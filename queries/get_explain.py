@@ -1,15 +1,17 @@
 import json
+import shlex
 import subprocess
 
 file = "6_explain.sql"
 output_file = "explain.json"
-command = "psql -d tpchdb -U tpch -a -f " + file + " > " + output_file
+command = "psql -d tpchdb -U tpch -a -f " + file
 
+json_file = open(output_file, "w")
 # Run command
-subprocess.getoutput(command)
+cmd = subprocess.run(shlex.split(command), check=True, stdout=json_file)
+json_file.close()
 
 # Clean-up output_file, make into nice JSON and load
-
 # Remove before "------"
 with open(output_file, 'r+') as fp:
     # read an store all lines into list
@@ -50,4 +52,46 @@ explain_json = json.load(f)[0]
 f.close()
 
 #print(explain_json)
-print(json.dumps(explain_json, indent=4))
+
+from plan_to_pandas import * 
+# print(json.dumps(explain_json, indent=4))
+
+
+explain_tree = None
+
+
+def json_to_class(json, tree):
+    # First node check
+    if tree == None:
+        node = json["Plan"]
+    
+    else:
+        node = json
+
+    node_class = None    
+    node_type = node["Node Type"]
+    if node_type.lower() == "limit":
+        node_class = limit_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"])
+    elif node_type.lower() == "aggregate":
+        node_class = aggregate_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"])
+    elif node_type.lower() == "gather":    
+        node_class = gather_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Workers Planned"], node["Single Copy"], node["Parent Relationship"])
+    elif node_type.lower() == "seq scan":
+        node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Parent Relationship"], node["Filter"])
+    else:
+        raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
+        
+    # Check if this node has a child
+    if "Plans" in node:
+        node_class.set_plans(json_to_class(node["Plans"][0], ""))
+    
+    return node_class
+   
+# Build a class structure that is nested within each other
+explain_tree = json_to_class(explain_json, explain_tree) 
+
+print(explain_tree)
+
+# Let's try and visualise this now
+from visualising_tree import plot_tree
+plot_tree(explain_tree, "Explain_Q6_tree")
