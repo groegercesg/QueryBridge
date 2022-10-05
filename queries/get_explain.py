@@ -95,3 +95,16 @@ print(explain_tree)
 # Let's try and visualise this now
 from visualising_tree import plot_tree
 plot_tree(explain_tree, "Explain_Q6_tree")
+
+# Let's try and write some pandas code from this
+from tree_to_pandas import make_pandas
+pandas = make_pandas(explain_tree)
+
+
+# Plans to get around limitations
+    # Doesn't give us names of columns
+        # Top class has output, this lines up with the .sql file output, so we can scan and get it from that
+    # Doesn't have the number to limit by
+        # Get this from the sql as well
+
+print(pandas)

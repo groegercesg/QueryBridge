@@ -1,9 +1,9 @@
 import pydot
 
 def walk_class_tree(graph, class_tree, parent_node=None):
-    '''
+    """
     Plotting function for the tree of our class
-    '''
+    """
 
     if parent_node is not None:
 
