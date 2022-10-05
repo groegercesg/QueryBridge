@@ -1,0 +1,51 @@
+language: python
+
+python:
+  - "3.4"
+
+services:
+  - postgresql
+
+addons:
+  postgresql: "9.6"
+
+env:
+  - TPCH_PASSWORD=dbf8pXCrzZ5cDeqv
+
+before_install:
+  - python --version
+  - pip --version
+  - pg_config --version
+  - psql --version
+
+  - wget -q https://github.com/electrum/tpch-dbgen/archive/32f1c1b92d1664dba542e927d23d86ffa57aa253.zip -O tpch-dbgen.zip
+  - unzip -q tpch-dbgen.zip
+  - mv tpch-dbgen-32f1c1b92d1664dba542e927d23d86ffa57aa253 tpch-dbgen
+  - rm tpch-dbgen.zip
+
+install:
+  - pip install -r requirements.txt
+
+before_script:
+  - psql --command="CREATE DATABASE tpchdb;" -U postgres
+  - psql --command="CREATE USER tpch WITH PASSWORD '${TPCH_PASSWORD}';" -U postgres
+  - psql --command="GRANT ALL PRIVILEGES ON DATABASE tpchdb TO tpch;" -U postgres
+
+script:
+  - ./tpch_pgsql.py || export EXIT_CODE=$? && echo $EXIT_CODE && if [ "$EXIT_CODE" == "2" ]; then true; else false; fi
+
+  - ./tpch_pgsql.py --help
+
+  - export PYTHONPATH=$(pwd)
+  - echo $PYTHONPATH
+  - $(cd tests/ && python -m unittest test_tpch_pgsql.py --verbose && cd ..)
+
+  - $(cd tests/ && python -m unittest test_prepare_before.py --verbose && cd ..)
+  - ./tpch_pgsql.py --scale 0.01 prepare
+  - $(cd tests/ && python -m unittest test_prepare_after.py --verbose && cd ..)
+
+  - ./tpch_pgsql.py --dbname tpchdb --username tpch --password $TPCH_PASSWORD load
+  - $(cd tests/ && python -m unittest test_load_after.py --verbose && cd ..)
+
+  - ./tpch_pgsql.py --dbname tpchdb --username tpch --password $TPCH_PASSWORD query
+  - $(cd tests/ && python -m unittest test_query_after.py --verbose && cd ..)
