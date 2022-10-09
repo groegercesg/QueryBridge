@@ -2,9 +2,10 @@ import json
 import shlex
 import subprocess
 
-file = "6_explain.sql"
+file = "6.sql"
+explain_file = "6_explain.sql"
 output_file = "explain.json"
-command = "psql -d tpchdb -U tpch -a -f " + file
+command = "psql -d tpchdb -U tpch -a -f " + explain_file
 
 json_file = open(output_file, "w")
 # Run command
@@ -53,7 +54,7 @@ f.close()
 
 #print(explain_json)
 
-from plan_to_pandas import * 
+from plan_to_explain_tree import * 
 # print(json.dumps(explain_json, indent=4))
 
 
@@ -90,15 +91,19 @@ def json_to_class(json, tree):
 # Build a class structure that is nested within each other
 explain_tree = json_to_class(explain_json, explain_tree) 
 
-print(explain_tree)
+# print(explain_tree)
 
-# Let's try and visualise this now
+# Let's try and visualise the explain tree now
 from visualising_tree import plot_tree
-plot_tree(explain_tree, "Explain_Q6_tree")
+plot_tree(explain_tree, "Q6_explain_tree")
+
+# Let's try create a pandas list
+from pandas_list import make_pandas_list
+pandas_list = make_pandas_list(explain_tree, file)
 
 # Let's try and write some pandas code from this
-from tree_to_pandas import make_pandas
-pandas = make_pandas(explain_tree)
+from pandas_list_to_pandas import make_pandas
+pandas = make_pandas(pandas_list)
 
 
 # Plans to get around limitations
@@ -107,4 +112,5 @@ pandas = make_pandas(explain_tree)
     # Doesn't have the number to limit by
         # Get this from the sql as well
 
-print(pandas)
+for statement in pandas:
+    print(statement)

@@ -17,6 +17,10 @@ Also install `postgresql-devel, libpq5-devel` (to provide pg_config command)
 - Query
     ```python3 tpch_pgsql.py -U tpch -W dogSocks -d tpchdb query```
 
+### Solve Peer auth issue
+
+[link](https://stackoverflow.com/questions/18664074/getting-error-peer-authentication-failed-for-user-postgres-when-trying-to-ge)
+
 ## Running in cmd
 
 Be in this folder:
@@ -25,8 +29,17 @@ Be in this folder:
 Run this:
 `psql -d tpchdb -U tpch -a -f 6.sql`
 
+## Running the tcphdb in interactive mode
 
-### Solve Peer auth issue
+`su - postgres`
 
-[link](https://stackoverflow.com/questions/18664074/getting-error-peer-authentication-failed-for-user-postgres-when-trying-to-ge)
+Enter password, in back of book
+
+`psql tcphdb`
+
+## PostgresSQL
+
+- Enable timing:
+`\timing on`
+
 
