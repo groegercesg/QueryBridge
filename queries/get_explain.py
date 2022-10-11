@@ -4,7 +4,7 @@ import subprocess
 
 file = "6.sql"
 explain_file = "6_explain.sql"
-output_file = "explain.json"
+output_file = "q6_explain.json"
 command = "psql -d tpchdb -U tpch -a -f " + explain_file
 
 json_file = open(output_file, "w")
