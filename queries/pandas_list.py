@@ -75,13 +75,12 @@ class filter_node():
         instructions.append(statement2_string)
         
         return instructions
-        
-class limit_node():
-    def __init__(self, data, output, sql):
+             
+class sort_node():
+    def __init__(self, data, output, sort_key, sql):
         self.data = data
-        self.amount = self.process_amount(sql)
-            
         self.output = self.process_output(output, sql)
+        self.sort_key = self.process_sort_key(sort_key)
         
     def process_output(self, output, sql):
         for i in range(len(output)):
@@ -92,25 +91,49 @@ class limit_node():
                 output[i] = (output_original_value, sql.column_references[output_original_value])
         return output
     
+    def process_sort_key(self, sort_key):
+        keys = []
+        ascendings = []
+        
+        for individual_sort in sort_key:
+            sort_split = individual_sort.split()
+            if len(sort_split) == 1:
+                # No DESC/ASC, therefore is ASC (implied)
+                keys.append(sort_split[0].split(".")[1])
+                ascendings.append(True)
+            else:
+                # There is a DESC or ASC
+                if sort_split[1] == "DESC":
+                    ascendings.append(False)
+                elif sort_split[1] == "ASC":
+                    ascendings.append(True)
+                else:
+                    raise ValueError("Sorting type not recognised!")
+                # Add the key
+                keys.append(sort_split[0].split(".")[1])
+        return keys, ascendings
+    
+    def to_pandas(self, prev_df, this_df):
+        columns, ascendings = self.sort_key
+        return [this_df + " = " + prev_df + ".sort_values(by=" + str(columns) + ", ascending=" + str(ascendings) + ")"]
+
+class limit_node():
+    def __init__(self, data, output, sql):
+        self.data = data
+        self.amount = self.process_amount(sql)
+        self.output = self.process_output(output, sql)
+        
     def process_amount(self, sql):
         return sql.limit
-        
-    def set_instructions(self, instructions):
-        self.instructions = instructions
-        
-    def get_amount(self, file):
-        if "LIMIT" in file:
-            intermediate = file.split("LIMIT")[1].strip()
-            numeric_filter = filter(str.isdigit, intermediate)
-            numeric_string = "".join(numeric_filter)
-        elif "limit" in file:
-            intermediate = file.split("limit")[1].strip()
-            numeric_filter = filter(str.isdigit, intermediate)
-            numeric_string = "".join(numeric_filter)
-        else:
-            raise ValueError("No Limit statement detected, is this really a LIMIT node?")
-        
-        return int(numeric_string)
+    
+    def process_output(self, output, sql):
+        for i in range(len(output)):
+            cleaned_output = clean_extra_brackets(output[i])
+            if cleaned_output in sql.column_references:
+                # We have an item in output that needs to be changed
+                output_original_value = cleaned_output
+                output[i] = (output_original_value, sql.column_references[output_original_value])
+        return output
     
     def to_pandas(self, prev_df, this_df):
         # print(self.output)
@@ -242,6 +265,10 @@ def create_list(class_tree, pandas_list, sql_class):
             if hasattr(currentTreeNode, "filters"):
                 # Check if is a filter type of Seq Scan
                 pandas_list.append(filter_node(currentTreeNode.relation_name, currentTreeNode.filters, currentTreeNode.output, sql_class))
+        elif currentTreeNode.node_type == "Sort":
+            pandas_list.append(sort_node(None, currentTreeNode.output, currentTreeNode.sort_key, sql_class))
+        else:
+            raise ValueError("The node: " + str(currentTreeNode.node_type) + " is not recognised. Not all node have been implemented")
         
         if currentTreeNode.plans == None:
             stillPlans = False

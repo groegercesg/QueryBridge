@@ -20,6 +20,11 @@ class aggregate_node(base_node):
         self.partial_mode = partial_mode
         self.parent_relationship = parent_relationship
 
+class group_aggregate_node(aggregate_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, strategy, partial_mode, parent_relationship, group_key):
+        super().__init__(node_type, parallel_aware, async_capable, output, strategy, partial_mode, parent_relationship)
+        self.group_key = group_key
+
 class gather_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, workers_planned, single_copy, parent_relationship):
         super().__init__(node_type, parallel_aware, async_capable, output)
@@ -36,3 +41,8 @@ class seq_scan_node(base_node):
         self.parent_relationship = parent_relationship
         self.filters = filters
 
+class sort_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, sort_key, parent_relationship):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.sort_key = sort_key
+        self.parent_relationship = parent_relationship

@@ -54,7 +54,7 @@ explain_json = json.load(f)[0]
 f.close()
 
 from plan_to_explain_tree import * 
-print(json.dumps(explain_json, indent=4))
+# print(json.dumps(explain_json, indent=4))
 
 
 explain_tree = None
@@ -73,11 +73,16 @@ def json_to_class(json, tree):
     if node_type.lower() == "limit":
         node_class = limit_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"])
     elif node_type.lower() == "aggregate":
-        node_class = aggregate_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"])
+        if "Group Key" in node:
+            node_class = group_aggregate_node("Group " + node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"], node["Group Key"])
+        else:
+            node_class = aggregate_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"])
     elif node_type.lower() == "gather":    
         node_class = gather_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Workers Planned"], node["Single Copy"], node["Parent Relationship"])
     elif node_type.lower() == "seq scan":
         node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Parent Relationship"], node["Filter"])
+    elif node_type.lower() == "sort":
+        node_class = sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Sort Key"], node["Parent Relationship"])
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
         
@@ -90,7 +95,7 @@ def json_to_class(json, tree):
 # Build a class structure that is nested within each other
 explain_tree = json_to_class(explain_json, explain_tree) 
 
-print(explain_tree)
+# print(explain_tree)
 
 # Let's try and visualise the explain tree now
 from visualising_tree import plot_tree
