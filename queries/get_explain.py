@@ -2,9 +2,10 @@ import json
 import shlex
 import subprocess
 
-file = "6.sql"
-explain_file = "6_explain.sql"
-output_file = "q6_explain.json"
+file = "1.sql"
+explain_file = "1_explain.sql"
+output_file = "q1_explain.json"
+tree_output = "Q1_explain_tree"
 command = "psql -d tpchdb -U tpch -a -f " + explain_file
 
 json_file = open(output_file, "w")
@@ -52,10 +53,8 @@ f = open(output_file)
 explain_json = json.load(f)[0]
 f.close()
 
-#print(explain_json)
-
 from plan_to_explain_tree import * 
-# print(json.dumps(explain_json, indent=4))
+print(json.dumps(explain_json, indent=4))
 
 
 explain_tree = None
@@ -91,11 +90,11 @@ def json_to_class(json, tree):
 # Build a class structure that is nested within each other
 explain_tree = json_to_class(explain_json, explain_tree) 
 
-# print(explain_tree)
+print(explain_tree)
 
 # Let's try and visualise the explain tree now
 from visualising_tree import plot_tree
-plot_tree(explain_tree, "Q6_explain_tree")
+plot_tree(explain_tree, tree_output)
 
 # Let's try create a pandas list
 from pandas_list import make_pandas_list

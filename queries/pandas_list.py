@@ -114,7 +114,7 @@ class limit_node():
     
     def to_pandas(self, prev_df, this_df):
         # print(self.output)
-        return [str(prev_df + ".head("+str(self.amount)+")")]
+        return ["print(" + str(prev_df + ".head("+str(self.amount)+")") + ")"]
         
 class aggr_node():
     def __init__(self, data, output, sql):
@@ -131,7 +131,7 @@ class aggr_node():
         return output
 
     def to_pandas(self, prev_df, this_df):
-        instructions = []
+        instructions = [this_df + " = pd.Dataframe()"]
         
         for i, col in enumerate(self.output):
             if isinstance(col, tuple):
@@ -146,7 +146,7 @@ class aggr_node():
                     inner_string = " * ".join(cols)
                     
                     outer_string = "(" + inner_string + ").sum()"
-                    statement = str(col[1]) + " = " + outer_string
+                    statement = this_df + "['" + str(col[1]) + "'] = [" + outer_string + "]"
                 else:
                     raise ValueError("Other types of aggr haven't been implemented yet!")
             else:
@@ -161,7 +161,7 @@ class aggr_node():
                     inner_string = " * ".join(cols)
                     
                     outer_string = "(" + inner_string + ").sum()"
-                    statement = "SUM_"+str(i) + " = " + outer_string
+                    statement = this_df + "['col_"+ str(i) + "'] = [" + outer_string + "]"
                 else:
                     raise ValueError("Other types of aggr haven't been implemented yet!")
             # Append instructions
