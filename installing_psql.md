@@ -29,13 +29,13 @@ Be in this folder:
 Run this:
 `psql -d tpchdb -U tpch -a -f 6.sql`
 
-## Running the tcphdb in interactive mode
+## Running the tpchdb in interactive mode
 
 `su - postgres`
 
 Enter password, in back of book
 
-`psql tcphdb`
+`psql tpchdb`
 
 ## PostgresSQL
 

@@ -5,55 +5,28 @@ def make_pandas(pandas_list):
     # Function to generate pandas code from tree of classes
     pandas_statements = []
     
-    # Break for aggr
-    aggr_break = False
-    
-    for i, node in enumerate(pandas_list):
-        # Special break for aggr statements
-        if aggr_break:
-            break
-        
+    for i, node in enumerate(pandas_list):        
         class_name = get_class_name(node)
-        
-        statement_string = ""
-        
+                
         # We need to find handle two cases
         # Either we have a previous statement, and so need to refer to it
         # Or we don't so, need to refer to the previous as DF
         if pandas_statements == []:
             # First operation to modify DF
-            statement_string += "df_" + class_name + " = df"
-            
-            pandas_string, output = node.to_pandas("df")
-            
-            if class_name == "aggr":
-                # If it's an aggr we don't have the "df stuff", and this is the final statement
-                statement_string += pandas_string
-                # Also, if it's an aggr, then it's the final statement
-                aggr_break = True
-            else:
-                statement_string += pandas_string
-            
-        else:
+            pandas_strings = node.to_pandas("df", "df_"+class_name)            
+        else:           
             # Not first time, figure out what previous df would be called
             prev_class_name = get_class_name(pandas_list[i-1])
-            pandas_string, output = node.to_pandas("df_"+prev_class_name)
             
-            if class_name == "aggr":
-                # If it's an aggr we don't have the "df stuff", and this is the final statement
-                statement_string += pandas_string
-                # Also, if it's an aggr, then it's the final statement
-                aggr_break = True
+            # Check for limit last
+            if prev_class_name == "aggr" and class_name == "limit" and i == len(pandas_list) - 1:
+                # We are in the situation of penultimate aggr and final limit, let's skip the limit
+                # Add in a print for the final value
+                pandas_strings = ["print(" + str(pandas_statements[-1].split()[0]) + ")"]
             else:
-                statement_string += "df_" + class_name + " = df_" + prev_class_name
-                statement_string += pandas_string
-                
-        pandas_statements.append(statement_string)
-        
-        # We are about to stop iterating
-        # This means we have broken prematurely on a aggr
-        # So we must have a output term we are required to add
-        if aggr_break:
-            pandas_statements.append("print("+output+")")
+                pandas_strings = node.to_pandas("df_"+prev_class_name, "df_"+class_name)
+            
+        for statement in pandas_strings:
+            pandas_statements.append(statement)
     
     return pandas_statements
