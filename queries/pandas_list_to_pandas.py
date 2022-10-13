@@ -4,6 +4,9 @@ def get_class_name(node):
 def make_pandas(pandas_list):
     # Function to generate pandas code from tree of classes
     pandas_statements = []
+    # Flag for using post-aggr output or not
+    usePostAggr = False
+    aggrs = ["aggr", "group"]
     
     for i, node in enumerate(pandas_list):        
         class_name = get_class_name(node)
@@ -18,13 +21,19 @@ def make_pandas(pandas_list):
             # Not first time, figure out what previous df would be called
             prev_class_name = get_class_name(pandas_list[i-1])
             
-            # Check for limit last
-            #if prev_class_name == "aggr" and class_name == "limit" and i == len(pandas_list) - 1:
-            #    # We are in the situation of penultimate aggr and final limit, let's skip the limit
-            #    # Add in a print for the final value
-            #    pandas_strings = ["print(" + str(pandas_statements[-1].split()[0]) + ")"]
-            #else:
-            pandas_strings = node.to_pandas("df_"+prev_class_name, "df_"+class_name)
+            print("postAggr")
+            
+            # Decide on what output to use
+            if class_name in aggrs:
+                # We are in the aggr
+                usePostAggr = True
+                pandas_strings = node.to_pandas("df_"+prev_class_name, "df_"+class_name, usePostAggr)
+                
+                print("We are post_aggr")
+            else:
+                pandas_strings = node.to_pandas("df_"+prev_class_name, "df_"+class_name, usePostAggr)
+            
+            
             
         for statement in pandas_strings:
             pandas_statements.append(statement)
