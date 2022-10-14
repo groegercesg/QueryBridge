@@ -16,20 +16,17 @@ def make_pandas(pandas_list):
         # Or we don't so, need to refer to the previous as DF
         if pandas_statements == []:
             # First operation to modify DF
-            pandas_strings = node.to_pandas("df", "df_"+class_name)            
+            pandas_strings = node.to_pandas("df", "df_"+class_name, usePostAggr)            
         else:           
             # Not first time, figure out what previous df would be called
             prev_class_name = get_class_name(pandas_list[i-1])
             
-            print("postAggr")
             
             # Decide on what output to use
             if class_name in aggrs:
                 # We are in the aggr
                 usePostAggr = True
                 pandas_strings = node.to_pandas("df_"+prev_class_name, "df_"+class_name, usePostAggr)
-                
-                print("We are post_aggr")
             else:
                 pandas_strings = node.to_pandas("df_"+prev_class_name, "df_"+class_name, usePostAggr)
             

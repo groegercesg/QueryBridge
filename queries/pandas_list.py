@@ -97,7 +97,7 @@ class filter_node():
     def set_instructions(self, instructions):
         self.instructions = instructions
         
-    def to_pandas(self, prev_df, this_df):
+    def to_pandas(self, prev_df, this_df, usePostAggr):
         instructions = []
         
         # Edit params:
@@ -105,8 +105,10 @@ class filter_node():
         statement1_string = "df_intermediate" + " = " + prev_df + "[" + str(params) + "]"
         instructions.append(statement1_string)
         
-        # Limit df_filter to output columns
-        statement2_string = this_df + " = df_intermediate[" + str(self.output) + "]"
+        output_cols = choose_aliases(self, usePostAggr)
+        
+        # Limit to output columns
+        statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
         instructions.append(statement2_string)
         
         return instructions
@@ -139,16 +141,18 @@ class sort_node():
                 keys.append(sort_split[0].split(".")[1])
         return keys, ascendings
     
-    def to_pandas(self, prev_df, this_df):
+    def to_pandas(self, prev_df, this_df, usePostAggr):
         instructions = []
         
         # Sorting to an intermediate dataframe
         columns, ascendings = self.sort_key
-        statement1_string = "df_intermediate" + " = " + prev_df + ".sort_values(by=" + str(columns) + ", ascending=" + str(ascendings) + ")"
+        statement1_string = "df_intermediate = " + prev_df + ".sort_values(by=" + str(columns) + ", ascending=" + str(ascendings) + ")"
         instructions.append(statement1_string)
         
-        # Limiting to output columns
-        statement2_string = this_df + " = df_intermediate[" + str(self.output) + "]"
+        output_cols = choose_aliases(self, usePostAggr)
+        
+        # Limit to output columns
+        statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
         instructions.append(statement2_string)
         
         return instructions
@@ -162,11 +166,13 @@ class limit_node():
     def process_amount(self, sql):
         return sql.limit
     
-    def to_pandas(self, prev_df, this_df):
+    def to_pandas(self, prev_df, this_df, usePostAggr):
         instructions = []
         
+        output_cols = choose_aliases(self, usePostAggr)
+        
         # Limit to output columns
-        statement1_string = this_df + " = " + prev_df + "[" + str(self.output) + "]"
+        statement1_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
         instructions.append(statement1_string)
         
         # Show the new dataframe
@@ -175,7 +181,8 @@ class limit_node():
         
         return instructions
     
-def do_aggregation(self, instructions, prev_df):
+def do_group_aggregation(self, instructions):
+    instructions = ["df_intermediate = df_intermediate.apply(lambda s: pd.Series({"]
     for i, col in enumerate(self.output):
         if isinstance(col, tuple):
             # This is a column with an alias
@@ -184,20 +191,76 @@ def do_aggregation(self, instructions, prev_df):
                 # The aggr operation is SUM!
                 inner = str(col[0]).split("sum")[1]
                 inner = clean_extra_brackets(inner)
-                cols = inner.split("*")
+                cols = inner.split(" ")
+                
+                # Check if cols[j][0] or [-1] is a bracket
+                # And split it up if it is
+                insertBrackets = []
                 for j in range(len(cols)):
-                    cols[j] = prev_df + "." + cols[j].strip()
-                inner_string = " * ".join(cols)
+                    
+                    if cols[j][0] == "(":
+                        cols[j] = cols[j][1:]
+                        insertBrackets.append((j, "("))
+                        
+                    # Handle multiple brackets at the start of a string
+                    k = 0
+                    brack_count = 0
+                    while k < len(cols[j]):
+                        if cols[j][k] == "(":
+                            brack_count += 1
+                            k += 1
+                        else:
+                            # Break out of while
+                            k = len(cols[j]) * 2
+                            break
+                    
+                    if brack_count != 0:        
+                        cols[j] = cols[j][:-brack_count]
+                        insertBrackets.append((j, "("*brack_count))
+                        
+                    
+                    # Handle multiple brackets at the end of a string
+                    k = 1
+                    brack_count = 0
+                    while k < len(cols[j]):
+                        if cols[j][-k] == ")":
+                            brack_count += 1
+                            k += 1
+                        else:
+                            # Break out of while
+                            k = len(cols[j]) * 2
+                            break
+                    
+                    if brack_count != 0:        
+                        cols[j] = cols[j][:-brack_count]
+                        insertBrackets.append((j+1, ")"*brack_count))
+                        
+                # Carry out insert Brackets
+                for i, insert in enumerate(insertBrackets):
+                    cols.insert(insert[0]+i, insert[1])
+                
+                # Define acceptable characters
+                from string import ascii_letters
+                char_set = set(ascii_letters + "_")
+                
+                for j in range(len(cols)):
+                    
+                    
+                    
+                    if isinstance(cols[j], str):
+                        if all(c in char_set for c in cols[j]):
+                            cols[j] = 's["' + cols[j].strip() + '"]'
+                inner_string = " ".join(cols)
                 
                 outer_string = "(" + inner_string + ").sum()"
-                statement = "intermediate_df['" + str(col[1]) + "'] = [" + outer_string + "]"
+                statement = '    "' + str(col[1]) + '": ' + outer_string + ","
             elif "avg" in col[0]:
                 # The aggr operation is AVG!
                 inner = str(col[0]).split("avg")[1]
                 inner = clean_extra_brackets(inner)
                 
                 # Create statement
-                statement = "intermediate_df['" + str(col[1]) + "'] = " + prev_df + "['" + inner + "'].mean()"
+                statement = '    "' + str(col[1]) + '": (s["' + inner + '"]).mean(),'
             elif "count" in col[0]:
                 # The aggr operation is to count!
                 inner = str(col[0]).split("count")[1]
@@ -205,10 +268,10 @@ def do_aggregation(self, instructions, prev_df):
                 
                 if inner == "*":
                     # Length of prev_df
-                    statement = "intermediate_df['" + str(col[1]) + "'] = len(" + prev_df + ".index)" 
+                    statement = '    "' + str(col[1]) + '": len(s.index),' 
                 else:
                     # Length of a column of prev_df
-                    statement = "intermediate_df['" + str(col[1]) + "'] = len(" + prev_df + "['" + inner + "'])" 
+                    statement = '    "' + str(col[1]) + '":  len(df_intermediate["' + inner + '"]),' 
             else:
                 raise ValueError("Other types of aggr haven't been implemented yet!")
         else:
@@ -221,16 +284,34 @@ def do_aggregation(self, instructions, prev_df):
                 raise ValueError("COUNT with no alias!")
             else:
                 #raise ValueError("Other types of aggr haven't been implemented yet!")
-                statement = "intermediate_df['" + str(col) + "'] = " + prev_df + "['" + str(col) + "']"
+                #statement = "df_intermediate['" + str(col) + "'] = " + prev_df + "['" + str(col) + "']"
+                
+                # In aggregate skip column no aggregation to be done
+                continue
         # Append instructions
         instructions.append(statement)
         
+    instructions.append("}))")
     return instructions
 
-def choose_aliases(self):
-    print(self.output)
-    
-    return self.output
+def do_aggregation(self, instructions, prev_df):
+    raise ValueError("Not implemented yet")
+
+def choose_aliases(self, usePostAggr):
+    output = []
+    if usePostAggr:
+        for col in self.output:
+            if isinstance(col, tuple):
+                output.append(col[1])
+            else:
+                output.append(col)
+    else:
+        for col in self.output:
+            if isinstance(col, tuple):
+                output.append(col[0])
+            else:
+                output.append(col)
+    return output
 
 class group_aggr_node():
     def __init__(self, data, output, group_key, sql):
@@ -250,19 +331,17 @@ class group_aggr_node():
         instructions = []
         
         # Group the data based on the keys
-        statement1_string = "intermediate_df" + " = " + prev_df + ".groupby(" + str(self.group_key) + ")"
+        statement1_string = "df_intermediate" + " = " + prev_df + ".groupby(" + str(self.group_key) + ")"
         instructions.append(statement1_string)
         
         # Do aggr
-        instructions += do_aggregation(self, instructions, prev_df)
+        instructions += do_group_aggregation(self, instructions)
+        
+        output_cols = choose_aliases(self, usePostAggr)
         
         # Limit to output columns
-        statement2_string = this_df + " = " + "intermediate_df[" + str(self.output) + "]"
+        statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
         instructions.append(statement2_string)
-        
-        choose_aliases(self)
-        # print(instructions)
-        # print(self.output)
         
         return instructions   
         
@@ -272,12 +351,14 @@ class aggr_node():
         self.output = process_output(self, output, sql)
 
     def to_pandas(self, prev_df, this_df):
-        instructions = ["intermediate_df = pd.Dataframe()"]
+        instructions = ["df_intermediate = pd.Dataframe()"]
         
         instructions += do_aggregation(self, instructions, prev_df)
         
+        output_cols = choose_aliases(self, usePostAggr)
+        
         # Limit to output columns
-        statement2_string = this_df + " = " + "intermediate_df[" + str(self.output) + "]"
+        statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
         instructions.append(statement2_string)
             
         return instructions
