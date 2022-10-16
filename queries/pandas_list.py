@@ -97,7 +97,7 @@ class filter_node():
     def set_instructions(self, instructions):
         self.instructions = instructions
         
-    def to_pandas(self, prev_df, this_df, usePostAggr):
+    def to_pandas(self, prev_df, this_df, codeCompHelper):
         instructions = []
         
         # Edit params:
@@ -105,7 +105,7 @@ class filter_node():
         statement1_string = "df_intermediate" + " = " + prev_df + "[" + str(params) + "]"
         instructions.append(statement1_string)
         
-        output_cols = choose_aliases(self, usePostAggr)
+        output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
         statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
@@ -141,7 +141,7 @@ class sort_node():
                 keys.append(sort_split[0].split(".")[1])
         return keys, ascendings
     
-    def to_pandas(self, prev_df, this_df, usePostAggr):
+    def to_pandas(self, prev_df, this_df, codeCompHelper):
         instructions = []
         
         # Sorting to an intermediate dataframe
@@ -149,7 +149,7 @@ class sort_node():
         statement1_string = "df_intermediate = " + prev_df + ".sort_values(by=" + str(columns) + ", ascending=" + str(ascendings) + ")"
         instructions.append(statement1_string)
         
-        output_cols = choose_aliases(self, usePostAggr)
+        output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
         statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
@@ -166,10 +166,10 @@ class limit_node():
     def process_amount(self, sql):
         return sql.limit
     
-    def to_pandas(self, prev_df, this_df, usePostAggr):
+    def to_pandas(self, prev_df, this_df, codeCompHelper):
         instructions = []
         
-        output_cols = choose_aliases(self, usePostAggr)
+        output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
         statement1_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
@@ -181,7 +181,7 @@ class limit_node():
         
         return instructions
     
-def do_group_aggregation(self, instructions):
+def do_group_aggregation(self, instructions, codeCompHelper):
     instructions = ["df_intermediate = df_intermediate.apply(lambda s: pd.Series({"]
     for i, col in enumerate(self.output):
         if isinstance(col, tuple):
@@ -282,12 +282,15 @@ def do_group_aggregation(self, instructions):
                 raise ValueError("AVG with no alias!")
             elif "count" in col:
                 raise ValueError("COUNT with no alias!")
+            elif col in codeCompHelper.indexes:
+                # The column is one of the indexes, we skip it!
+                continue
             else:
                 #raise ValueError("Other types of aggr haven't been implemented yet!")
                 #statement = "df_intermediate['" + str(col) + "'] = " + prev_df + "['" + str(col) + "']"
                 
                 # In aggregate skip column no aggregation to be done
-                continue
+                raise ValueError("Col is: " + str(col) + " We don't recognise this, help!")
         # Append instructions
         instructions.append(statement)
         
@@ -297,20 +300,32 @@ def do_group_aggregation(self, instructions):
 def do_aggregation(self, instructions, prev_df):
     raise ValueError("Not implemented yet")
 
-def choose_aliases(self, usePostAggr):
+def choose_aliases(self, cCHelper):
     output = []
-    if usePostAggr:
+    if cCHelper.usePostAggr:
         for col in self.output:
+            appendingCol = None
             if isinstance(col, tuple):
-                output.append(col[1])
+                appendingCol = col[1]
             else:
-                output.append(col)
+                appendingCol = col
+            # Append the column, first check if it is in the indexes, if so, skip
+            if appendingCol in cCHelper.indexes:
+                continue
+            else:
+                output.append(appendingCol)    
     else:
         for col in self.output:
+            appendingCol = None
             if isinstance(col, tuple):
-                output.append(col[0])
+                appendingCol = col[0]
             else:
-                output.append(col)
+                appendingCol = col
+            # Append the column, first check if it is in the indexes, if so, skip
+            if appendingCol in cCHelper.indexes:
+                continue
+            else:
+                output.append(appendingCol)    
     return output
 
 class group_aggr_node():
@@ -325,8 +340,9 @@ class group_aggr_node():
             grouping_keys.append(key.split(".")[1])
         return grouping_keys
 
-    def to_pandas(self, prev_df, this_df, usePostAggr):
-        
+    def to_pandas(self, prev_df, this_df, codeCompHelper):
+        # Set group keys as the codeCompHelper indexes
+        codeCompHelper.setIndexes(self.group_key)
         
         instructions = []
         
@@ -335,9 +351,9 @@ class group_aggr_node():
         instructions.append(statement1_string)
         
         # Do aggr
-        instructions += do_group_aggregation(self, instructions)
+        instructions += do_group_aggregation(self, instructions, codeCompHelper)
         
-        output_cols = choose_aliases(self, usePostAggr)
+        output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
         statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
@@ -350,12 +366,12 @@ class aggr_node():
         self.data = data        
         self.output = process_output(self, output, sql)
 
-    def to_pandas(self, prev_df, this_df):
+    def to_pandas(self, prev_df, this_df, codeCompHelper):
         instructions = ["df_intermediate = pd.Dataframe()"]
         
         instructions += do_aggregation(self, instructions, prev_df)
         
-        output_cols = choose_aliases(self, usePostAggr)
+        output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
         statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
