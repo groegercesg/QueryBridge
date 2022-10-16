@@ -181,76 +181,84 @@ class limit_node():
         
         return instructions
     
+def aggregate_sum(sum_string, s_group=None, df_group=None):
+    cols = sum_string.split(" ")
+                
+    # Check if cols[j][0] or [-1] is a bracket
+    # And split it up if it is
+    insertBrackets = []
+    for j in range(len(cols)):
+        
+        if cols[j][0] == "(":
+            cols[j] = cols[j][1:]
+            insertBrackets.append((j, "("))
+            
+        # Handle multiple brackets at the start of a string
+        k = 0
+        brack_count = 0
+        while k < len(cols[j]):
+            if cols[j][k] == "(":
+                brack_count += 1
+                k += 1
+            else:
+                # Break out of while
+                k = len(cols[j]) * 2
+                break
+        
+        if brack_count != 0:        
+            cols[j] = cols[j][:-brack_count]
+            insertBrackets.append((j, "("*brack_count))
+            
+        
+        # Handle multiple brackets at the end of a string
+        k = 1
+        brack_count = 0
+        while k < len(cols[j]):
+            if cols[j][-k] == ")":
+                brack_count += 1
+                k += 1
+            else:
+                # Break out of while
+                k = len(cols[j]) * 2
+                break
+        
+        if brack_count != 0:        
+            cols[j] = cols[j][:-brack_count]
+            insertBrackets.append((j+1, ")"*brack_count))
+            
+    # Carry out insert Brackets
+    for i, insert in enumerate(insertBrackets):
+        cols.insert(insert[0]+i, insert[1])
+    
+    # Define acceptable characters
+    from string import ascii_letters
+    char_set = set(ascii_letters + "_")
+    
+    for j in range(len(cols)):
+        if isinstance(cols[j], str):
+            if all(c in char_set for c in cols[j]):
+                if s_group != None:
+                    cols[j] = 's["' + cols[j].strip() + '"]'
+                elif df_group != None:
+                    cols[j] = df_group + "." + cols[j].strip()
+                else:
+                    raise ValueError("In aggregate_sum, at least one of the two should be True!")
+                
+    inner_string = " ".join(cols)
+    
+    return inner_string
+    
 def do_group_aggregation(self, instructions, codeCompHelper):
     instructions = ["df_intermediate = df_intermediate.apply(lambda s: pd.Series({"]
     for i, col in enumerate(self.output):
         if isinstance(col, tuple):
             # This is a column with an alias
             if "sum" in col[0]:
-                # TODO: Only add "prev_df." to columns, don't add it to numbers!
                 # The aggr operation is SUM!
                 inner = str(col[0]).split("sum")[1]
                 inner = clean_extra_brackets(inner)
-                cols = inner.split(" ")
                 
-                # Check if cols[j][0] or [-1] is a bracket
-                # And split it up if it is
-                insertBrackets = []
-                for j in range(len(cols)):
-                    
-                    if cols[j][0] == "(":
-                        cols[j] = cols[j][1:]
-                        insertBrackets.append((j, "("))
-                        
-                    # Handle multiple brackets at the start of a string
-                    k = 0
-                    brack_count = 0
-                    while k < len(cols[j]):
-                        if cols[j][k] == "(":
-                            brack_count += 1
-                            k += 1
-                        else:
-                            # Break out of while
-                            k = len(cols[j]) * 2
-                            break
-                    
-                    if brack_count != 0:        
-                        cols[j] = cols[j][:-brack_count]
-                        insertBrackets.append((j, "("*brack_count))
-                        
-                    
-                    # Handle multiple brackets at the end of a string
-                    k = 1
-                    brack_count = 0
-                    while k < len(cols[j]):
-                        if cols[j][-k] == ")":
-                            brack_count += 1
-                            k += 1
-                        else:
-                            # Break out of while
-                            k = len(cols[j]) * 2
-                            break
-                    
-                    if brack_count != 0:        
-                        cols[j] = cols[j][:-brack_count]
-                        insertBrackets.append((j+1, ")"*brack_count))
-                        
-                # Carry out insert Brackets
-                for i, insert in enumerate(insertBrackets):
-                    cols.insert(insert[0]+i, insert[1])
-                
-                # Define acceptable characters
-                from string import ascii_letters
-                char_set = set(ascii_letters + "_")
-                
-                for j in range(len(cols)):
-                    
-                    
-                    
-                    if isinstance(cols[j], str):
-                        if all(c in char_set for c in cols[j]):
-                            cols[j] = 's["' + cols[j].strip() + '"]'
-                inner_string = " ".join(cols)
+                inner_string = aggregate_sum(inner, s_group=True)
                 
                 outer_string = "(" + inner_string + ").sum()"
                 statement = '    "' + str(col[1]) + '": ' + outer_string + ","
@@ -297,8 +305,27 @@ def do_group_aggregation(self, instructions, codeCompHelper):
     instructions.append("}))")
     return instructions
 
-def do_aggregation(self, instructions, prev_df):
-    raise ValueError("Not implemented yet")
+def do_aggregation(self, prev_df):
+    local_instructions = []
+    for col in self.output:
+        if isinstance(col, tuple):
+            if "sum" in col[0]:
+                # The aggr operation is SUM!
+                inner = str(col[0]).split("sum")[1]
+                inner = clean_extra_brackets(inner)
+                
+                inner_string = aggregate_sum(inner, df_group=prev_df)
+              
+                outer_string = "(" + inner_string + ").sum()"
+                
+                local_instructions.append("df_intermediate['" + col[1] + "'] = [" + outer_string + "]")
+            else:
+                raise ValueError("Not coded!")
+        else:
+            raise ValueError("Not Implemented Error")
+
+    return local_instructions
+
 
 def choose_aliases(self, cCHelper):
     output = []
@@ -367,9 +394,9 @@ class aggr_node():
         self.output = process_output(self, output, sql)
 
     def to_pandas(self, prev_df, this_df, codeCompHelper):
-        instructions = ["df_intermediate = pd.Dataframe()"]
+        instructions = ["df_intermediate = pd.DataFrame()"]
         
-        instructions += do_aggregation(self, instructions, prev_df)
+        instructions += do_aggregation(self, prev_df)
         
         output_cols = choose_aliases(self, codeCompHelper)
         
