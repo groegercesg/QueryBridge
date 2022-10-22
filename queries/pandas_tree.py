@@ -80,6 +80,9 @@ class filter_node():
         self.params = self.clean_params(params)
         self.output = process_output(self, output, sql)
         
+    def set_nodes(self, nodes):
+        self.nodes = nodes
+        
     def clean_params(self, params):  
         # Replace AND with & and convert to string
         filters = str(params.replace("AND", "&"))
@@ -114,10 +117,12 @@ class filter_node():
         return instructions
              
 class sort_node():
-    def __init__(self, data, output, sort_key, sql):
-        self.data = data
+    def __init__(self, output, sort_key, sql):
         self.output = process_output(self, output, sql)
         self.sort_key = self.process_sort_key(sort_key)
+        
+    def set_nodes(self, nodes):
+        self.nodes = nodes
     
     def process_sort_key(self, sort_key):
         keys = []
@@ -131,9 +136,9 @@ class sort_node():
                 ascendings.append(True)
             else:
                 # There is a DESC or ASC
-                if sort_split[1] == "DESC":
+                if sort_split[-1] == "DESC":
                     ascendings.append(False)
-                elif sort_split[1] == "ASC":
+                elif sort_split[-1] == "ASC":
                     ascendings.append(True)
                 else:
                     raise ValueError("Sorting type not recognised!")
@@ -158,10 +163,12 @@ class sort_node():
         return instructions
 
 class limit_node():
-    def __init__(self, data, output, sql):
-        self.data = data
+    def __init__(self, output, sql):
         self.amount = self.process_amount(sql)
         self.output = process_output(self, output, sql)
+        
+    def set_nodes(self, nodes):
+        self.nodes = nodes
         
     def process_amount(self, sql):
         return sql.limit
@@ -356,10 +363,12 @@ def choose_aliases(self, cCHelper):
     return output
 
 class group_aggr_node():
-    def __init__(self, data, output, group_key, sql):
-        self.data = data        
+    def __init__(self, output, group_key, sql):      
         self.output = process_output(self, output, sql)
         self.group_key = self.process_group_key(group_key)
+        
+    def set_nodes(self, nodes):
+        self.nodes = nodes
     
     def process_group_key(self, group_key):
         grouping_keys = []
@@ -389,11 +398,13 @@ class group_aggr_node():
         return instructions   
     
 class merge_node():
-    def __init__(self, data, condition, output, sql):
-        self.data = data
+    def __init__(self, condition, output, sql):
         self.condition = condition
         self.output = process_output(self, output, sql)
-        
+
+    def set_nodes(self, nodes):
+        self.nodes = nodes
+
     def process_condition_into_merge(self, left_prev_df, right_prev_df):
         # Strip brackets
         self.condition = clean_extra_brackets(self.condition)
@@ -424,11 +435,13 @@ class merge_node():
         instructions.append(statement2_string)
             
         return instructions
-        
+
 class aggr_node():
-    def __init__(self, data, output, sql):
-        self.data = data        
+    def __init__(self, output, sql):    
         self.output = process_output(self, output, sql)
+
+    def set_nodes(self, nodes):
+        self.nodes = nodes
 
     def to_pandas(self, prev_df, this_df, codeCompHelper):
         instructions = ["df_intermediate = pd.DataFrame()"]
@@ -483,7 +496,7 @@ class sql_class():
         return file
 
 # Functions to make pandas tree of classes
-def make_pandas_list(class_tree, sql_file):
+def make_pandas_tree(class_tree, sql_file):
     """Function to make a pandas tree, a tree data structure of pandas operations
     from a class tree (built from the explain output on a sql file)
 
@@ -495,41 +508,39 @@ def make_pandas_list(class_tree, sql_file):
     # Process SQL file into information for LIMIT and AS, in a class structure
     sql = sql_class(sql_file)
     
-    pandas_list = []
-    create_list(class_tree, pandas_list, sql)
+    pandas_tree = create_tree(class_tree, sql)
     
-    # Reverse to get instructions in order
-    pandas_list.reverse()
-    return pandas_list
-  
-def create_list(class_tree, pandas_list, sql_class):
-    stillPlans = True
-    currentTreeNode = class_tree
+    return pandas_tree
+
+def create_tree(class_tree, sql_class):
+    current_node = class_tree
+    node_type = current_node.node_type
     
-    while stillPlans:
-        # Process the node
-        if currentTreeNode.node_type == "Limit":
-            pandas_list.append(limit_node(None, currentTreeNode.output, sql_class))
-        elif currentTreeNode.node_type == "Aggregate":
-            if currentTreeNode.partial_mode == "Simple":
-                # Mode is Simple, we can add this
-                pandas_list.append(aggr_node(None, currentTreeNode.output, sql_class))
-        elif currentTreeNode.node_type == "Seq Scan":
-            if hasattr(currentTreeNode, "filters"):
-                # Check if is a filter type of Seq Scan
-                pandas_list.append(filter_node(currentTreeNode.relation_name, currentTreeNode.filters, currentTreeNode.output, sql_class))
-        elif currentTreeNode.node_type == "Sort":
-            pandas_list.append(sort_node(None, currentTreeNode.output, currentTreeNode.sort_key, sql_class))
-        elif currentTreeNode.node_type == "Group Aggregate":
-            pandas_list.append(group_aggr_node(None, currentTreeNode.output, currentTreeNode.group_key, sql_class))
-        elif currentTreeNode.node_type == "Hash Join":
-            pandas_list.append(merge_node(None, currentTreeNode.hash_cond, currentTreeNode.output, sql_class))
-        else:
-            raise ValueError("The node: " + str(currentTreeNode.node_type) + " is not recognised. Not all node have been implemented")
+    node_class = None
+    # Catch all the different options
+    if node_type == "Limit":
+        node_class = limit_node(current_node.output, sql_class)
+    elif node_type == "Aggregate":
+        if current_node.partial_mode == "Simple":
+            # Mode is Simple, we can add this
+            node_class = aggr_node(current_node.output, sql_class)
+    elif node_type == "Seq Scan":
+        if hasattr(current_node, "filters"):
+            # Check if is a filter type of Seq Scan
+            node_class = filter_node(current_node.relation_name, current_node.filters, current_node.output, sql_class)
+    elif node_type == "Sort":
+        node_class = sort_node(current_node.output, current_node.sort_key, sql_class)
+    elif node_type == "Group Aggregate":
+        node_class = group_aggr_node(current_node.output, current_node.group_key, sql_class)
+    elif node_type == "Hash Join":
+        node_class = merge_node(current_node.hash_cond, current_node.output, sql_class)
+    else:
+        raise ValueError("The node: " + str(current_node.node_type) + " is not recognised. Not all node have been implemented")
+    
+    if current_node.plans != None:
+        current_node_plans = []
+        for individual_plan in current_node.plans:
+            current_node_plans.append(create_tree(individual_plan, sql_class))
+        node_class.set_nodes(current_node_plans)
         
-        if currentTreeNode.plans == None:
-            stillPlans = False
-            break
-        else:
-            currentTreeNode = currentTreeNode.plans 
-        
+    return node_class

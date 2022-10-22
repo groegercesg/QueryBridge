@@ -118,19 +118,12 @@ from visualising_tree import plot_tree
 plot_tree(explain_tree, tree_output)
 
 # Let's try create a pandas list
-from pandas_list import make_pandas_list
-pandas_list = make_pandas_list(explain_tree, file)
+from pandas_tree import make_pandas_tree
+pandas_tree = make_pandas_tree(explain_tree, file)
 
 # Let's try and write some pandas code from this
-from pandas_list_to_pandas import make_pandas
-pandas = make_pandas(pandas_list)
-
-
-# Plans to get around limitations
-    # Doesn't give us names of columns
-        # Top class has output, this lines up with the .sql file output, so we can scan and get it from that
-    # Doesn't have the number to limit by
-        # Get this from the sql as well
+from pandas_tree_to_pandas import make_pandas
+pandas = make_pandas(pandas_tree)
 
 for statement in pandas:
     print(statement)
