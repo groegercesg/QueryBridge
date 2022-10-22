@@ -12,11 +12,11 @@ def walk_class_tree(graph, class_tree, parent_node=None):
 
         node_from = pydot.Node(from_name, label=from_label)
         graph.add_node(node_from)
-        graph.add_edge( pydot.Edge(parent_node, node_from) )
+        graph.add_edge(pydot.Edge(parent_node, node_from) )
 
         if class_tree.plans is not None: # if more leaves below this node
-
-            walk_class_tree(graph, class_tree.plans, node_from)
+            for plan in class_tree.plans:
+                walk_class_tree(graph, plan, node_from)
 
         else: # if leaf node
             to_name = str(class_tree.node_type) + '_' + str(class_tree.relation_name) # unique name
@@ -33,7 +33,8 @@ def walk_class_tree(graph, class_tree, parent_node=None):
 
         node_from = pydot.Node(from_name, label=from_label)
         graph.add_node(node_from)
-        walk_class_tree(graph, class_tree.plans, node_from)
+        for plan in class_tree.plans:
+            walk_class_tree(graph, plan, node_from)
 
 def plot_tree(tree, name):
     

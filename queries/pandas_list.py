@@ -387,6 +387,43 @@ class group_aggr_node():
         instructions.append(statement2_string)
         
         return instructions   
+    
+class merge_node():
+    def __init__(self, data, condition, output, sql):
+        self.data = data
+        self.condition = condition
+        self.output = process_output(self, output, sql)
+        
+    def process_condition_into_merge(self, left_prev_df, right_prev_df):
+        # Strip brackets
+        self.condition = clean_extra_brackets(self.condition)
+        
+        # Split into left and right
+        split_cond = str(self.condition).split(" = ")
+        left_side = str(split_cond[0]).split(".")
+        left_table = str(left_side[0])
+        left_cond = str(left_side[1])
+        right_side = str(split_cond[1]).split(".")
+        right_table = str(right_side[0])
+        right_cond = str(right_side[1])
+        
+        # Create statement
+        statement = left_prev_df+'.merge('+right_prev_df+', left_on="'+left_cond+'", right_on="'+right_cond+'")'
+        
+        return str(statement)
+
+    def to_pandas(self, left_prev_df, right_prev_df, this_df, codeCompHelper):
+        instructions = ["df_intermediate = pd.DataFrame()"]
+        
+        instructions += "df_intermediate = " + self.process_condition_into_merge(left_prev_df, right_prev_df)
+        
+        output_cols = choose_aliases(self, codeCompHelper)
+        
+        # Limit to output columns
+        statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
+        instructions.append(statement2_string)
+            
+        return instructions
         
 class aggr_node():
     def __init__(self, data, output, sql):
@@ -485,6 +522,8 @@ def create_list(class_tree, pandas_list, sql_class):
             pandas_list.append(sort_node(None, currentTreeNode.output, currentTreeNode.sort_key, sql_class))
         elif currentTreeNode.node_type == "Group Aggregate":
             pandas_list.append(group_aggr_node(None, currentTreeNode.output, currentTreeNode.group_key, sql_class))
+        elif currentTreeNode.node_type == "Hash Join":
+            pandas_list.append(merge_node(None, currentTreeNode.hash_cond, currentTreeNode.output, sql_class))
         else:
             raise ValueError("The node: " + str(currentTreeNode.node_type) + " is not recognised. Not all node have been implemented")
         

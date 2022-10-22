@@ -46,3 +46,35 @@ class sort_node(base_node):
         super().__init__(node_type, parallel_aware, async_capable, output)
         self.sort_key = sort_key
         self.parent_relationship = parent_relationship
+        
+class nested_loop_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, inner_unique, join_type, parent_relationship):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.inner_unique = inner_unique
+        self.join_type = join_type
+        self.parent_relationship = parent_relationship
+
+class hash_join_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, inner_unique, join_type, hash_cond, parent_relationship):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.inner_unique = inner_unique
+        self.join_type = join_type
+        self.hash_cond = hash_cond
+        self.parent_relationship = parent_relationship
+        
+class hash_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, parent_relationship):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.parent_relationship = parent_relationship
+        
+class index_scan_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, scan_direction, index_name, relation_name, schema, alias, index_cond, filter, output, parent_relationship):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.parent_relationship = parent_relationship
+        self.scan_direction = scan_direction
+        self.index_name = index_name
+        self.relation_name = relation_name
+        self.schema = schema
+        self.alias = alias
+        self.index_cond = index_cond
+        self.filter = filter

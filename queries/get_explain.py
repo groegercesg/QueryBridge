@@ -2,7 +2,7 @@ import json
 import shlex
 import subprocess
 
-file = "6.sql"
+file = "3.sql"
 explain_file = "3_explain.sql"
 output_file = "q3_explain.json"
 tree_output = "Q3_explain_tree"
@@ -54,7 +54,7 @@ explain_json = json.load(f)[0]
 f.close()
 
 from plan_to_explain_tree import * 
-# print(json.dumps(explain_json, indent=4))
+print(json.dumps(explain_json, indent=4))
 
 
 explain_tree = None
@@ -83,12 +83,28 @@ def json_to_class(json, tree):
         node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Parent Relationship"], node["Filter"])
     elif node_type.lower() == "sort":
         node_class = sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Sort Key"], node["Parent Relationship"])
+    elif node_type.lower() == "nested loop":
+        node_class = nested_loop_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Parent Relationship'])
+    elif node_type.lower() == "hash join":
+        node_class = hash_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Hash Cond'], node['Parent Relationship'])
+    elif node_type.lower() == "hash":
+        node_class = hash_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
+    elif node_type.lower() == "index scan":
+        node_class = index_scan_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Scan Direction'], node['Index Name'], node['Relation Name'], node['Schema'], node['Alias'], node['Index Cond'], node['Filter'], node['Output'], node['Parent Relationship'])
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
         
     # Check if this node has a child
     if "Plans" in node:
-        node_class.set_plans(json_to_class(node["Plans"][0], ""))
+        node_class_plans = []
+        for individual_plan in node['Plans']:
+            node_class_plans.append(json_to_class(individual_plan, ""))
+        node_class.set_plans(node_class_plans)
+        #if len(node['Plans']) == 1:
+            
+        #else:
+        #    for individual_plan in node['Plans']:
+        #        print(individual_plan['Node Type'])
     
     return node_class
    
