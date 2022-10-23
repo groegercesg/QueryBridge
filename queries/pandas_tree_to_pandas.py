@@ -2,12 +2,16 @@ class CodeCompilation():
     def __init__(self):
         self.usePostAggr = False
         self.indexes = []
+        self.relations = []
         
     def setAggr(self, aggr):
         self.usePostAggr = aggr
         
     def setIndexes(self, idxs):
         self.indexes = idxs
+        
+    def add_relation(self, relation):
+        self.relations.append(relation)
 
 def get_class_name(node):
     return str(str(node.__class__.__name__).split("_")[0])
@@ -44,19 +48,21 @@ def postorder_traversal(tree, pandas_statements, codeCompHelper, aggrs):
             prev_class_name = prev_class_names[0]
         else:
             # We have to handle multiple classes below, this must be a MERGE!
-            raise ValueError("Have to handle multiple classes below")
-            
+            # We pass in a list of previous names, 
+            prev_class_name = prev_class_names
             
         # Decide on what output to use
         if class_name in aggrs:
             # We are in the aggr
             codeCompHelper.setAggr(True)
-            pandas_strings = tree.to_pandas("df_"+prev_class_name, "df_"+class_name, codeCompHelper)
+            pandas_strings = tree.to_pandas(prev_class_name, class_name, codeCompHelper)
         else:
-            pandas_strings = tree.to_pandas("df_"+prev_class_name, "df_"+class_name, codeCompHelper)
+            pandas_strings = tree.to_pandas(prev_class_name, class_name, codeCompHelper)
         
     else:
-        pandas_strings = tree.to_pandas("df", "df_"+class_name, codeCompHelper)
+        # Add tree.data, the relation name, to codeCompHelper
+        codeCompHelper.add_relation(tree.data)
+        pandas_strings = tree.to_pandas(tree.data, class_name, codeCompHelper)
 
    
     for statement in pandas_strings:

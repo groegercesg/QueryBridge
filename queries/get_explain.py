@@ -84,7 +84,7 @@ def json_to_class(json, tree):
     elif node_type.lower() == "sort":
         node_class = sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Sort Key"], node["Parent Relationship"])
     elif node_type.lower() == "nested loop":
-        node_class = nested_loop_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Parent Relationship'])
+        node_class = nested_loop_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Parent Relationship']) 
     elif node_type.lower() == "hash join":
         node_class = hash_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Hash Cond'], node['Parent Relationship'])
     elif node_type.lower() == "hash":
@@ -116,6 +116,13 @@ explain_tree = json_to_class(explain_json, explain_tree)
 # Let's try and visualise the explain tree now
 from visualising_tree import plot_tree
 plot_tree(explain_tree, tree_output)
+
+from explain_tree import solve_nested_loop_node, solve_hash_node
+solve_nested_loop_node(explain_tree)
+solve_hash_node(explain_tree)
+
+# Plot tree after pruning/altering
+plot_tree(explain_tree, "Q3_explain_post_prune_tree")
 
 # Let's try create a pandas list
 from pandas_tree import make_pandas_tree

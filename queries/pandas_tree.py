@@ -57,6 +57,11 @@ def clean_type_information(self, content):
             new_value = "pd.Timestamp('"+str(pd.to_datetime(value, format='%Y-%m-%d %H:%M:%S'))+"')"
         elif "numeric" in match_str:
             new_value = str(int(value))
+        elif "bpchar" in match_str:
+            new_value = str("'" + value + "'")
+            # replace single equals with double equals
+            # Use the existing replace method to do this
+            replaces.append(("=", "=="))
         else:
             raise ValueError("In clean_type_information, it contain some information about datatype that we weren't able to parse appropriately")
         # print("New Value: " + str(new_value))
@@ -101,6 +106,12 @@ class filter_node():
         self.instructions = instructions
         
     def to_pandas(self, prev_df, this_df, codeCompHelper):
+        # Set prefixes
+        if not isinstance(prev_df, str):
+            raise ValueError("Inputted prev_df is not a string!")
+        # Filter dataframes are typically (are they always?) fetching data so we don't need to give the
+        # previous dataframe a prefix, as it's DATA.
+        this_df = "df_" + this_df
         instructions = []
         
         # Edit params:
@@ -147,6 +158,11 @@ class sort_node():
         return keys, ascendings
     
     def to_pandas(self, prev_df, this_df, codeCompHelper):
+        # Set prefixes
+        if not isinstance(prev_df, str):
+            raise ValueError("Inputted prev_df is not a string!")
+        prev_df = "df_" + prev_df
+        this_df = "df_" + this_df
         instructions = []
         
         # Sorting to an intermediate dataframe
@@ -174,6 +190,11 @@ class limit_node():
         return sql.limit
     
     def to_pandas(self, prev_df, this_df, codeCompHelper):
+        # Set prefixes
+        if not isinstance(prev_df, str):
+            raise ValueError("Inputted prev_df is not a string!")
+        prev_df = "df_" + prev_df
+        this_df = "df_" + this_df
         instructions = []
         
         output_cols = choose_aliases(self, codeCompHelper)
@@ -291,6 +312,7 @@ def do_group_aggregation(self, instructions, codeCompHelper):
                 raise ValueError("Other types of aggr haven't been implemented yet!")
         else:
             # No alias, so just output!
+            col_no_df = str(col.split(".")[1])
             if "sum" in col:
                 raise ValueError("SUM with no alias!")
             elif "avg" in col:
@@ -298,6 +320,13 @@ def do_group_aggregation(self, instructions, codeCompHelper):
             elif "count" in col:
                 raise ValueError("COUNT with no alias!")
             elif col in codeCompHelper.indexes:
+                # The column is one of the indexes, we skip it!
+                continue
+            elif col_no_df in codeCompHelper.indexes:
+                # We sometimes have columns that look like:
+                # lineitem.l_orderkey
+                # Where l_orderkey is a known index, so we take the section after the dot 
+                # To compare it
                 # The column is one of the indexes, we skip it!
                 continue
             else:
@@ -364,7 +393,9 @@ def choose_aliases(self, cCHelper):
 
 class group_aggr_node():
     def __init__(self, output, group_key, sql):      
-        self.output = process_output(self, output, sql)
+        # TODO: Process output at to_pandas time, we do it too early before we
+        # have all the relevant information.
+        # self.output = process_output(self, output, sql)
         self.group_key = self.process_group_key(group_key)
         
     def set_nodes(self, nodes):
@@ -377,6 +408,11 @@ class group_aggr_node():
         return grouping_keys
 
     def to_pandas(self, prev_df, this_df, codeCompHelper):
+        # Set prefixes
+        if not isinstance(prev_df, str):
+            raise ValueError("Inputted prev_df is not a string!")
+        prev_df = "df_" + prev_df
+        this_df = "df_" + this_df
         # Set group keys as the codeCompHelper indexes
         codeCompHelper.setIndexes(self.group_key)
         
@@ -423,10 +459,19 @@ class merge_node():
         
         return str(statement)
 
-    def to_pandas(self, left_prev_df, right_prev_df, this_df, codeCompHelper):
+    def to_pandas(self, prev_dfs, this_df, codeCompHelper):
+        # Set prefixes
+        if not isinstance(prev_dfs, list):
+            raise ValueError("Inputted prev_df is not a list!")
+        elif len(prev_dfs) != 2:
+            raise ValueError("Too few previous dataframes specified")
+        else:
+            for i in range(len(prev_dfs)):
+                # Add prefix
+                prev_dfs[i] = "df_" + prev_dfs[i]
         instructions = ["df_intermediate = pd.DataFrame()"]
         
-        instructions += "df_intermediate = " + self.process_condition_into_merge(left_prev_df, right_prev_df)
+        instructions += "df_intermediate = " + self.process_condition_into_merge(prev_dfs[0], prev_dfs[1])
         
         output_cols = choose_aliases(self, codeCompHelper)
         
@@ -444,6 +489,11 @@ class aggr_node():
         self.nodes = nodes
 
     def to_pandas(self, prev_df, this_df, codeCompHelper):
+        # Set prefixes
+        if not isinstance(prev_df, str):
+            raise ValueError("Inputted prev_df is not a string!")
+        prev_df = "df_" + prev_df
+        this_df = "df_" + this_df
         instructions = ["df_intermediate = pd.DataFrame()"]
         
         instructions += do_aggregation(self, prev_df)
@@ -534,6 +584,15 @@ def create_tree(class_tree, sql_class):
         node_class = group_aggr_node(current_node.output, current_node.group_key, sql_class)
     elif node_type == "Hash Join":
         node_class = merge_node(current_node.hash_cond, current_node.output, sql_class)
+    elif node_type == "Nested Loop":
+        # Make a nested loop into a merge node
+        if hasattr(current_node, "merge_cond"):
+            node_class = merge_node(current_node.merge_cond, current_node.output, sql_class)
+        else:
+            raise ValueError("We need our nested loop to have a merge condition, this should have been added by traversal")
+    elif node_type == "Index Scan":
+        # Make an index scan into a filter node
+        node_class = filter_node(current_node.relation_name, current_node.filter, current_node.output, sql_class)
     else:
         raise ValueError("The node: " + str(current_node.node_type) + " is not recognised. Not all node have been implemented")
     

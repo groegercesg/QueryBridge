@@ -53,6 +53,9 @@ class nested_loop_node(base_node):
         self.inner_unique = inner_unique
         self.join_type = join_type
         self.parent_relationship = parent_relationship
+        
+    def add_merge_cond(self, merge_cond):
+        self.merge_cond = merge_cond
 
 class hash_join_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, inner_unique, join_type, hash_cond, parent_relationship):
