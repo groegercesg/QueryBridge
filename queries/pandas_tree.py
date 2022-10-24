@@ -137,34 +137,53 @@ class filter_node():
 class sort_node():
     def __init__(self, output, sort_key):
         self.output = output
-        self.sort_key = self.process_sort_key(sort_key)
+        self.sort_key = sort_key
         
     def set_nodes(self, nodes):
         self.nodes = nodes
     
-    def process_sort_key(self, sort_key):
+    def process_sort_key(self, codeCompHelper):
         keys = []
         ascendings = []
         
-        for individual_sort in sort_key:
+        for individual_sort in self.sort_key:
+            # Clean individual_sort with clean_type_info
+            individual_sort = clean_type_information(self, individual_sort)
             sort_split = individual_sort.split()
             if len(sort_split) == 1:
                 # No DESC/ASC, therefore is ASC (implied)
-                keys.append(sort_split[0].split(".")[1])
+                # Use process_output to clear the relation if present
+                column = (process_output(self, [sort_split[0]], codeCompHelper))[0]
+                keys.append(column)
                 ascendings.append(True)
             else:
                 # There is a DESC or ASC
+                column = None
                 if sort_split[-1] == "DESC":
                     ascendings.append(False)
+                    column = individual_sort.split(" DESC")[0]
                 elif sort_split[-1] == "ASC":
                     ascendings.append(True)
+                    column = individual_sort.split(" ASC")[0]
                 else:
                     raise ValueError("Sorting type not recognised!")
+                
+                # Check if the column is a reference from SQL
+                # Use the process_output module
+                column = (process_output(self, [column], codeCompHelper))[0]
+                # If has tuple
+                if isinstance(column, tuple):
+                    if codeCompHelper.usePostAggr:
+                        column = column[1]
+                    else:
+                        column = column[0]
                 # Add the key
-                keys.append(sort_split[0].split(".")[1])
+                keys.append(column)
         return keys, ascendings
     
     def to_pandas(self, prev_df, this_df, codeCompHelper):
+        # Set sort_keys
+        self.sort_key = self.process_sort_key(codeCompHelper)
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         # Set prefixes
