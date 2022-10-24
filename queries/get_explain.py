@@ -130,7 +130,7 @@ pandas_tree = make_pandas_tree(explain_tree, file)
 
 # Let's try and write some pandas code from this
 from pandas_tree_to_pandas import make_pandas
-pandas = make_pandas(pandas_tree)
+pandas = make_pandas(pandas_tree, file)
 
 for statement in pandas:
     print(statement)
