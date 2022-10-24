@@ -2,10 +2,12 @@ import json
 import shlex
 import subprocess
 
-file = "3.sql"
-explain_file = "3_explain.sql"
-output_file = "q3_explain.json"
-tree_output = "Q3_explain_tree"
+
+what_query = str(3)
+file = what_query+".sql"
+explain_file = what_query+"_explain.sql"
+output_file = "q"+what_query+"_explain.json"
+tree_output = "Q"+what_query+"_explain_tree"
 command = "psql -d tpchdb -U tpch -a -f " + explain_file
 
 json_file = open(output_file, "w")

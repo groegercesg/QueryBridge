@@ -11,7 +11,27 @@ def solve_nested_loop_node(tree):
                     # We have already found the merging condition
                     raise Exception
                 else:
-                    merging_condition = individual_plan.index_cond
+                    # We should flip this around at this point
+                    # So originally index_cond will be:
+                    # (a = b)
+                    # And we should change it to:
+                    # (b = a)
+                    index = str(individual_plan.index_cond)
+                    replace_brackets = False
+                    if index[0] == "(" and index[-1] == ")":
+                        # Strip brackets
+                        index = index[1:-1]
+                        replace_brackets = True
+                        
+                    index_split = str(index).split(" = ")
+                    if len(index_split) != 2:
+                        raise ValueError("There should be two sides to an index condition")
+                    else:
+                        new_index = str(index_split[1]) + " = " + str(index_split[0])
+                        if replace_brackets:
+                            new_index = "(" + new_index + ")"
+                    
+                    merging_condition = new_index
                     break
     
         if merging_condition != None:

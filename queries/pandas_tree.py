@@ -19,17 +19,30 @@ def process_output(self, output, codecomphelper):
         # Remove brackets for comparison purposes
         brack_cleaned_output = cleaned_output.replace("(", "").replace(")", "")
         # Remove relations (and dot), if they exist
+        # store replaces for later
+        replaces = []
         if hasattr(codecomphelper, "relations"):
             for relation in codecomphelper.relations:
                 if relation in brack_cleaned_output:
+                    replaces.append(relation+".")
                     brack_cleaned_output = brack_cleaned_output.replace(relation+".", "")
                     # Change output[i], this is for the case where we have a relation in the output
                     # But we don't have a column reference
-                    output[i] = brack_cleaned_output
+                    #output[i] = brack_cleaned_output
         if brack_cleaned_output in codecomphelper.sql.column_references:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_output])
+        if replaces != []:
+            for replace_relation in replaces:
+                if isinstance(output[i], tuple):
+                    # Convert out of tuple
+                    output_tup_list = list(output[i])
+                    output_tup_list[0] = str(output_tup_list[0]).replace(replace_relation, "")
+                    output[i] = tuple(output_tup_list)
+                else:
+                    output[i] = str(output[i]).replace(replace_relation, "")
+                    
     return output
 
 def remove_range(sentence, matches):
