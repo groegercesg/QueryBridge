@@ -236,15 +236,24 @@ class limit_node():
             raise ValueError("Inputted prev_df is not a string!")
         instructions = []
         
-        output_cols = choose_aliases(self, codeCompHelper)
+        output_cols = choose_aliases(self, codeCompHelper, final_output=True)
+        
+        # Undo axes to normal columns
+        if codeCompHelper.indexes != []:
+            statement1_string = "df_intermediate = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()"
+            instructions.append(statement1_string)
         
         # Limit to output columns
-        statement1_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
-        instructions.append(statement1_string)
+        if codeCompHelper.indexes != []:
+            statement2_string = this_df + " = df_intermediate[" + str(output_cols) + "]"
+            instructions.append(statement2_string)
+        else:
+            statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
+            instructions.append(statement2_string)
         
         # Show the new dataframe
-        statement2_string = "print(" + str(this_df + ".head("+str(self.amount)+")") + ")"
-        instructions.append(statement2_string)
+        statement3_string = "print(" + str(this_df + ".head("+str(self.amount)+")") + ")"
+        instructions.append(statement3_string)
         
         return instructions
     
@@ -405,7 +414,7 @@ def do_aggregation(self, prev_df):
     return local_instructions
 
 
-def choose_aliases(self, cCHelper):
+def choose_aliases(self, cCHelper, final_output=False):
     output = []
     if cCHelper.usePostAggr:
         for col in self.output:
@@ -415,7 +424,9 @@ def choose_aliases(self, cCHelper):
             else:
                 appendingCol = col
             # Append the column, first check if it is in the indexes, if so, skip
-            if appendingCol in cCHelper.indexes:
+            if final_output:
+                output.append(appendingCol)
+            elif appendingCol in cCHelper.indexes:
                 continue
             else:
                 output.append(appendingCol)    
@@ -427,6 +438,8 @@ def choose_aliases(self, cCHelper):
             else:
                 appendingCol = col
             # Append the column, first check if it is in the indexes, if so, skip
+            if final_output:
+                output.append(appendingCol)
             if appendingCol in cCHelper.indexes:
                 continue
             else:
