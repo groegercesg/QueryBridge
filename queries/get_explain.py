@@ -8,6 +8,8 @@ file = what_query+".sql"
 explain_file = what_query+"_explain.sql"
 output_file = "q"+what_query+"_explain.json"
 tree_output = "Q"+what_query+"_explain_tree"
+tree_prune_output = "Q"+what_query+"_explain_post_prune_tree"
+tree_pandas_output = "Q"+what_query+"_pandas_tree"
 command = "psql -d tpchdb -U tpch -a -f " + explain_file
 
 json_file = open(output_file, "w")
@@ -116,19 +118,22 @@ explain_tree = json_to_class(explain_json, explain_tree)
 # print(explain_tree)
 
 # Let's try and visualise the explain tree now
-from visualising_tree import plot_tree
+from visualising_tree import plot_tree, plot_pandas_tree
 plot_tree(explain_tree, tree_output)
 
 from explain_tree import solve_nested_loop_node, solve_hash_node
 solve_nested_loop_node(explain_tree)
 solve_hash_node(explain_tree)
 
-# Plot tree after pruning/altering
-plot_tree(explain_tree, "Q3_explain_post_prune_tree")
+# Plot tree after pruning/altering, show changes in tree
+plot_tree(explain_tree, tree_prune_output)
 
 # Let's try create a pandas list
 from pandas_tree import make_pandas_tree
 pandas_tree = make_pandas_tree(explain_tree, file)
+
+# Make tree of pandas!
+plot_pandas_tree(pandas_tree, tree_pandas_output)
 
 # Let's try and write some pandas code from this
 from pandas_tree_to_pandas import make_pandas
