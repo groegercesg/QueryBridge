@@ -2,14 +2,14 @@ import json
 import shlex
 import subprocess
 
-
 what_query = str(3)
-file = what_query+".sql"
-explain_file = what_query+"_explain.sql"
-output_file = "q"+what_query+"_explain.json"
-tree_output = "Q"+what_query+"_explain_tree"
-tree_prune_output = "Q"+what_query+"_explain_post_prune_tree"
-tree_pandas_output = "Q"+what_query+"_pandas_tree"
+query_folder = "q"+what_query
+file = query_folder + "/"+ what_query+".sql"
+explain_file = query_folder + "/"+ what_query+"_explain.sql"
+output_file = query_folder + "/"+ "q"+what_query+"_explain.json"
+tree_output = query_folder + "/"+ "Q"+what_query+"_explain_tree"
+tree_prune_output = query_folder + "/"+ "Q"+what_query+"_explain_post_prune_tree"
+tree_pandas_output = query_folder + "/"+ "Q"+what_query+"_pandas_tree"
 command = "psql -d tpchdb -U tpch -a -f " + explain_file
 
 json_file = open(output_file, "w")
@@ -58,8 +58,7 @@ explain_json = json.load(f)[0]
 f.close()
 
 from plan_to_explain_tree import * 
-print(json.dumps(explain_json, indent=4))
-
+# print(json.dumps(explain_json, indent=4))
 
 explain_tree = None
 
@@ -104,18 +103,11 @@ def json_to_class(json, tree):
         for individual_plan in node['Plans']:
             node_class_plans.append(json_to_class(individual_plan, ""))
         node_class.set_plans(node_class_plans)
-        #if len(node['Plans']) == 1:
-            
-        #else:
-        #    for individual_plan in node['Plans']:
-        #        print(individual_plan['Node Type'])
     
     return node_class
    
 # Build a class structure that is nested within each other
 explain_tree = json_to_class(explain_json, explain_tree) 
-
-# print(explain_tree)
 
 # Let's try and visualise the explain tree now
 from visualising_tree import plot_tree, plot_pandas_tree
