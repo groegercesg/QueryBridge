@@ -1,3 +1,5 @@
+from plan_to_explain_tree import * 
+
 def solve_nested_loop_node(tree):
     # Preorder traversal
     
@@ -72,3 +74,45 @@ def solve_hash_node(tree):
         for individual_plan in tree.plans:
             solve_hash_node(individual_plan)
     
+    
+def make_tree(json, tree):
+    # First node check
+    if tree == None:
+        node = json["Plan"]
+    else:
+        node = json
+
+    node_class = None    
+    node_type = node["Node Type"]
+    if node_type.lower() == "limit":
+        node_class = limit_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"])
+    elif node_type.lower() == "aggregate":
+        if "Group Key" in node:
+            node_class = group_aggregate_node("Group " + node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"], node["Group Key"])
+        else:
+            node_class = aggregate_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"])
+    elif node_type.lower() == "gather":    
+        node_class = gather_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Workers Planned"], node["Single Copy"], node["Parent Relationship"])
+    elif node_type.lower() == "seq scan":
+        node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Parent Relationship"], node["Filter"])
+    elif node_type.lower() == "sort":
+        node_class = sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Sort Key"], node["Parent Relationship"])
+    elif node_type.lower() == "nested loop":
+        node_class = nested_loop_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Parent Relationship']) 
+    elif node_type.lower() == "hash join":
+        node_class = hash_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Hash Cond'], node['Parent Relationship'])
+    elif node_type.lower() == "hash":
+        node_class = hash_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
+    elif node_type.lower() == "index scan":
+        node_class = index_scan_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Scan Direction'], node['Index Name'], node['Relation Name'], node['Schema'], node['Alias'], node['Index Cond'], node['Filter'], node['Output'], node['Parent Relationship'])
+    else:
+        raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
+        
+    # Check if this node has a child
+    if "Plans" in node:
+        node_class_plans = []
+        for individual_plan in node['Plans']:
+            node_class_plans.append(make_tree(individual_plan, ""))
+        node_class.set_plans(node_class_plans)
+    
+    return node_class
