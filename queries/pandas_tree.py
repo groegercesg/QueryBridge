@@ -550,7 +550,7 @@ class aggr_node():
         # Set prefixes
         if not isinstance(prev_df, str):
             raise ValueError("Inputted prev_df is not a string!")
-        instructions = []
+        instructions = [this_df + " = pd.DataFrame()"]
         
         instructions += do_aggregation(self, prev_df, this_df)
         
