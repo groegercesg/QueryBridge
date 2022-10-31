@@ -136,13 +136,13 @@ class filter_node():
         
         # Edit params:
         params = self.params.replace(self.data, prev_df)
-        statement1_string = "df_intermediate" + " = " + prev_df + "[" + str(params) + "]"
+        statement1_string = this_df + " = " + prev_df + "[" + str(params) + "]"
         instructions.append(statement1_string)
         
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
+        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
         instructions.append(statement2_string)
         
         return instructions
@@ -206,13 +206,13 @@ class sort_node():
         
         # Sorting to an intermediate dataframe
         columns, ascendings = self.sort_key
-        statement1_string = "df_intermediate = " + prev_df + ".sort_values(by=" + str(columns) + ", ascending=" + str(ascendings) + ")"
+        statement1_string = this_df + " = " + prev_df + ".sort_values(by=" + str(columns) + ", ascending=" + str(ascendings) + ")"
         instructions.append(statement1_string)
         
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
+        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
         instructions.append(statement2_string)
         
         return instructions
@@ -240,18 +240,23 @@ class limit_node():
         
         # Undo axes to normal columns
         if codeCompHelper.indexes != []:
-            statement1_string = "df_intermediate = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()"
+            statement1_string = this_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()"
             instructions.append(statement1_string)
         
         # Limit to output columns
         if codeCompHelper.indexes != []:
-            statement2_string = this_df + " = df_intermediate[" + str(output_cols) + "]"
+            statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
         else:
             statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
         
         # Show the new dataframe
+        if codeCompHelper.timing:
+            # Timing is true, so first set a variable to end_time
+            statement25_string = "end_time = time.time()"
+            instructions.append(statement25_string)
+            
         statement3_string = "print(" + str(this_df + ".head("+str(self.amount)+")") + ")"
         instructions.append(statement3_string)
         
@@ -324,8 +329,8 @@ def aggregate_sum(sum_string, s_group=None, df_group=None):
     
     return inner_string
     
-def do_group_aggregation(self, instructions, codeCompHelper):
-    instructions = ["df_intermediate = df_intermediate.apply(lambda s: pd.Series({"]
+def do_group_aggregation(self, instructions, codeCompHelper, current_df):
+    instructions = [current_df + " = " + current_df + ".apply(lambda s: pd.Series({"]
     for i, col in enumerate(self.output):
         if isinstance(col, tuple):
             # This is a column with an alias
@@ -355,7 +360,7 @@ def do_group_aggregation(self, instructions, codeCompHelper):
                     statement = '    "' + str(col[1]) + '": len(s.index),' 
                 else:
                     # Length of a column of prev_df
-                    statement = '    "' + str(col[1]) + '":  len(df_intermediate["' + inner + '"]),' 
+                    statement = '    "' + str(col[1]) + '":  len(' + current_df + '["' + inner + '"]),' 
             else:
                 raise ValueError("Other types of aggr haven't been implemented yet!")
         else:
@@ -392,7 +397,7 @@ def do_group_aggregation(self, instructions, codeCompHelper):
     instructions.append("}))")
     return instructions
 
-def do_aggregation(self, prev_df):
+def do_aggregation(self, prev_df, current_df):
     local_instructions = []
     for col in self.output:
         if isinstance(col, tuple):
@@ -405,7 +410,7 @@ def do_aggregation(self, prev_df):
               
                 outer_string = "(" + inner_string + ").sum()"
                 
-                local_instructions.append("df_intermediate['" + col[1] + "'] = [" + outer_string + "]")
+                local_instructions.append(current_df+"['" + col[1] + "'] = [" + outer_string + "]")
             else:
                 raise ValueError("Not coded!")
         else:
@@ -472,16 +477,16 @@ class group_aggr_node():
         instructions = []
         
         # Group the data based on the keys
-        statement1_string = "df_intermediate" + " = " + prev_df + ".groupby(" + str(self.group_key) + ")"
+        statement1_string = this_df + " = " + prev_df + ".groupby(" + str(self.group_key) + ")"
         instructions.append(statement1_string)
         
         # Do aggr
-        instructions += do_group_aggregation(self, instructions, codeCompHelper)
+        instructions += do_group_aggregation(self, instructions, codeCompHelper, this_df)
         
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
+        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
         instructions.append(statement2_string)
         
         return instructions   
@@ -520,14 +525,14 @@ class merge_node():
             raise ValueError("Inputted prev_df is not a list!")
         elif len(prev_dfs) != 2:
             raise ValueError("Too few previous dataframes specified")
-        instructions = ["df_intermediate = pd.DataFrame()"]
+        instructions = []
         
-        instructions.append("df_intermediate = " + self.process_condition_into_merge(prev_dfs[0], prev_dfs[1]))
+        instructions.append(this_df + " = " + self.process_condition_into_merge(prev_dfs[0], prev_dfs[1]))
         
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
+        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
         instructions.append(statement2_string)
             
         return instructions
@@ -545,14 +550,14 @@ class aggr_node():
         # Set prefixes
         if not isinstance(prev_df, str):
             raise ValueError("Inputted prev_df is not a string!")
-        instructions = ["df_intermediate = pd.DataFrame()"]
+        instructions = []
         
-        instructions += do_aggregation(self, prev_df)
+        instructions += do_aggregation(self, prev_df, this_df)
         
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        statement2_string = this_df + " = " + "df_intermediate[" + str(output_cols) + "]"
+        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
         instructions.append(statement2_string)
             
         return instructions

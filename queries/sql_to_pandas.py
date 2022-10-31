@@ -1,5 +1,7 @@
 import json
 
+# Flag for timing
+timing=True
 what_query = str(3)
 query_folder = "q"+what_query
 file = query_folder + "/"+ what_query+".sql"
@@ -51,7 +53,7 @@ plot_pandas_tree(pandas_tree, tree_pandas_output)
 
 # Let's try and write some pandas code from this
 from pandas_tree_to_pandas import make_pandas
-pandas = make_pandas(pandas_tree, file)
+pandas = make_pandas(pandas_tree, file, timing)
 
 # Print out the pandas code, line by line
 for statement in pandas:

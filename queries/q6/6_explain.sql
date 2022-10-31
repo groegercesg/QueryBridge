@@ -1,10 +1,11 @@
-EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON) select
-	sum(l_extendedprice * l_discount) as revenue
-from
-	lineitem
-where
-	l_shipdate >= date '1993-01-01'
-	and l_shipdate < date '1993-01-01' + interval '1' year
-	and l_discount between 0.08 - 0.01 and 0.08 + 0.01
-	and l_quantity < 25
+EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON) SELECT
+    sum(l_extendedprice * l_discount) as revenue
+FROM
+    lineitem
+WHERE
+    l_shipdate >= date '1994-01-01'
+    AND l_shipdate < date '1995-01-01'
+    AND l_discount >= 0.05
+    AND l_discount <= 0.07
+    AND l_quantity < 24
 LIMIT 1;
