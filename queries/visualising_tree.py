@@ -5,13 +5,17 @@ def get_class_id(node):
 
 def get_class_name(node):
     # Capitalise first letter
-    return str(str(node.__class__.__name__).split("_")[0]).capitalize()
+    result = str(str(node.__class__.__name__).split("_")[0]).capitalize()
+    if result == "Aggr":
+        result = "Aggregate"
+    return result
 
 # color of nodes, format is:
 #   fillcolor, fontcolor
 pandas_node_colors = {
     "Limit": ["#FD7979", "black"],
     "Sort": ["#7FC6C6", "black"],
+    "Aggregate": ["#CCFF3F", "black"],
     "Group": ["#FFD23F", "black"],
     "Merge": ["#CCC9E7", "black"],
     "Filter": ["#FFA175", "black"],

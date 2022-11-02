@@ -103,7 +103,10 @@ def clean_type_information(self, content):
 class filter_node():
     def __init__(self, data, params, output):
         self.data = data
-        self.params = self.clean_params(params)
+        if params != None:
+            self.params = self.clean_params(params)
+        else:
+            self.params = None
         self.output = output
         
     def set_nodes(self, nodes):
@@ -135,16 +138,23 @@ class filter_node():
         instructions = []
         
         # Edit params:
-        params = self.params.replace(self.data, prev_df)
-        statement1_string = this_df + " = " + prev_df + "[" + str(params) + "]"
-        instructions.append(statement1_string)
+        if self.params != None:
+            params = self.params.replace(self.data, prev_df)
+            statement1_string = this_df + " = " + prev_df + "[" + str(params) + "]"
+            instructions.append(statement1_string)
         
-        output_cols = choose_aliases(self, codeCompHelper)
-        
-        # Limit to output columns
-        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-        instructions.append(statement2_string)
-        
+            output_cols = choose_aliases(self, codeCompHelper)
+            
+            # Limit to output columns
+            statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+            instructions.append(statement2_string)
+        else:
+            output_cols = choose_aliases(self, codeCompHelper)
+            
+            # Limit to output columns
+            statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
+            instructions.append(statement2_string)
+            
         return instructions
              
 class sort_node():
@@ -388,9 +398,10 @@ def do_group_aggregation(self, instructions, codeCompHelper, current_df):
             else:
                 #raise ValueError("Other types of aggr haven't been implemented yet!")
                 #statement = "df_intermediate['" + str(col) + "'] = " + prev_df + "['" + str(col) + "']"
+                statement = '    "' + str(col) + '":  s["' + str(col) + '"].unique()[0],'
                 
                 # In aggregate skip column no aggregation to be done
-                raise ValueError("Col is: " + str(col) + " We don't recognise this, help!")
+                #raise ValueError("Col is: " + str(col) + ". We don't recognise this, help!")
         # Append instructions
         instructions.append(statement)
         

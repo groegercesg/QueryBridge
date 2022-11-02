@@ -44,7 +44,7 @@ solve_hash_node(explain_tree)
 # Plot tree after pruning/altering, show changes in tree
 plot_tree(explain_tree, tree_prune_output)
 
-# Let's try create a pandas list
+# Let's try create a pandas tree
 from pandas_tree import make_pandas_tree
 pandas_tree = make_pandas_tree(explain_tree, file)
 
