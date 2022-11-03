@@ -272,6 +272,77 @@ class limit_node():
         
         return instructions
     
+def check_aggregate(string, s_group=None, df_group=None):
+    cols = string.split(" ")
+                
+    # Check if cols[j][0] or [-1] is a bracket
+    # And split it up if it is
+    insertBrackets = []
+    for j in range(len(cols)):
+        
+        if cols[j][0] == "(":
+            cols[j] = cols[j][1:]
+            insertBrackets.append((j, "("))
+            
+        # Handle multiple brackets at the start of a string
+        k = 0
+        brack_count = 0
+        while k < len(cols[j]):
+            if cols[j][k] == "(":
+                brack_count += 1
+                k += 1
+            else:
+                # Break out of while
+                k = len(cols[j]) * 2
+                break
+        
+        if brack_count != 0:        
+            cols[j] = cols[j][:-brack_count]
+            insertBrackets.append((j, "("*brack_count))
+            
+        
+        # Handle multiple brackets at the end of a string
+        k = 1
+        brack_count = 0
+        while k < len(cols[j]):
+            if cols[j][-k] == ")":
+                brack_count += 1
+                k += 1
+            else:
+                # Break out of while
+                k = len(cols[j]) * 2
+                break
+        
+        if brack_count != 0:        
+            cols[j] = cols[j][:-brack_count]
+            insertBrackets.append((j+1, ")"*brack_count))
+            
+    # Carry out insert Brackets
+    for i, insert in enumerate(insertBrackets):
+        cols.insert(insert[0]+i, insert[1])
+    
+    # Define acceptable characters
+    from string import ascii_letters
+    char_set = set(ascii_letters + "_")
+    
+    # Track number of columns we encounter
+    column_count = 0
+    for j in range(len(cols)):
+        if isinstance(cols[j], str):
+            if all(c in char_set for c in cols[j]):
+                if s_group != None:
+                    cols[j] = 's["' + cols[j].strip() + '"]'
+                    column_count += 1
+                elif df_group != None:
+                    cols[j] = df_group + "." + cols[j].strip()
+                    column_count += 1
+                else:
+                    raise ValueError("In aggregate_sum, at least one of the two should be True!")
+                
+    inner_string = " ".join(cols)
+    
+    return inner_string, column_count
+    
 def aggregate_sum(sum_string, s_group=None, df_group=None):
     cols = sum_string.split(" ")
                 
@@ -338,75 +409,6 @@ def aggregate_sum(sum_string, s_group=None, df_group=None):
     inner_string = " ".join(cols)
     
     return inner_string
-    
-def do_group_aggregation(self, instructions, codeCompHelper, current_df):
-    instructions = [current_df + " = " + current_df + ".apply(lambda s: pd.Series({"]
-    for i, col in enumerate(self.output):
-        if isinstance(col, tuple):
-            # This is a column with an alias
-            if "sum" in col[0]:
-                # The aggr operation is SUM!
-                inner = str(col[0]).split("sum")[1]
-                inner = clean_extra_brackets(inner)
-                
-                inner_string = aggregate_sum(inner, s_group=True)
-                
-                outer_string = "(" + inner_string + ").sum()"
-                statement = '    "' + str(col[1]) + '": ' + outer_string + ","
-            elif "avg" in col[0]:
-                # The aggr operation is AVG!
-                inner = str(col[0]).split("avg")[1]
-                inner = clean_extra_brackets(inner)
-                
-                # Create statement
-                statement = '    "' + str(col[1]) + '": (s["' + inner + '"]).mean(),'
-            elif "count" in col[0]:
-                # The aggr operation is to count!
-                inner = str(col[0]).split("count")[1]
-                inner = clean_extra_brackets(inner)
-                
-                if inner == "*":
-                    # Length of prev_df
-                    statement = '    "' + str(col[1]) + '": len(s.index),' 
-                else:
-                    # Length of a column of prev_df
-                    statement = '    "' + str(col[1]) + '":  len(' + current_df + '["' + inner + '"]),' 
-            else:
-                raise ValueError("Other types of aggr haven't been implemented yet!")
-        else:
-            # No alias, so just output!
-            if "." in col:
-                col_no_df = str(col.split(".")[1])
-            else:
-                col_no_df = None
-            if "sum" in col:
-                raise ValueError("SUM with no alias!")
-            elif "avg" in col:
-                raise ValueError("AVG with no alias!")
-            elif "count" in col:
-                raise ValueError("COUNT with no alias!")
-            elif col in codeCompHelper.indexes:
-                # The column is one of the indexes, we skip it!
-                continue
-            elif col_no_df in codeCompHelper.indexes:
-                # We sometimes have columns that look like:
-                # lineitem.l_orderkey
-                # Where l_orderkey is a known index, so we take the section after the dot 
-                # To compare it
-                # The column is one of the indexes, we skip it!
-                continue
-            else:
-                #raise ValueError("Other types of aggr haven't been implemented yet!")
-                #statement = "df_intermediate['" + str(col) + "'] = " + prev_df + "['" + str(col) + "']"
-                statement = '    "' + str(col) + '":  s["' + str(col) + '"].unique()[0],'
-                
-                # In aggregate skip column no aggregation to be done
-                #raise ValueError("Col is: " + str(col) + ". We don't recognise this, help!")
-        # Append instructions
-        instructions.append(statement)
-        
-    instructions.append("}))")
-    return instructions
 
 def do_aggregation(self, prev_df, current_df):
     local_instructions = []
@@ -423,7 +425,7 @@ def do_aggregation(self, prev_df, current_df):
                 
                 local_instructions.append(current_df+"['" + col[1] + "'] = [" + outer_string + "]")
             else:
-                raise ValueError("Not coded!")
+                raise ValueError("Not other types of aggregation haven't been implemented yet!")
         else:
             raise ValueError("Not Implemented Error")
 
@@ -462,6 +464,88 @@ def choose_aliases(self, cCHelper, final_output=False):
                 output.append(appendingCol)    
     return output
 
+def handle_complex_aggregations(self, codeCompHelper, prev_df):
+    # Array to hold decisions
+    # Before Aggrs:
+        # Array for aggregations that need to happen before grouping
+        # Format: [column name, instruction]
+    before_aggrs = []
+    
+    # After Aggrs:
+        # Array for aggregations (simple ones) that can happen after grouping
+        # Format: [column name, uses column, aggr type]
+    after_aggrs = []
+    
+    # For each output in self.output
+    # Determine how many columns it uses
+            # Split off the sum avg or count
+    for i, col in enumerate(self.output):
+        aggr_type = None
+        if isinstance(col, tuple):
+            if "sum" in col[0]:
+                aggr_type = "sum"
+                inner = str(col[0]).split("sum")[1]
+            elif "avg" in col[0]:
+                aggr_type = "avg"
+                inner = str(col[0]).split("avg")[1]
+            elif "count" in col[0]:
+                aggr_type = "count"
+                inner = str(col[0]).split("count")[1]   
+            else:
+                raise ValueError("Other types of aggr not implemented. Such as: " + str(col[0]))  
+            
+            # At the moment we only look to aggr if we have a name for a column
+            inner = clean_extra_brackets(inner)
+            cleaned_inner, count = check_aggregate(inner, df_group=prev_df)
+            # If count > 1
+                # We need to do the inner part before, add to a before list
+                # Save the after part in after list
+            if count > 1:
+                # Add to before_aggrs
+                before_aggrs.append([col[1], cleaned_inner])
+                # Add to after_aggrs
+                after_aggrs.append([col[1], col[1], aggr_type])
+            # If count <= 1
+                # Save in after part list
+            else:
+                # We don't use cleaned_inner, it's junk.
+                # We just use the inner originally
+                # Add to after_aggrs
+                after_aggrs.append([col[1], inner, aggr_type])
+            
+        else:
+            if "." in col:
+                col_no_df = str(col.split(".")[1])
+            else:
+                col_no_df = None   
+            
+            # Check if it's an index
+            if col in codeCompHelper.indexes:
+                    # The column is one of the indexes, we skip it!
+                continue
+            elif col_no_df in codeCompHelper.indexes:
+                # We sometimes have columns that look like:
+                # lineitem.l_orderkey
+                # Where l_orderkey is a known index, so we take the section after the dot 
+                # To compare it
+                # The column is one of the indexes, we skip it!
+                continue
+            elif "sum" in col:
+                raise ValueError("SUM with no alias!")
+            elif "avg" in col:
+                raise ValueError("AVG with no alias!")
+            elif "count" in col:
+                raise ValueError("COUNT with no alias!")
+            else:
+                # If these are columns with no aggregations
+                # That are not indexes
+                # In that case we should be grouping by them
+                self.group_key.append(col)
+                #raise ValueError("Col is: " + str(col) + ". We don't recognise this, help!")
+     
+    # Handle and rearrange output
+    return before_aggrs, after_aggrs
+
 class group_aggr_node():
     def __init__(self, output, group_key):
         self.output = output
@@ -475,7 +559,7 @@ class group_aggr_node():
         for key in group_key:
             grouping_keys.append(key.split(".")[1])
         return grouping_keys
-
+    
     def to_pandas(self, prev_df, this_df, codeCompHelper):
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
@@ -487,12 +571,45 @@ class group_aggr_node():
         
         instructions = []
         
-        # Group the data based on the keys
-        statement1_string = this_df + " = " + prev_df + ".groupby(" + str(self.group_key) + ")"
-        instructions.append(statement1_string)
+        # Out of self.output determine which of these are complex aggregations
+        # I.e. ones like: 'sum(l_extendedprice * (1 - l_discount))'
+        # This is complex because it uses more than one column
+        # We want to perform the inner part of this, the column multiplication
+        # Prior to grouping
         
-        # Do aggr
-        instructions += do_group_aggregation(self, instructions, codeCompHelper, this_df)
+        # Note: We decide to let the "before" aggregations happen to the previous_df
+        before_group, after_group = handle_complex_aggregations(self, codeCompHelper, prev_df)
+        
+        # Handle before
+        for before_name, before_command in before_group:
+            instructions.append(prev_df + "['" + before_name + "'] = " + before_command)
+        
+        # Handle group
+        instructions.append(this_df + " = " + prev_df + " \\")
+        instructions.append("    .groupby(" + str(self.group_key) + ") \\")
+        instructions.append("    .agg(")
+        
+        
+        # Handle After
+        #if aggr_type == "count" and inner == "*":
+        #   after_aggrs.append([col[1], "len(s.index)", aggr_type])
+        for after_name, after_col, after_operation in after_group:
+            if after_operation == "sum":
+                instructions.append('        ' + after_name + '=("' + after_col + '", "' + after_operation + '"),')
+            elif after_operation == "avg":
+                instructions.append('        ' + after_name + '=("' + after_col + '", "mean"),')
+            elif after_operation == "count":
+                if after_col == "*":
+                    if len(codeCompHelper.indexes) < 1:
+                        raise ValueError("No indexes in CodeCompHelper")
+                    instructions.append('        ' + after_name + '=("' + codeCompHelper.indexes[0] + '", "count"),')
+                else:
+                    instructions.append('        ' + after_name + '=("' + after_col + '", "count"),')
+            else:
+                raise ValueError("Operation: " + str(after_operation) + " not recognised!")
+            
+        # Add closing bracket
+        instructions.append("    )")
         
         output_cols = choose_aliases(self, codeCompHelper)
         

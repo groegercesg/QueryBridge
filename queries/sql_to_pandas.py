@@ -2,7 +2,7 @@ import json
 
 # Flag for timing
 timing=True
-what_query = str(6)
+what_query = str(10)
 query_folder = "q"+what_query
 file = query_folder + "/"+ what_query+".sql"
 explain_file = query_folder + "/"+ what_query+"_explain.sql"
