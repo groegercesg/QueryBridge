@@ -56,6 +56,9 @@ class nested_loop_node(base_node):
         
     def add_merge_cond(self, merge_cond):
         self.merge_cond = merge_cond
+        
+    def add_filter(self, filters):
+        self.filter = filters
 
 class hash_join_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, inner_unique, join_type, hash_cond, parent_relationship):

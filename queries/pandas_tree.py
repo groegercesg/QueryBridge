@@ -115,43 +115,43 @@ def clean_type_information(self, content):
     
     return content
 
+def clean_filter_params(self, params):  
+    # Replace AND with & and convert to string
+    filters = str(params.replace("AND", "&"))
+    filters = str(filters.replace("OR", "|"))
+    # Remove first and last brackets
+    filters = filters[1:-1]
+    
+    # Split on & and |, keep in original split
+    line_split = re.split('([&|])',filters)
+    for i in range(len(line_split)):
+        # Don't try to clean type information if we have a bare "and" or "or"
+        if line_split[i] != "&" and line_split[i] != "|":
+            line_split[i] = clean_type_information(self, line_split[i])
+            
+            # If line_split[i] contains an "ANY", the replace with ".isin"
+            if " = ANY " in line_split[i]:
+                line_split[i] = line_split[i].replace(" = ANY ", ".isin")
+    
+    # Reassemble line_split
+    # Join on nothing, should have spaces still in it
+    filters = "".join(line_split)
+    
+    return filters
+
 # Classes for pandas instructions
 class filter_node():
     def __init__(self, data, params, output):
         self.data = data
         if params != None:
-            self.params = self.clean_params(params)
+            self.params = clean_filter_params(self,params)
         else:
             self.params = None
         self.output = output
         
     def set_nodes(self, nodes):
         self.nodes = nodes
-        
-    def clean_params(self, params):  
-        # Replace AND with & and convert to string
-        filters = str(params.replace("AND", "&"))
-        filters = str(filters.replace("OR", "|"))
-        # Remove first and last brackets
-        filters = filters[1:-1]
-        
-        # Split on & and |, keep in original split
-        line_split = re.split('([&|])',filters)
-        for i in range(len(line_split)):
-            # Don't try to clean type information if we have a bare "and" or "or"
-            if line_split[i] != "&" and line_split[i] != "|":
-                line_split[i] = clean_type_information(self, line_split[i])
-                
-                # If line_split[i] contains an "ANY", the replace with ".isin"
-                if " = ANY " in line_split[i]:
-                    line_split[i] = line_split[i].replace(" = ANY ", ".isin")
-        
-        # Reassemble line_split
-        # Join on nothing, should have spaces still in it
-        filters = "".join(line_split)
-        
-        return filters
-        
+    
     def set_instructions(self, instructions):
         self.instructions = instructions
         
@@ -646,9 +646,13 @@ class group_aggr_node():
         return instructions   
     
 class merge_node():
-    def __init__(self, condition, output):
+    def __init__(self, condition, output, filters=None):
         self.condition = condition
         self.output = output
+        if filters != None:
+            self.filter = clean_filter_params(self, filters)
+        else:
+            self.filter = None
 
     def set_nodes(self, nodes):
         self.nodes = nodes
@@ -682,6 +686,14 @@ class merge_node():
         instructions = []
         
         instructions.append(this_df + " = " + self.process_condition_into_merge(prev_dfs[0], prev_dfs[1]))
+        
+        # After merge, we filter if we have some
+        if self.filter != None:
+            # We need to replace any relation name with this_df, use codeComp to know these
+            for relation in codeCompHelper.relations:
+                self.filter = self.filter.replace(relation, this_df)
+            statement = this_df + " = " + this_df + "[" + str(self.filter) + "]"
+            instructions.append(statement)
         
         output_cols = choose_aliases(self, codeCompHelper)
         
@@ -797,7 +809,10 @@ def create_tree(class_tree, sql_class):
     elif node_type == "Nested Loop":
         # Make a nested loop into a merge node
         if hasattr(current_node, "merge_cond"):
-            node_class = merge_node(current_node.merge_cond, current_node.output)
+            if hasattr(current_node, "filter"):
+                node_class = merge_node(current_node.merge_cond, current_node.output, current_node.filter)
+            else:
+                node_class = merge_node(current_node.merge_cond, current_node.output)
         else:
             raise ValueError("We need our nested loop to have a merge condition, this should have been added by traversal")
     elif node_type == "Index Scan":

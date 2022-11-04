@@ -1,4 +1,6 @@
 from plan_to_explain_tree import * 
+import regex
+import re
 
 def solve_nested_loop_node(tree):
     # Preorder traversal
@@ -9,9 +11,10 @@ def solve_nested_loop_node(tree):
         merging_condition = None
         for individual_plan in tree.plans:
             if individual_plan.node_type == "Index Scan":
+                # Perform work for the merging condition
                 if merging_condition != None:
                     # We have already found the merging condition
-                    raise Exception
+                    raise Exception("We have found two merging conditions")
                 else:
                     # We should flip this around at this point
                     # So originally index_cond will be:
@@ -34,8 +37,25 @@ def solve_nested_loop_node(tree):
                             new_index = "(" + new_index + ")"
                     
                     merging_condition = new_index
-                    break
-    
+                
+                # Perform work for the filter condition
+                # We are going to investigate individual_plan.filter
+                # We want to use a regular expression to split up a string but respect nested brackets
+                
+                keep_filter, up_filter = process_matches(str(individual_plan.filter)[1:-1], individual_plan.relation_name)
+                
+                # Handle keep_filter ending in "AND" or "OR"
+                if keep_filter[-1] == "AND" or keep_filter[-1] == "OR":
+                    # Pop last element out
+                    keep_filter.pop()
+                
+                # Set individual_node filters back to keep_filter
+                individual_plan.filter = "(" + " ".join(keep_filter) + ")"
+                
+                # Set tree filters
+                if up_filter != []:
+                    tree.add_filter(" ".join(up_filter))
+                        
         if merging_condition != None:
             tree.add_merge_cond(merging_condition)
         else:
@@ -44,7 +64,39 @@ def solve_nested_loop_node(tree):
     if tree.plans != None:
         for individual_plan in tree.plans:
             solve_nested_loop_node(individual_plan)
+
+def process_matches(string, relation):
+    matches = return_matches(string)
+    
+    keep_filter = []
+    up_filter = []
+    
+    for current_match in matches:
+        up_match = False
+        regex = r"[^\s]+\."
+        matches = re.finditer(regex, current_match, re.MULTILINE)
+        out_matches = []
+        for matchNum, in_match in enumerate(matches, start=1):
+            match = str(str(str(in_match.group()).replace("(", "")).replace(")", "")).replace(".", "")
+            out_matches.append(match)
+        
+        # Check that all elements in out_matches are relation
+        for element in out_matches:
+            if element != relation:
+                up_match = True
+                break
             
+        # Do upmatch
+        if up_match:
+            up_filter.append(current_match)
+        else:
+            keep_filter.append(current_match)
+            
+    return keep_filter, up_filter
+
+def return_matches(string):
+    return [match.group() for match in regex.finditer(r"(?:(\((?>[^()]+|(?1))*\))|\S)+", string)]
+ 
 def solve_hash_node(tree):
     # Preorder Traversal
     # We have a tree with the potential for "Hash" nodes in it
