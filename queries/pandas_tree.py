@@ -61,7 +61,7 @@ def do_replaces(sentence, replaces):
 def clean_type_information(self, content):
     # print(content)
 
-    regex = r"::\w+(\s+\w+)*"
+    regex = r"::(\w+\[*\]*)(\s+\w+)*"
     matches = re.finditer(regex, content, re.MULTILINE)
     remove_ranges = []
     replaces = []
@@ -78,6 +78,22 @@ def clean_type_information(self, content):
             new_value = "pd.Timestamp('"+str(pd.to_datetime(value, format='%Y-%m-%d %H:%M:%S'))+"')"
         elif "numeric" in match_str:
             new_value = str(int(value))
+        # ' (part.p_container = ANY (\'{"SM CASE","SM BOX","SM PACK","SM PKG"}\'::bpchar[])) '
+        elif "bpchar[]" in match_str:
+            edit_value = value[1:-1]
+            # Require edit_value to be properly formatted
+            if edit_value[0] != '"':
+                # Split on commas
+                split_edit = edit_value.split(",")
+                for i in range(len(split_edit)):
+                    if split_edit[i][0] != '"':
+                        split_edit[i] = '"' + split_edit[i]
+                    if split_edit[i][-1] != '"':
+                        split_edit[i] = split_edit[i] + '"'
+                        
+                # Join back together
+                edit_value = ",".join(split_edit)
+            new_value = str("[" + edit_value + "]")
         elif "bpchar" in match_str:
             new_value = str("'" + value + "'")
             # replace single equals with double equals
@@ -115,14 +131,24 @@ class filter_node():
     def clean_params(self, params):  
         # Replace AND with & and convert to string
         filters = str(params.replace("AND", "&"))
+        filters = str(filters.replace("OR", "|"))
         # Remove first and last brackets
         filters = filters[1:-1]
         
-        line_split = filters.split("&")
+        # Split on & and |, keep in original split
+        line_split = re.split('([&|])',filters)
         for i in range(len(line_split)):
-            line_split[i] = clean_type_information(self, line_split[i])
+            # Don't try to clean type information if we have a bare "and" or "or"
+            if line_split[i] != "&" and line_split[i] != "|":
+                line_split[i] = clean_type_information(self, line_split[i])
+                
+                # If line_split[i] contains an "ANY", the replace with ".isin"
+                if " = ANY " in line_split[i]:
+                    line_split[i] = line_split[i].replace(" = ANY ", ".isin")
         
-        filters = "&".join(line_split)
+        # Reassemble line_split
+        # Join on nothing, should have spaces still in it
+        filters = "".join(line_split)
         
         return filters
         

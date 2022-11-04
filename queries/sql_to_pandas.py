@@ -25,7 +25,7 @@ explain_json = json.load(f)[0]
 f.close()
 
 # Print out the json
-print(json.dumps(explain_json, indent=4))
+# print(json.dumps(explain_json, indent=4))
 
 from explain_tree import make_tree
 # Build a class structure that is nested within each other
