@@ -2,7 +2,7 @@ import json
 
 # Flag for timing
 timing=True
-what_query = str(10)
+what_query = str(19)
 query_folder = "q"+what_query
 file = query_folder + "/"+ what_query+".sql"
 explain_file = query_folder + "/"+ what_query+"_explain.sql"
@@ -25,7 +25,7 @@ explain_json = json.load(f)[0]
 f.close()
 
 # Print out the json
-# print(json.dumps(explain_json, indent=4))
+print(json.dumps(explain_json, indent=4))
 
 from explain_tree import make_tree
 # Build a class structure that is nested within each other
