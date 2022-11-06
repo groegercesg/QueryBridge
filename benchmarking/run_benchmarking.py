@@ -4,9 +4,10 @@ import json
 import subprocess
 from pathlib import Path
 import shutil
-import pandas as pd
 import time
+import csv
 from math import log10, floor
+import os
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -45,6 +46,11 @@ def init_argparse() -> argparse.ArgumentParser:
 def round_sig(x, sig=3):
     return round(x, sig-int(floor(log10(abs(x))))-1)
 
+def results_writer(json, data):
+    with open(json["Results Location"], 'a', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(data)
+
 def main():
     parser = init_argparse()
     args = parser.parse_args()
@@ -76,6 +82,13 @@ def main():
     # Make a folder
     Path(temp_path).mkdir(parents=True, exist_ok=True)
     
+    # Delete Results file if already exists
+    if os.path.exists(manifest_json["Results Location"]):
+        os.remove(manifest_json["Results Location"])
+        
+    # For the results, write the Header
+    results_writer(manifest_json, ["Data Type", "Query Name", "Average", "Minimum", "Maximum"])
+    
     # Write an __init__.py into the file
     open(f"{temp_path}"+"/"+"__init__.py", 'a').close()
     
@@ -103,6 +116,7 @@ def main():
             query_data.append(getattr(data_loaded, relation))
         
         run_times = []
+        # Run the query and get an execution time for it
         for i in range(manifest_json["Number of Query Runs"]):
             if args.verbose:
                 print("Doing Run: " + str(i+1))
@@ -112,9 +126,11 @@ def main():
          
         if args.verbose:   
             print(run_times)
-        print(round_sig(sum(run_times)/len(run_times), 3))
-    
-    # Run the query and get an execution time for it
+        min_3sf = round_sig(min(run_times), 3)
+        max_3sf = round_sig(max(run_times), 3)
+        avg_3sf = round_sig(sum(run_times)/len(run_times), 3)
+        print(avg_3sf)
+        results_writer(manifest_json, ["Pandas", str(sql_query["Query Name"]), avg_3sf, min_3sf, max_3sf])
     
     # Tear Down
     # Delete temporary folder
