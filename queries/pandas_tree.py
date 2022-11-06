@@ -286,15 +286,12 @@ class limit_node():
         else:
             statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
-        
-        # Show the new dataframe
-        if codeCompHelper.timing:
-            # Timing is true, so first set a variable to end_time
-            statement25_string = "end_time = time.time()"
-            instructions.append(statement25_string)
-            
-        statement3_string = "print(" + str(this_df + ".head("+str(self.amount)+")") + ")"
+                    
+        statement3_string = "result = " + str(this_df) + ".head("+str(self.amount)+")"
         instructions.append(statement3_string)
+        
+        statement4_string = "return result"
+        instructions.append(statement4_string)
         
         return instructions
     

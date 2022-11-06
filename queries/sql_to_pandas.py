@@ -138,12 +138,20 @@ def main():
 
     # Let's try and write some pandas code from this
     from pandas_tree_to_pandas import make_pandas
-    pandas = make_pandas(pandas_tree, query_file, timing)
+    pandas, codeCompHelper = make_pandas(pandas_tree, query_file)
 
     # Write out the pandas code, line by line
-    with open(args.output_location + "/" + args.name, 'w') as f:
-        for line in pandas:
-            f.write(f"{line}\n")
+    if args.benchmarking:
+        # We need a special mode for outputing
+        with open(args.output_location + "/" + args.name, 'w') as f:
+            f.write("import pandas as pd\n")
+            f.write("def query(" + str(codeCompHelper.relations)[1:-1].replace("'", "") + "):\n")
+            for line in pandas:
+                f.write("    "+f"{line}\n")
+    else:        
+        with open(args.output_location + "/" + args.name, 'w') as f:
+            for line in pandas:
+                f.write(f"{line}\n")
     
     # Tear Down
     # If it's benchmarking, delete results

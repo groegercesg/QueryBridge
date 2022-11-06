@@ -9,5 +9,7 @@
         }
     ],
     "Temporary Directory": "temp_queries",
-    "SQL Converter Location": "../queries/sql_to_pandas.py"
-}
+    "SQL Converter Location": "../queries/sql_to_pandas.py",
+    "Pandas Data Loader": "tpch_data_loader.py",
+    "Number of Query Runs": 5
+}   

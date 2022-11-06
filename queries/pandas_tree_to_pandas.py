@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 class CodeCompilation():
-    def __init__(self, sql_class, timing):
+    def __init__(self, sql_class):
         self.usePostAggr = False
         self.indexes = []
         self.relations = []
@@ -10,7 +10,6 @@ class CodeCompilation():
         self.node_type_tracker = defaultdict(int)
         # Dictionary to map class: filter_node (id: 123123) to df_name: df_filter_2
         self.node_id_tracker = {}
-        self.timing = timing
         
     def setAggr(self, aggr):
         self.usePostAggr = aggr
@@ -27,19 +26,19 @@ def get_class_name(node):
 def get_class_id(node):
     return str(id(node))
 
-def make_pandas(pandas_tree, sql, timing):
+def make_pandas(pandas_tree, sql):
     # Function to generate pandas code from tree of classes
     pandas_statements = []
     # Process incoming SQL file using module
     from pandas_tree import sql_class
     sql_file = sql_class(sql)
     # Flag for using post-aggr output or not
-    codeCompHelper = CodeCompilation(sql_file, timing)
+    codeCompHelper = CodeCompilation(sql_file)
     aggrs = ["aggr", "group"]
     
     postorder_traversal(pandas_tree, pandas_statements, codeCompHelper, aggrs)
     
-    return pandas_statements
+    return pandas_statements, codeCompHelper
 
 def postorder_traversal(tree, pandas_statements, codeCompHelper, aggrs):
     #if root is None return
