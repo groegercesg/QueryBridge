@@ -1,0 +1,13 @@
+{
+    "Test Name":"Basic Test",
+    "SQL Queries": [
+        {
+            "Query Name": "Query 1",
+            "Query Location": "queries/1.sql",
+            "Required Data": ["lineitem"],
+            "Pandas Name": "q1_pandas.py"
+        }
+    ],
+    "Temporary Directory": "temp_queries",
+    "SQL Converter Location": "../queries/sql_to_pandas.py"
+}

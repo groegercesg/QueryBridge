@@ -28,13 +28,23 @@ def init_argparse() -> argparse.ArgumentParser:
                        type=str,
                        help='The file we would like to convert')
     
-    parser.add_argument('--timing',
-                       metavar='timing',
+    parser.add_argument('--benchmarking',
+                       metavar='benchmarking',
                        type=str2bool,
                        nargs='?',
                        const=True, 
                        default=False,
-                       help='Whether we would like to add timing to our output or not. Used for testing purposes')
+                       help='Whether we are benchmarking or not, controls the output of various additional information')
+    
+    parser.add_argument('--output_location',
+                       metavar='output_location',
+                       type=str,
+                       help='The location that we should output the file to')
+    
+    parser.add_argument('--name',
+                       metavar='output_name',
+                       type=str,
+                       help='The name of the file that we should output')
     return parser
 
 
@@ -49,7 +59,7 @@ def main():
     
     # Set the Arguments
     query_file = args.file
-    timing=args.timing
+    timing=args.benchmarking
 
     # Create a folder for files and diagrams
     query_name = str(query_file.split("/")[-1]).split(".")[0]
@@ -82,7 +92,6 @@ def main():
     tree_output = f"{folder_path}" + "/"+query_name+"_explain_tree"
     tree_prune_output = f"{folder_path}" + "/"+query_name+"_explain_post_prune_tree"
     tree_pandas_output = f"{folder_path}" + "/"+ query_name+"_pandas_tree"
-    query_pandas = f"{folder_path}" + "/"+ query_name+"_pandas.py"
     command = "psql -d tpchdb -U tpch -a -f " + explain_file
 
     from clean_up_json import run
@@ -107,7 +116,8 @@ def main():
 
     # Let's try and visualise the explain tree now
     from visualising_tree import plot_tree, plot_pandas_tree
-    plot_tree(explain_tree, tree_output)
+    if not args.benchmarking:
+        plot_tree(explain_tree, tree_output)
 
     # Prune and alter the tree, for later use
     from explain_tree import solve_nested_loop_node, solve_hash_node
@@ -115,23 +125,32 @@ def main():
     solve_hash_node(explain_tree)
 
     # Plot tree after pruning/altering, show changes in tree
-    plot_tree(explain_tree, tree_prune_output)
+    if not args.benchmarking:
+        plot_tree(explain_tree, tree_prune_output)
 
     # Let's try create a pandas tree
     from pandas_tree import make_pandas_tree
     pandas_tree = make_pandas_tree(explain_tree, query_file)
 
     # Make tree of pandas!
-    plot_pandas_tree(pandas_tree, tree_pandas_output)
+    if not args.benchmarking:
+        plot_pandas_tree(pandas_tree, tree_pandas_output)
 
     # Let's try and write some pandas code from this
     from pandas_tree_to_pandas import make_pandas
     pandas = make_pandas(pandas_tree, query_file, timing)
 
     # Write out the pandas code, line by line
-    with open(query_pandas, 'w') as f:
+    with open(args.output_location + "/" + args.name, 'w') as f:
         for line in pandas:
             f.write(f"{line}\n")
+    
+    # Tear Down
+    # If it's benchmarking, delete results
+    if args.benchmarking:
+        results_folder = Path("results")
+        if results_folder.exists() and results_folder.is_dir():
+            shutil.rmtree(results_folder)
             
 if __name__ == "__main__":
     main()
