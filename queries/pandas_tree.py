@@ -272,20 +272,26 @@ class limit_node():
             raise ValueError("Inputted prev_df is not a string!")
         instructions = []
         
-        output_cols = choose_aliases(self, codeCompHelper, final_output=True)
         
-        # Undo axes to normal columns
-        if codeCompHelper.indexes != []:
-            statement1_string = this_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()"
-            instructions.append(statement1_string)
         
-        # Limit to output columns
-        if codeCompHelper.indexes != []:
-            statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-            instructions.append(statement2_string)
+        if codeCompHelper.column_ordering:
+            output_cols = choose_aliases(self, codeCompHelper, final_output=True)
+            # Undo axes to normal columns
+            if codeCompHelper.indexes != []:
+                statement1_string = this_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()"
+                instructions.append(statement1_string)
+            
+            # Limit to output columns
+            if codeCompHelper.indexes != []:
+                statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+                instructions.append(statement2_string)
+            else:
+                statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
+                instructions.append(statement2_string)
         else:
-            statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
-            instructions.append(statement2_string)
+            output_cols = choose_aliases(self, codeCompHelper, final_output=False)
+            statement_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
+            instructions.append(statement_string)
                     
         statement3_string = "result = " + str(this_df) + ".head("+str(self.amount)+")"
         instructions.append(statement3_string)

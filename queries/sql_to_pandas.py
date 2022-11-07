@@ -45,6 +45,16 @@ def init_argparse() -> argparse.ArgumentParser:
                        metavar='output_name',
                        type=str,
                        help='The name of the file that we should output')
+    
+    parser.add_argument('--column_ordering',
+                    metavar='column_ordering',
+                    type=str2bool,
+                    nargs='?',
+                    const=True, 
+                    default=False,
+                    help='Whether we would like our column ordering to be perfectly accurate or not. Has significant impact on run-time.')
+
+    
     return parser
 
 
@@ -59,7 +69,6 @@ def main():
     
     # Set the Arguments
     query_file = args.file
-    timing=args.benchmarking
 
     # Create a folder for files and diagrams
     query_name = str(query_file.split("/")[-1]).split(".")[0]
@@ -138,7 +147,7 @@ def main():
 
     # Let's try and write some pandas code from this
     from pandas_tree_to_pandas import make_pandas
-    pandas, codeCompHelper = make_pandas(pandas_tree, query_file)
+    pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args.column_ordering)
 
     # Write out the pandas code, line by line
     if args.benchmarking:

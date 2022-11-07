@@ -12,5 +12,12 @@
     "SQL Converter Location": "../queries/sql_to_pandas.py",
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 5,
-    "Results Location": "basic_test_results.csv"
+    "Results Location": "basic_test_results.csv",
+    "Database Connection Details": {
+            "User": "benchmarker",
+            "Password": "benchMugPassword",
+            "Host": "localhost",
+            "Port": "5432",
+            "Database": "tpchdb"
+        }
 }   

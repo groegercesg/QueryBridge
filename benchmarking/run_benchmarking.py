@@ -87,7 +87,7 @@ def main():
         os.remove(manifest_json["Results Location"])
         
     # For the results, write the Header
-    results_writer(manifest_json, ["Data Type", "Query Name", "Average", "Minimum", "Maximum"])
+    results_writer(manifest_json, ["Data Type", "Query Name", "Average"])
     
     # Write an __init__.py into the file
     open(f"{temp_path}"+"/"+"__init__.py", 'a').close()
@@ -126,16 +126,14 @@ def main():
          
         if args.verbose:   
             print(run_times)
-        min_3sf = round_sig(min(run_times), 3)
-        max_3sf = round_sig(max(run_times), 3)
         avg_3sf = round_sig(sum(run_times)/len(run_times), 3)
         print(avg_3sf)
-        results_writer(manifest_json, ["Pandas", str(sql_query["Query Name"]), avg_3sf, min_3sf, max_3sf])
+        results_writer(manifest_json, ["Pandas", str(sql_query["Query Name"]), avg_3sf])
     
     # Tear Down
     # Delete temporary folder
-    if temp_path.exists() and temp_path.is_dir():
-        shutil.rmtree(temp_path)
+    #if temp_path.exists() and temp_path.is_dir():
+    #    shutil.rmtree(temp_path)
         
 if __name__ == "__main__":
     main()
