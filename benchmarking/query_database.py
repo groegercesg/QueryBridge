@@ -1,11 +1,10 @@
 import psycopg2
-import json
 import time
 import psycopg2.extensions
 from psycopg2.extras import LoggingConnection, LoggingCursor
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 # MyLoggingCursor simply sets self.timestamp at start of each query                                                                 
@@ -30,40 +29,39 @@ class MyLoggingConnection(LoggingConnection):
         kwargs.setdefault('cursor_factory', MyLoggingCursor)
         return LoggingConnection.cursor(self, *args, **kwargs)
 
-manifest_json = json.load(open("basic_test.json"))
-
-
-db_details = manifest_json["Database Connection Details"]
-
-# Read SQL file
-with open(manifest_json["SQL Queries"][0]["Query Location"], 'r') as file:
-    sql_query = file.read()
-
-# Try connection, catch error
-try:
-    connection = psycopg2.connect(user=db_details["User"],
-                                  password=db_details["Password"],
-                                  host=db_details["Host"],
-                                  port=db_details["Port"],
-                                  database=db_details["Database"],
-                                  connection_factory=MyLoggingConnection)
-    connection.initialize(logger)
-    cursor = connection.cursor()
-
-    print("Executing SQL Query")
-    cursor.execute(sql_query)
-    retrieved_records = cursor.fetchall()
-
-    print("Result of Query")
-    for row in retrieved_records:
-        print(row)
+def run_query(db_details, query_file, verbose):
+    # Read SQL file
+    with open(query_file, 'r') as file:
+        sql_query = file.read()
         
-    print("Execution time was: " + str(connection.exec_time))
-except (Exception, psycopg2.Error) as error:
-    print("Error while fetching data from PostgreSQL", error)
-finally:
-    # closing database connection.
-    if connection:
-        cursor.close()
-        connection.close()
-        print("PostgreSQL connection is closed")
+    exec_time = None
+    results = None
+
+    # Try connection, catch error
+    try:
+        connection = psycopg2.connect(user=db_details["User"],
+                                    password=db_details["Password"],
+                                    host=db_details["Host"],
+                                    port=db_details["Port"],
+                                    database=db_details["Database"],
+                                    connection_factory=MyLoggingConnection)
+        connection.initialize(logger)
+        cursor = connection.cursor()
+        if verbose:
+            print("Executing SQL Query")
+        cursor.execute(sql_query)
+        retrieved_records = cursor.fetchall()
+
+        results = retrieved_records
+        exec_time = connection.exec_time
+    except (Exception, psycopg2.Error) as error:
+        print("Error while fetching data from PostgreSQL", error)
+    finally:
+        # closing database connection.
+        if connection:
+            cursor.close()
+            connection.close()
+            if verbose:
+                print("PostgreSQL connection is closed")
+            
+    return results, exec_time

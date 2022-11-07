@@ -7,6 +7,8 @@ import shutil
 import time
 import csv
 from math import log10, floor
+from query_database import run_query
+from compare_results import compare
 import os
 
 def str2bool(v):
@@ -63,6 +65,8 @@ def main():
     manifest = args.file
     manifest_json = json.load(open(manifest))
     
+    db_details = manifest_json["Database Connection Details"]
+    
     print("Running Test: " + str(manifest_json['Test Name']))
     
     # Import Pandas Data
@@ -115,25 +119,45 @@ def main():
         for relation in sql_query["Required Data"]:
             query_data.append(getattr(data_loaded, relation))
         
-        run_times = []
+        pandas_run_times = []
         # Run the query and get an execution time for it
         for i in range(manifest_json["Number of Query Runs"]):
             if args.verbose:
-                print("Doing Run: " + str(i+1))
+                print("Doing Pandas Run: " + str(i+1))
             start_time = time.time()
-            result = query_function(*query_data)
-            run_times.append(time.time() - start_time)
+            pandas_result = query_function(*query_data)
+            pandas_run_times.append(time.time() - start_time)
          
         if args.verbose:   
-            print(run_times)
-        avg_3sf = round_sig(sum(run_times)/len(run_times), 3)
-        print(avg_3sf)
+            print(pandas_run_times)
+        avg_3sf = round_sig(sum(pandas_run_times)/len(pandas_run_times), 3)
+        print("Pandas: " + str(avg_3sf))
         results_writer(manifest_json, ["Pandas", str(sql_query["Query Name"]), avg_3sf])
+        
+        sql_run_times = []
+        for i in range(manifest_json["Number of Query Runs"]):
+            if args.verbose:
+                print("Doing SQL Run: " + str(i+1))
+            sql_result, run_time = run_query(db_details, sql_query["Query Location"], args.verbose)
+            sql_run_times.append(run_time)
+            
+        if args.verbose:   
+            print(sql_run_times)
+        avg_3sf = round_sig(sum(sql_run_times)/len(sql_run_times), 3)
+        print("SQL: " + str(avg_3sf))
+        results_writer(manifest_json, ["SQL", str(sql_query["Query Name"]), avg_3sf])
+        
+        # Checking correctness
+        # We should check if pandas_result is the same as sql_result
+        compare_decision = compare(sql_query["Query Location"], pandas_result, sql_result)
+    
+    
+    print("Testing is complete and results have been written to: " + str(manifest_json["Results Location"]))    
     
     # Tear Down
     # Delete temporary folder
-    #if temp_path.exists() and temp_path.is_dir():
-    #    shutil.rmtree(temp_path)
+    if temp_path.exists() and temp_path.is_dir():
+        shutil.rmtree(temp_path)
         
 if __name__ == "__main__":
     main()
