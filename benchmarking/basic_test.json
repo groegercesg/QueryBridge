@@ -19,5 +19,6 @@
             "Host": "localhost",
             "Port": "5432",
             "Database": "tpchdb"
-        }
+        },
+    "Results Precision": 5
 }   

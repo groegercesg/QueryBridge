@@ -149,8 +149,15 @@ def main():
         
         # Checking correctness
         # We should check if pandas_result is the same as sql_result
-        compare_decision = compare(sql_query["Query Location"], pandas_result, sql_result)
-    
+        compare_decision = compare(sql_query["Query Location"], pandas_result, sql_result, manifest_json["Results Precision"])
+        if compare_decision:
+            print("The returned data was equivalent for both SQL and Pandas")
+        else:
+            print("The returned data was not equivalent!")
+            print("Pandas Data:")
+            print(pandas_result)
+            print("SQL Data:")
+            print(sql_result)
     
     print("Testing is complete and results have been written to: " + str(manifest_json["Results Location"]))    
     
