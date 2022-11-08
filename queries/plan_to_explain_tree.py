@@ -74,7 +74,7 @@ class hash_node(base_node):
         self.parent_relationship = parent_relationship
         
 class index_scan_node(base_node):
-    def __init__(self, node_type, parallel_aware, async_capable, scan_direction, index_name, relation_name, schema, alias, index_cond, filter, output, parent_relationship):
+    def __init__(self, node_type, parallel_aware, async_capable, scan_direction, index_name, relation_name, schema, alias, output, parent_relationship):
         super().__init__(node_type, parallel_aware, async_capable, output)
         self.parent_relationship = parent_relationship
         self.scan_direction = scan_direction
@@ -82,5 +82,30 @@ class index_scan_node(base_node):
         self.relation_name = relation_name
         self.schema = schema
         self.alias = alias
-        self.index_cond = index_cond
-        self.filter = filter
+        
+    def add_index_cond(self, cond):
+        self.index_cond = cond
+        
+    def add_filter(self, in_filter):
+        self.filter = in_filter
+
+class incremental_sort_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, parent_relationship, sort_key, presorted_key):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.parent_relationship = parent_relationship
+        self.sort_key = sort_key
+        self.presorted_key = presorted_key
+        
+class merge_join_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, inner_unique, join_type, merge_cond, parent_relationship):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.inner_unique = inner_unique
+        self.join_type = join_type
+        self.merge_cond = merge_cond
+        self.parent_relationship = parent_relationship
+        
+class materialize_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, parent_relationship):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.parent_relationship = parent_relationship
+

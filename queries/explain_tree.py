@@ -41,20 +41,20 @@ def solve_nested_loop_node(tree):
                 # Perform work for the filter condition
                 # We are going to investigate individual_plan.filter
                 # We want to use a regular expression to split up a string but respect nested brackets
-                
-                keep_filter, up_filter = process_matches(str(individual_plan.filter)[1:-1], individual_plan.relation_name)
-                
-                # Handle keep_filter ending in "AND" or "OR"
-                if keep_filter[-1] == "AND" or keep_filter[-1] == "OR":
-                    # Pop last element out
-                    keep_filter.pop()
-                
-                # Set individual_node filters back to keep_filter
-                individual_plan.filter = "(" + " ".join(keep_filter) + ")"
-                
-                # Set tree filters
-                if up_filter != []:
-                    tree.add_filter(" ".join(up_filter))
+                if hasattr(individual_plan, "filter"):
+                    keep_filter, up_filter = process_matches(str(individual_plan.filter)[1:-1], individual_plan.relation_name)
+                    
+                    # Handle keep_filter ending in "AND" or "OR"
+                    if keep_filter[-1] == "AND" or keep_filter[-1] == "OR":
+                        # Pop last element out
+                        keep_filter.pop()
+                    
+                    # Set individual_node filters back to keep_filter
+                    individual_plan.filter = "(" + " ".join(keep_filter) + ")"
+                    
+                    # Set tree filters
+                    if up_filter != []:
+                        tree.add_filter(" ".join(up_filter))
                         
         if merging_condition != None:
             tree.add_merge_cond(merging_condition)
@@ -97,7 +97,9 @@ def process_matches(string, relation):
 def return_matches(string):
     return [match.group() for match in regex.finditer(r"(?:(\((?>[^()]+|(?1))*\))|\S)+", string)]
  
-def solve_hash_node(tree):
+def solve_prune_node(prune_type, tree):
+    # Modified to Support Any node we input
+    
     # Preorder Traversal
     # We have a tree with the potential for "Hash" nodes in it
     # We want to knock them out, specifically:
@@ -111,20 +113,70 @@ def solve_hash_node(tree):
     if tree.plans != None:
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
-            if current_node.node_type == "Hash":
-                # We have found a Hash node
-                # Get the Hash's children (child)
+            if current_node.node_type == prune_type:
+                # We have found a Prune node
+                # Get the Prune's children (child)
                 if len(current_node.plans) == 1:
-                    hashes_children = current_node.plans[0]
+                    prune_children = current_node.plans[0]
                 else:
-                    raise ValueError("We have assumed a Hash node only has one child, not the case in reality!")
+                    raise ValueError("We have assumed a " + prune_type + " node only has one child, not the case in reality!")
                 # Set current_node to be the children
-                tree.plans[i] = hashes_children
+                tree.plans[i] = prune_children
     
     # Run this function on below nodes
     if tree.plans != None:
         for individual_plan in tree.plans:
-            solve_hash_node(individual_plan)
+            solve_prune_node(prune_type, individual_plan)
+            
+def solve_aliases(tree, replaces = None):
+    # Maybe instead of a tree traversal we could just
+    # Iterate post-order through the tree collecting a dict of replaces
+    # Then Iterate again to replace the dodgy items
+    
+    
+    # if current_node.alias != current_node.relation_name:
+    #     # We are using an alias, therefore we must replace all of the alias in output with the
+    #     # relation_name, as we don't use the alias for Pandas
+    #     modified_output = current_node.output
+    #     for i in range(len(modified_output)):
+    #         modified_output[i] = modified_output[i].replace(current_node.alias, current_node.relation_name)
+    #         
+    #     # Set it back
+    #     current_node.output = modified_output
+    
+    # We want to use a post-order traversal
+    # First we traverse the left subtree, then the right subtree and finally the root node.
+    if tree.plans != None:
+        for individual_plan in tree.plans:
+            solve_aliases(individual_plan)
+    
+    # Act on current node  
+    # If replaces = None, create it
+    if replaces == None:
+        replaces = {}
+         
+    # Add a new replaces if exists
+    if hasattr(tree, "alias") and hasattr(tree, "relation_name"):
+        if tree.alias != tree.relation_name:
+            # Add to dict, if doesn't exist already
+            if replaces.get(tree.alias, None) == None:
+                # Add to dict
+                replaces[tree.alias] = tree.relation_name
+            else:
+                # This is already in the dict, we don't need to add it again
+                pass
+            
+    # Do alterations to node.output, based on the content in replaces
+    for key in replaces.keys():
+        # Iterate through output
+        modified_output = tree.output
+        for i in range(len(modified_output)):
+            modified_output[i] = modified_output[i].replace(key, replaces[key])
+             
+        # Set it back
+        tree.output = modified_output
+         
+    print(tree.node_type)
     
     
 def make_tree(json, tree):
@@ -160,7 +212,18 @@ def make_tree(json, tree):
     elif node_type.lower() == "hash":
         node_class = hash_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
     elif node_type.lower() == "index scan":
-        node_class = index_scan_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Scan Direction'], node['Index Name'], node['Relation Name'], node['Schema'], node['Alias'], node['Index Cond'], node['Filter'], node['Output'], node['Parent Relationship'])
+        node_class = index_scan_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Scan Direction'], node['Index Name'], node['Relation Name'], node['Schema'], node['Alias'], node['Output'], node['Parent Relationship']) 
+        if "Index Cond" in node:
+            node_class.add_index_cond(node['Index Cond'])
+        if "Filter" in node:
+            node_class.add_filter(node['Filter'])
+    elif node_type.lower() == "incremental sort":
+        # node_type, parallel_aware, async_capable, output, parent_relationship, sort_key, presorted_key
+        node_class = incremental_sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Parent Relationship"], node["Sort Key"], node["Presorted Key"])
+    elif node_type.lower() == "merge join":
+        node_class = merge_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Merge Cond'], node['Parent Relationship'])
+    elif node_type.lower() == "materialize":
+        node_class = materialize_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
         

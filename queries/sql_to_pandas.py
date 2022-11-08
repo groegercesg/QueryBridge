@@ -129,9 +129,12 @@ def main():
         plot_tree(explain_tree, tree_output)
 
     # Prune and alter the tree, for later use
-    from explain_tree import solve_nested_loop_node, solve_hash_node
+    from explain_tree import solve_nested_loop_node, solve_prune_node, solve_aliases
     solve_nested_loop_node(explain_tree)
-    solve_hash_node(explain_tree)
+    # We bump off hash nodes, we may also need to do this with materialise nodes
+    solve_prune_node("Hash", explain_tree)
+    solve_prune_node("Materialize", explain_tree)
+    solve_aliases(explain_tree)
 
     # Plot tree after pruning/altering, show changes in tree
     if not args.benchmarking:

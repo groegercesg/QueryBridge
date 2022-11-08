@@ -174,7 +174,7 @@ class filter_node():
             # Limit to output columns
             statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
-        else:
+        else:            
             output_cols = choose_aliases(self, codeCompHelper)
             
             # Limit to output columns
@@ -560,7 +560,8 @@ def handle_complex_aggregations(self, codeCompHelper, prev_df):
                 # The column is one of the indexes, we skip it!
                 continue
             elif "sum" in col:
-                raise ValueError("SUM with no alias!")
+                #raise ValueError("SUM with no alias!")
+                continue
             elif "avg" in col:
                 raise ValueError("AVG with no alias!")
             elif "count" in col:
@@ -805,10 +806,17 @@ def create_tree(class_tree, sql_class):
             node_class = filter_node(current_node.relation_name, current_node.filters, current_node.output)
     elif node_type == "Sort":
         node_class = sort_node(current_node.output, current_node.sort_key)
+    elif node_type == "Incremental Sort":
+        if set(current_node.presorted_key).issubset(current_node.sort_key):
+            node_class = sort_node(current_node.output, current_node.sort_key)
+        else:
+            raise ValueError("Unexpected Values from Incremental Sort Node.")
     elif node_type == "Group Aggregate":
         node_class = group_aggr_node(current_node.output, current_node.group_key)
     elif node_type == "Hash Join":
         node_class = merge_node(current_node.hash_cond, current_node.output)
+    elif node_type == "Merge Join":
+        node_class = merge_node(current_node.merge_cond, current_node.output)
     elif node_type == "Nested Loop":
         # Make a nested loop into a merge node
         if hasattr(current_node, "merge_cond"):
@@ -818,9 +826,12 @@ def create_tree(class_tree, sql_class):
                 node_class = merge_node(current_node.merge_cond, current_node.output)
         else:
             raise ValueError("We need our nested loop to have a merge condition, this should have been added by traversal")
-    elif node_type == "Index Scan":
+    elif node_type == "Index Scan":            
         # Make an index scan into a filter node
-        node_class = filter_node(current_node.relation_name, current_node.filter, current_node.output)
+        if hasattr(current_node, "filter"):
+            node_class = filter_node(current_node.relation_name, current_node.filter, current_node.output)
+        else:
+            node_class = filter_node(current_node.relation_name, None, current_node.output)
     else:
         raise ValueError("The node: " + str(current_node.node_type) + " is not recognised. Not all node have been implemented")
     
