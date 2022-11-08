@@ -128,33 +128,36 @@ def solve_prune_node(prune_type, tree):
         for individual_plan in tree.plans:
             solve_prune_node(prune_type, individual_plan)
             
+alias_locations = {
+    "Index Scan": ["output", "index_cond"],
+    "Seq Scan": ["output"],
+    "Group Aggregate": ["group_key", "output", "filter"],
+    "Hash Join": ["hash_cond", "output"],
+    "Sort": ["sort_key", "output"],
+    "Merge Join": ["output", "merge_cond"],
+    "Nested Loop": ["merge_cond", "output"],
+    "Incremental Sort": ["output", "presorted_key", "sort_key"],
+    "Limit": ["output"]
+}
+            
 def solve_aliases(tree, replaces = None):
     # Maybe instead of a tree traversal we could just
     # Iterate post-order through the tree collecting a dict of replaces
     # Then Iterate again to replace the dodgy items
     
-    
-    # if current_node.alias != current_node.relation_name:
-    #     # We are using an alias, therefore we must replace all of the alias in output with the
-    #     # relation_name, as we don't use the alias for Pandas
-    #     modified_output = current_node.output
-    #     for i in range(len(modified_output)):
-    #         modified_output[i] = modified_output[i].replace(current_node.alias, current_node.relation_name)
-    #         
-    #     # Set it back
-    #     current_node.output = modified_output
+    # Root creates dictionary
+    # If replaces = None, create it
+    if replaces == None:
+        replaces = {}
     
     # We want to use a post-order traversal
     # First we traverse the left subtree, then the right subtree and finally the root node.
     if tree.plans != None:
         for individual_plan in tree.plans:
-            solve_aliases(individual_plan)
-    
-    # Act on current node  
-    # If replaces = None, create it
-    if replaces == None:
-        replaces = {}
+            solve_aliases(individual_plan, replaces)
          
+    # Act on current node  
+    
     # Add a new replaces if exists
     if hasattr(tree, "alias") and hasattr(tree, "relation_name"):
         if tree.alias != tree.relation_name:
@@ -166,18 +169,26 @@ def solve_aliases(tree, replaces = None):
                 # This is already in the dict, we don't need to add it again
                 pass
             
-    # Do alterations to node.output, based on the content in replaces
+    # Do alterations to all the alteration places, based on the content in replaces
     for key in replaces.keys():
-        # Iterate through output
-        modified_output = tree.output
-        for i in range(len(modified_output)):
-            modified_output[i] = modified_output[i].replace(key, replaces[key])
-             
-        # Set it back
-        tree.output = modified_output
-         
-    print(tree.node_type)
-    
+        locs = alias_locations[tree.node_type]
+        for attribute in locs:
+            if hasattr(tree, attribute):
+                # Iterate through output
+                modified_attribute = getattr(tree, attribute)
+                # Modified attribute may not always be a list
+                if isinstance(modified_attribute, list):
+                    for i in range(len(modified_attribute)):
+                        modified_attribute[i] = modified_attribute[i].replace(key, replaces[key])
+                elif isinstance(modified_attribute, str):
+                    modified_attribute = modified_attribute.replace(key, replaces[key])
+                else:
+                    raise ValueError("Attribute is not a type we expected")
+                # Set it back
+                setattr(tree, attribute, modified_attribute)
+            else:
+                # The class doesn't have this attribute, ignore it
+                pass 
     
 def make_tree(json, tree):
     # First node check
@@ -193,6 +204,8 @@ def make_tree(json, tree):
     elif node_type.lower() == "aggregate":
         if "Group Key" in node:
             node_class = group_aggregate_node("Group " + node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"], node["Group Key"])
+            if "Filter" in node:
+                node_class.add_filter(node["Filter"])
         else:
             node_class = aggregate_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"])
     elif node_type.lower() == "gather":    

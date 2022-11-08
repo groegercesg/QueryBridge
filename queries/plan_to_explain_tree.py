@@ -24,6 +24,9 @@ class group_aggregate_node(aggregate_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, strategy, partial_mode, parent_relationship, group_key):
         super().__init__(node_type, parallel_aware, async_capable, output, strategy, partial_mode, parent_relationship)
         self.group_key = group_key
+            
+    def add_filter(self, in_filter):
+        self.filter = in_filter
 
 class gather_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, workers_planned, single_copy, parent_relationship):

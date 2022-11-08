@@ -581,6 +581,9 @@ class group_aggr_node():
         self.output = output
         self.group_key = self.process_group_key(group_key)
         
+    def add_filter(self, in_filter):
+        self.filter = in_filter
+        
     def set_nodes(self, nodes):
         self.nodes = nodes
     
@@ -644,8 +647,9 @@ class group_aggr_node():
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-        instructions.append(statement2_string)
+        if output_cols != []:
+            statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+            instructions.append(statement2_string)
         
         return instructions   
     
@@ -813,6 +817,8 @@ def create_tree(class_tree, sql_class):
             raise ValueError("Unexpected Values from Incremental Sort Node.")
     elif node_type == "Group Aggregate":
         node_class = group_aggr_node(current_node.output, current_node.group_key)
+        if hasattr(current_node, "filter"):
+            node_class.add_filter(current_node.filter)
     elif node_type == "Hash Join":
         node_class = merge_node(current_node.hash_cond, current_node.output)
     elif node_type == "Merge Join":
