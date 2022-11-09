@@ -1,20 +1,22 @@
-from sqlglot import parse_one, exp
 import math
+import datetime
+import pandas as pd
 
 def get_columns(query):
-    column_references = []
-    for select in parse_one(query).find_all(exp.Select):
-        for projection in select.expressions:
-            column_references.append(projection.alias_or_name)
-
-    return column_references
+    # Alternate method
+    cut_query = str(str(query.lower()).split("select")[1]).split("from")[0]
+    clean_query = str(cut_query.replace("\n", ""))
+    split_query = clean_query.split(",")
+    for i in range(len(split_query)):
+        if " as " in split_query[i]:
+            split_query[i] = str(split_query[i]).split(" as ")[1]
+        
+        split_query[i] = str(split_query[i]).replace(" ", "")
+    return split_query
 
 def compare(query_file, pandas_result, sql_result, decimal_places):
     # Compare Result
     compare_result = True
-    
-    # TODO: What if our SQL Column names have brackets in them
-    # These obviously won't appear in Pandas Columns
     
     # Read SQL file
     with open(query_file, 'r') as file:
@@ -23,10 +25,17 @@ def compare(query_file, pandas_result, sql_result, decimal_places):
     # Preprocessing
     # get columns of SQL
     columns = get_columns(sql_query)
+    
+    # If our SQL Column names have brackets in them
+    # These obviously won't appear in Pandas Columns
+    # So we just replace these out for our check comparison
+    for i in range(len(columns)):
+        columns[i] = str(str(columns[i]).replace("(", "")).replace(")", "")
+    
     # Convert Pandas indexes to not be indexes, and instead be normal columns
     pandas_result = pandas_result.reset_index()
         
-    # Check if same number of columns
+    # Check if same number of columns    
     if len(columns) != len(pandas_result.columns):
         compare_result = False
         return compare_result
@@ -73,16 +82,24 @@ def compare_column(sql_column, pandas_column, decimal_places):
     
     # Iterate down SQL Column
     for i in range(len(sql_column)):
-        if sql_column[i] == pandas_column[i]:
+        if isinstance(sql_column[i], datetime.date) and isinstance(pandas_column[i], pd.Timestamp):
+            sql_value = pd.Timestamp(sql_column[i])
+            pd_value = pandas_column[i]
+        else:
+            sql_value = sql_column[i]
+            pd_value = pandas_column[i]
+            
+        
+        if sql_value == pd_value:
             # They are Equal, next item
             pass
-        elif sql_column[i] != pandas_column[i]:
+        elif sql_value != pd_value:
             # Convert to float
-            sql_float = float(sql_column[i])
-            if sql_float == pandas_column[i]:
+            sql_float = float(sql_value)
+            if sql_float == pd_value:
                 # They are equal
                 pass
-            elif truncate(sql_float, decimal_places) == truncate(pandas_column[i], decimal_places):
+            elif truncate(sql_float, decimal_places) == truncate(pd_value, decimal_places):
                 # Equal to decimal places
                 pass
             else:

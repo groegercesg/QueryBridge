@@ -13,7 +13,7 @@ df_sort_1 = df_merge_1.sort_values(by=['o_custkey'], ascending=[True])
 df_sort_1 = df_sort_1[['o_orderkey', 'o_orderdate', 'o_totalprice', 'o_custkey']]
 df_merge_2 = df_filter_1.merge(df_sort_1, left_on="c_custkey", right_on="o_custkey")
 df_merge_2 = df_merge_2[['c_name', 'c_custkey', 'o_orderkey', 'o_orderdate', 'o_totalprice']]
-df_filter_4 = lineitem[['l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+df_filter_4 = lineitem[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
 df_merge_3 = df_merge_2.merge(df_filter_4, left_on="o_orderkey", right_on="l_orderkey")
 df_merge_3 = df_merge_3[['c_custkey', 'o_orderkey', 'c_name', 'o_orderdate', 'o_totalprice', 'l_quantity']]
 df_sort_2 = df_merge_3.sort_values(by=['c_custkey', 'o_orderkey'], ascending=[True, True])

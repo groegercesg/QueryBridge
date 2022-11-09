@@ -8,7 +8,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--file", "basic_test.json"]
+            "args": ["--file", "query_18.json"]
         }
     ]
 }

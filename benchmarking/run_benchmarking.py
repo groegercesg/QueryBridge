@@ -114,10 +114,15 @@ def main():
         package_name = str(sql_query["Pandas Name"]).split(".")[0]
         query_function = getattr(__import__(manifest_json["Temporary Directory"]+".%s" % package_name, fromlist=[function_default]), function_default)
         
+        # Order of data imports
+        data_order = list(query_function.__code__.co_varnames[:query_function.__code__.co_argcount])
+        
         # Get Query Data
-        query_data = []
+        query_data = [0] * len(data_order)
         for relation in sql_query["Required Data"]:
-            query_data.append(getattr(data_loaded, relation))
+            # Get position of relation in data_order, use as position in query data
+            insert_pos = data_order.index(relation)
+            query_data[insert_pos] = getattr(data_loaded, relation)
         
         pandas_run_times = []
         # Run the query and get an execution time for it
@@ -125,6 +130,7 @@ def main():
             if args.verbose:
                 print("Doing Pandas Run: " + str(i+1))
             start_time = time.time()
+            
             pandas_result = query_function(*query_data)
             pandas_run_times.append(time.time() - start_time)
          
