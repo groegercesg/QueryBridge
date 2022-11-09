@@ -4,7 +4,9 @@ df_filter_3 = lineitem[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 
 df_group_1 = df_filter_3 \
     .groupby(['l_orderkey']) \
     .agg(
+        suml_quantity=("l_quantity", "sum"),
     )
+df_group_1 = df_group_1[df_group_1.suml_quantity > 300]
 df_merge_1 = df_filter_2.merge(df_group_1, left_on="o_orderkey", right_on="l_orderkey")
 df_merge_1 = df_merge_1[['o_orderkey', 'o_orderdate', 'o_totalprice', 'o_custkey']]
 df_sort_1 = df_merge_1.sort_values(by=['o_custkey'], ascending=[True])
@@ -19,10 +21,11 @@ df_sort_2 = df_sort_2[['c_custkey', 'o_orderkey', 'c_name', 'o_orderdate', 'o_to
 df_group_2 = df_sort_2 \
     .groupby(['c_custkey', 'o_orderkey', 'c_name', 'o_orderdate', 'o_totalprice']) \
     .agg(
+        suml_quantity=("l_quantity", "sum"),
     )
-df_group_2 = df_group_2[['sum(l_quantity)']]
+df_group_2 = df_group_2[['suml_quantity']]
 df_sort_3 = df_group_2.sort_values(by=['o_totalprice', 'o_orderdate'], ascending=[False, True])
-df_sort_3 = df_sort_3[['(sum(l_quantity))']]
-df_limit_1 = df_sort_3[['(sum(l_quantity))']]
+df_sort_3 = df_sort_3[['suml_quantity']]
+df_limit_1 = df_sort_3[['suml_quantity']]
 result = df_limit_1.head(100)
 return result

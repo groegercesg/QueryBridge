@@ -470,6 +470,17 @@ def choose_aliases(self, cCHelper, final_output=False):
                 appendingCol = col[1]
             else:
                 appendingCol = col
+        
+            # Check if first and last characters are brackets
+            if appendingCol[0] == "(" or appendingCol[-1] == ")":
+                # It has brackets, let's clean them, then check if we need to use bracket replace
+                new_appendingCol = clean_extra_brackets(appendingCol)
+                
+                # Check if new_appendingCol is in the cCHelper bracket_replace
+                if cCHelper.bracket_replace.get(new_appendingCol, None) != None:
+                    # This col is in the dict, use the replacement as the column in forward
+                    appendingCol = cCHelper.bracket_replace[new_appendingCol]
+                
             # Append the column, first check if it is in the indexes, if so, skip
             if final_output:
                 output.append(appendingCol)
@@ -484,6 +495,12 @@ def choose_aliases(self, cCHelper, final_output=False):
                 appendingCol = col[0]
             else:
                 appendingCol = col
+                
+            # Check if appendingCol is in the cCHelper bracket_replace
+            if cCHelper.bracket_replace.get(appendingCol, None) != None:
+                # This col is in the dict, use the replacement as the column in forward
+                appendingCol = cCHelper.bracket_replace(appendingCol)
+            
             # Append the column, first check if it is in the indexes, if so, skip
             if final_output:
                 output.append(appendingCol)
@@ -493,7 +510,7 @@ def choose_aliases(self, cCHelper, final_output=False):
                 output.append(appendingCol)    
     return output
 
-def handle_complex_aggregations(self, codeCompHelper, prev_df):
+def handle_complex_aggregations(self, data, codeCompHelper, prev_df):
     # Array to hold decisions
     # Before Aggrs:
         # Array for aggregations that need to happen before grouping
@@ -508,7 +525,7 @@ def handle_complex_aggregations(self, codeCompHelper, prev_df):
     # For each output in self.output
     # Determine how many columns it uses
             # Split off the sum avg or count
-    for i, col in enumerate(self.output):
+    for i, col in enumerate(data):
         aggr_type = None
         if isinstance(col, tuple):
             if "sum" in col[0]:
@@ -561,7 +578,11 @@ def handle_complex_aggregations(self, codeCompHelper, prev_df):
                 continue
             elif "sum" in col:
                 #raise ValueError("SUM with no alias!")
-                continue
+                aggr_type = "sum"
+                inner = str(col).split("sum")[1]
+                inner = clean_extra_brackets(inner)
+                
+                after_aggrs.append([col, inner, aggr_type])
             elif "avg" in col:
                 raise ValueError("AVG with no alias!")
             elif "count" in col:
@@ -582,7 +603,7 @@ class group_aggr_node():
         self.group_key = self.process_group_key(group_key)
         
     def add_filter(self, in_filter):
-        self.filter = in_filter
+        self.filter = clean_filter_params(self, in_filter)
         
     def set_nodes(self, nodes):
         self.nodes = nodes
@@ -602,6 +623,46 @@ class group_aggr_node():
         # Set group keys as the codeCompHelper indexes
         codeCompHelper.setIndexes(self.group_key)
         
+        if hasattr(self, "filter"):
+            # We have a filter operation to do
+            proc_filter = None
+            if isinstance(self.filter, str):
+                proc_filter = process_output(self, [self.filter], codeCompHelper)
+            elif isinstance(self.filter, list):
+                proc_filter = process_output(self, self.filter, codeCompHelper)
+            else:
+                raise ValueError("Unrecognised type of filter for the Group Aggregation Node, filter: " + str(self.filter))
+        
+            
+            if len(proc_filter) == 1:
+                self.filter = proc_filter[0]
+            else:
+                raise ValueError("Group Aggregation Node not written for multiple Filters")
+            
+            # Catch equality
+            cut_filter = None
+            filter_amount = None
+            filter_type = None
+            if "<" in self.filter:
+                filter_type = "<"
+                cut_filter = str(str(self.filter).split("<")[0]).strip()
+                filter_amount = str(str(self.filter).split("<")[1]).strip()
+            elif ">" in self.filter:
+                filter_type = ">"
+                cut_filter = str(str(self.filter).split(">")[0]).strip()
+                filter_amount = str(str(self.filter).split(">")[1]).strip()
+            else:
+                raise ValueError("Haven't written Filter for Group Aggregation to manage filters like: " + str(self.filter))
+            
+            filter_steps = [[cut_filter, filter_type, filter_amount]]
+            
+            if isinstance(self.filter, str):
+                before_filter, after_filter = handle_complex_aggregations(self, [cut_filter], codeCompHelper, prev_df)
+            elif isinstance(self.filter, list):
+                before_filter, after_filter = handle_complex_aggregations(self, cut_filter, codeCompHelper, prev_df)
+            else:
+                raise ValueError("Unrecognised type of filter for the Group Aggregation Node, filter: " + str(self.filter))
+        
         instructions = []
         
         # Out of self.output determine which of these are complex aggregations
@@ -611,7 +672,12 @@ class group_aggr_node():
         # Prior to grouping
         
         # Note: We decide to let the "before" aggregations happen to the previous_df
-        before_group, after_group = handle_complex_aggregations(self, codeCompHelper, prev_df)
+        before_group, after_group = handle_complex_aggregations(self, self.output, codeCompHelper, prev_df)
+        
+        # Combine after_filter and before filter
+        if hasattr(self, "filter"):
+            before_group += before_filter
+            after_group += after_filter
         
         # Handle before
         for before_name, before_command in before_group:
@@ -626,7 +692,16 @@ class group_aggr_node():
         # Handle After
         #if aggr_type == "count" and inner == "*":
         #   after_aggrs.append([col[1], "len(s.index)", aggr_type])
-        for after_name, after_col, after_operation in after_group:
+        for after_name, after_col, after_operation in after_group:      
+            # Handle brackets in output
+            if "(" or ")" in after_name:
+                # print("After name: " + str(after_name) + " has brackets in it.")
+                # Replace these
+                new_after_name = str(str(after_name).replace("(", "")).replace(")", "")
+                codeCompHelper.add_bracket_replace(after_name, new_after_name)
+                # Set to after_name for use now
+                after_name = new_after_name    
+            
             if after_operation == "sum":
                 instructions.append('        ' + after_name + '=("' + after_col + '", "' + after_operation + '"),')
             elif after_operation == "avg":
@@ -643,6 +718,18 @@ class group_aggr_node():
             
         # Add closing bracket
         instructions.append("    )")
+        
+        # Apply post_filters
+        if hasattr(self, "filter"):
+            # check codeCompHelper.bracket_replace
+            # df_group_1 = df_group_1[df_group_1.sum_quantity > 300]
+            for name, type, amount in filter_steps:
+                # Check if used by bracket replaces
+                if hasattr(codeCompHelper, "bracket_replace"):
+                    if codeCompHelper.bracket_replace.get(name, None) != None:
+                        name = codeCompHelper.bracket_replace.get(name)
+                    
+                instructions.append(this_df + " = " + this_df + "[" + this_df + "." + str(name) + " " + str(type) + " " + str(amount) + "]")
         
         output_cols = choose_aliases(self, codeCompHelper)
         

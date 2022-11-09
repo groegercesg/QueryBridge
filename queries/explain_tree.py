@@ -126,7 +126,7 @@ def solve_prune_node(prune_type, tree):
     # Run this function on below nodes
     if tree.plans != None:
         for individual_plan in tree.plans:
-            solve_prune_node(prune_type, individual_plan)
+            solve_prune_node(prune_type, individual_plan)               
             
 alias_locations = {
     "Index Scan": ["output", "index_cond"],

@@ -13,6 +13,9 @@ def compare(query_file, pandas_result, sql_result, decimal_places):
     # Compare Result
     compare_result = True
     
+    # TODO: What if our SQL Column names have brackets in them
+    # These obviously won't appear in Pandas Columns
+    
     # Read SQL file
     with open(query_file, 'r') as file:
         sql_query = file.read()

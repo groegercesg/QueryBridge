@@ -11,6 +11,7 @@ class CodeCompilation():
         # Dictionary to map class: filter_node (id: 123123) to df_name: df_filter_2
         self.node_id_tracker = {}
         self.column_ordering = column_ordering
+        self.bracket_replace = {}
         
     def setAggr(self, aggr):
         self.usePostAggr = aggr
@@ -20,6 +21,14 @@ class CodeCompilation():
         
     def add_relation(self, relation):
         self.relations.append(relation)
+        
+    def add_bracket_replace(self, old_name, new_name):
+        if self.bracket_replace.get(old_name, None) == None:
+            # Not in dictionary, add it
+            self.bracket_replace[old_name] = new_name
+        else:
+            # Exists in dictionary, ignore it
+            pass
 
 def get_class_name(node):
     return str(str(node.__class__.__name__).split("_")[0])

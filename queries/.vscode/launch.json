@@ -2,13 +2,40 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: SQL to Pandas",
+            "name": "Python: SQL to Pandas - 18",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["--file", "queries/18.sql", "--output_location", "results/18", "--name", "18_pandas.py"]
+        },
+        {
+            "name": "Python: SQL to Pandas - 10",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "queries/10.sql", "--output_location", "results/10", "--name", "10_pandas.py"]
+        },
+        {
+            "name": "Python: SQL to Pandas - 3",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "queries/3.sql", "--output_location", "results/3", "--name", "3_pandas.py"]
+        },
+        {
+            "name": "Python: SQL to Pandas - 1",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "queries/1.sql", "--output_location", "results/1", "--name", "1_pandas.py"]
         }
     ]
 }
