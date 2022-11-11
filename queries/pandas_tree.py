@@ -920,7 +920,7 @@ def create_tree(class_tree, sql_class):
         # Make a nested loop into a merge node
         if hasattr(current_node, "merge_cond"):
             if hasattr(current_node, "filter"):
-                node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type, filter=current_node.filter)
+                node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type, filters=current_node.filter)
             else:
                 node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type)
         else:

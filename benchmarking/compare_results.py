@@ -1,6 +1,7 @@
 import math
 import datetime
 import pandas as pd
+import decimal
 
 def get_columns(query):
     # Alternate method
@@ -36,14 +37,19 @@ def compare(query_file, pandas_result, sql_result, decimal_places):
     pandas_result = pandas_result.reset_index()
         
     # Check if same number of columns    
-    if len(columns) != len(pandas_result.columns):
-        compare_result = False
-        return compare_result
+    if len(columns) == len(pandas_result.columns):
+        pass
+    else:
+        if "index" in list(pandas_result.columns) and len(columns) == len(pandas_result.columns) - 1:
+            pass
+        else:
+            compare_result = False
+            return compare_result, columns
         
     # Ensure SQL and Columns have same number
     if len(columns) != len(sql_result[0]):
         compare_result = False
-        return compare_result
+        return compare_result, columns
          
     # Iterate through Columnns of SQL_Result
     # Compare the column to the columns[idx] of pandas_result
@@ -53,23 +59,27 @@ def compare(query_file, pandas_result, sql_result, decimal_places):
         # I.e. Don't give a decision of True, as this will overwrite previous Falses
         if column_compare == False:
             compare_result = False
-            return compare_result
+            return compare_result, columns
         
     
-    return compare_result
+    return compare_result, columns
 
 def truncate(number, digits):
-    # Improve accuracy with floating point operations, to avoid truncate(16.4, 2) = 16.39 or truncate(-1.13, 2) = -1.12
+    decimal.getcontext().rounding = decimal.ROUND_HALF_UP  # define rounding method
+    return decimal.Decimal(str(float(number))).quantize(decimal.Decimal('1e-{}'.format(digits)))
     
-    #if "." not in str(number):
-    #    return number
-    #else:
+    if "." in number:
+        split_number = number.split(".")
+        if len(split_number[1]) < digits:
+            # calculate extra 0s
+            extra_zeros = digits - len(split_number[1])
+            return float(split_number[0] + "." + split_number[1] + "0" * extra_zeros)
+        else:
+            return float(split_number[0] + "." + split_number[1][:digits])
+    else:
+        return float(number)
     
-    nbDecimals = len(str(number).split('.')[1])
-    if nbDecimals <= digits:
-        return number
-    stepper = 10.0 ** digits
-    return math.trunc(stepper * number) / stepper
+    
 
 
 def compare_column(sql_column, pandas_column, decimal_places):
@@ -99,15 +109,19 @@ def compare_column(sql_column, pandas_column, decimal_places):
             # They are Equal, next item
             pass
         elif sql_value != pd_value:
-            # Convert to float
-            sql_float = float(sql_value)
-            if sql_float == pd_value:
-                # They are equal
+            # Convert to truncated floats
+            sql_trunc = truncate(sql_value, decimal_places) 
+            pd_trunc = truncate(pd_value, decimal_places)
+            if float(sql_value) == pd_value:
+                # They are equal, left float
                 pass
-            elif sql_float == float(pd_value):
+            elif sql_value == float(pd_value):
+                # They are equal, right float
+                pass
+            elif float(sql_value) == float(pd_value):
                 # They are equal, as floats
                 pass
-            elif truncate(sql_float, decimal_places) == truncate(pd_value, decimal_places):
+            elif sql_trunc == pd_trunc:
                 # Equal to decimal places
                 pass
             else:
