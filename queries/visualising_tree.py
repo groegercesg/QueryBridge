@@ -22,7 +22,6 @@ pandas_node_colors = {
     "DATA": ["#394648", "white"]
 }
 
-
 def walk_pandas_tree(graph, class_tree, parent_node=None):
     """
     Plotting function for the tree of our class
@@ -119,16 +118,16 @@ def walk_class_tree(graph, class_tree, parent_node=None):
 
 def plot_tree(tree, name):
     
-    # first you create a new graph, you do that with pydot.Dot()
+    # first we create a new graph, we do that with pydot.Dot()
     graph = pydot.Dot(graph_type='graph')
 
     walk_class_tree(graph, tree)
 
-    graph.write_png(name+'.png')
+    graph.write_pdf(name+'.pdf')
     
 def plot_pandas_tree(tree, name):
     
-    # first you create a new graph, you do that with pydot.Dot()
+    # first we create a new graph, we do that with pydot.Dot()
     graph = pydot.Dot(graph_type='graph')
 
     walk_pandas_tree(graph, tree)

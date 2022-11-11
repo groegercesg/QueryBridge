@@ -12,13 +12,19 @@
             "Query Location": "queries/18.sql",
             "Required Data": ["lineitem", "orders", "customer"],
             "Pandas Name": "q18_pandas.py"
+        },
+        {
+            "Query Name": "Query 4",
+            "Query Location": "queries/4.sql",
+            "Required Data": ["orders", "lineitem"],
+            "Pandas Name": "q4_pandas.py"
         }
     ],
     "Temporary Directory": "temp_queries",
     "SQL Converter Location": "../queries/sql_to_pandas.py",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 5,
-    "Results Location": "query18_test_results.csv",
+    "Number of Query Runs": 25,
+    "Results Location": "large_test_results.csv",
     "Database Connection Details": {
             "User": "benchmarker",
             "Password": "benchMugPassword",

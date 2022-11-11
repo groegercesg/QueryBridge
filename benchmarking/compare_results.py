@@ -60,7 +60,12 @@ def compare(query_file, pandas_result, sql_result, decimal_places):
 
 def truncate(number, digits):
     # Improve accuracy with floating point operations, to avoid truncate(16.4, 2) = 16.39 or truncate(-1.13, 2) = -1.12
-    nbDecimals = len(str(number).split('.')[1]) 
+    
+    #if "." not in str(number):
+    #    return number
+    #else:
+    
+    nbDecimals = len(str(number).split('.')[1])
     if nbDecimals <= digits:
         return number
     stepper = 10.0 ** digits
@@ -86,8 +91,8 @@ def compare_column(sql_column, pandas_column, decimal_places):
             sql_value = pd.Timestamp(sql_column[i])
             pd_value = pandas_column[i]
         else:
-            sql_value = sql_column[i]
-            pd_value = pandas_column[i]
+            sql_value = str(sql_column[i]).strip()
+            pd_value = str(pandas_column[i]).strip()
             
         
         if sql_value == pd_value:
@@ -98,6 +103,9 @@ def compare_column(sql_column, pandas_column, decimal_places):
             sql_float = float(sql_value)
             if sql_float == pd_value:
                 # They are equal
+                pass
+            elif sql_float == float(pd_value):
+                # They are equal, as floats
                 pass
             elif truncate(sql_float, decimal_places) == truncate(pd_value, decimal_places):
                 # Equal to decimal places

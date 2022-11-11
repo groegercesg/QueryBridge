@@ -741,13 +741,14 @@ class group_aggr_node():
         return instructions   
     
 class merge_node():
-    def __init__(self, condition, output, filters=None):
+    def __init__(self, condition, output, join, filters=None):
         self.condition = condition
         self.output = output
         if filters != None:
             self.filter = clean_filter_params(self, filters)
         else:
             self.filter = None
+        self.join_type = join
 
     def set_nodes(self, nodes):
         self.nodes = nodes
@@ -766,7 +767,12 @@ class merge_node():
         right_cond = str(right_side[1])
         
         # Create statement
-        statement = left_prev_df+'.merge('+right_prev_df+', left_on="'+left_cond+'", right_on="'+right_cond+'")'
+        if self.join_type == "Semi":
+            # Add support for a semi join
+            # df_merge_1 =  df_filter_1[df_filter_1.o_orderkey.isin(df_filter_2["l_orderkey"])]
+            statement = left_prev_df + '[' + left_prev_df + '.' + left_cond + '.isin(' + right_prev_df + '["' + right_cond + '"])]'
+        else:
+            statement = left_prev_df+'.merge('+right_prev_df+', left_on="'+left_cond+'", right_on="'+right_cond+'")'
         
         return str(statement)
 
@@ -907,16 +913,16 @@ def create_tree(class_tree, sql_class):
         if hasattr(current_node, "filter"):
             node_class.add_filter(current_node.filter)
     elif node_type == "Hash Join":
-        node_class = merge_node(current_node.hash_cond, current_node.output)
+        node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type)
     elif node_type == "Merge Join":
-        node_class = merge_node(current_node.merge_cond, current_node.output)
+        node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type)
     elif node_type == "Nested Loop":
         # Make a nested loop into a merge node
         if hasattr(current_node, "merge_cond"):
             if hasattr(current_node, "filter"):
-                node_class = merge_node(current_node.merge_cond, current_node.output, current_node.filter)
+                node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type, filter=current_node.filter)
             else:
-                node_class = merge_node(current_node.merge_cond, current_node.output)
+                node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type)
         else:
             raise ValueError("We need our nested loop to have a merge condition, this should have been added by traversal")
     elif node_type == "Index Scan":            

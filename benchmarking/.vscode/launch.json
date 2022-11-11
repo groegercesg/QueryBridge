@@ -9,6 +9,24 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["--file", "query_18.json"]
+        },
+        {
+            "name": "Python: Query 4",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "query_4_test.json"]
+        },
+        {
+            "name": "Python: Run Large Query",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "large_test.json", "--verbose"]
         }
     ]
 }

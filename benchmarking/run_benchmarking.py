@@ -91,7 +91,7 @@ def main():
         os.remove(manifest_json["Results Location"])
         
     # For the results, write the Header
-    results_writer(manifest_json, ["Data Type", "Query Name", "Average"])
+    results_writer(manifest_json, ["Data Type", "Query Name", "Average", "Runs"])
     
     # Write an __init__.py into the file
     open(f"{temp_path}"+"/"+"__init__.py", 'a').close()
@@ -138,7 +138,7 @@ def main():
             print(pandas_run_times)
         avg_3sf = round_sig(sum(pandas_run_times)/len(pandas_run_times), 3)
         print("Pandas: " + str(avg_3sf))
-        results_writer(manifest_json, ["Pandas", str(sql_query["Query Name"]), avg_3sf])
+        results_writer(manifest_json, ["Pandas", str(sql_query["Query Name"]), avg_3sf, pandas_run_times])
         
         sql_run_times = []
         for i in range(manifest_json["Number of Query Runs"]):
@@ -151,7 +151,7 @@ def main():
             print(sql_run_times)
         avg_3sf = round_sig(sum(sql_run_times)/len(sql_run_times), 3)
         print("SQL: " + str(avg_3sf))
-        results_writer(manifest_json, ["SQL", str(sql_query["Query Name"]), avg_3sf])
+        results_writer(manifest_json, ["SQL", str(sql_query["Query Name"]), avg_3sf, sql_run_times])
         
         # Checking correctness
         # We should check if pandas_result is the same as sql_result
