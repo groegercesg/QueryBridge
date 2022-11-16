@@ -33,6 +33,8 @@ def process_output(self, output, codecomphelper):
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_output])
+        else:
+            output[i] = cleaned_output
         if replaces != []:
             for replace_relation in replaces:
                 if isinstance(output[i], tuple):
@@ -58,9 +60,15 @@ def do_replaces(sentence, replaces):
         
     return sentence
 
+def count_char(char, string):
+    counter = 0
+    for i in range(len(string)):
+        if string[i] == char:
+            counter += 1
+            
+    return counter
+            
 def clean_type_information(self, content):
-    # print(content)
-
     regex = r"::(\w+\[*\]*)(\s+\w+)*"
     matches = re.finditer(regex, content, re.MULTILINE)
     remove_ranges = []
@@ -69,7 +77,30 @@ def clean_type_information(self, content):
     for matchNum, match in enumerate(matches, start=1):
         
         # print("Match {matchNum} was found at {start}-{end}: {match}".format(matchNum = matchNum, start = match.start(), end = match.end(), match = match.group()))
-        value = content[:match.start()].split("'")[-2]
+        
+        # TODO: This whole section for deciding the value could be firmed up and improved
+        valueFind = None
+        if "'" in content[:match.start()]:
+            valueFind = "Quotes"
+            value = content[:match.start()].split("'")[-2]
+        else:
+            valueFind = "Brackets"
+            # Count types of brackets and go with which has more
+            open_bracket_count = count_char("(", content[:match.start()])
+            close_bracket_count = count_char(")", content[:match.start()])
+            if open_bracket_count > close_bracket_count:
+                # Use Open
+                value = content[:match.start()].split("(")[-1]
+                value = value.replace("(", "").replace(")", "")
+            elif open_bracket_count < close_bracket_count:
+                # Use Close
+                value = content[:match.start()].split(")")[-1]
+                value = value.replace("(", "").replace(")", "")
+            else:
+                # Equal number of open and close, use Open
+                value = content[:match.start()].split("(")[-1]
+                value = value.replace("(", "").replace(")", "")
+        
         # print("Old Value: " + str(value))
         match_str = str(str(match.group())[2:])
         if "date" in match_str:
@@ -78,6 +109,8 @@ def clean_type_information(self, content):
             new_value = "pd.Timestamp('"+str(pd.to_datetime(value, format='%Y-%m-%d %H:%M:%S'))+"')"
         elif "numeric" in match_str:
             new_value = str(int(value))
+        elif "text" in match_str:
+            new_value = str(value)
         # ' (part.p_container = ANY (\'{"SM CASE","SM BOX","SM PACK","SM PKG"}\'::bpchar[])) '
         elif "bpchar[]" in match_str:
             edit_value = value[1:-1]
@@ -105,7 +138,12 @@ def clean_type_information(self, content):
         
         # Add target values to arrays for processing
         remove_ranges.append((match.start(), match.end()))
-        replaces.append(("'"+value+"'", new_value))
+        if valueFind == "Quotes":
+            replaces.append(("'"+value+"'", new_value))
+        elif valueFind == "Brackets":
+            replaces.append(("("+value+")", new_value))
+        else:
+            raise ValueError("Unrecognised value for valueFind: " + str(valueFind))
         
     if remove_range != [] and replaces != []:
         content = remove_range(content, remove_ranges)
@@ -456,6 +494,7 @@ def do_aggregation(self, prev_df, current_df):
             else:
                 raise ValueError("Not other types of aggregation haven't been implemented yet!")
         else:
+            # We need to handle cases in here
             raise ValueError("Not Implemented Error")
 
     return local_instructions

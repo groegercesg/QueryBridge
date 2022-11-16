@@ -1,0 +1,24 @@
+{
+    "Test Name":"Basic Test",
+    "SQL Queries": [
+        {
+            "Query Name": "Query 14",
+            "Query Location": "queries/14.sql",
+            "Required Data": ["part", "lineitem"],
+            "Pandas Name": "q14_pandas.py"
+        }
+    ],
+    "Temporary Directory": "temp_queries",
+    "SQL Converter Location": "../queries/sql_to_pandas.py",
+    "Pandas Data Loader": "tpch_data_loader.py",
+    "Number of Query Runs": 5,
+    "Results Location": "query_14_test_results.csv",
+    "Database Connection Details": {
+            "User": "benchmarker",
+            "Password": "benchMugPassword",
+            "Host": "localhost",
+            "Port": "5432",
+            "Database": "tpchdb"
+        },
+    "Results Precision": 4
+}   
