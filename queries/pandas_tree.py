@@ -477,6 +477,115 @@ def aggregate_sum(sum_string, s_group=None, df_group=None):
     
     return inner_string
 
+def inner_aggregation(string, prev_df):
+    if "sum" in string:
+        # The aggr operation is SUM!
+        inner = str(string).split("sum")[1:]
+        
+        # Is the start of string important?
+        before_string = str(string).split("sum")[0]
+        if ("*" or "+" or "/" or "-" in before_string) and before_string != "":
+            outer_string = []
+            
+            before_string = before_string.strip()
+            
+            # Clean bad brackets
+            if before_string[0] == "(" and before_string[-1] == ")":
+                # This is bracket and start and end so fine:
+                pass
+            else:
+                if before_string[0] == "(":
+                    # Therefore not one at end
+                    before_string = before_string[1:]
+                elif before_string[-1] == ")":
+                    # Therefore not one at start
+                    before_string = before_string[:-1]
+                else:
+                    # No brackets, fine
+                    pass
+            
+            # Add to outer string
+            outer_string.append(before_string.strip())
+        
+        # If it's a list then join it all back up together
+        if isinstance(inner, list):
+            inner = "".join(inner)
+        inner = clean_extra_brackets(inner)
+        
+        if "CASE WHEN" and "THEN" and "ELSE" in inner:
+            # Do case aggregation
+            inner_string = aggregate_case(inner, prev_df)
+        else:
+            inner_string = aggregate_sum(inner, df_group=prev_df)
+        
+        # Check if variable exists
+        if 'outer_string' in locals():
+            if isinstance(outer_string, list):
+                outer_string.append("(" + inner_string + ").sum()")
+            else:
+                outer_string = "(" + inner_string + ").sum()"
+        else:
+            # Doesn't exist, must be a string set then
+            outer_string = "(" + inner_string + ").sum()"
+        
+    else:
+        raise ValueError("Other types of aggregate not implemented")
+    
+    return outer_string
+
+def aggregate_case(inner_string, prev_df):
+    else_value = inner_string.split("ELSE")[1]
+    when_value = inner_string.split("CASE WHEN")[1].split("THEN")[0]
+    then_value = inner_string.split("THEN")[1].split("ELSE")[0]
+    
+    # Clean values
+    # Put values in the order of the pandas expression
+    values = [then_value, when_value, else_value]
+    for i in range(len(values)):
+        values[i] = values[i].strip()
+        if values[i][0] == "(" and values[i][-1] == ")":
+            # This is bracket and start and end so fine:
+            pass
+        else:
+            if values[i][0] == "(":
+                # Therefore not one at end
+                values[i] = values[i][1:]
+            elif values[i][-1] == ")":
+                # Therefore not one at start
+                values[i] = values[i][:-1]
+            else:
+                # No brackets, fine
+                pass
+    
+    # Transform values into pandas equivalents
+    for i in range(len(values)):
+        # contains ~~
+        # Starts with
+        # https://www.postgresql.org/docs/current/functions-matching.html
+        if "~~" in values[i]:
+            values[i] = clean_extra_brackets(values[i])
+            split_starts = values[i].split(" ~~ ")
+            # First element of split_starts should be the column,
+            # Second should be the comparator
+            if len(split_starts) != 2:
+                raise ValueError("Split Starts for case Aggregation should be of length 2")
+            
+            if "%" in split_starts[1]:
+                split_starts[1] = split_starts[1].replace("%", "")
+            else:
+                raise ValueError("Aggregate Case, not sure what to clean")
+            
+            values[i] = 'x["' + split_starts[0] + '"].startswith("' + split_starts[1] + '")'
+            
+        # Hand this off to the s_group function
+        elif "*" or "-" in values[i]:
+            values[i] = aggregate_sum(values[i], s_group = "x")
+    
+    # li_pa_join.apply(lambda x: x["l_extendedprice"] * (1 - x["l_discount"]) if x["p_type"].startswith("PROMO") else 0, axis=1)
+    inner_string = prev_df + '.apply(lambda x: ' + str(values[0]) + ' if ' + str(values[1]) + ' else ' + str(values[2]) + ', axis=1)'        
+    
+    return inner_string
+
 def do_aggregation(self, prev_df, current_df):
     local_instructions = []
     for col in self.output:
@@ -495,7 +604,34 @@ def do_aggregation(self, prev_df, current_df):
                 raise ValueError("Not other types of aggregation haven't been implemented yet!")
         else:
             # We need to handle cases in here
-            raise ValueError("Not Implemented Error")
+            if "/" in col:
+                # Split on this, handle agg of both sides individually
+                split_col = col.split("/")
+                aggr_results = []
+                for col in split_col:
+                    inner_agg_results = inner_aggregation(col.strip(), prev_df)
+                    if isinstance(inner_agg_results, list):
+                        aggr_results += inner_agg_results
+                    else:
+                        aggr_results.append(inner_agg_results)
+                  
+                # '(df_merge_1.apply(lambda x: ( s["l_extendedprice"] * ( 1 - s["l_discount"] )) if x["p_type].startswith("PROMO") else 0, axis=1)).sum() / (df_merge_1.l_extendedprice * ( 1 - df_merge_1.l_discount )).sum()'
+                # '(100.00 * / (df_merge_1.apply(lambda x: ( s["l_extendedprice"] * ( 1 - s["l_discount"] )) if x["p_type"].startswith("PROMO") else 0, axis=1)).sum() /  / (df_merge_1.l_extendedprice * ( 1 - df_merge_1.l_discount )).sum()'
+                
+                # Join aggr results
+                outer_string = ""
+                for i in range(len(aggr_results)):
+                    # Add to outer_string
+                    # if not the last one add with a divide
+                    if i < len(aggr_results) - 1:
+                        outer_string += aggr_results[i] + " / "
+                    elif i < len(aggr_results):
+                        outer_string += aggr_results[i]
+                
+                local_instructions.append(current_df + " = [" + outer_string + "]")
+            else:
+            # '(100.00 * sum(CASE WHEN (p_type ~~ PROMO%) THEN (l_extendedprice * (1 - l_discount)) ELSE 0)) / sum(l_extendedprice * (1 - l_discount))'
+                raise ValueError("Not Implemented Error, for col: " + str(col))
 
     return local_instructions
 
