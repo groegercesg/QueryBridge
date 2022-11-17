@@ -42,6 +42,12 @@
             "Query Location": "queries/19.sql",
             "Required Data": ["lineitem", "part"],
             "Pandas Name": "q19_pandas.py"
+        },
+        {
+            "Query Name": "Query 14",
+            "Query Location": "queries/14.sql",
+            "Required Data": ["part", "lineitem"],
+            "Pandas Name": "q14_pandas.py"
         }
     ],
     "Temporary Directory": "temp_queries",
