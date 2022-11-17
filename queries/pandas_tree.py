@@ -623,11 +623,21 @@ def do_aggregation(self, prev_df, current_df):
                 for i in range(len(aggr_results)):
                     # Add to outer_string
                     # if not the last one add with a divide
+                    add_value = ""
+                    print(str(i) + " and len aggr is: " + str(len(aggr_results)))
                     if i < len(aggr_results) - 1:
-                        outer_string += aggr_results[i] + " / "
-                    elif i < len(aggr_results):
-                        outer_string += aggr_results[i]
-                
+                        add_value = " / "
+                        
+                    print(str(add_value) + " is add_value")
+                    
+                    print("Last char is: " + str(aggr_results[i][-1]))
+                    if aggr_results[i][-1] == "/" or aggr_results[i][-1] == "*":
+                        add_value = " "
+                        
+                    print(str(add_value) + " is add_value")
+                        
+                    outer_string += aggr_results[i] + add_value
+                    
                 local_instructions.append(current_df + " = [" + outer_string + "]")
             else:
             # '(100.00 * sum(CASE WHEN (p_type ~~ PROMO%) THEN (l_extendedprice * (1 - l_discount)) ELSE 0)) / sum(l_extendedprice * (1 - l_discount))'
