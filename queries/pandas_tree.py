@@ -29,10 +29,16 @@ def process_output(self, output, codecomphelper):
                     # Change output[i], this is for the case where we have a relation in the output
                     # But we don't have a column reference
                     #output[i] = brack_cleaned_output
+        # Make lowercase as well            
+        brack_cleaned_lower_output = brack_cleaned_output.lower()
         if brack_cleaned_output in codecomphelper.sql.column_references:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_output])
+        elif brack_cleaned_lower_output in codecomphelper.sql.column_references:
+            # We have an item in output that needs to be changed
+            output_original_value = cleaned_output
+            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_lower_output])
         else:
             output[i] = cleaned_output
         if replaces != []:
@@ -467,7 +473,7 @@ def aggregate_sum(sum_string, s_group=None, df_group=None):
         if isinstance(cols[j], str):
             if all(c in char_set for c in cols[j]):
                 if s_group != None:
-                    cols[j] = 's["' + cols[j].strip() + '"]'
+                    cols[j] = s_group + '["' + cols[j].strip() + '"]'
                 elif df_group != None:
                     cols[j] = df_group + "." + cols[j].strip()
                 else:
@@ -578,7 +584,7 @@ def aggregate_case(inner_string, prev_df):
             values[i] = 'x["' + split_starts[0] + '"].startswith("' + split_starts[1] + '")'
             
         # Hand this off to the s_group function
-        elif "*" or "-" in values[i]:
+        elif ("*" or "-" in values[i]) and (len(values[i]) > 1):
             values[i] = aggregate_sum(values[i], s_group = "x")
     
     # li_pa_join.apply(lambda x: x["l_extendedprice"] * (1 - x["l_discount"]) if x["p_type"].startswith("PROMO") else 0, axis=1)
@@ -590,7 +596,34 @@ def do_aggregation(self, prev_df, current_df):
     local_instructions = []
     for col in self.output:
         if isinstance(col, tuple):
-            if "sum" in col[0]:
+            if "/" in col[0]:
+                # Split on this, handle agg of both sides individually
+                split_col = col[0].split("/")
+                aggr_results = []
+                for current_col in split_col:
+                    inner_agg_results = inner_aggregation(current_col.strip(), prev_df)
+                    if isinstance(inner_agg_results, list):
+                        aggr_results += inner_agg_results
+                    else:
+                        aggr_results.append(inner_agg_results)
+                
+                # Join aggr results
+                outer_string = ""
+                for i in range(len(aggr_results)):
+                    # Add to outer_string
+                    # if not the last one add with a divide
+                    add_value = ""
+                    if i < len(aggr_results) - 1:
+                        add_value = " / "
+                        
+                    if aggr_results[i][-1] == "/" or aggr_results[i][-1] == "*":
+                        add_value = " "
+                        
+                    outer_string += aggr_results[i] + add_value
+                    
+                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
+            
+            elif "sum" in col[0]:
                 # The aggr operation is SUM!
                 inner = str(col[0]).split("sum")[1]
                 inner = clean_extra_brackets(inner)
@@ -599,7 +632,7 @@ def do_aggregation(self, prev_df, current_df):
               
                 outer_string = "(" + inner_string + ").sum()"
                 
-                local_instructions.append(current_df+"['" + col[1] + "'] = [" + outer_string + "]")
+                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
             else:
                 raise ValueError("Not other types of aggregation haven't been implemented yet!")
         else:
@@ -624,17 +657,11 @@ def do_aggregation(self, prev_df, current_df):
                     # Add to outer_string
                     # if not the last one add with a divide
                     add_value = ""
-                    print(str(i) + " and len aggr is: " + str(len(aggr_results)))
                     if i < len(aggr_results) - 1:
                         add_value = " / "
-                        
-                    print(str(add_value) + " is add_value")
                     
-                    print("Last char is: " + str(aggr_results[i][-1]))
                     if aggr_results[i][-1] == "/" or aggr_results[i][-1] == "*":
                         add_value = " "
-                        
-                    print(str(add_value) + " is add_value")
                         
                     outer_string += aggr_results[i] + add_value
                     
@@ -1043,6 +1070,18 @@ class sql_class():
                     if projection_original in column_references:
                         raise ValueError("We are trying to process a SQL but finding multiple identical projections")
                     else:
+                        # Like replacement
+                        if "like" in projection_original:
+                            projection_original = projection_original.replace("like", "~~")
+                        
+                        # Get rid of end
+                        if "where" and "then" and "else" and "end" in projection_original:
+                            projection_original = projection_original.replace("end ", "")
+                            
+                        # Get rid of apostrophes
+                        if "'" in projection_original:
+                            projection_original = projection_original.replace("'", "")
+                            
                         column_references[projection_original] = str(projection.alias_or_name)
 
         return column_references
