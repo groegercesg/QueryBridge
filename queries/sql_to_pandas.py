@@ -131,7 +131,6 @@ def main():
             if i != 0:
                 # There has been a view, therefore use the previous query
                 sub_query = split_query[i-1].strip() + ";" + "\n\n" + explain_opts + "\n" + sub_query.strip() + ";"
-                print(sub_query)
         
         # Write subquery into explain file
         with open(explain_file, "w") as writer:

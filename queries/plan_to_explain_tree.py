@@ -50,6 +50,23 @@ class sort_node(base_node):
         self.sort_key = sort_key
         self.parent_relationship = parent_relationship
         
+#"Node Type": "Subquery Scan",
+#"Parent Relationship": "Outer",
+#"Parallel Aware": false,
+#"Async Capable": false,
+#"Alias": "revenue0",
+#"Output": [
+#    "revenue0.total_revenue",
+#    "revenue0.supplier_no"
+#],
+#"Plans": [...]
+
+class subquery_scan_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, alias, parent_relationship):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.alias = alias
+        self.parent_relationship = parent_relationship
+        
 class nested_loop_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, inner_unique, join_type, parent_relationship):
         super().__init__(node_type, parallel_aware, async_capable, output)
