@@ -102,8 +102,16 @@ def main():
     # Store relations from across subqueries, use as function parameter
     relations_subqueries = []
     
+    # Create the filename
+    python_output_name = args.output_location + "/" + args.name
+    
     # Iterate through every subquery
     for i, sub_query in enumerate(split_query):
+        
+        # Skip iterations
+        if sub_query == "":
+            # Skip iteration if empty
+            continue
 
         # Automatically create explain_file from query_file
         explain_file = f"{folder_path}" + "/"+ query_name+"_explain_" + str(i) + ".sql"
@@ -132,6 +140,11 @@ def main():
         # Write the explain options out to the file
         # We already do this we have created a view beforehand
         if view_query == True:
+            line_prepender(explain_file, explain_opts)
+            
+        # Check if no views then do line_prepender
+        if len(split_query) == 2 and split_query[1] == "":
+            # We have no view, so have to prepend the explain options
             line_prepender(explain_file, explain_opts)
 
         output_file = f"{folder_path}" + "/"+query_name+"_explain_" + str(i) + ".json"
@@ -190,29 +203,27 @@ def main():
         # Write out the pandas code, line by line
         if args.benchmarking:
             # We need a special mode for outputing
-            with open(args.output_location + "/" + args.name, 'w') as f:
+            with open(python_output_name, 'w') as f:
                 for line in pandas:
                     f.write("    "+f"{line}\n")
             # Store relations
             relations_subqueries += codeCompHelper.relations
         else:        
-            with open(args.output_location + "/" + args.name, 'w') as f:
+            with open(python_output_name, 'a') as f:
                 for line in pandas:
                     f.write(f"{line}\n")
                     
     # Write at the start of the file, the import and function definition
     if args.benchmarking:
-        with open(args.output_location + "/" + args.name, 'w') as f:
-            # Write at the start of the file
-            f.write("import pandas as pd\n")
-            f.write("def query(" + str(codeCompHelper.relations)[1:-1].replace("'", "") + "):\n")
-    
+        line_prepender(python_output_name, "def query(" + str(relations_subqueries)[1:-1].replace("'", "") + "):\n")
+        line_prepender(python_output_name, "import pandas as pd\n")
+        
     # Tear Down
     # If it's benchmarking, delete results
-    if args.benchmarking:
-        results_folder = Path("results")
-        if results_folder.exists() and results_folder.is_dir():
-            shutil.rmtree(results_folder)
+    #if args.benchmarking:
+    #    results_folder = Path("results")
+    #    if results_folder.exists() and results_folder.is_dir():
+    #        shutil.rmtree(results_folder)
             
 if __name__ == "__main__":
     main()
