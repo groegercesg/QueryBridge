@@ -203,7 +203,13 @@ def make_tree(json, tree):
         node_class = limit_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"])
     elif node_type.lower() == "aggregate":
         if "Group Key" in node:
-            node_class = group_aggregate_node("Group " + node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"], node["Group Key"])
+            # Switch if no Parent Relationship
+            if "Parent Relationship" in node:
+                node_class = group_aggregate_node("Group " + node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"], node["Group Key"])
+            else:
+                node_class = group_aggregate_node("Group " + node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], None, node["Group Key"])
+            
+            # Handle adding Filter
             if "Filter" in node:
                 node_class.add_filter(node["Filter"])
         else:

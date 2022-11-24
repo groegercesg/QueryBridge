@@ -58,6 +58,13 @@ def init_argparse() -> argparse.ArgumentParser:
     return parser
 
 
+def line_prepender(filename, line):
+    with open(filename, 'r+') as f:
+        content = f.read()
+        f.seek(0, 0)
+        f.write(line.rstrip('\r\n') + '\n' + content)
+
+
 def main():
     parser = init_argparse()
     args = parser.parse_args()
@@ -69,6 +76,9 @@ def main():
     
     # Set the Arguments
     query_file = args.file
+    
+    # Append the EXPLAIN options to the start of the file
+    explain_opts = "EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON) "
 
     # Create a folder for files and diagrams
     query_name = str(query_file.split("/")[-1]).split(".")[0]
@@ -81,89 +91,121 @@ def main():
     Path(folder_path).mkdir(parents=True, exist_ok=True)
     # Move query_file into it
     shutil.copy(query_file, folder_path)
+    
+    # Handle multiple separate queries in one file
+    query_file_data = None
+    with open(query_file, 'r') as f:
+        query_file_data = f.read()
+    
+    split_query = query_file_data.split(";")
+    
+    # Store relations from across subqueries, use as function parameter
+    relations_subqueries = []
+    
+    # Iterate through every subquery
+    for i, sub_query in enumerate(split_query):
 
-    # Automatically create explain_file from query_file
-    explain_file = f"{folder_path}" + "/"+ query_name+"_explain.sql"
-    # Create a copy of the query
-    shutil.copy(query_file,explain_file)
-    # Append the EXPLAIN options to the start of the file
-    def line_prepender(filename, line):
-        with open(filename, 'r+') as f:
-            content = f.read()
-            f.seek(0, 0)
-            f.write(line.rstrip('\r\n') + '\n' + content)
+        # Automatically create explain_file from query_file
+        explain_file = f"{folder_path}" + "/"+ query_name+"_explain_" + str(i) + ".sql"
+        
+        view_query = False
+        # Determine whether this sub_query is a view or not
+        if sub_query[:12] == "create view ":
+            view_query = True
+            # Store the view_name
+            view_name = str(str(sub_query.split("create view ")[1]).split("(")[0]).strip()
+            # Remove the create view stuff, split on as. Remove leading/trailing whitespace
+            sub_query = str("".join(sub_query.split("as")[1:])).strip()
+            # Add a semicolon on to the end of the sub_query
+            sub_query = sub_query + ";"
+        else:
+            # Not a subquery
+            if i != 0:
+                # There has been a view, therefore use the previous query
+                sub_query = split_query[i-1].strip() + ";" + "\n\n" + explain_opts + "\n" + sub_query.strip() + ";"
+                print(sub_query)
+        
+        # Write subquery into explain file
+        with open(explain_file, "w") as writer:
+            writer.write(sub_query)
+            
+        # Write the explain options out to the file
+        # We already do this we have created a view beforehand
+        if view_query == True:
+            line_prepender(explain_file, explain_opts)
 
-    explain_opts = "EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON) "
+        output_file = f"{folder_path}" + "/"+query_name+"_explain_" + str(i) + ".json"
+        tree_output = f"{folder_path}" + "/"+query_name+"_explain_tree_" + str(i)
+        tree_prune_output = f"{folder_path}" + "/"+query_name+"_explain_post_prune_tree_" + str(i)
+        tree_pandas_output = f"{folder_path}" + "/"+ query_name+"_pandas_tree_" + str(i)
+        command = "psql -d tpchdb -U tpch -a -f " + explain_file
 
-    line_prepender(explain_file, explain_opts)
+        from clean_up_json import run
+        # Execute the command, get the json and clean it
+        run(command, output_file)
 
-    output_file = f"{folder_path}" + "/"+query_name+"_explain.json"
-    tree_output = f"{folder_path}" + "/"+query_name+"_explain_tree"
-    tree_prune_output = f"{folder_path}" + "/"+query_name+"_explain_post_prune_tree"
-    tree_pandas_output = f"{folder_path}" + "/"+ query_name+"_pandas_tree"
-    command = "psql -d tpchdb -U tpch -a -f " + explain_file
+        # Load json from written file
+        explain_json = ""
+        with open(output_file) as f:
+            # returns JSON object as a dictionary
+            explain_json = json.load(f)[0]
 
-    from clean_up_json import run
-    # Execute the command, get the json and clean it
-    run(command, output_file)
+        # Print out the json
+        # print(json.dumps(explain_json, indent=4))
 
-    # Load json from written file
-    explain_json = ""
-    f = open(output_file)
+        from explain_tree import make_tree
+        # Build a class structure that is nested within each other
+        explain_tree = None
+        explain_tree = make_tree(explain_json, explain_tree)
 
-    # returns JSON object as a dictionary
-    explain_json = json.load(f)[0]
-    f.close()
+        # Let's try and visualise the explain tree now
+        from visualising_tree import plot_tree, plot_pandas_tree
+        if not args.benchmarking:
+            plot_tree(explain_tree, tree_output)
 
-    # Print out the json
-    # print(json.dumps(explain_json, indent=4))
+        # Prune and alter the tree, for later use
+        from explain_tree import solve_nested_loop_node, solve_prune_node, solve_aliases
+        solve_nested_loop_node(explain_tree)
+        # We bump off hash nodes, we may also need to do this with materialise nodes
+        solve_prune_node("Hash", explain_tree)
+        solve_prune_node("Materialize", explain_tree)
+        solve_aliases(explain_tree)
 
-    from explain_tree import make_tree
-    # Build a class structure that is nested within each other
-    explain_tree = None
-    explain_tree = make_tree(explain_json, explain_tree)
+        # Plot tree after pruning/altering, show changes in tree
+        if not args.benchmarking:
+            plot_tree(explain_tree, tree_prune_output)
 
-    # Let's try and visualise the explain tree now
-    from visualising_tree import plot_tree, plot_pandas_tree
-    if not args.benchmarking:
-        plot_tree(explain_tree, tree_output)
+        # Let's try create a pandas tree
+        from pandas_tree import make_pandas_tree
+        pandas_tree = make_pandas_tree(explain_tree, query_file)
 
-    # Prune and alter the tree, for later use
-    from explain_tree import solve_nested_loop_node, solve_prune_node, solve_aliases
-    solve_nested_loop_node(explain_tree)
-    # We bump off hash nodes, we may also need to do this with materialise nodes
-    solve_prune_node("Hash", explain_tree)
-    solve_prune_node("Materialize", explain_tree)
-    solve_aliases(explain_tree)
+        # Make tree of pandas!
+        if not args.benchmarking:
+            plot_pandas_tree(pandas_tree, tree_pandas_output)
 
-    # Plot tree after pruning/altering, show changes in tree
-    if not args.benchmarking:
-        plot_tree(explain_tree, tree_prune_output)
+        # Let's try and write some pandas code from this
+        from pandas_tree_to_pandas import make_pandas
+        pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args.column_ordering)
 
-    # Let's try create a pandas tree
-    from pandas_tree import make_pandas_tree
-    pandas_tree = make_pandas_tree(explain_tree, query_file)
-
-    # Make tree of pandas!
-    if not args.benchmarking:
-        plot_pandas_tree(pandas_tree, tree_pandas_output)
-
-    # Let's try and write some pandas code from this
-    from pandas_tree_to_pandas import make_pandas
-    pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args.column_ordering)
-
-    # Write out the pandas code, line by line
+        # Write out the pandas code, line by line
+        if args.benchmarking:
+            # We need a special mode for outputing
+            with open(args.output_location + "/" + args.name, 'w') as f:
+                for line in pandas:
+                    f.write("    "+f"{line}\n")
+            # Store relations
+            relations_subqueries += codeCompHelper.relations
+        else:        
+            with open(args.output_location + "/" + args.name, 'w') as f:
+                for line in pandas:
+                    f.write(f"{line}\n")
+                    
+    # Write at the start of the file, the import and function definition
     if args.benchmarking:
-        # We need a special mode for outputing
         with open(args.output_location + "/" + args.name, 'w') as f:
+            # Write at the start of the file
             f.write("import pandas as pd\n")
             f.write("def query(" + str(codeCompHelper.relations)[1:-1].replace("'", "") + "):\n")
-            for line in pandas:
-                f.write("    "+f"{line}\n")
-    else:        
-        with open(args.output_location + "/" + args.name, 'w') as f:
-            for line in pandas:
-                f.write(f"{line}\n")
     
     # Tear Down
     # If it's benchmarking, delete results
