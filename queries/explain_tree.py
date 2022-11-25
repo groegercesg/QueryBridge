@@ -1,6 +1,10 @@
 from plan_to_explain_tree import * 
 import regex
 import re
+from queue import Queue
+
+def get_class_id(node):
+    return str(id(node))
 
 def solve_nested_loop_node(tree):
     # Preorder traversal
@@ -137,7 +141,9 @@ alias_locations = {
     "Merge Join": ["output", "merge_cond"],
     "Nested Loop": ["merge_cond", "output"],
     "Incremental Sort": ["output", "presorted_key", "sort_key"],
-    "Limit": ["output"]
+    "Limit": ["output"],
+    "Aggregate": ["group_key", "output"],
+    "Subquery Scan": ["output"]
 }
             
 def solve_aliases(tree, replaces = None):
@@ -189,6 +195,127 @@ def solve_aliases(tree, replaces = None):
             else:
                 # The class doesn't have this attribute, ignore it
                 pass 
+            
+
+def solve_initplan_nodes(tree):
+    capturedTrees = []
+    dropClasses = set()
+    
+    treeQueue = Queue()
+    treeQueue.put(tree)
+    while (not treeQueue.empty()):
+        treeNode = treeQueue.get()
+        if treeNode == None:
+            continue
+        else:
+            # Act on the current node
+            
+            # Iterate on lower nodes
+            if treeNode.plans != None:
+                for nodeBelow in treeNode.plans:
+                    
+                    # If we have a parent
+                    if hasattr(nodeBelow, "parent_relationship"):
+                        # Check if is equal to InitPlan
+                        if nodeBelow.parent_relationship == "InitPlan":
+                            # We have an InitPlan
+                            # Extract the InitPlan set value
+                            if hasattr(nodeBelow, "subplan_name"):
+                                set_value = str(str(nodeBelow.subplan_name).split("returns ")[1].split(")")[0]).strip()
+                                # Replace this to dollar, the standard form of set values
+                                set_value = str(set_value).replace("$", "dollar_")
+                            else:
+                                raise ValueError("We have an Subplan but with no information about what it's set as!")
+                            
+                            # Add this to the captured Trees List
+                            capturedTrees.append((nodeBelow, set_value))
+                            
+                            # Add the id of nodeBelow to dropClasses
+                            dropClasses.add(get_class_id(nodeBelow))
+                            
+                            # Run next iteration
+                            continue
+                        
+                    # Add them to the queue
+                    treeQueue.put(nodeBelow)
+                    
+    # Remove classes by their id
+    delete_tree_branches_by_id(tree, dropClasses)
+    
+    # Add the main tree, now potentially altered, to the end of captured trees
+    capturedTrees.append(tree)
+    
+    return capturedTrees
+
+def delete_tree_branches_by_id(tree, ids):
+    # Preorder Traversal
+            
+    # Check current node
+    if tree.plans != None:
+        to_remove = []
+        for i in range(len(tree.plans)):
+            below_current_node = tree.plans[i]
+            if get_class_id(below_current_node) in ids:
+                # Remove it
+                to_remove.append(i)
+        
+        # Do in reverse to not cause logic errors
+        for i in sorted(to_remove, reverse=True):
+            del tree.plans[i]
+    
+    # Run this function on below nodes
+    if tree.plans != None:
+        for individual_plan in tree.plans:
+            delete_tree_branches_by_id(individual_plan, ids)     
+
+def solve_view_set_values(tree_list):
+    # Gather all the set_values and their original names
+    # In a list called replaces, with 1st element original and 2nd the new name
+    replaces = []
+    
+    for i in range(len(tree_list)):
+        if isinstance(tree_list[i], tuple):
+            # We have a replace
+            set_value_new = tree_list[i][1]
+            replaces.append((set_value_new.replace("dollar_", "$"), set_value_new))
+    
+    # Recursively move through the tree, changing if we see the presence of replace[i][0] to replace[i][1]
+    for i in range(len(tree_list)):
+        if isinstance(tree_list[i], tuple):
+            # Don't run for a list that is a subplan
+            pass
+        else:
+            recurse_and_replace(tree_list[i], replaces)
+    
+def recurse_and_replace(tree, replaces):
+    # Recursively move through the tree, changing if we see the presence of replace[i][0] to replace[i][1]
+    
+    # We want to use a post-order traversal
+    # First we traverse the left subtree, then the right subtree and finally the root node.
+    if tree.plans != None:
+        for individual_plan in tree.plans:
+            recurse_and_replace(individual_plan, replaces)
+    
+    # Do alterations to all the alteration places, based on the content in replaces
+    for original, new in replaces:
+        locs = alias_locations[tree.node_type]
+        for attribute in locs:
+            if hasattr(tree, attribute):
+                # Iterate through output
+                modified_attribute = getattr(tree, attribute)
+                # Modified attribute may not always be a list
+                if isinstance(modified_attribute, list):
+                    for i in range(len(modified_attribute)):
+                        modified_attribute[i] = modified_attribute[i].replace(original, new)
+                elif isinstance(modified_attribute, str):
+                    modified_attribute = modified_attribute.replace(original, new)
+                else:
+                    raise ValueError("Attribute is not a type we expected")
+                # Set it back
+                setattr(tree, attribute, modified_attribute)
+            else:
+                # The class doesn't have this attribute, ignore it
+                pass 
     
 def make_tree(json, tree):
     # First node check
@@ -214,6 +341,9 @@ def make_tree(json, tree):
                 node_class.add_filter(node["Filter"])
         else:
             node_class = aggregate_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"])
+            
+        if "Subplan Name" in node:
+            node_class.add_subplan(node["Subplan Name"])
     elif node_type.lower() == "gather":    
         node_class = gather_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Workers Planned"], node["Single Copy"], node["Parent Relationship"])
     elif node_type.lower() == "seq scan":

@@ -19,6 +19,9 @@ class aggregate_node(base_node):
         self.strategy = strategy
         self.partial_mode = partial_mode
         self.parent_relationship = parent_relationship
+        
+    def add_subplan(self, subplan):
+        self.subplan_name = subplan
 
 class group_aggregate_node(aggregate_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, strategy, partial_mode, parent_relationship, group_key):
@@ -49,17 +52,6 @@ class sort_node(base_node):
         super().__init__(node_type, parallel_aware, async_capable, output)
         self.sort_key = sort_key
         self.parent_relationship = parent_relationship
-        
-#"Node Type": "Subquery Scan",
-#"Parent Relationship": "Outer",
-#"Parallel Aware": false,
-#"Async Capable": false,
-#"Alias": "revenue0",
-#"Output": [
-#    "revenue0.total_revenue",
-#    "revenue0.supplier_no"
-#],
-#"Plans": [...]
 
 class subquery_scan_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, alias, parent_relationship):

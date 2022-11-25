@@ -63,6 +63,44 @@ def line_prepender(filename, line):
         content = f.read()
         f.seek(0, 0)
         f.write(line.rstrip('\r\n') + '\n' + content)
+        
+def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, tree, set_value=None, output_index=None):
+    from pandas_tree import make_pandas_tree
+    from visualising_tree import plot_pandas_tree
+    from pandas_tree_to_pandas import make_pandas
+    
+    # Let's try create a pandas tree
+    pandas_tree = make_pandas_tree(tree, query_file)
+    
+    # Make visual tree of pandas!
+    if not args.benchmarking:
+        if output_index != None:
+            plot_pandas_tree(pandas_tree, tree_pandas_output+"_"+str(output_index))
+        else:
+            plot_pandas_tree(pandas_tree, tree_pandas_output)
+    
+    if set_value != None:
+        # We have a sub_query on our hands, the final node needs to set this to be
+        # set_value
+        print(set_value)
+        pass
+    else:
+        # Let's try and write some pandas code from this
+        pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args.column_ordering)
+    
+    # We have created the pandas code, now let's write it out
+    # Write out the pandas code, line by line
+    if args.benchmarking:
+        # We need a special mode for outputing
+        with open(python_output_name, 'w') as f:
+            for line in pandas:
+                f.write("    "+f"{line}\n")
+        # Store relations
+        relations_subqueries += codeCompHelper.relations
+    else:        
+        with open(python_output_name, 'a') as f:
+            for line in pandas:
+                f.write(f"{line}\n")
 
 
 def main():
@@ -119,6 +157,9 @@ def main():
         view_query = False
         # Determine whether this sub_query is a view or not
         if sub_query[:12] == "create view ":
+            # Don't continue the execution if it's a create view
+            continue
+            
             view_query = True
             # Store the view_name
             view_name = str(str(sub_query.split("create view ")[1]).split("(")[0]).strip()
@@ -171,46 +212,63 @@ def main():
         explain_tree = make_tree(explain_json, explain_tree)
 
         # Let's try and visualise the explain tree now
-        from visualising_tree import plot_tree, plot_pandas_tree
+        from visualising_tree import plot_tree
         if not args.benchmarking:
             plot_tree(explain_tree, tree_output)
 
         # Prune and alter the tree, for later use
-        from explain_tree import solve_nested_loop_node, solve_prune_node, solve_aliases
-        solve_nested_loop_node(explain_tree)
-        # We bump off hash nodes, we may also need to do this with materialise nodes
-        solve_prune_node("Hash", explain_tree)
-        solve_prune_node("Materialize", explain_tree)
-        solve_aliases(explain_tree)
+        from explain_tree import solve_nested_loop_node, solve_prune_node, solve_aliases, solve_initplan_nodes, solve_view_set_values
+        # We bump off hash nodes, we also need to do this with materialise nodes
+        remove_nodes = ["Hash", "Materialize"]
+        for node in remove_nodes:
+            solve_prune_node(node, explain_tree)
+            
+        # Handle InitPlan Branches in queries
+        output_trees = solve_initplan_nodes(explain_tree)
+        
+        # From this point on, we may have multiple output_trees
+        for i in range(len(output_trees)):
+            if isinstance(output_trees[i], tuple):
+                # It's a tuple, so we use the first element
+                solve_nested_loop_node(output_trees[i][0])
+                solve_aliases(output_trees[i][0])
+            else:
+                # Not a tuple, just use the current element
+                solve_nested_loop_node(output_trees[i])
+                solve_aliases(output_trees[i])
+                
+        # Handle changes need to be made because of view_set_values
+        solve_view_set_values(output_trees)
+        
+        # If output_trees is only 1, set it back in, no list
+        if len(output_trees) == 1:
+            output_trees = output_trees[0]
 
         # Plot tree after pruning/altering, show changes in tree
         if not args.benchmarking:
-            plot_tree(explain_tree, tree_prune_output)
+            if isinstance(output_trees, list):
+                for i in range(len(output_trees)):
+                    # Might be a tuple or not, depending on whether it's a subquery
+                    if isinstance(output_trees[i], tuple):
+                        # The 0th element is the tree
+                        plot_tree(output_trees[i][0], tree_prune_output+"_"+str(i))
+                    else:
+                        plot_tree(output_trees[i], tree_prune_output+"_"+str(i))
+                        
+            else:
+                plot_tree(output_trees, tree_prune_output)
 
-        # Let's try create a pandas tree
-        from pandas_tree import make_pandas_tree
-        pandas_tree = make_pandas_tree(explain_tree, query_file)
-
-        # Make tree of pandas!
-        if not args.benchmarking:
-            plot_pandas_tree(pandas_tree, tree_pandas_output)
-
-        # Let's try and write some pandas code from this
-        from pandas_tree_to_pandas import make_pandas
-        pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args.column_ordering)
-
-        # Write out the pandas code, line by line
-        if args.benchmarking:
-            # We need a special mode for outputing
-            with open(python_output_name, 'w') as f:
-                for line in pandas:
-                    f.write("    "+f"{line}\n")
-            # Store relations
-            relations_subqueries += codeCompHelper.relations
-        else:        
-            with open(python_output_name, 'a') as f:
-                for line in pandas:
-                    f.write(f"{line}\n")
+        # Iterate through all of the plans
+        if isinstance(output_trees, list):
+            for i in range(len(output_trees)):
+                # Might be a tuple or not, depending on whether it's a subquery
+                if isinstance(output_trees[i], tuple):
+                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i][0], set_value=output_trees[i][1], output_index=i)
+                else:
+                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, set_value=output_trees[i], output_index=i)
+        else:
+            # Just run it once
+            do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees)
                     
     # Write at the start of the file, the import and function definition
     if args.benchmarking:
