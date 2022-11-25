@@ -666,8 +666,27 @@ def do_aggregation(self, prev_df, current_df):
                     outer_string += aggr_results[i] + add_value
                     
                 local_instructions.append(current_df + " = [" + outer_string + "]")
+            elif "max" in col:
+                # max(sum(l_extendedprice * (1 - l_discount)))
+                 
+                # The aggr operation is MAX!
+                inner = str(col).split("max")[1]
+                inner = clean_extra_brackets(inner)
+                
+                if "sum" in inner:
+                    # The aggr operation is SUM!
+                    inner_inner = str(inner).split("sum")[1]
+                    inner_inner = clean_extra_brackets(inner_inner)
+                    
+                    inner_inner_string = aggregate_sum(inner_inner, df_group=prev_df)
+                
+                    inner = "(" + inner_inner_string + ").sum()"
+                    
+                outer_string = "(" + inner + ").max()"
+                
+                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
+            
             else:
-            # '(100.00 * sum(CASE WHEN (p_type ~~ PROMO%) THEN (l_extendedprice * (1 - l_discount)) ELSE 0)) / sum(l_extendedprice * (1 - l_discount))'
                 raise ValueError("Not Implemented Error, for col: " + str(col))
 
     return local_instructions
@@ -863,6 +882,10 @@ class group_aggr_node():
                 filter_type = ">"
                 cut_filter = str(str(self.filter).split(">")[0]).strip()
                 filter_amount = str(str(self.filter).split(">")[1]).strip()
+            elif "=" in self.filter:
+                filter_type = "="
+                cut_filter = str(str(self.filter).split("=")[0]).strip()
+                filter_amount = str(str(self.filter).split("=")[1]).strip()
             else:
                 raise ValueError("Haven't written Filter for Group Aggregation to manage filters like: " + str(self.filter))
             
@@ -1040,6 +1063,32 @@ class aggr_node():
         instructions.append(statement2_string)
             
         return instructions
+    
+class rename_node():
+    def __init__(self, output, alias):    
+        self.output = output
+        self.alias = alias
+    
+    def set_nodes(self, nodes):
+        self.nodes = nodes
+
+    def to_pandas(self, prev_df, this_df, codeCompHelper):
+        # Process output:
+        self.output = process_output(self, self.output, codeCompHelper)
+        # Set prefixes
+        if not isinstance(prev_df, str):
+            raise ValueError("Inputted prev_df is not a string!")
+        instructions = []
+        
+        # instructions += do_aggregation(self, prev_df, this_df)
+        
+        output_cols = choose_aliases(self, codeCompHelper)
+        
+        # Limit to output columns
+        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+        instructions.append(statement2_string)
+            
+        return instructions
 
 class sql_class():
     def __init__(self, sql_file):
@@ -1155,6 +1204,9 @@ def create_tree(class_tree, sql_class):
             node_class = filter_node(current_node.relation_name, current_node.filter, current_node.output)
         else:
             node_class = filter_node(current_node.relation_name, None, current_node.output)
+    elif node_type == "Subquery Scan":
+        # Make a Subquery Scan into a "rename node"
+        node_class = rename_node(current_node.output, current_node.alias)
     else:
         raise ValueError("The node: " + str(current_node.node_type) + " is not recognised. Not all node have been implemented")
     

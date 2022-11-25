@@ -82,8 +82,7 @@ def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_fil
     if set_value != None:
         # We have a sub_query on our hands, the final node needs to set this to be
         # set_value
-        print(set_value)
-        pass
+        pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args.column_ordering, output_name=set_value)
     else:
         # Let's try and write some pandas code from this
         pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args.column_ordering)
@@ -147,8 +146,12 @@ def main():
     for i, sub_query in enumerate(split_query):
         
         # Skip iterations
+        cleaned_sub_q = sub_query.strip()
         if sub_query == "":
             # Skip iteration if empty
+            continue
+        elif cleaned_sub_q[:4] == "drop":
+            # TODO: Execute this at some point
             continue
 
         # Automatically create explain_file from query_file
@@ -265,7 +268,7 @@ def main():
                 if isinstance(output_trees[i], tuple):
                     do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i][0], set_value=output_trees[i][1], output_index=i)
                 else:
-                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, set_value=output_trees[i], output_index=i)
+                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i], set_value=output_trees[i], output_index=i)
         else:
             # Just run it once
             do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees)

@@ -19,6 +19,7 @@ pandas_node_colors = {
     "Group": ["#FFD23F", "black"],
     "Merge": ["#CCC9E7", "black"],
     "Filter": ["#FFA175", "black"],
+    "Rename": ["#75ffa1", "black"],
     "DATA": ["#394648", "white"]
 }
 

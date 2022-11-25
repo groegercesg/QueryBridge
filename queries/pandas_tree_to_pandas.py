@@ -65,7 +65,7 @@ def get_class_name(node):
 def get_class_id(node):
     return str(id(node))
 
-def make_pandas(pandas_tree, sql, precise_column_ordering):
+def make_pandas(pandas_tree, sql, precise_column_ordering, output_name=None):
     # Function to generate pandas code from tree of classes
     pandas_statements = []
     # Process incoming SQL file using module
@@ -77,6 +77,10 @@ def make_pandas(pandas_tree, sql, precise_column_ordering):
     treeHelper = TreeHelper()
     
     ccHelper = postorder_traversal(pandas_tree, pandas_statements, baseCodeCompHelper, aggrs, treeHelper)
+    
+    if output_name != None:
+        current_df = pandas_statements[-1].split(" = ")[0]
+        pandas_statements.append(str(output_name) + " = " + str(current_df))
     
     return pandas_statements, ccHelper
 
