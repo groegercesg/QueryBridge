@@ -1073,6 +1073,9 @@ class rename_node():
         self.nodes = nodes
 
     def to_pandas(self, prev_df, this_df, codeCompHelper):
+        # Add the relation we are renaming to
+        codeCompHelper.add_relation(self.alias)
+        
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         # Set prefixes
@@ -1080,14 +1083,25 @@ class rename_node():
             raise ValueError("Inputted prev_df is not a string!")
         instructions = []
         
-        # instructions += do_aggregation(self, prev_df, this_df)
+        # Reset indexes to normal columns so we can reference them
+        instructions.append(prev_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()")
         
+        # Create the current dataframe
+        instructions.append(this_df + " = pd.DataFrame()")
+        
+        # Choose output columns        
         output_cols = choose_aliases(self, codeCompHelper)
         
-        # Limit to output columns
-        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-        instructions.append(statement2_string)
-            
+        # Get the previous output columns
+        prev_output = self.nodes[0].output
+        # Reverse these
+        prev_output.reverse() 
+        
+        # Create the rename dataframe, set previous columns to current column
+        for i, output in enumerate(output_cols):
+            statement_string = this_df + "['" + str(output) + "'] = " + prev_df + "['" + str(prev_output[i]) + "']"
+            instructions.append(statement_string)
+        
         return instructions
 
 class sql_class():

@@ -81,6 +81,7 @@ def make_pandas(pandas_tree, sql, precise_column_ordering, output_name=None):
     if output_name != None:
         current_df = pandas_statements[-1].split(" = ")[0]
         pandas_statements.append(str(output_name) + " = " + str(current_df))
+        pandas_statements.append("")
     
     return pandas_statements, ccHelper
 

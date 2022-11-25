@@ -268,7 +268,7 @@ def main():
                 if isinstance(output_trees[i], tuple):
                     do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i][0], set_value=output_trees[i][1], output_index=i)
                 else:
-                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i], set_value=output_trees[i], output_index=i)
+                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i], output_index=i)
         else:
             # Just run it once
             do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees)
