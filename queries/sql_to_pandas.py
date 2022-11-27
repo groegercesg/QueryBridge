@@ -116,6 +116,10 @@ def main():
     
     # Append the EXPLAIN options to the start of the file
     explain_opts = "EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON) "
+    
+    # PSQL commands
+    psql_file_command = "psql -d tpchdb -U tpch -a -f "
+    psql_string_command = "psql -d tpchdb -U tpch -a -c '"
 
     # Create a folder for files and diagrams
     query_name = str(query_file.split("/")[-1]).split(".")[0]
@@ -151,7 +155,14 @@ def main():
             # Skip iteration if empty
             continue
         elif cleaned_sub_q[:4] == "drop":
-            # TODO: Execute this at some point
+            import shlex
+            import subprocess
+            cleaned_sub_q = cleaned_sub_q + ";"
+            command = psql_string_command + cleaned_sub_q + "'"
+
+            cmd = subprocess.run(shlex.split(command), check=True, stdout=subprocess.DEVNULL)
+            
+            # Don't iterate after dropping
             continue
 
         # Automatically create explain_file from query_file
@@ -194,7 +205,7 @@ def main():
         tree_output = f"{folder_path}" + "/"+query_name+"_explain_tree_" + str(i)
         tree_prune_output = f"{folder_path}" + "/"+query_name+"_explain_post_prune_tree_" + str(i)
         tree_pandas_output = f"{folder_path}" + "/"+ query_name+"_pandas_tree_" + str(i)
-        command = "psql -d tpchdb -U tpch -a -f " + explain_file
+        command = psql_file_command + explain_file
 
         from clean_up_json import run
         # Execute the command, get the json and clean it
