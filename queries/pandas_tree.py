@@ -38,27 +38,33 @@ def process_output(self, output, codecomphelper):
         if hasattr(codecomphelper, "bracket_replace"):
             for x in list(codecomphelper.bracket_replace):
                 if x in relation_cleaned_output:
-                    # We have a bracket_replace that is subset within our output_value
-                    # We need to extract the parts that are not substring
-                    # Add a new bracket replace and solve parts
+                    if x == relation_cleaned_output:
+                        # This is the same, already in the dictionary
+                        # Don't add it again, we'll get it later
+                        pass
+                    else:
+                        # Relation is not already represented in the dictionary
+                        # We have a bracket_replace that is subset within our output_value
+                        # We need to extract the parts that are not substring
+                        # Add a new bracket replace and solve parts
+                        
+                        left_over_parts = relation_cleaned_output.split(x)
+                        solved_parts = []
+                        for j in range(len(left_over_parts)):
+                            is_comp, new_elem = complex_name_solve(left_over_parts[j])
+                            solved_parts.append(new_elem)
                     
-                    left_over_parts = relation_cleaned_output.split(x)
-                    solved_parts = []
-                    for j in range(len(left_over_parts)):
-                        is_comp, new_elem = complex_name_solve(left_over_parts[j])
-                        solved_parts.append(new_elem)
-                    
-                    # Join in back together
-                    new_key = left_over_parts[0] + x + left_over_parts[1]
-                    
-                    # Check these are equal, for sanity
-                    if new_key != relation_cleaned_output:
-                        raise ValueError("Something went wrong: " + str(new_key) + " versus " + str(relation_cleaned_output))
-                    
-                    new_value = solved_parts[0] + codecomphelper.bracket_replace[x] + solved_parts[1]
-                    
-                    # Add to dictionary
-                    codecomphelper.bracket_replace[new_key] = new_value
+                        # Join in back together
+                        new_key = left_over_parts[0] + x + left_over_parts[1]
+                        
+                        # Check these are equal, for sanity
+                        if new_key != relation_cleaned_output:
+                            raise ValueError("Something went wrong: " + str(new_key) + " versus " + str(relation_cleaned_output))
+                        
+                        new_value = solved_parts[0] + codecomphelper.bracket_replace[x] + solved_parts[1]
+                        
+                        # Add to dictionary
+                        codecomphelper.bracket_replace[new_key] = new_value
         
         brack_cleaned_lower_output = brack_cleaned_output.lower()
         if brack_cleaned_output in codecomphelper.sql.column_references:
@@ -1244,7 +1250,8 @@ class sql_class():
         
     def get_limit(self):
         # limit_amount = 0
-        limit_amount = self.file_content.split("limit")[1].split(";")[0].strip()
+        local_file = self.file_content.lower()
+        limit_amount = local_file.split("limit")[1].split(";")[0].strip()
         # for limit in parse_one(self.file_content).find_all(exp.Limit):
         #     limit_amount = int(limit.expression.alias_or_name)
         return limit_amount

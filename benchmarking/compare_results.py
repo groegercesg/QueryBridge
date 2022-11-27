@@ -5,6 +5,29 @@ import decimal
 
 def get_columns(query):
     # Alternate method
+    if query.count(";") > 1:
+        # We have multiple statements in a single file
+        remove_queries = []
+        many_queries = query.split(";")
+        for i in range(len(many_queries)):
+            many_queries[i] = many_queries[i].strip()
+            many_queries[i] = many_queries[i] + ";"
+            if many_queries[i] == ";":
+                remove_queries.append(i)
+        # Do remove
+        for idx in remove_queries.__reversed__():
+            del many_queries[idx]
+        remove_queries = []
+        # Choose which to use
+        for i in range(len(many_queries)):
+            if ("select" not in many_queries[i]) or ("from" not in many_queries[i]):
+                remove_queries.append(i)
+        # Do remove
+        for idx in remove_queries.__reversed__():
+            del many_queries[idx]
+        # Choose the last one
+        query = many_queries[-1]
+    
     cut_query = str(str(query.lower()).split("select")[1]).split("from")[0]
     clean_query = str(cut_query.replace("\n", ""))
     split_query = clean_query.split(",")
@@ -43,6 +66,10 @@ def compare(query_file, pandas_result, sql_result, decimal_places):
         if "index" in list(pandas_result.columns) and len(columns) == len(pandas_result.columns) - 1:
             pass
         else:
+            print(columns)
+            print(len(columns))
+            print(pandas_result.columns)
+            len(pandas_result.columns)
             compare_result = False
             return compare_result, columns
         

@@ -48,13 +48,19 @@
             "Query Location": "queries/14.sql",
             "Required Data": ["part", "lineitem"],
             "Pandas Name": "q14_pandas.py"
+        },
+        {
+            "Query Name": "Query 15",
+            "Query Location": "queries/15.sql",
+            "Required Data": ["supplier", "lineitem"],
+            "Pandas Name": "q15_pandas.py"
         }
     ],
     "Temporary Directory": "temp_queries",
     "SQL Converter Location": "../queries/sql_to_pandas.py",
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 25,
-    "Results Location": "very_large_test_results.csv",
+    "Results Location": "large_test_results.csv",
     "Database Connection Details": {
             "User": "benchmarker",
             "Password": "benchMugPassword",
@@ -62,5 +68,5 @@
             "Port": "5432",
             "Database": "tpchdb"
         },
-    "Results Precision": 5
+    "Results Precision": 4
 }   

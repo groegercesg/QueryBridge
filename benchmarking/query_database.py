@@ -34,8 +34,21 @@ def run_query(db_details, query_file, verbose):
     with open(query_file, 'r') as file:
         sql_query = file.read()
         
-    exec_time = None
-    results = None
+    exec_time = 0.0
+    results = []
+    queries = None
+    
+    # Process our SQL queries into an array of queries
+    if sql_query.count(";") > 1:
+        # Many queries in one file
+        queries = sql_query.split(";")
+        for i in range(len(queries)):
+            queries[i] = queries[i].strip()
+            queries[i] = queries[i] + ";"
+            if queries[i] == ";":
+                del queries[i]
+    else:
+        queries = [sql_query]
 
     # Try connection, catch error
     try:
@@ -47,13 +60,18 @@ def run_query(db_details, query_file, verbose):
                                     connection_factory=MyLoggingConnection)
         connection.initialize(logger)
         cursor = connection.cursor()
-        if verbose:
-            print("Executing SQL Query")
-        cursor.execute(sql_query)
-        retrieved_records = cursor.fetchall()
-
-        results = retrieved_records
-        exec_time = connection.exec_time
+        
+        for i, single_query in enumerate(queries):
+            if verbose:
+                print("Executing SQL Query, part", i+1, "of", len(queries), ".")
+            
+            cursor.execute(single_query)
+            
+            if single_query[:6].lower() == "select":
+                retrieved_records = cursor.fetchall()
+                results.append(retrieved_records)
+            
+            exec_time += connection.exec_time
     except (Exception, psycopg2.Error) as error:
         print("Error while fetching data from PostgreSQL", error)
     finally:
@@ -63,5 +81,19 @@ def run_query(db_details, query_file, verbose):
             connection.close()
             if verbose:
                 print("PostgreSQL connection is closed")
+    
+    # Choose results
+    if len(results) == 1:
+        results = results[0]
+    else:
+        raise ValueError("We have multiple statements that return values, we haven't coded how to handle this.")
             
     return results, exec_time
+
+# For testing
+if __name__ == "__main__":
+    pass
+    import json
+    manifest_json = json.load(open('query_15_test.json'))
+
+    run_query(manifest_json["Database Connection Details"], "queries/15.sql", True)

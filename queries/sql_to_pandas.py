@@ -316,10 +316,10 @@ def main():
         
     # Tear Down
     # If it's benchmarking, delete results
-    #if args.benchmarking:
-    #    results_folder = Path("results")
-    #    if results_folder.exists() and results_folder.is_dir():
-    #        shutil.rmtree(results_folder)
+    if args.benchmarking:
+        results_folder = Path("results")
+        if results_folder.exists() and results_folder.is_dir():
+            shutil.rmtree(results_folder)
             
 if __name__ == "__main__":
     main()
