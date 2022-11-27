@@ -66,7 +66,7 @@ def line_prepender(filename, line):
         f.seek(0, 0)
         f.write(line.rstrip('\r\n') + '\n' + content)
         
-def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, tree, set_value=None, output_index=None):
+def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, tree, relations_subqueries, set_value=None, output_index=None):
     from pandas_tree import make_pandas_tree
     from visualising_tree import plot_pandas_tree
     from pandas_tree_to_pandas import make_pandas
@@ -93,7 +93,7 @@ def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_fil
     # Write out the pandas code, line by line
     if args.benchmarking:
         # We need a special mode for outputing
-        with open(python_output_name, 'w') as f:
+        with open(python_output_name, 'a') as f:
             for line in pandas:
                 f.write("    "+f"{line}\n")
         # Store relations
@@ -144,6 +144,8 @@ def main():
     
     # Store relations from across subqueries, use as function parameter
     relations_subqueries = []
+    # Store view names
+    view_names = []
     
     # Create the filename
     python_output_name = args.output_location + "/" + args.name
@@ -173,6 +175,7 @@ def main():
         if sub_query[:12] == "create view ":
             # Don't continue the execution if it's a create view
             view_name = str(str(sub_query.split("create view ")[1]).split("(")[0]).strip()
+            view_names.append(view_name)
             
             # Exectute dropping this view
             command = psql_string_command + "drop view " + view_name + ";'"
@@ -294,16 +297,21 @@ def main():
             for i in range(len(output_trees)):
                 # Might be a tuple or not, depending on whether it's a subquery
                 if isinstance(output_trees[i], tuple):
-                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i][0], set_value=output_trees[i][1], output_index=i)
+                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i][0], relations_subqueries, set_value=output_trees[i][1], output_index=i)
                 else:
-                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i], output_index=i)
+                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i], relations_subqueries, output_index=i)
         else:
             # Just run it once
-            do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees)
+            do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees, relations_subqueries)
                     
     # Write at the start of the file, the import and function definition
     if args.benchmarking:
-        line_prepender(python_output_name, "def query(" + str(relations_subqueries)[1:-1].replace("'", "") + "):\n")
+        # Remove Duplicates
+        relations_subqueries = list(dict.fromkeys(relations_subqueries))
+        # Remove view names from this
+        cleaned_relations_subqueries = [x for x in relations_subqueries if x not in view_names]
+        
+        line_prepender(python_output_name, "def query(" + str(cleaned_relations_subqueries)[1:-1].replace("'", "") + "):\n")
         line_prepender(python_output_name, "import pandas as pd\n")
         
     # Tear Down

@@ -118,3 +118,26 @@ n_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
 nation = pd.read_table("../tpch-pgsql-master/data/load/nation.tbl.csv", sep="|", names=n_columnnames, dtype=n_data_types, parse_dates=n_parse_dates)
+
+# Supplier
+
+s_columnnames = ["S_SUPPKEY", "S_NAME", "S_ADDRESS", "S_NATIONKEY", "S_PHONE", "S_ACCTBAL", "S_COMMENT"]
+
+for i in range(len(s_columnnames)):
+    s_columnnames[i] = s_columnnames[i].lower()
+
+s_data_types = {
+    's_suppkey': int,
+    's_name': str,
+    's_address': str,
+    's_nationkey': int,
+    's_phone': str,
+    's_acctbal': float,
+    's_comment': str
+}
+
+s_parse_dates = []
+
+# Don't set indexes, as we can't access them with Pandas selection!
+# Don't set indexes, as we can't access them with Pandas selection!
+supplier = pd.read_table("../tpch-pgsql-master/data/load/supplier.tbl.csv", sep="|", names=s_columnnames, dtype=s_data_types, parse_dates=s_parse_dates)

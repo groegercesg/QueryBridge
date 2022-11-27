@@ -63,6 +63,15 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["--file", "queries/15.sql", "--output_location", "results/15", "--name", "15_pandas.py"]
+        },
+        {
+            "name": "Python: SQL to Pandas - BENCH 15",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "queries/15.sql", "--output_location", "results/15", "--name", "15_pandas.py", "--benchmarking", "True"]
         }
     ]
 }
