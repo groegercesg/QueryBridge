@@ -686,7 +686,7 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                     # Reset skip for safety
                     skip = False
                     
-                outer_string = "(" + inner + ").max()"
+                outer_string = "(" + prev_df + "." + inner + ").max()"
                 
                 local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
             
@@ -748,7 +748,7 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                     
                     inner_inner_string = aggregate_sum(inner_inner, df_group=prev_df)
                 
-                    inner = "(" + inner_inner_string + ").sum()"
+                    inner = "(" + prev_df + "." + inner_inner_string + ").sum()"
                     
                 outer_string = "(" + inner + ").max()"
                 

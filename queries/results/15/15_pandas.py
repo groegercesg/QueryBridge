@@ -8,9 +8,9 @@ df_group_1 = df_filter_1 \
     )
 df_group_1 = df_group_1[['suml_extendedprice1l_discount']]
 df_aggr_1 = pd.DataFrame()
-df_aggr_1['maxsuml_extendedprice1l_discount'] = [(suml_extendedprice1l_discount).max()]
+df_aggr_1['maxsuml_extendedprice1l_discount'] = [(df_group_1.suml_extendedprice1l_discount).max()]
 df_aggr_1 = df_aggr_1[['maxsuml_extendedprice1l_discount']]
-dollar_0 = df_aggr_1
+dollar_0 = df_aggr_1['maxsuml_extendedprice1l_discount'][0]
 
 df_filter_1 = supplier[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
 df_filter_2 = lineitem[(lineitem.l_shipdate >= pd.Timestamp('1996-01-01 00:00:00')) & (lineitem.l_shipdate < pd.Timestamp('1996-04-01 00:00:00'))]
