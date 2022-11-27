@@ -881,7 +881,23 @@ def handle_complex_aggregations(self, data, codeCompHelper, prev_df):
                 inner = str(col).split("sum")[1]
                 inner = clean_extra_brackets(inner)
                 
-                after_aggrs.append([col, inner, aggr_type])
+                cleaned_inner, count = check_aggregate(inner, df_group=prev_df)
+                # If count > 1
+                    # We need to do the inner part before, add to a before list
+                    # Save the after part in after list
+                if count > 1:
+                    # Add to before_aggrs
+                    before_aggrs.append([inner, cleaned_inner])
+                    # Add to after_aggrs
+                    after_aggrs.append([col, inner, aggr_type])
+                # If count <= 1
+                    # Save in after part list
+                else:
+                    # We don't use cleaned_inner, it's junk.
+                    # We just use the inner originally
+                    # Add to after_aggrs
+                    after_aggrs.append([col, inner, aggr_type])
+                
             elif "avg" in col:
                 raise ValueError("AVG with no alias!")
             elif "count" in col:
@@ -891,7 +907,6 @@ def handle_complex_aggregations(self, data, codeCompHelper, prev_df):
                 # That are not indexes
                 # In that case we should be grouping by them
                 self.group_key.append(col)
-                #raise ValueError("Col is: " + str(col) + ". We don't recognise this, help!")
      
     # Handle and rearrange output
     return before_aggrs, after_aggrs
@@ -991,6 +1006,21 @@ class group_aggr_node():
         
         # Handle before
         for before_name, before_command in before_group:
+            # Handle complex names in output
+            is_complex, new_name = complex_name_solve(before_name)
+            if is_complex == True:
+                # Replace these
+                codeCompHelper.add_bracket_replace(before_name, new_name)
+                # Find the before_name in after_group
+                # If before_name == after_group[i][1], the after_col, we can replace with new_name.
+                for i in range(len(after_group)):
+                    if before_name == after_group[i][1]:
+                        after_group[i][1] = new_name
+                
+                # Set to after_name for use now
+                before_name = new_name
+                
+            
             instructions.append(prev_df + "['" + before_name + "'] = " + before_command)
         
         # Handle group
@@ -1009,7 +1039,7 @@ class group_aggr_node():
                 # Replace these
                 codeCompHelper.add_bracket_replace(after_name, new_name)
                 # Set to after_name for use now
-                after_name = new_name    
+                after_name = new_name
             
             if after_operation == "sum":
                 instructions.append('        ' + after_name + '=("' + after_col + '", "' + after_operation + '"),')
@@ -1185,8 +1215,13 @@ class rename_node():
         
         # Get the previous output columns
         prev_output = self.nodes[0].output
+        # Iterate through these, replace with entries from codeCompHelper.bracket_replace if present
+        for i in range(len(prev_output)):
+            if prev_output[i] in codeCompHelper.bracket_replace:
+                # This is in it, so set to the replaced version
+                prev_output[i] = codeCompHelper.bracket_replace[prev_output[i]]
         # Reverse these
-        prev_output.reverse() 
+        prev_output.reverse()
         
         # Create the rename dataframe, set previous columns to current column
         for i, output in enumerate(output_cols):
@@ -1208,9 +1243,10 @@ class sql_class():
         self.limit = self.get_limit()
         
     def get_limit(self):
-        limit_amount = 0
-        for limit in parse_one(self.file_content).find_all(exp.Limit):
-            limit_amount = int(limit.expression.alias_or_name)
+        # limit_amount = 0
+        limit_amount = self.file_content.split("limit")[1].split(";")[0].strip()
+        # for limit in parse_one(self.file_content).find_all(exp.Limit):
+        #     limit_amount = int(limit.expression.alias_or_name)
         return limit_amount
         
     def get_col_refs(self):
