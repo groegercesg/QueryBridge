@@ -3,12 +3,12 @@ df_filter_1 = df_filter_1[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber
 df_group_1 = df_filter_1 \
     .groupby(['l_suppkey']) \
     .agg(
-        suml_extendedprice * 1 - l_discount=("l_extendedprice * (1 - l_discount)", "sum"),
+        suml_extendedprice1l_discount=("l_extendedprice * (1 - l_discount)", "sum"),
     )
-df_group_1 = df_group_1[['suml_extendedprice * 1 - l_discount']]
+df_group_1 = df_group_1[['suml_extendedprice1l_discount']]
 df_aggr_1 = pd.DataFrame()
-df_aggr_1['a'] = [((df_group_1.l_extendedprice * ( 1 - df_group_1.l_discount )).sum()).max()]
-df_aggr_1 = df_aggr_1[['max(sum(l_extendedprice * (1 - l_discount)))']]
+df_aggr_1['maxsuml_extendedprice1l_discount'] = [(suml_extendedprice1l_discount).max()]
+df_aggr_1 = df_aggr_1[['maxsuml_extendedprice1l_discount']]
 dollar_0 = df_aggr_1
 
 df_filter_1 = supplier[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
@@ -17,11 +17,10 @@ df_filter_2 = df_filter_2[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber
 df_group_1 = df_filter_2 \
     .groupby(['l_suppkey']) \
     .agg(
-        suml_extendedprice * 1 - l_discount=("l_extendedprice * (1 - l_discount)", "sum"),
-        suml_extendedprice * 1 - l_discount=("l_extendedprice * (1 - l_discount)", "sum"),
+        suml_extendedprice1l_discount=("l_extendedprice * (1 - l_discount)", "sum"),
     )
-df_group_1 = df_group_1[df_group_1.suml_extendedprice * 1 - l_discount = dollar_0]
-df_group_1 = df_group_1[['suml_extendedprice * 1 - l_discount']]
+df_group_1 = df_group_1[df_group_1.suml_extendedprice1l_discount == dollar_0]
+df_group_1 = df_group_1[['suml_extendedprice1l_discount']]
 df_group_1 = df_group_1.rename_axis(['l_suppkey']).reset_index()
 df_rename_1 = pd.DataFrame()
 df_rename_1['total_revenue'] = df_group_1['sum(l_extendedprice * (1 - l_discount))']

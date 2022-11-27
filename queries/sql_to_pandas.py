@@ -3,6 +3,8 @@ import shutil
 import sys
 from pathlib import Path
 import argparse
+import shlex
+import subprocess
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -155,8 +157,6 @@ def main():
             # Skip iteration if empty
             continue
         elif cleaned_sub_q[:4] == "drop":
-            import shlex
-            import subprocess
             cleaned_sub_q = cleaned_sub_q + ";"
             command = psql_string_command + cleaned_sub_q + "'"
 
@@ -172,11 +172,28 @@ def main():
         # Determine whether this sub_query is a view or not
         if sub_query[:12] == "create view ":
             # Don't continue the execution if it's a create view
+            view_name = str(str(sub_query.split("create view ")[1]).split("(")[0]).strip()
+            
+            # Exectute dropping this view
+            command = psql_string_command + "drop view " + view_name + ";'"
+
+            result = subprocess.run(shlex.split(command), stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)       
+            captureError = str(result.stderr.decode('UTF-8')).strip()
+            
+            # Check if the error relates to the view not existing, fine, or something else!
+            if captureError == "":
+                # No error 
+                pass
+            elif captureError == 'ERROR:  view "' + view_name + '" does not exist' :
+                # This error is okay
+                pass
+            else:
+                raise ValueError(captureError)
+            
             continue
             
             view_query = True
             # Store the view_name
-            view_name = str(str(sub_query.split("create view ")[1]).split("(")[0]).strip()
             # Remove the create view stuff, split on as. Remove leading/trailing whitespace
             sub_query = str("".join(sub_query.split("as")[1:])).strip()
             # Add a semicolon on to the end of the sub_query

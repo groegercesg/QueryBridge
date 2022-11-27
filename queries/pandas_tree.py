@@ -20,16 +20,46 @@ def process_output(self, output, codecomphelper):
         brack_cleaned_output = cleaned_output.replace("(", "").replace(")", "")
         # Remove relations (and dot), if they exist
         # store replaces for later
+        # Create a variable for cleaned output but without relations
+        relation_cleaned_output = cleaned_output
         replaces = []
         if hasattr(codecomphelper, "relations"):
             for relation in codecomphelper.relations:
                 if relation in brack_cleaned_output:
                     replaces.append(relation+".")
                     brack_cleaned_output = brack_cleaned_output.replace(relation+".", "")
+                    relation_cleaned_output = relation_cleaned_output.replace(relation+".", "")
                     # Change output[i], this is for the case where we have a relation in the output
                     # But we don't have a column reference
                     #output[i] = brack_cleaned_output
-        # Make lowercase as well            
+        # Make lowercase as well
+        # Do section that uses the codeCompHelper bracket_replace
+        is_complex, brack_replace_output = complex_name_solve(brack_cleaned_output) 
+        if hasattr(codecomphelper, "bracket_replace"):
+            for x in list(codecomphelper.bracket_replace):
+                if x in relation_cleaned_output:
+                    # We have a bracket_replace that is subset within our output_value
+                    # We need to extract the parts that are not substring
+                    # Add a new bracket replace and solve parts
+                    
+                    left_over_parts = relation_cleaned_output.split(x)
+                    solved_parts = []
+                    for j in range(len(left_over_parts)):
+                        is_comp, new_elem = complex_name_solve(left_over_parts[j])
+                        solved_parts.append(new_elem)
+                    
+                    # Join in back together
+                    new_key = left_over_parts[0] + x + left_over_parts[1]
+                    
+                    # Check these are equal, for sanity
+                    if new_key != relation_cleaned_output:
+                        raise ValueError("Something went wrong: " + str(new_key) + " versus " + str(relation_cleaned_output))
+                    
+                    new_value = solved_parts[0] + codecomphelper.bracket_replace[x] + solved_parts[1]
+                    
+                    # Add to dictionary
+                    codecomphelper.bracket_replace[new_key] = new_value
+        
         brack_cleaned_lower_output = brack_cleaned_output.lower()
         if brack_cleaned_output in codecomphelper.sql.column_references:
             # We have an item in output that needs to be changed
@@ -39,8 +69,14 @@ def process_output(self, output, codecomphelper):
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_lower_output])
+        elif relation_cleaned_output in codecomphelper.bracket_replace:
+            output_original_value = cleaned_output
+            output[i] = (output_original_value, codecomphelper.bracket_replace[relation_cleaned_output])
         else:
             output[i] = cleaned_output
+        
+        # Performance the replaces to the output, removing the relations
+        # This is crucial
         if replaces != []:
             for replace_relation in replaces:
                 if isinstance(output[i], tuple):
@@ -592,7 +628,7 @@ def aggregate_case(inner_string, prev_df):
     
     return inner_string
 
-def do_aggregation(self, prev_df, current_df):
+def do_aggregation(self, prev_df, current_df, codeCompHelper):
     local_instructions = []
     for col in self.output:
         if isinstance(col, tuple):
@@ -622,6 +658,38 @@ def do_aggregation(self, prev_df, current_df):
                     outer_string += aggr_results[i] + add_value
                     
                 local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
+            
+            elif "max" in col[0]:
+                # max(sum(l_extendedprice * (1 - l_discount)))
+                
+                 
+                # The aggr operation is MAX!
+                inner = str(col[0]).split("max")[1]
+                inner = clean_extra_brackets(inner)
+                
+                if "sum" in inner:
+                    # Determine if inner is in the codeCompHelper.bracket_replace
+                    if hasattr(codeCompHelper, "bracket_replace"):
+                        if inner in codeCompHelper.bracket_replace:
+                            skip = True
+                            inner = codeCompHelper.bracket_replace[inner]
+                    
+                    if not skip:
+                        # The aggr operation is SUM!
+                        inner_inner = str(inner).split("sum")[1]
+                        inner_inner = clean_extra_brackets(inner_inner)
+                        
+                        inner_inner_string = aggregate_sum(inner_inner, df_group=prev_df)
+                    
+                        inner = "(" + inner_inner_string + ").sum()"
+                    
+                    # Reset skip for safety
+                    skip = False
+                    
+                outer_string = "(" + inner + ").max()"
+                
+                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
+            
             
             elif "sum" in col[0]:
                 # The aggr operation is SUM!
@@ -684,7 +752,7 @@ def do_aggregation(self, prev_df, current_df):
                     
                 outer_string = "(" + inner + ").max()"
                 
-                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
+                local_instructions.append(current_df + "['" + col + "'] = [" + outer_string + "]")
             
             else:
                 raise ValueError("Not Implemented Error, for col: " + str(col))
@@ -883,7 +951,7 @@ class group_aggr_node():
                 cut_filter = str(str(self.filter).split(">")[0]).strip()
                 filter_amount = str(str(self.filter).split(">")[1]).strip()
             elif "=" in self.filter:
-                filter_type = "="
+                filter_type = "=="
                 cut_filter = str(str(self.filter).split("=")[0]).strip()
                 filter_amount = str(str(self.filter).split("=")[1]).strip()
             else:
@@ -911,8 +979,15 @@ class group_aggr_node():
         
         # Combine after_filter and before filter
         if hasattr(self, "filter"):
-            before_group += before_filter
-            after_group += after_filter
+            # Only append if not already present
+            for b_filt in before_filter:
+                if b_filt not in before_group:
+                    before_group.append(b_filt)
+            
+            # Only append if not already present
+            for a_filt in after_filter:
+                if a_filt not in after_group:
+                    after_group.append(a_filt)
         
         # Handle before
         for before_name, before_command in before_group:
@@ -927,15 +1002,14 @@ class group_aggr_node():
         # Handle After
         #if aggr_type == "count" and inner == "*":
         #   after_aggrs.append([col[1], "len(s.index)", aggr_type])
-        for after_name, after_col, after_operation in after_group:      
+        for after_name, after_col, after_operation in after_group:             
             # Handle brackets in output
-            if "(" or ")" in after_name:
-                # print("After name: " + str(after_name) + " has brackets in it.")
+            is_complex, new_name = complex_name_solve(after_name)
+            if is_complex == True:
                 # Replace these
-                new_after_name = str(str(after_name).replace("(", "")).replace(")", "")
-                codeCompHelper.add_bracket_replace(after_name, new_after_name)
+                codeCompHelper.add_bracket_replace(after_name, new_name)
                 # Set to after_name for use now
-                after_name = new_after_name    
+                after_name = new_name    
             
             if after_operation == "sum":
                 instructions.append('        ' + after_name + '=("' + after_col + '", "' + after_operation + '"),')
@@ -974,6 +1048,23 @@ class group_aggr_node():
             instructions.append(statement2_string)
         
         return instructions   
+    
+def complex_name_solve(in_name):
+    complex_items = ["*", "-", "(", ")", " "]
+    is_complex = False
+    new_name = None
+    
+    if any(item in in_name for item in complex_items):
+        # We have one of these items in our string
+        is_complex = True
+        new_name = in_name
+        for item in complex_items:
+            new_name = new_name.replace(item, "")
+    
+    # returns
+    #   is_complex  -  True or False as to whether complex
+    #   new_name  -  The name that we have after this function has done it's magic
+    return is_complex, new_name
     
 class merge_node():
     def __init__(self, condition, output, join, filters=None):
@@ -1054,7 +1145,7 @@ class aggr_node():
             raise ValueError("Inputted prev_df is not a string!")
         instructions = [this_df + " = pd.DataFrame()"]
         
-        instructions += do_aggregation(self, prev_df, this_df)
+        instructions += do_aggregation(self, prev_df, this_df, codeCompHelper)
         
         output_cols = choose_aliases(self, codeCompHelper)
         
