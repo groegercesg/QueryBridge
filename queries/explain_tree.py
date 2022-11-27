@@ -134,7 +134,7 @@ def solve_prune_node(prune_type, tree):
             
 alias_locations = {
     "Index Scan": ["output", "index_cond"],
-    "Seq Scan": ["output"],
+    "Seq Scan": ["output", "filters"],
     "Group Aggregate": ["group_key", "output", "filter"],
     "Hash Join": ["hash_cond", "output"],
     "Sort": ["sort_key", "output"],

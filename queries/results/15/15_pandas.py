@@ -1,4 +1,4 @@
-df_filter_1 = lineitem[(lineitem_1.l_shipdate >= pd.Timestamp('1996-01-01 00:00:00')) & (lineitem_1.l_shipdate < pd.Timestamp('1996-04-01 00:00:00'))]
+df_filter_1 = lineitem[(lineitem.l_shipdate >= pd.Timestamp('1996-01-01 00:00:00')) & (lineitem.l_shipdate < pd.Timestamp('1996-04-01 00:00:00'))]
 df_filter_1 = df_filter_1[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
 df_filter_1['l_extendedprice1l_discount'] = df_filter_1.l_extendedprice * ( 1 - df_filter_1.l_discount )
 df_group_1 = df_filter_1 \
