@@ -222,6 +222,70 @@ def clean_filter_params(self, params):
             # If line_split[i] contains an "ANY", the replace with ".isin"
             if " = ANY " in line_split[i]:
                 line_split[i] = line_split[i].replace(" = ANY ", ".isin")
+                
+            # Handle not equals case
+            if " <> " in line_split[i]:
+                line_split[i] = line_split[i].replace("<>", "!=")
+            
+            # Handle does not start with    
+            if " !~~ " in line_split[i]:
+                line_split[i] = line_split[i].strip()
+                if (line_split[i][0] == "(") and (line_split[i][-1] == ")"):
+                    line_split[i] = clean_extra_brackets(line_split[i])
+                # (pa.p_type.str.startswith("MEDIUM POLISHED") == False)
+                split_like = line_split[i].split(" !~~ ")
+                if len(split_like) != 2:
+                    raise ValueError("Expected only 2 parts to this statement")
+                
+                data_name = split_like[0].strip()
+                
+                if split_like[1].count("%") != 1:
+                    raise ValueError("We haven't written the handling of multiple wildcards yet")
+                else:
+                    if split_like[1][0] == "%":
+                        # We do endswith
+                        line_split[i] = '(' + data_name + '.str.endswith("' + str(split_like[1].replace("%", "")) +'") == False)'
+                    elif split_like[1][-1] == "%":
+                        # We do startswith
+                        line_split[i] = '(' + data_name + '.str.startswith("' + str(split_like[1].replace("%", "")) +'") == False)'
+                    else:
+                        raise ValueError("We haven't yet written the handling of wildcards inside the statement")                
+                
+            # Handle "~~"
+            if " ~~ " in line_split[i]:
+                split_like = line_split[i].split(" ~~ ")
+                if len(split_like) != 2:
+                    raise ValueError("Expected only 2 parts to this statement")
+                
+                data_name = split_like[0]
+                
+                # Split split_like[1] into the contain parts, validate this
+                contain_parts = list(filter(None, split_like[1].split("%")))
+                # Fix empty ones in this
+                
+                if len(contain_parts) == 1:
+                    line_split[i] = data_name + '.str.contains("' + contain_parts[0] + '")'
+                else:
+                    # More than one part
+                    # Have to do contains and have to do find for position
+                    parts = []
+                    
+                    # Do the contains
+                    for part in contain_parts:
+                        parts.append('('+data_name + '.str.contains("' + part + '"))')
+                        
+                    # Do the find
+                    finds = []
+                    for part in contain_parts:
+                        finds.append(data_name + '.str.find("' + part + '")')
+                    
+                    # Join the finds all up together
+                    find_join = "(" + " < ".join(finds) + ")"
+                    
+                    # Add to parts
+                    parts.append(find_join)
+                    
+                    line_split[i] = " & ".join(parts)
     
     # Reassemble line_split
     # Join on nothing, should have spaces still in it
@@ -299,7 +363,7 @@ class sort_node():
             sort_split = individual_sort.split()
             if len(sort_split) == 1:
                 # No DESC/ASC, therefore is ASC (implied)
-                # Use process_output to clear the relation if present
+                # Use process_output to      the relation if present
                 column = (process_output(self, [sort_split[0]], codeCompHelper))[0]
                 keys.append(column)
                 ascendings.append(True)
@@ -1361,8 +1425,8 @@ def create_tree(class_tree, sql_class):
             node_class = filter_node(current_node.relation_name, current_node.filters, current_node.output)
     
         # Add in subplan information
-        if hasattr(current_node, "Subplan Name"):
-            node_class.add_subplan_name(current_node["Subplan Name"])
+        if hasattr(current_node, "subplan_name"):
+            node_class.add_subplan_name(current_node.subplan_name)
     elif node_type == "Sort":
         node_class = sort_node(current_node.output, current_node.sort_key)
     elif node_type == "Incremental Sort":
