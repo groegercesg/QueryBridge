@@ -80,10 +80,10 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--file", "queries/15.sql", "--output_location", "results/15", "--name", "15_pandas.py"] 
+            "args": ["--file", "queries/15.sql", "--output_location", "results/15", "--name", "15_pandas.py", "--column_limiting", "False"] 
         },
         {
-            "extra": ["--column_limiting", "False"],
+            "extra": [],
         }
     ]
 }

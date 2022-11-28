@@ -117,7 +117,6 @@ def main():
         cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_query["Query Location"], '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", sql_query["Pandas Name"]]    
         if "Conversion Options" in sql_query:
             cmd += sql_query["Conversion Options"]
-            print(cmd)
         
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         

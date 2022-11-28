@@ -268,6 +268,9 @@ class filter_node():
             if codeCompHelper.column_limiting:
                 statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
                 instructions.append(statement2_string)
+            else:
+                statement2_string = this_df + " = " + prev_df
+                instructions.append(statement2_string)
             
         return instructions
              

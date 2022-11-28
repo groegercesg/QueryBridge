@@ -29,13 +29,13 @@
             "args": []
         },
         {
-            "name": "Python: Run Micro Test",
+            "name": "Python: Run Column Limiting",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--file", "micro_test.json", "--verbose"]
+            "args": ["--file", "column_limiting.json", "--verbose"]
         }
     ]
 }

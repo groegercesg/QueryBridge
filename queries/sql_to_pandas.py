@@ -313,9 +313,9 @@ def main():
                 else:
                     do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i], relations_subqueries, overall_tree_helper, output_index=i)
             
-            # Reset overall_tree_helper dict of node_id_tracker to be empty
-            # But we maintain the totals in node_type_tracker, this stops us having overlapping names
-            overall_tree_helper.node_id_tracker = {}
+                # Reset overall_tree_helper dict of node_id_tracker to be empty
+                # But we maintain the totals in node_type_tracker, this stops us having overlapping names
+                overall_tree_helper.node_id_tracker = {}
         else:
             # Just run it once
             do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees, relations_subqueries, overall_tree_helper)
