@@ -347,11 +347,14 @@ def make_tree(json, tree):
     elif node_type.lower() == "gather":    
         node_class = gather_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Workers Planned"], node["Single Copy"], node["Parent Relationship"])
     elif node_type.lower() == "seq scan":
+        # TODO: Capture Subplan Name if "Parent Relationship" == "SubPlan"
         if "Filter" in node:
             node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Parent Relationship"], node["Filter"])
         else:
             # From the planner, some Seq Scan nodes just return the data, with no filtering
             node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Parent Relationship"], None)
+        if node["Parent Relationship"] == "SubPlan":
+            node_class.add_subplan_name(node["Subplan Name"])
     elif node_type.lower() == "sort":
         node_class = sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Sort Key"], node["Parent Relationship"])
     elif node_type.lower() == "subquery scan":
@@ -375,6 +378,8 @@ def make_tree(json, tree):
         node_class = merge_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Merge Cond'], node['Parent Relationship'])
     elif node_type.lower() == "materialize":
         node_class = materialize_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
+    elif node_type.lower() == "index only scan":
+        node_class = index_only_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Scan Direction"], node["Index Name"], node["Relation Name"], node["Schema"], node["Alias"], node["Output"], node["Filter"], node["Parent Relationship"])
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
         

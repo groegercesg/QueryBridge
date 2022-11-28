@@ -217,6 +217,9 @@ def main():
         
         # Write subquery into explain file
         with open(explain_file, "w") as writer:
+            # Add a semicolon to the last character if we don't already have one
+            if sub_query[-1] != ";":
+                sub_query = sub_query + ";"
             writer.write(sub_query)
             
         # Write the explain options out to the file

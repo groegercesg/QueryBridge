@@ -31,6 +31,17 @@ class group_aggregate_node(aggregate_node):
     def add_filter(self, in_filter):
         self.filter = in_filter
 
+class index_only_scan_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, scan_direction, index_name, relation_name, schema, alias, output, filter, parent_relationship):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.scan_direction = scan_direction
+        self.index_name = index_name
+        self.relation_name = relation_name
+        self.schema = schema
+        self.alias = alias
+        self.filter = filter
+        self.parent_relationship = parent_relationship
+
 class gather_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, workers_planned, single_copy, parent_relationship):
         super().__init__(node_type, parallel_aware, async_capable, output)
@@ -46,6 +57,9 @@ class seq_scan_node(base_node):
         self.alias = alias
         self.parent_relationship = parent_relationship
         self.filters = filters
+        
+    def add_subplan_name(self, in_name):
+        self.subplan_name = in_name
 
 class sort_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, sort_key, parent_relationship):

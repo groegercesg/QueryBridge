@@ -160,13 +160,18 @@ def postorder_traversal(tree, pandas_statements, baseCodeCompHelper, aggrs, tree
         if current_class_name in aggrs:
             # We are in the aggr
             codeCompHelper.setAggr(True)
+            if hasattr(tree, "data"):
+                codeCompHelper.add_relation(tree.data)
             pandas_strings = tree.to_pandas(prev_node_name, df_name, codeCompHelper)
         else:
+            if hasattr(tree, "data"):
+                codeCompHelper.add_relation(tree.data)
             pandas_strings = tree.to_pandas(prev_node_name, df_name, codeCompHelper)
         
     else:
         # Add tree.data, the relation name, to codeCompHelper
-        codeCompHelper.add_relation(tree.data)
+        if hasattr(tree, "data"):
+            codeCompHelper.add_relation(tree.data)
         pandas_strings = tree.to_pandas(tree.data, df_name, codeCompHelper)
 
    

@@ -175,6 +175,10 @@ def clean_type_information(self, content):
                 # Join back together
                 edit_value = ",".join(split_edit)
             new_value = str("[" + edit_value + "]")
+        # " (part.p_size = ANY ('{49,14,23,45,19,3,36,9}'::integer[]))"
+        elif "integer[]" in match_str:
+            edit_value = value[1:-1]
+            new_value = str("[" + edit_value + "]")
         elif "bpchar" in match_str:
             new_value = str("'" + value + "'")
             # replace single equals with double equals
@@ -237,6 +241,9 @@ class filter_node():
         
     def set_nodes(self, nodes):
         self.nodes = nodes
+        
+    def add_subplan_name(self, in_name):
+        self.subplan_name = in_name
     
     def set_instructions(self, instructions):
         self.instructions = instructions
@@ -849,7 +856,15 @@ def handle_complex_aggregations(self, data, codeCompHelper, prev_df):
                 inner = str(col[0]).split("avg")[1]
             elif "count" in col[0]:
                 aggr_type = "count"
-                inner = str(col[0]).split("count")[1]   
+                inner = str(col[0]).split("count")[1]
+                if "distinct" in col[0].lower():
+                    # Set Aggr type as Distinct
+                    aggr_type = "count_distinct"
+                    
+                    inner = clean_extra_brackets(inner)
+                    inner = str(inner).split("DISTINCT ")[1]
+                    inner = clean_extra_brackets(inner)
+                    
             else:
                 raise ValueError("Other types of aggr not implemented. Such as: " + str(col[0]))  
             
@@ -915,7 +930,17 @@ def handle_complex_aggregations(self, data, codeCompHelper, prev_df):
             elif "avg" in col:
                 raise ValueError("AVG with no alias!")
             elif "count" in col:
-                raise ValueError("COUNT with no alias!")
+                inner = str(col).split("count")[1]
+                inner = clean_extra_brackets(inner)
+                if "DISTINCT" in inner:
+                    aggr_type = "distinct"
+                    inner = str(inner).split("DISTINCT ")[1]
+                    inner = clean_extra_brackets(inner)
+                    cleaned_inner, count = check_aggregate(inner, df_group=prev_df)
+                    
+                    after_aggrs.append([col, inner, aggr_type])
+                else:
+                    raise ValueError("COUNT with no alias!")
             else:
                 # If these are columns with no aggregations
                 # That are not indexes
@@ -1066,6 +1091,8 @@ class group_aggr_node():
                     instructions.append('        ' + after_name + '=("' + codeCompHelper.indexes[0] + '", "count"),')
                 else:
                     instructions.append('        ' + after_name + '=("' + after_col + '", "count"),')
+            elif after_operation == "count_distinct":
+                instructions.append('        ' + after_name + '=("' + after_col + '", "lambda x: x.nunique()"),')
             else:
                 raise ValueError("Operation: " + str(after_operation) + " not recognised!")
             
@@ -1332,6 +1359,10 @@ def create_tree(class_tree, sql_class):
         if hasattr(current_node, "filters"):
             # Check if is a filter type of Seq Scan
             node_class = filter_node(current_node.relation_name, current_node.filters, current_node.output)
+    
+        # Add in subplan information
+        if hasattr(current_node, "Subplan Name"):
+            node_class.add_subplan_name(current_node["Subplan Name"])
     elif node_type == "Sort":
         node_class = sort_node(current_node.output, current_node.sort_key)
     elif node_type == "Incremental Sort":
@@ -1365,6 +1396,11 @@ def create_tree(class_tree, sql_class):
     elif node_type == "Subquery Scan":
         # Make a Subquery Scan into a "rename node"
         node_class = rename_node(current_node.output, current_node.alias)
+    elif node_type == "Index Only Scan":
+        if hasattr(current_node, "filter"):
+            node_class = filter_node(current_node.relation_name, current_node.filter, current_node.output)
+        else:
+            node_class = filter_node(current_node.relation_name, None, current_node.output)
     else:
         raise ValueError("The node: " + str(current_node.node_type) + " is not recognised. Not all node have been implemented")
     

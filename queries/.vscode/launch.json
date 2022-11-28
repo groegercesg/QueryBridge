@@ -83,7 +83,13 @@
             "args": ["--file", "queries/15.sql", "--output_location", "results/15", "--name", "15_pandas.py", "--column_limiting", "False"] 
         },
         {
-            "extra": [],
-        }
+            "name": "Python: SQL to Pandas - 16",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "queries/16.sql", "--output_location", "results/16", "--name", "16_pandas.py"]
+        },
     ]
 }
