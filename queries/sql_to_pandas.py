@@ -56,7 +56,14 @@ def init_argparse() -> argparse.ArgumentParser:
                     default=False,
                     help='Whether we would like our column ordering to be perfectly accurate or not. Has significant impact on run-time.')
 
-    
+    parser.add_argument('--column_limiting',
+                    metavar='column_limiting',
+                    type=str2bool,
+                    nargs='?',
+                    const=True, 
+                    default=True,
+                    help='Whether we would like our columns between nodes to be limited, can help with ongoing memory usage.')
+
     return parser
 
 
@@ -84,22 +91,22 @@ def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_fil
     if set_value != None:
         # We have a sub_query on our hands, the final node needs to set this to be
         # set_value
-        pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args.column_ordering, output_name=set_value)
+        pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args, output_name=set_value)
     else:
         # Let's try and write some pandas code from this
-        pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args.column_ordering)
+        pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args)
     
     # We have created the pandas code, now let's write it out
     # Write out the pandas code, line by line
     if args.benchmarking:
         # We need a special mode for outputing
-        with open(python_output_name, 'a') as f:
+        with open(python_output_name, 'a+') as f:
             for line in pandas:
                 f.write("    "+f"{line}\n")
         # Store relations
         relations_subqueries += codeCompHelper.relations
     else:        
-        with open(python_output_name, 'a') as f:
+        with open(python_output_name, 'a+') as f:
             for line in pandas:
                 f.write(f"{line}\n")
 
@@ -112,7 +119,7 @@ def main():
         # display help message when no args are passed.
         parser.print_help()
         sys.exit(1)
-    
+        
     # Set the Arguments
     query_file = args.file
     

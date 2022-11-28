@@ -258,14 +258,16 @@ class filter_node():
             output_cols = choose_aliases(self, codeCompHelper)
             
             # Limit to output columns
-            statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-            instructions.append(statement2_string)
+            if codeCompHelper.column_limiting:
+                statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+                instructions.append(statement2_string)
         else:            
             output_cols = choose_aliases(self, codeCompHelper)
             
             # Limit to output columns
-            statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
-            instructions.append(statement2_string)
+            if codeCompHelper.column_limiting:
+                statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
+                instructions.append(statement2_string)
             
         return instructions
              
@@ -334,8 +336,9 @@ class sort_node():
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-        instructions.append(statement2_string)
+        if codeCompHelper.column_limiting:
+            statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+            instructions.append(statement2_string)
         
         return instructions
 
@@ -358,8 +361,6 @@ class limit_node():
             raise ValueError("Inputted prev_df is not a string!")
         instructions = []
         
-        
-        
         if codeCompHelper.column_ordering:
             output_cols = choose_aliases(self, codeCompHelper, final_output=True)
             # Undo axes to normal columns
@@ -375,9 +376,13 @@ class limit_node():
                 statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
                 instructions.append(statement2_string)
         else:
-            output_cols = choose_aliases(self, codeCompHelper, final_output=False)
-            statement_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
-            instructions.append(statement_string)
+            if codeCompHelper.column_limiting:
+                output_cols = choose_aliases(self, codeCompHelper, final_output=False)
+                statement_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
+                instructions.append(statement_string)
+            else:
+                statement_string = this_df + " = " + prev_df
+                instructions.append(statement_string)
                     
         statement3_string = "result = " + str(this_df) + ".head("+str(self.amount)+")"
         instructions.append(statement3_string)
@@ -1079,7 +1084,7 @@ class group_aggr_node():
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        if output_cols != []:
+        if output_cols != [] and codeCompHelper.column_limiting:
             statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
         
@@ -1161,8 +1166,9 @@ class merge_node():
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-        instructions.append(statement2_string)
+        if codeCompHelper.column_limiting:
+            statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+            instructions.append(statement2_string)
             
         return instructions
 
@@ -1186,8 +1192,9 @@ class aggr_node():
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-        instructions.append(statement2_string)
+        if codeCompHelper.column_limiting:
+            statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+            instructions.append(statement2_string)
             
         return instructions
     

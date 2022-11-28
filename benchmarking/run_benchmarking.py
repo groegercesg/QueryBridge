@@ -80,11 +80,25 @@ def main():
     # This directory is specified as: manifest_json["Temporary Directory"]
     
     # Delete if already exists
-    temp_path = Path(manifest_json["Temporary Directory"])
-    if temp_path.exists() and temp_path.is_dir():
-        shutil.rmtree(temp_path)
-    # Make a folder
-    Path(temp_path).mkdir(parents=True, exist_ok=True)
+    def make_temp_folder():
+        temp_path = Path(manifest_json["Temporary Directory"])
+        if temp_path.exists() and temp_path.is_dir():
+            shutil.rmtree(temp_path)
+        # Make a folder
+        Path(temp_path).mkdir(parents=True, exist_ok=True)
+        
+        # Write an __init__.py into the file
+        open(f"{temp_path}"+"/"+"__init__.py", 'a').close()
+        
+        return temp_path
+        
+    def delete_temp_folder():
+        # Tear Down
+        # Delete temporary folder
+        if temp_path.exists() and temp_path.is_dir():
+            shutil.rmtree(temp_path)
+        
+    temp_path = make_temp_folder()
     
     # Delete Results file if already exists
     if os.path.exists(manifest_json["Results Location"]):
@@ -93,15 +107,17 @@ def main():
     # For the results, write the Header
     results_writer(manifest_json, ["Data Type", "Query Name", "Average", "Runs"])
     
-    # Write an __init__.py into the file
-    open(f"{temp_path}"+"/"+"__init__.py", 'a').close()
-    
     # Iterate through all the SQL Queries
     for sql_query in manifest_json["SQL Queries"]:
+        temp_path = make_temp_folder()
+        
         print("Doing Query: " + str(sql_query["Query Name"]))
     
         # Run converter
         cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_query["Query Location"], '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", sql_query["Pandas Name"]]    
+        if "Conversion Options" in sql_query:
+            cmd += sql_query["Conversion Options"]
+            print(cmd)
         
         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
         
@@ -138,10 +154,19 @@ def main():
             print(pandas_run_times)
         avg_3sf = round_sig(sum(pandas_run_times)/len(pandas_run_times), 3)
         print("Pandas: " + str(avg_3sf))
-        results_writer(manifest_json, ["Pandas", str(sql_query["Query Name"]), avg_3sf, pandas_run_times])
+        results_writer(manifest_json, [str(sql_query["Results Name"]), str(sql_query["Query Name"]), avg_3sf, pandas_run_times])
         
         sql_run_times = []
-        for i in range(manifest_json["Number of Query Runs"]):
+        # Handle whether to run SQL many times or just run once to check correctness
+        sql_runs = None
+        if "Compare SQL" in sql_query:
+            if sql_query["Compare SQL"] == "Once":
+                sql_runs = 1
+            else:
+                raise ValueError("Unknown Value for Compare SQL in Query: " + str(sql_query["Query Name"]) + ". This was: " + str(sql_query["Compare SQL"]))
+        else:
+            sql_runs = manifest_json["Number of Query Runs"]
+        for i in range(sql_runs):
             if args.verbose:
                 print("Doing SQL Run: " + str(i+1))
             sql_result, run_time = run_query(db_details, sql_query["Query Location"], args.verbose)
@@ -151,7 +176,9 @@ def main():
             print(sql_run_times)
         avg_3sf = round_sig(sum(sql_run_times)/len(sql_run_times), 3)
         print("SQL: " + str(avg_3sf))
-        results_writer(manifest_json, ["SQL", str(sql_query["Query Name"]), avg_3sf, sql_run_times])
+        if "Compare SQL" not in sql_query:
+            # If we have set our "Compare SQL", then don't write the SQL results to file
+            results_writer(manifest_json, ["SQL", str(sql_query["Query Name"]), avg_3sf, sql_run_times])
         
         # Checking correctness
         # We should check if pandas_result is the same as sql_result
@@ -166,13 +193,12 @@ def main():
             print(columns)
             for row in sql_result:
                 print(row)
+        
+        delete_temp_folder()
     
     print("Testing is complete and results have been written to: " + str(manifest_json["Results Location"]))    
     
-    # Tear Down
-    # Delete temporary folder
-    if temp_path.exists() and temp_path.is_dir():
-        shutil.rmtree(temp_path)
+    delete_temp_folder()
         
 if __name__ == "__main__":
     main()

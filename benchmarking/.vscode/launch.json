@@ -17,7 +17,7 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
-            "args": ["--file", "query_15_test.json", "--verbose"]
+            "args": ["--file", "micro_test.json", "--verbose"]
         },
         {
             "name": "Python: Run 15 Database",
@@ -27,6 +27,15 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": []
+        },
+        {
+            "name": "Python: Run Micro Test",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "micro_test.json", "--verbose"]
         }
     ]
 }

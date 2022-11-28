@@ -11,12 +11,13 @@ class TreeHelper():
         self.node_id_tracker = {}
 
 class CodeCompilation():
-    def __init__(self, sql_class, column_ordering):
+    def __init__(self, sql_class, column_ordering, column_limiting):
         self.usePostAggr = False
         self.indexes = []
         self.relations = []
         self.sql = sql_class
         self.column_ordering = column_ordering
+        self.column_limiting = column_limiting
         self.bracket_replace = {}
         
     def setAggr(self, aggr):
@@ -41,6 +42,8 @@ class CodeCompilation():
         new_bracket_replace = self.bracket_replace | other.bracket_replace
         # column_ordering
         new_column_ordering = self.column_ordering or other.column_ordering
+        # column_limiting
+        new_column_limiting = self.column_limiting or other.column_limiting
         # indexes
         new_indexes = list(set(self.indexes + other.indexes))
         # relations
@@ -51,7 +54,7 @@ class CodeCompilation():
         new_use_post_aggr = self.usePostAggr or other.usePostAggr
         
         # Make class
-        returningCodeComp = CodeCompilation(new_sql, new_column_ordering)
+        returningCodeComp = CodeCompilation(new_sql, new_column_ordering, new_column_limiting)
         returningCodeComp.usePostAggr = new_use_post_aggr
         returningCodeComp.relations = new_relations
         returningCodeComp.indexes = new_indexes
@@ -65,24 +68,39 @@ def get_class_name(node):
 def get_class_id(node):
     return str(id(node))
 
-def make_pandas(pandas_tree, sql, precise_column_ordering, output_name=None):
+def make_pandas(pandas_tree, sql, args, output_name=None):
     # Function to generate pandas code from tree of classes
     pandas_statements = []
     # Process incoming SQL file using module
     from pandas_tree import sql_class
     sql_file = sql_class(sql)
     # Flag for using post-aggr output or not
-    baseCodeCompHelper = CodeCompilation(sql_file, precise_column_ordering)
+    
+    baseCodeCompHelper = CodeCompilation(sql_file, args.column_ordering, args.column_limiting)
     aggrs = ["aggr", "group"]
     treeHelper = TreeHelper()
     
     ccHelper = postorder_traversal(pandas_tree, pandas_statements, baseCodeCompHelper, aggrs, treeHelper)
     
     if output_name != None:
-        current_df = pandas_statements[-1].split(" = ")[0]
-        # Hardcoded at the moment to only handle one
-        last_column = pandas_statements[-1].split("[['")[1].split("']]")[0]
-        pandas_statements.append(str(output_name) + " = " + str(current_df) + "['" + last_column + "'][0]")
+        top_class_id = get_class_id(pandas_tree)
+        if treeHelper.node_id_tracker.get(top_class_id, None) == None:
+            raise ValueError("Top Node in tree not detected")
+        else:
+            # current_df = pandas_statements[-1].split(" = ")[0]
+            last_df = treeHelper.node_id_tracker[top_class_id]
+        
+        if isinstance(pandas_tree.output, list):
+            # Use 1st element
+            # Hardcoded at the moment to only handle one
+            if isinstance(pandas_tree.output[0], tuple):
+                last_column = str(pandas_tree.output[0][1])
+            else:
+                last_column = str(pandas_tree.output[0])
+        else:
+            raise ValueError("We were expecting the output attribute of pandas_tree to be a list, but it's not! Output: " + str(pandas_tree.output))
+        
+        pandas_statements.append(str(output_name) + " = " + str(last_df) + "['" + last_column + "'][0]")
         pandas_statements.append("")
     
     return pandas_statements, ccHelper

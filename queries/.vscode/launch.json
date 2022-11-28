@@ -65,13 +65,25 @@
             "args": ["--file", "queries/15.sql", "--output_location", "results/15", "--name", "15_pandas.py"]
         },
         {
-            "name": "Python: SQL to Pandas - BENCH 15",
+            "name": "Python: SQL to Pandas - 15 Benchmarking",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["--file", "queries/15.sql", "--output_location", "results/15", "--name", "15_pandas.py", "--benchmarking", "True"]
+        },
+        {
+            "name": "Python: SQL to Pandas - 15 Limiting",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "queries/15.sql", "--output_location", "results/15", "--name", "15_pandas.py"] 
+        },
+        {
+            "extra": ["--column_limiting", "False"],
         }
     ]
 }
