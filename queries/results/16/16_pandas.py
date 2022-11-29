@@ -11,7 +11,7 @@ df_sort_1 = df_sort_1[['p_brand', 'p_type', 'p_size', 'ps_suppkey']]
 df_group_1 = df_sort_1 \
     .groupby(['p_brand', 'p_type', 'p_size']) \
     .agg(
-        supplier_cnt=("ps_suppkey", "lambda x: x.nunique()"),
+        supplier_cnt=("ps_suppkey", lambda x: x.nunique()),
     )
 df_group_1 = df_group_1[['supplier_cnt']]
 df_sort_2 = df_group_1.sort_values(by=['supplier_cnt', 'p_brand', 'p_type', 'p_size'], ascending=[False, True, True, True])

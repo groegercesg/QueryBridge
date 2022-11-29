@@ -1250,7 +1250,7 @@ class group_aggr_node():
                 else:
                     instructions.append('        ' + after_name + '=("' + after_col + '", "count"),')
             elif after_operation == "count_distinct":
-                instructions.append('        ' + after_name + '=("' + after_col + '", "lambda x: x.nunique()"),')
+                instructions.append('        ' + after_name + '=("' + after_col + '", lambda x: x.nunique()),')
             else:
                 raise ValueError("Operation: " + str(after_operation) + " not recognised!")
             
