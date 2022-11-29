@@ -205,10 +205,78 @@ def clean_type_information(self, content):
     
     return content
 
+from difflib import SequenceMatcher
+
+def similar_string(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+def clean_subplan_params(self, in_filters, prev_df, this_df):
+    # Check this node is subplan appropriate
+    if hasattr(self, "nodes"):
+        if len(self.nodes) >= 1:
+            if hasattr(self.nodes[0], "subplan_name"):
+                pass
+            else:
+                raise ValueError("Incorrect subplan formulation")
+        else:
+            raise ValueError("Incorrect subplan formulation")
+    else:
+        raise ValueError("Incorrect subplan formulation")
+    
+    # Split on & and |, keep in original split
+    line_split = re.split('([&|])', in_filters)
+    for i in range(len(line_split)):
+        if "NOT " in line_split[i]:
+            line_split[i] = line_split[i].replace("NOT ", "")
+            inner = clean_extra_brackets(line_split[i])
+            inner_split = inner.split("SubPlan ")
+            
+            if len(inner_split) != 2:
+                raise ValueError("Unexpected formulation of inner_split: " + str(inner_split))
+            
+            subplan_name = "SubPlan " + inner_split[1]
+            
+            if subplan_name != self.nodes[0].subplan_name:
+                raise ValueError("The SubPlan names are different, desired name: " + str(subplan_name) + " but the detected SubPlan had name: " + str(self.nodes[0].subplan_name))
+            
+            # Decide which column to do the equivalance for
+            if len(self.output) == 1:
+                chosen_column = self.output[0]
+            else:
+                # Choose which column to use
+                best_similarity = 0.0
+                best_column = None
+                
+                # Iterate through columns
+                for j in range(len(self.output)):
+                    # Calculate the score for a string
+                    similar_score = similar_string(self.output[j], self.nodes[0].output[0])
+                    # If better than the current best score
+                    if similar_score > best_similarity:
+                        # Set as new score
+                        best_similarity = similar_score
+                        # And update best column
+                        best_column = self.output[j]
+                        
+                chosen_column = best_column
+            
+            line_split[i] = this_df + '[~' + this_df + '.' + chosen_column + '.isin(' + prev_df + '["' + self.nodes[0].output[0] + '"])]'
+            
+        else:
+            raise ValueError("Not implemented")
+        
+        
+    # Reassemble line_split
+    # Join on nothing, should have spaces still in it
+    filters = "".join(line_split)
+    
+    return filters
+    
+
 def clean_filter_params(self, params):  
     # Replace AND with & and convert to string
-    filters = str(params.replace("AND", "&"))
-    filters = str(filters.replace("OR", "|"))
+    filters = str(params.replace(" AND ", " & "))
+    filters = str(filters.replace(" OR ", " | "))
     # Remove first and last brackets
     filters = filters[1:-1]
     
@@ -286,6 +354,12 @@ def clean_filter_params(self, params):
                     parts.append(find_join)
                     
                     line_split[i] = " & ".join(parts)
+                    
+        # Clear leading/trailing spaces
+        line_split[i] = line_split[i].strip()
+        
+        if (line_split[i] == "&") or (line_split[i] == "|"):
+            line_split[i] = " " + line_split[i] + " "
     
     # Reassemble line_split
     # Join on nothing, should have spaces still in it
@@ -313,8 +387,16 @@ class filter_node():
         self.instructions = instructions
         
     def to_pandas(self, prev_df, this_df, codeCompHelper):
+        subplan_mode = False
+
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
+        
+        # Check if "SubPlan"
+        if "SubPlan" in self.params:
+            subplan_mode = True
+            self.params = clean_subplan_params(self, self.params, prev_df, self.data)
+        
         # Set prefixes
         if not isinstance(prev_df, str):
             raise ValueError("Inputted prev_df is not a string!")
@@ -322,16 +404,28 @@ class filter_node():
         
         # Edit params:
         if self.params != None:
-            params = self.params.replace(self.data, prev_df)
-            statement1_string = this_df + " = " + prev_df + "[" + str(params) + "]"
-            instructions.append(statement1_string)
-        
-            output_cols = choose_aliases(self, codeCompHelper)
+            if subplan_mode == True:
+                # Do output for subplan mode
+                instructions.append(this_df + " = " + self.params)
+                
+                output_cols = choose_aliases(self, codeCompHelper)
+                
+                # Limit to output columns
+                if codeCompHelper.column_limiting:
+                    statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+                    instructions.append(statement2_string)
             
-            # Limit to output columns
-            if codeCompHelper.column_limiting:
-                statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-                instructions.append(statement2_string)
+            else:
+                params = self.params.replace(self.data, prev_df)
+                statement1_string = this_df + " = " + prev_df + "[" + str(params) + "]"
+                instructions.append(statement1_string)
+            
+                output_cols = choose_aliases(self, codeCompHelper)
+                
+                # Limit to output columns
+                if codeCompHelper.column_limiting:
+                    statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+                    instructions.append(statement2_string)
         else:            
             output_cols = choose_aliases(self, codeCompHelper)
             
