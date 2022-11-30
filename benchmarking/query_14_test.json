@@ -3,6 +3,7 @@
     "SQL Queries": [
         {
             "Query Name": "Query 14",
+            "Results Name": "Pandas",
             "Query Location": "queries/14.sql",
             "Required Data": ["part", "lineitem"],
             "Pandas Name": "q14_pandas.py"

@@ -1,19 +1,19 @@
 {
-    "Test Name":"Basic Test",
+    "Test Name":"Query 16 Test",
     "SQL Queries": [
         {
-            "Query Name": "Query 15",
+            "Query Name": "Query 16",
             "Results Name": "Pandas",
-            "Query Location": "queries/15.sql",
-            "Required Data": ["supplier", "lineitem"],
-            "Pandas Name": "q15_pandas.py"
+            "Query Location": "queries/16.sql",
+            "Required Data": ["supplier", "partsupp", "part"],
+            "Pandas Name": "q16_pandas.py"
         }
     ],
     "Temporary Directory": "temp_queries",
     "SQL Converter Location": "../queries/sql_to_pandas.py",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 5,
-    "Results Location": "query_15_test_results.csv",
+    "Number of Query Runs": 15,
+    "Results Location": "query_16_test_results.csv",
     "Database Connection Details": {
             "User": "benchmarker",
             "Password": "benchMugPassword",

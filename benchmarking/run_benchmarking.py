@@ -144,10 +144,12 @@ def main():
         for i in range(manifest_json["Number of Query Runs"]):
             if args.verbose:
                 print("Doing Pandas Run: " + str(i+1))
-            start_time = time.time()
             
+            start_time = time.time()
             pandas_result = query_function(*query_data)
-            pandas_run_times.append(time.time() - start_time)
+            end_time = time.time()
+            
+            pandas_run_times.append(end_time - start_time)
          
         if args.verbose:   
             print(pandas_run_times)

@@ -393,9 +393,10 @@ class filter_node():
         self.output = process_output(self, self.output, codeCompHelper)
         
         # Check if "SubPlan"
-        if "SubPlan" in self.params:
-            subplan_mode = True
-            self.params = clean_subplan_params(self, self.params, prev_df, self.data)
+        if self.params != None:
+            if "SubPlan" in self.params:
+                subplan_mode = True
+                self.params = clean_subplan_params(self, self.params, prev_df, self.data)
         
         # Set prefixes
         if not isinstance(prev_df, str):
