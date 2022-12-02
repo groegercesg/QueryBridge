@@ -102,8 +102,12 @@ def walk_class_tree(graph, class_tree, parent_node=None):
                 walk_class_tree(graph, plan, node_from)
 
         else: # if leaf node
-            to_name = str(class_tree.node_type) + '_' + str(class_tree.relation_name) # unique name
-            to_label = str(class_tree.relation_name)
+            if hasattr(class_tree, "relation_name"):
+                to_name = str(class_tree.node_type) + '_' + str(class_tree.relation_name) # unique name
+                to_label = str(class_tree.relation_name)
+            else:
+                to_name = str(class_tree.node_type)
+                to_label = ""
 
             node_to = pydot.Node(to_name, label=to_label, shape='box')
             graph.add_node(node_to)

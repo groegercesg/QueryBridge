@@ -48,7 +48,19 @@ class gather_node(base_node):
         self.workers_planned = workers_planned
         self.single_copy = single_copy
         self.parent_relationship = parent_relationship
+
+class bitmap_heap_scan_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, relation_name, schema, alias, recheck_cond):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.relation_name = relation_name
+        self.schema = schema
+        self.alias = alias
+        self.recheck_cond = recheck_cond
         
+    def add_parent_relationship(self, parent):
+        
+        self.parent_relationship = parent
+
 class seq_scan_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, relation_name, schema, alias, filters):
         super().__init__(node_type, parallel_aware, async_capable, output)
@@ -117,6 +129,15 @@ class index_scan_node(base_node):
         
     def add_filter(self, in_filter):
         self.filter = in_filter
+        
+class bitmap_index_scan_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, index_name, parent_relationship):
+        super().__init__(node_type, parallel_aware, async_capable, None)
+        self.parent_relationship = parent_relationship
+        self.index_name = index_name
+        
+    def add_index_cond(self, cond):
+        self.index_cond = cond
 
 class incremental_sort_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, parent_relationship, sort_key, presorted_key):

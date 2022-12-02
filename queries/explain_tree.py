@@ -385,6 +385,15 @@ def make_tree(json, tree):
         node_class = materialize_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
     elif node_type.lower() == "index only scan":
         node_class = index_only_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Scan Direction"], node["Index Name"], node["Relation Name"], node["Schema"], node["Alias"], node["Output"], node["Filter"], node["Parent Relationship"])
+    elif node_type.lower() == "bitmap index scan":
+        node_class = bitmap_index_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Index Name"], node["Parent Relationship"])
+        if "Index Cond" in node:
+            node_class.add_index_cond(node['Index Cond'])
+    elif node_type.lower() == "bitmap heap scan":
+        node_class = bitmap_heap_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Recheck Cond"])
+        if "Parent Relationship" in node:
+            # Add to node_class
+            node_class.add_parent_relationship(node["Parent Relationship"])
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
         

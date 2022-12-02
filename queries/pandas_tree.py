@@ -1550,6 +1550,9 @@ def create_tree(class_tree, sql_class):
             node_class = filter_node(current_node.relation_name, current_node.filter, current_node.output)
         else:
             node_class = filter_node(current_node.relation_name, None, current_node.output)
+    elif node_type == "Bitmap Heap Scan":
+        node_class = filter_node(current_node.relation_name, current_node.recheck_cond, current_node.output)
+    
     else:
         raise ValueError("The node: " + str(current_node.node_type) + " is not recognised. Not all node have been implemented")
     
