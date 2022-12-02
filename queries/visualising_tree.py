@@ -114,8 +114,9 @@ def walk_class_tree(graph, class_tree, parent_node=None):
 
         node_from = pydot.Node(from_name, label=from_label)
         graph.add_node(node_from)
-        for plan in class_tree.plans:
-            walk_class_tree(graph, plan, node_from)
+        if class_tree.plans is not None:
+            for plan in class_tree.plans:
+                walk_class_tree(graph, plan, node_from)
 
 def plot_tree(tree, name):
     

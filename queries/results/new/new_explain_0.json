@@ -1,0 +1,1 @@
+[{"Plan": {"Node Type": "Seq Scan","Parallel Aware": false,"Async Capable": false,"Relation Name": "supplier","Schema": "public","Alias": "supplier","Output": ["s_suppkey"],"Filter": "((supplier.s_comment)::text ~~ '%Customer%Complaints%'::text)"}}]

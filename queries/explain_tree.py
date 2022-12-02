@@ -349,12 +349,17 @@ def make_tree(json, tree):
     elif node_type.lower() == "seq scan":
         # TODO: Capture Subplan Name if "Parent Relationship" == "SubPlan"
         if "Filter" in node:
-            node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Parent Relationship"], node["Filter"])
+            node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Filter"])
         else:
             # From the planner, some Seq Scan nodes just return the data, with no filtering
             node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Parent Relationship"], None)
-        if node["Parent Relationship"] == "SubPlan":
-            node_class.add_subplan_name(node["Subplan Name"])
+
+        if "Parent Relationship" in node:
+            # Add to node_class
+            node_class.add_parent_relationship(node["Parent Relationship"])
+            # Add Subplan
+            if node["Parent Relationship"] == "SubPlan":
+                node_class.add_subplan_name(node["Subplan Name"])
     elif node_type.lower() == "sort":
         node_class = sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Sort Key"], node["Parent Relationship"])
     elif node_type.lower() == "subquery scan":

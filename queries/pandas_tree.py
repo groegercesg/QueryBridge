@@ -1445,11 +1445,14 @@ class sql_class():
         self.limit = self.get_limit()
         
     def get_limit(self):
-        # limit_amount = 0
         local_file = self.file_content.lower()
-        limit_amount = local_file.split("limit")[1].split(";")[0].strip()
-        # for limit in parse_one(self.file_content).find_all(exp.Limit):
-        #     limit_amount = int(limit.expression.alias_or_name)
+        if "limit" in local_file.lower():
+            # limit_amount = 0
+            limit_amount = local_file.split("limit")[1].split(";")[0].strip()
+            # for limit in parse_one(self.file_content).find_all(exp.Limit):
+            #     limit_amount = int(limit.expression.alias_or_name)
+        else:
+            limit_amount = None
         return limit_amount
         
     def get_col_refs(self):

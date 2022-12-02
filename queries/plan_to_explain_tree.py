@@ -50,16 +50,19 @@ class gather_node(base_node):
         self.parent_relationship = parent_relationship
         
 class seq_scan_node(base_node):
-    def __init__(self, node_type, parallel_aware, async_capable, output, relation_name, schema, alias, parent_relationship, filters):
+    def __init__(self, node_type, parallel_aware, async_capable, output, relation_name, schema, alias, filters):
         super().__init__(node_type, parallel_aware, async_capable, output)
         self.relation_name = relation_name
         self.schema = schema
         self.alias = alias
-        self.parent_relationship = parent_relationship
         self.filters = filters
         
     def add_subplan_name(self, in_name):
         self.subplan_name = in_name
+        
+    def add_parent_relationship(self, parent):
+        
+        self.parent_relationship = parent
 
 class sort_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, sort_key, parent_relationship):
