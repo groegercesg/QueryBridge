@@ -271,6 +271,18 @@ def clean_subplan_params(self, in_filters, prev_df, this_df):
     filters = "".join(line_split)
     
     return filters
+
+_special_regex_chars = {
+    ch : '\\'+ch
+    for ch in '.^$*+?{}[]|()\\'
+}
+
+def sql_like_fragment_to_regex_string(fragment):
+    safe_fragment = ''.join([
+        _special_regex_chars.get(ch, ch)
+        for ch in fragment
+    ])
+    return '^' + safe_fragment.replace('%', '.*?').replace('_', '.') + '$'
     
 
 def clean_filter_params(self, params):  
@@ -294,67 +306,42 @@ def clean_filter_params(self, params):
             # Handle not equals case
             if " <> " in line_split[i]:
                 line_split[i] = line_split[i].replace("<>", "!=")
-            
-            # Handle does not start with    
-            if " !~~ " in line_split[i]:
+                
+            # The presence of "~~", be it as part of "!~~" (NOT LIKE) or "~~" (LIKE)
+            # Means that we have to convert this to a like statement
+            # We can do this generally using a regex, this catches all cases 100% of the time
+            if "~~" in line_split[i]:
+                # Variable for what type of like we have
+                not_equal_like = False
+                
+                # Strip and clean
                 line_split[i] = line_split[i].strip()
                 if (line_split[i][0] == "(") and (line_split[i][-1] == ")"):
                     line_split[i] = clean_extra_brackets(line_split[i])
-                # (pa.p_type.str.startswith("MEDIUM POLISHED") == False)
-                split_like = line_split[i].split(" !~~ ")
+                    
+                # Not equal
+                if " !~~ " in line_split[i]:
+                    not_equal_like = True
+                    split_like = line_split[i].split(" !~~ ")
+                else:
+                    split_like = line_split[i].split(" ~~ ") 
+                
+                # Catch potential error
                 if len(split_like) != 2:
                     raise ValueError("Expected only 2 parts to this statement")
-                
+                    
                 data_name = split_like[0].strip()
+                regex_cmd = sql_like_fragment_to_regex_string(split_like[1])
                 
-                if split_like[1].count("%") != 1:
-                    raise ValueError("We haven't written the handling of multiple wildcards yet")
+                # Assemble the line
+                line_split[i] = '(' + data_name + '.str.contains("' + str(regex_cmd) +'", regex=True)'
+                
+                if not_equal_like == True:
+                    line_split[i] = line_split[i] + " == False)"
                 else:
-                    if split_like[1][0] == "%":
-                        # We do endswith
-                        line_split[i] = '(' + data_name + '.str.endswith("' + str(split_like[1].replace("%", "")) +'") == False)'
-                    elif split_like[1][-1] == "%":
-                        # We do startswith
-                        line_split[i] = '(' + data_name + '.str.startswith("' + str(split_like[1].replace("%", "")) +'") == False)'
-                    else:
-                        raise ValueError("We haven't yet written the handling of wildcards inside the statement")                
-                
-            # Handle "~~"
-            if " ~~ " in line_split[i]:
-                split_like = line_split[i].split(" ~~ ")
-                if len(split_like) != 2:
-                    raise ValueError("Expected only 2 parts to this statement")
-                
-                data_name = split_like[0]
-                
-                # Split split_like[1] into the contain parts, validate this
-                contain_parts = list(filter(None, split_like[1].split("%")))
-                # Fix empty ones in this
-                
-                if len(contain_parts) == 1:
-                    line_split[i] = data_name + '.str.contains("' + contain_parts[0] + '")'
-                else:
-                    # More than one part
-                    # Have to do contains and have to do find for position
-                    parts = []
-                    
-                    # Do the contains
-                    for part in contain_parts:
-                        parts.append('('+data_name + '.str.contains("' + part + '"))')
-                        
-                    # Do the find
-                    finds = []
-                    for part in contain_parts:
-                        finds.append(data_name + '.str.find("' + part + '")')
-                    
-                    # Join the finds all up together
-                    find_join = "(" + " < ".join(finds) + ")"
-                    
-                    # Add to parts
-                    parts.append(find_join)
-                    
-                    line_split[i] = " & ".join(parts)
-                    
+                    # Otherwise, just close the bracket
+                    line_split[i] = line_split[i] + ")"
+              
         # Clear leading/trailing spaces
         line_split[i] = line_split[i].strip()
         
