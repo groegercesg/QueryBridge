@@ -78,8 +78,10 @@ def walk_pandas_tree(graph, class_tree, parent_node=None):
 
         node_from = pydot.Node(from_name, label=from_label, fontname="Helvetica", fontcolor=font_color, style="filled", fillcolor=edge_color)
         graph.add_node(node_from)
-        for plan in class_tree.nodes:
-            walk_pandas_tree(graph, plan, node_from)
+        if hasattr(class_tree, "nodes"):
+            if class_tree.nodes is not None: # if more leaves below this node
+                for plan in class_tree.nodes:
+                    walk_pandas_tree(graph, plan, node_from)
 
 def walk_class_tree(graph, class_tree, parent_node=None):
     """

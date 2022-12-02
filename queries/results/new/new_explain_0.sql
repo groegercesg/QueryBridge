@@ -4,4 +4,4 @@ SELECT
 FROM
     supplier
 WHERE
-    s_comment LIKE '%Customer%Complaints%';
+    s_comment LIKE '_r%';
