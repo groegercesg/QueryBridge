@@ -9,6 +9,7 @@ Setup from: https://github.com/Data-Science-Platform/tpch-pgsql
 Located in [queries/tests](queries/tests). Can be run with the following command:
 
 ```python
+pytest where_general_tests.py
 pytest like_operator_tests.py
 ```
 

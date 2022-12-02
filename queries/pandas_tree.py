@@ -156,9 +156,36 @@ def clean_type_information(self, content):
         elif "timestamp" in match_str:
             new_value = "pd.Timestamp('"+str(pd.to_datetime(value, format='%Y-%m-%d %H:%M:%S'))+"')"
         elif "numeric" in match_str:
-            new_value = str(int(value))
+            # Bug: '(supplier.s_nationkey)::numeric < 27.3'
+            # Sometimes the postgres planner refers to the relation as "numeric"
+            # We obviously shouldn't try to cast this as an integer
+            
+            # If there are no digits in the string, then simply cast it as a string
+            if sum(c.isdigit() for c in match_str) == 0:
+                new_value = str(value)
+            else:
+                new_value = str(int(value))
+        elif "text[]" in match_str:
+            edit_value = value[1:-1]
+            if edit_value.count(",") > 0:
+                # There are commas in the string
+                # We split on these
+                edit_split = edit_value.split(",")
+                for k in range(len(edit_split)):
+                    # Add a quote to the start and end of every string
+                    edit_split[k] = "\'" + edit_split[k] + "\'"
+                
+                # Join back up together with commas
+                edit_value = ",".join(edit_split)
+            else:
+                edit_value = "\'" + edit_value + "\'"
+            new_value = str("[" + edit_value + "]")
         elif "text" in match_str:
             new_value = str(value)
+            if matchNum > 1:
+                # If we have the second match, i.e. the first is the relation
+                # Then on the second we can add in quotes
+                new_value = "\'" + str(value) + "\'"
         # ' (part.p_container = ANY (\'{"SM CASE","SM BOX","SM PACK","SM PKG"}\'::bpchar[])) '
         elif "bpchar[]" in match_str:
             edit_value = value[1:-1]
@@ -184,6 +211,8 @@ def clean_type_information(self, content):
             # replace single equals with double equals
             # Use the existing replace method to do this
             replaces.append(("=", "=="))
+        elif "integer" in match_str:
+            new_value = str(int(value))
         else:
             raise ValueError("In clean_type_information, it contain some information about datatype that we weren't able to parse appropriately")
         # print("New Value: " + str(new_value))
@@ -302,6 +331,11 @@ def clean_filter_params(self, params):
             # If line_split[i] contains an "ANY", the replace with ".isin"
             if " = ANY " in line_split[i]:
                 line_split[i] = line_split[i].replace(" = ANY ", ".isin")
+                
+            # Do replacements for all
+            if " <> ALL " in line_split[i]:
+                line_split[i] = line_split[i].replace(" <> ALL ", ".isin")
+                line_split[i] = "~" + line_split[i]
                 
             # Handle not equals case
             if " <> " in line_split[i]:
