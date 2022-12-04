@@ -6,6 +6,30 @@ from queue import Queue
 def get_class_id(node):
     return str(id(node))
 
+def flip_cond_around(in_cond):
+    # We should flip this around at this point
+    # So originally index_cond will be:
+    # (a = b)
+    # And we should change it to:
+    # (b = a)
+    index = str(in_cond)
+    replace_brackets = False
+    if index[0] == "(" and index[-1] == ")":
+        # Strip brackets
+        index = index[1:-1]
+        replace_brackets = True
+        
+    index_split = str(index).split(" = ")
+    if len(index_split) != 2:
+        raise ValueError("There should be two sides to an index condition")
+    else:
+        new_index = str(index_split[1]) + " = " + str(index_split[0])
+        if replace_brackets:
+            new_index = "(" + new_index + ")"
+            
+    # Return it out
+    return new_index
+
 def solve_nested_loop_node(tree):
     # Preorder traversal
     
@@ -13,52 +37,40 @@ def solve_nested_loop_node(tree):
         # Add in merge_cond attribute
         # Check the plans of Node, for an index scan, add on that only!
         merging_condition = None
-        for individual_plan in tree.plans:
-            if individual_plan.node_type == "Index Scan":
-                # Perform work for the merging condition
-                if merging_condition != None:
-                    # We have already found the merging condition
-                    raise Exception("We have found two merging conditions")
-                else:
-                    # We should flip this around at this point
-                    # So originally index_cond will be:
-                    # (a = b)
-                    # And we should change it to:
-                    # (b = a)
-                    index = str(individual_plan.index_cond)
-                    replace_brackets = False
-                    if index[0] == "(" and index[-1] == ")":
-                        # Strip brackets
-                        index = index[1:-1]
-                        replace_brackets = True
+        
+        # If the tree node has an attribute of filter.
+        # We don't need to carry out the searching below procedure
+        # And can instead use functions to swap around the filter and add as a merging cond
+        if hasattr(tree, "filter"):
+            merging_condition = flip_cond_around(tree.filter)
+        else:
+            for individual_plan in tree.plans:
+                if individual_plan.node_type == "Index Scan":
+                    # Perform work for the merging condition
+                    if merging_condition != None:
+                        # We have already found the merging condition
                         
-                    index_split = str(index).split(" = ")
-                    if len(index_split) != 2:
-                        raise ValueError("There should be two sides to an index condition")
+                        raise Exception("We have found two merging conditions")
                     else:
-                        new_index = str(index_split[1]) + " = " + str(index_split[0])
-                        if replace_brackets:
-                            new_index = "(" + new_index + ")"
+                        merging_condition = flip_cond_around(individual_plan.index_cond)
                     
-                    merging_condition = new_index
-                
-                # Perform work for the filter condition
-                # We are going to investigate individual_plan.filter
-                # We want to use a regular expression to split up a string but respect nested brackets
-                if hasattr(individual_plan, "filter"):
-                    keep_filter, up_filter = process_matches(str(individual_plan.filter)[1:-1], individual_plan.relation_name)
-                    
-                    # Handle keep_filter ending in "AND" or "OR"
-                    if keep_filter[-1] == "AND" or keep_filter[-1] == "OR":
-                        # Pop last element out
-                        keep_filter.pop()
-                    
-                    # Set individual_node filters back to keep_filter
-                    individual_plan.filter = "(" + " ".join(keep_filter) + ")"
-                    
-                    # Set tree filters
-                    if up_filter != []:
-                        tree.add_filter(" ".join(up_filter))
+                    # Perform work for the filter condition
+                    # We are going to investigate individual_plan.filter
+                    # We want to use a regular expression to split up a string but respect nested brackets
+                    if hasattr(individual_plan, "filter"):
+                        keep_filter, up_filter = process_matches(str(individual_plan.filter)[1:-1], individual_plan.relation_name)
+                        
+                        # Handle keep_filter ending in "AND" or "OR"
+                        if keep_filter[-1] == "AND" or keep_filter[-1] == "OR":
+                            # Pop last element out
+                            keep_filter.pop()
+                        
+                        # Set individual_node filters back to keep_filter
+                        individual_plan.filter = "(" + " ".join(keep_filter) + ")"
+                        
+                        # Set tree filters
+                        if up_filter != []:
+                            tree.add_filter(" ".join(up_filter))
                         
         if merging_condition != None:
             tree.add_merge_cond(merging_condition)
@@ -139,7 +151,7 @@ alias_locations = {
     "Hash Join": ["hash_cond", "output"],
     "Sort": ["sort_key", "output"],
     "Merge Join": ["output", "merge_cond"],
-    "Nested Loop": ["merge_cond", "output"],
+    "Nested Loop": ["merge_cond", "output", "filter"],
     "Incremental Sort": ["output", "presorted_key", "sort_key"],
     "Limit": ["output"],
     "Aggregate": ["group_key", "output"],
@@ -347,13 +359,13 @@ def make_tree(json, tree):
     elif node_type.lower() == "gather":    
         node_class = gather_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Workers Planned"], node["Single Copy"], node["Parent Relationship"])
     elif node_type.lower() == "seq scan":
-        # TODO: Capture Subplan Name if "Parent Relationship" == "SubPlan"
+        node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"])
+        
+        # Check if a filter exists and add it
         if "Filter" in node:
-            node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Filter"])
-        else:
-            # From the planner, some Seq Scan nodes just return the data, with no filtering
-            node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Parent Relationship"], None)
-
+            node_class.add_filters(node["Filter"])
+        
+        # Check if a parent relationship exists and add it
         if "Parent Relationship" in node:
             # Add to node_class
             node_class.add_parent_relationship(node["Parent Relationship"])
@@ -366,6 +378,9 @@ def make_tree(json, tree):
         node_class = subquery_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Alias"], node["Parent Relationship"])
     elif node_type.lower() == "nested loop":
         node_class = nested_loop_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Parent Relationship']) 
+        
+        if "Join Filter" in node:
+            node_class.add_filter(node["Join Filter"])
     elif node_type.lower() == "hash join":
         node_class = hash_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Hash Cond'], node['Parent Relationship'])
     elif node_type.lower() == "hash":
