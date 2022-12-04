@@ -202,13 +202,6 @@ def main():
                 raise ValueError(captureError)
             
             continue
-            
-            view_query = True
-            # Store the view_name
-            # Remove the create view stuff, split on as. Remove leading/trailing whitespace
-            sub_query = str("".join(sub_query.split("as")[1:])).strip()
-            # Add a semicolon on to the end of the sub_query
-            sub_query = sub_query + ";"
         else:
             # Not a subquery
             if i != 0:

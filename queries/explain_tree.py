@@ -342,20 +342,21 @@ def make_tree(json, tree):
         node_class = limit_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"])
     elif node_type.lower() == "aggregate":
         if "Group Key" in node:
-            # Switch if no Parent Relationship
-            if "Parent Relationship" in node:
-                node_class = group_aggregate_node("Group " + node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"], node["Group Key"])
-            else:
-                node_class = group_aggregate_node("Group " + node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], None, node["Group Key"])
-            
+            node_class = group_aggregate_node("Group " + node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Group Key"])
+
             # Handle adding Filter
             if "Filter" in node:
                 node_class.add_filter(node["Filter"])
         else:
-            node_class = aggregate_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Parent Relationship"])
-            
+            node_class = aggregate_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"])
+        
+        # Add SubPlan
         if "Subplan Name" in node:
             node_class.add_subplan(node["Subplan Name"])
+            
+        # Add Parent Relationship
+        if "Parent Relationship" in node:
+            node_class.add_parent_relationship(node["Parent Relationship"])
     elif node_type.lower() == "gather":    
         node_class = gather_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Workers Planned"], node["Single Copy"], node["Parent Relationship"])
     elif node_type.lower() == "seq scan":
@@ -399,7 +400,9 @@ def make_tree(json, tree):
     elif node_type.lower() == "materialize":
         node_class = materialize_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
     elif node_type.lower() == "index only scan":
-        node_class = index_only_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Scan Direction"], node["Index Name"], node["Relation Name"], node["Schema"], node["Alias"], node["Output"], node["Filter"], node["Parent Relationship"])
+        node_class = index_only_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Scan Direction"], node["Index Name"], node["Relation Name"], node["Schema"], node["Alias"], node["Output"], node["Parent Relationship"])
+        if "Filter" in node:
+            node_class.add_filter(node['Filter'])
     elif node_type.lower() == "bitmap index scan":
         node_class = bitmap_index_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Index Name"], node["Parent Relationship"])
         if "Index Cond" in node:

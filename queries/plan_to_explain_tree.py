@@ -14,33 +14,37 @@ class limit_node(base_node):
         super().__init__(node_type, parallel_aware, async_capable, output)
         
 class aggregate_node(base_node):
-    def __init__(self, node_type, parallel_aware, async_capable, output, strategy, partial_mode, parent_relationship):
+    def __init__(self, node_type, parallel_aware, async_capable, output, strategy, partial_mode):
         super().__init__(node_type, parallel_aware, async_capable, output)
         self.strategy = strategy
         self.partial_mode = partial_mode
-        self.parent_relationship = parent_relationship
         
     def add_subplan(self, subplan):
         self.subplan_name = subplan
+        
+    def add_parent_relationship(self, in_parent):
+        self.parent_relationship = in_parent
 
 class group_aggregate_node(aggregate_node):
-    def __init__(self, node_type, parallel_aware, async_capable, output, strategy, partial_mode, parent_relationship, group_key):
-        super().__init__(node_type, parallel_aware, async_capable, output, strategy, partial_mode, parent_relationship)
+    def __init__(self, node_type, parallel_aware, async_capable, output, strategy, partial_mode, group_key):
+        super().__init__(node_type, parallel_aware, async_capable, output, strategy, partial_mode)
         self.group_key = group_key
             
     def add_filter(self, in_filter):
         self.filter = in_filter
 
 class index_only_scan_node(base_node):
-    def __init__(self, node_type, parallel_aware, async_capable, scan_direction, index_name, relation_name, schema, alias, output, filter, parent_relationship):
+    def __init__(self, node_type, parallel_aware, async_capable, scan_direction, index_name, relation_name, schema, alias, output, parent_relationship):
         super().__init__(node_type, parallel_aware, async_capable, output)
         self.scan_direction = scan_direction
         self.index_name = index_name
         self.relation_name = relation_name
         self.schema = schema
         self.alias = alias
-        self.filter = filter
         self.parent_relationship = parent_relationship
+        
+    def add_filter(self, in_filter):
+        self.filter = in_filter
 
 class gather_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, workers_planned, single_copy, parent_relationship):

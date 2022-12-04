@@ -390,13 +390,13 @@ def clean_filter_params(self, params):
 
 # Classes for pandas instructions
 class filter_node():
-    def __init__(self, data, params, output):
+    def __init__(self, data, output):
         self.data = data
-        if params != None:
-            self.params = clean_filter_params(self,params)
-        else:
-            self.params = None
         self.output = output
+        self.params = None
+        
+    def set_params(self, in_params):
+        self.params = clean_filter_params(self, in_params)
         
     def set_nodes(self, nodes):
         self.nodes = nodes
@@ -954,6 +954,20 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                 outer_string = "(" + inner + ").max()"
                 
                 local_instructions.append(current_df + "['" + col + "'] = [" + outer_string + "]")
+            elif "count" in col:
+                # The aggr operation is MAX!
+                inner = str(col).split("count")[1]
+                inner = clean_extra_brackets(inner)
+                
+                outer_string = "(" + inner + ").count()"
+                
+                # Handle complex names in output
+                is_complex, new_name = complex_name_solve(col)
+                if is_complex == True:
+                    # Replace these
+                    codeCompHelper.add_bracket_replace(col, new_name)
+                
+                local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
             
             else:
                 raise ValueError("Not Implemented Error, for col: " + str(col))
@@ -1539,10 +1553,12 @@ def create_tree(class_tree, sql_class):
             # Mode is Simple, we can add this
             node_class = aggr_node(current_node.output)
     elif node_type == "Seq Scan":
+        node_class = filter_node(current_node.relation_name, current_node.output)
+    
         if hasattr(current_node, "filters"):
             # Check if is a filter type of Seq Scan
-            node_class = filter_node(current_node.relation_name, current_node.filters, current_node.output)
-    
+            node_class.add_filters(current_node.filters)
+        
         # Add in subplan information
         if hasattr(current_node, "subplan_name"):
             node_class.add_subplan_name(current_node.subplan_name)
@@ -1572,21 +1588,23 @@ def create_tree(class_tree, sql_class):
             raise ValueError("We need our nested loop to have a merge condition, this should have been added by traversal")
     elif node_type == "Index Scan":            
         # Make an index scan into a filter node
-        if hasattr(current_node, "filter"):
-            node_class = filter_node(current_node.relation_name, current_node.filter, current_node.output)
-        else:
-            node_class = filter_node(current_node.relation_name, None, current_node.output)
+        node_class = filter_node(current_node.relation_name, current_node.output)
+            
+        if hasattr(current_node, "filters"):
+            # Check if is a filter type of Seq Scan
+            node_class.add_filters(current_node.filters)
     elif node_type == "Subquery Scan":
         # Make a Subquery Scan into a "rename node"
         node_class = rename_node(current_node.output, current_node.alias)
     elif node_type == "Index Only Scan":
-        if hasattr(current_node, "filter"):
-            node_class = filter_node(current_node.relation_name, current_node.filter, current_node.output)
-        else:
-            node_class = filter_node(current_node.relation_name, None, current_node.output)
+        # Make an index scan into a filter node
+        node_class = filter_node(current_node.relation_name, current_node.output)
+            
+        if hasattr(current_node, "filters"):
+            # Check if is a filter type of Seq Scan
+            node_class.add_filters(current_node.filters)
     elif node_type == "Bitmap Heap Scan":
         node_class = filter_node(current_node.relation_name, current_node.recheck_cond, current_node.output)
-    
     else:
         raise ValueError("The node: " + str(current_node.node_type) + " is not recognised. Not all node have been implemented")
     
