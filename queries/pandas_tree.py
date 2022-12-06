@@ -531,7 +531,7 @@ class sort_node():
             instructions.append(statement2_string)
         
         return instructions
-
+    
 class limit_node():
     def __init__(self, output, sql):
         self.amount = self.process_amount(sql)
@@ -579,6 +579,43 @@ class limit_node():
         
         statement4_string = "return result"
         instructions.append(statement4_string)
+        
+        return instructions
+
+class unique_node():
+    def __init__(self, output):
+        self.output = output
+        
+    def set_nodes(self, nodes):
+        self.nodes = nodes
+    
+    def to_pandas(self, prev_df, this_df, codeCompHelper):
+        # Process output:
+        self.output = process_output(self, self.output, codeCompHelper)
+        # Set prefixes
+        if not isinstance(prev_df, str):
+            raise ValueError("Inputted prev_df is not a string!")
+        instructions = []
+            
+        # Reset indexes to normal columns so we can reference them
+        if codeCompHelper.indexes != []:
+            instructions.append(prev_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()")
+        
+        # Create the current dataframe
+        instructions.append(this_df + " = pd.DataFrame()")
+        
+        # Choose output columns        
+        output_cols = choose_aliases(self, codeCompHelper)
+        
+        # Create the rename dataframe, set previous columns to current column
+        for i, output in enumerate(output_cols):
+            statement_string = this_df + "['" + str(output) + "'] = " + prev_df + "['" + str(output) + "'].unique()"
+            instructions.append(statement_string)
+            
+        # It appears that unique also needs to sort the columns
+        ascendings = [True] * len(output_cols)
+        statement1_string = this_df + " = " + this_df + ".sort_values(by=" + str(output_cols) + ", ascending=" + str(ascendings) + ")"
+        instructions.append(statement1_string)
         
         return instructions
     
@@ -942,7 +979,7 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                 inner = str(col).split("max")[1]
                 inner = clean_extra_brackets(inner)
                 
-                if "sum" in inner:
+                if "sum" in inner.lower():
                     # The aggr operation is SUM!
                     inner_inner = str(inner).split("sum")[1]
                     inner_inner = clean_extra_brackets(inner_inner)
@@ -959,16 +996,33 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                 inner = str(col).split("count")[1]
                 inner = clean_extra_brackets(inner)
                 
-                outer_string = "(" + inner + ").count()"
+                if "distinct" in inner.lower():
+                    # The aggr operation is distinct!
+                    inner_inner = str(inner).split("DISTINCT")[1]
+                    inner_inner = clean_extra_brackets(inner_inner).strip()
                 
-                # Handle complex names in output
-                is_complex, new_name = complex_name_solve(col)
-                if is_complex == True:
-                    # Replace these
-                    codeCompHelper.add_bracket_replace(col, new_name)
+                    outer_string = "(" + prev_df + "['" + inner_inner + "']).nunique()"
+                    
+                    # Handle complex names in output
+                    is_complex, new_name = complex_name_solve(col)
+                    if is_complex == True:
+                        # Replace these
+                        codeCompHelper.add_bracket_replace(col, new_name)
+                        
+                    local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
+                    
+                else:
                 
-                local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
-            
+                    outer_string = "(" + inner + ").count()"
+                    
+                    # Handle complex names in output
+                    is_complex, new_name = complex_name_solve(col)
+                    if is_complex == True:
+                        # Replace these
+                        codeCompHelper.add_bracket_replace(col, new_name)
+                    
+                    local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
+                
             else:
                 raise ValueError("Not Implemented Error, for col: " + str(col))
 
@@ -1605,6 +1659,8 @@ def create_tree(class_tree, sql_class):
             node_class.add_filters(current_node.filters)
     elif node_type == "Bitmap Heap Scan":
         node_class = filter_node(current_node.relation_name, current_node.recheck_cond, current_node.output)
+    elif node_type == "Unique":
+        node_class = unique_node(current_node.output)
     else:
         raise ValueError("The node: " + str(current_node.node_type) + " is not recognised. Not all node have been implemented")
     

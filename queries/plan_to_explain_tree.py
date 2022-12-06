@@ -13,6 +13,13 @@ class limit_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output):
         super().__init__(node_type, parallel_aware, async_capable, output)
         
+class unique_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+    
+    def add_parent_relationship(self, in_parent):
+        self.parent_relationship = in_parent
+
 class aggregate_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, strategy, partial_mode):
         super().__init__(node_type, parallel_aware, async_capable, output)

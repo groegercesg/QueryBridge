@@ -11,7 +11,6 @@ select o_custkey from orders limit 10;
 select count( o_custkey ) from orders;
 select distinct ( o_custkey ) from orders limit 10;
 select count( distinct ( o_custkey ) ) from orders;
-
 """
 
 TESTING_DIR = "../testing_outputs/"
@@ -129,8 +128,15 @@ def test_simple_count():
     assert pandas_query == pandas_expected
     
 def test_simple_distinct():
-        # Expected pandas
-    pandas_expected = inspect.cleandoc("""""").strip()
+    # Expected pandas
+    pandas_expected = inspect.cleandoc("""
+        df_filter_1 = orders[['o_custkey']]
+        df_unique_1 = pd.DataFrame()
+        df_unique_1['o_custkey'] = df_filter_1['o_custkey'].unique()
+        df_unique_1 = df_unique_1.sort_values(by=['o_custkey'], ascending=[True])
+        df_limit_1 = df_unique_1[['o_custkey']]
+        result = df_limit_1.head(10)
+        return result""").strip()
     
     # A count select select
     sql_query = "select distinct ( o_custkey ) from orders limit 10;"
@@ -157,6 +163,38 @@ def test_simple_distinct():
     
     assert pandas_query == pandas_expected
     
+def test_count_distinct():
+    # Expected pandas
+    pandas_expected = inspect.cleandoc("""
+        df_filter_1 = orders[['o_custkey']]
+        df_aggr_1 = pd.DataFrame()
+        df_aggr_1['countDISTINCTo_custkey'] = [(df_filter_1['o_custkey']).nunique()]
+        df_aggr_1 = df_aggr_1[['countDISTINCTo_custkey']]""").strip()
+    
+    # A count select select
+    sql_query = "select count( distinct ( o_custkey ) ) from orders;"
+    
+    # Write to a file
+    write_to_file(TESTING_DIR+QUERY_NAME, sql_query)
+        
+    # Run this query
+    cmd = ["python3", CONVERTER_LOC, '--file', TESTING_DIR+QUERY_NAME, "--output_location", TESTING_DIR, '--benchmarking', "False", "--name", OUTPUT_NAME]    
+    
+    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    
+    if result.returncode != 0:
+        print(result.stdout)
+        print(result.stderr)
+        raise Exception( f'Invalid result: { result.returncode }' )
+    
+    pandas_query = str(read_from_file(TESTING_DIR+OUTPUT_NAME)).strip()
+    
+    print("Pandas Query:")
+    print(pandas_query)
+    print("Pandas Expected:")
+    print(pandas_expected)
+    
+    assert pandas_query == pandas_expected
 
 # After all
 @pytest.fixture(scope="module", autouse=True)

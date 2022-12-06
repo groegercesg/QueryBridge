@@ -412,6 +412,11 @@ def make_tree(json, tree):
         if "Parent Relationship" in node:
             # Add to node_class
             node_class.add_parent_relationship(node["Parent Relationship"])
+    elif node_type.lower() == "unique":
+        node_class = unique_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"])
+        if "Parent Relationship" in node:
+        # Add to node_class
+            node_class.add_parent_relationship(node["Parent Relationship"])
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
         
