@@ -81,7 +81,16 @@ def make_pandas(pandas_tree, sql, args, treeHelper, output_name=None):
     
     ccHelper = postorder_traversal(pandas_tree, pandas_statements, baseCodeCompHelper, aggrs, treeHelper)
     
-    if output_name != None:
+    if output_name == "RETURN":
+        top_class_id = get_class_id(pandas_tree)
+        if treeHelper.node_id_tracker.get(top_class_id, None) == None:
+            raise ValueError("Top Node in tree not detected")
+        else:
+            last_df = treeHelper.node_id_tracker[top_class_id]
+            pandas_statements.append("return " + str(last_df))
+        
+    
+    elif output_name != None:
         top_class_id = get_class_id(pandas_tree)
         if treeHelper.node_id_tracker.get(top_class_id, None) == None:
             raise ValueError("Top Node in tree not detected")

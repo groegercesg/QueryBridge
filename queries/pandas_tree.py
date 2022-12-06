@@ -574,11 +574,8 @@ class limit_node():
                 statement_string = this_df + " = " + prev_df
                 instructions.append(statement_string)
                     
-        statement3_string = "result = " + str(this_df) + ".head("+str(self.amount)+")"
+        statement3_string = str(this_df) + " = " + str(this_df) + ".head("+str(self.amount)+")"
         instructions.append(statement3_string)
-        
-        statement4_string = "return result"
-        instructions.append(statement4_string)
         
         return instructions
 
@@ -1611,7 +1608,7 @@ def create_tree(class_tree, sql_class):
     
         if hasattr(current_node, "filters"):
             # Check if is a filter type of Seq Scan
-            node_class.add_filters(current_node.filters)
+            node_class.set_params(current_node.filters)
         
         # Add in subplan information
         if hasattr(current_node, "subplan_name"):
@@ -1646,7 +1643,7 @@ def create_tree(class_tree, sql_class):
             
         if hasattr(current_node, "filters"):
             # Check if is a filter type of Seq Scan
-            node_class.add_filters(current_node.filters)
+            node_class.set_params(current_node.filters)
     elif node_type == "Subquery Scan":
         # Make a Subquery Scan into a "rename node"
         node_class = rename_node(current_node.output, current_node.alias)
@@ -1656,7 +1653,7 @@ def create_tree(class_tree, sql_class):
             
         if hasattr(current_node, "filters"):
             # Check if is a filter type of Seq Scan
-            node_class.add_filters(current_node.filters)
+            node_class.set_params(current_node.filters)
     elif node_type == "Bitmap Heap Scan":
         node_class = filter_node(current_node.relation_name, current_node.recheck_cond, current_node.output)
     elif node_type == "Unique":

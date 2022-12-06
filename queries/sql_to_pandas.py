@@ -73,7 +73,7 @@ def line_prepender(filename, line):
         f.seek(0, 0)
         f.write(line.rstrip('\r\n') + '\n' + content)
         
-def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, tree, relations_subqueries, treeHelp, set_value=None, output_index=None):
+def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, tree, relations_subqueries, treeHelp, last_tree, set_value=None, output_index=None):
     from pandas_tree import make_pandas_tree
     from visualising_tree import plot_pandas_tree
     from pandas_tree_to_pandas import make_pandas
@@ -94,8 +94,12 @@ def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_fil
         # set_value
         pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args, treeHelp, output_name=set_value)
     else:
-        # Let's try and write some pandas code from this
-        pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args, treeHelp)
+        # If We have last tree set, then we pass this through as the output_name
+        if last_tree == True:
+            # Let's try and write some pandas code from this
+            pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args, treeHelp, output_name="RETURN")
+        else:
+            pandas, codeCompHelper = make_pandas(pandas_tree, query_file, args, treeHelp)
     
     # We have created the pandas code, now let's write it out
     # Write out the pandas code, line by line
@@ -303,18 +307,26 @@ def main():
         # Iterate through all of the plans
         if isinstance(output_trees, list):
             for i in range(len(output_trees)):
+                # Check if is last tree
+                if i == (len(output_trees) - 1):
+                    last_tree = True
+                else:
+                    last_tree = False
+                
                 # Might be a tuple or not, depending on whether it's a subquery
                 if isinstance(output_trees[i], tuple):
-                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i][0], relations_subqueries, overall_tree_helper, set_value=output_trees[i][1], output_index=i)
+                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i][0], relations_subqueries, overall_tree_helper, last_tree, set_value=output_trees[i][1], output_index=i)
                 else:
-                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i], relations_subqueries, overall_tree_helper, output_index=i)
+                    do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees[i], relations_subqueries, overall_tree_helper, last_tree, output_index=i)
             
                 # Reset overall_tree_helper dict of node_id_tracker to be empty
                 # But we maintain the totals in node_type_tracker, this stops us having overlapping names
                 overall_tree_helper.node_id_tracker = {}
         else:
+            # Only one tree, set last tree to be true
+            last_tree = True
             # Just run it once
-            do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees, relations_subqueries, overall_tree_helper)
+            do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, output_trees, relations_subqueries, overall_tree_helper, last_tree)
                     
     # Write at the start of the file, the import and function definition
     if args.benchmarking:
