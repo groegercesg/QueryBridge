@@ -924,6 +924,15 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                 outer_string = "(" + prev_df + "." + inner + ").max()"
                 
                 local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
+                
+            elif "min" in col[0]:
+                # The aggr operation is MIN!
+                inner = str(col[0]).split("min")[1]
+                inner = clean_extra_brackets(inner)
+                
+                outer_string = "(" + prev_df + "." + inner + ").min()"
+                
+                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
             
             
             elif "sum" in col[0]:
@@ -936,6 +945,25 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                 outer_string = "(" + inner_string + ").sum()"
                 
                 local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
+                
+            elif "count" in col[0]:
+                # The aggr operation is COUNT!
+                inner = str(col[0]).split("count")[1]
+                inner = clean_extra_brackets(inner)
+                
+                outer_string = "(" + prev_df + "." + inner + ").count()"
+                
+                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
+                
+            elif "avg" in col[0]:
+                # The aggr operation is MIN!
+                inner = str(col[0]).split("avg")[1]
+                inner = clean_extra_brackets(inner)
+                
+                outer_string = "(" + prev_df + "." + inner + ").mean()"
+                
+                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
+                
             else:
                 raise ValueError("Not other types of aggregation haven't been implemented yet!")
         else:
@@ -970,6 +998,7 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                     
                 local_instructions.append(current_df + " = [" + outer_string + "]")
             elif "max" in col:
+                skip = False
                 # max(sum(l_extendedprice * (1 - l_discount)))
                  
                 # The aggr operation is MAX!
@@ -984,10 +1013,50 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                     inner_inner_string = aggregate_sum(inner_inner, df_group=prev_df)
                 
                     inner = "(" + prev_df + "." + inner_inner_string + ").sum()"
+                    skip = True
                     
-                outer_string = "(" + inner + ").max()"
+                if skip == True:                    
+                    outer_string = "(" + inner + ").max()"
+                else:
+                    outer_string = "(" + prev_df + "." + inner + ").max()"
+                    
+                # Handle complex names in output
+                is_complex, new_name = complex_name_solve(col)
+                if is_complex == True:
+                    # Replace these
+                    codeCompHelper.add_bracket_replace(col, new_name)
                 
-                local_instructions.append(current_df + "['" + col + "'] = [" + outer_string + "]")
+                local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
+            elif "min" in col:
+                # The aggr operation is MIN!
+                inner = str(col).split("min")[1]
+                inner = clean_extra_brackets(inner)
+                
+                outer_string = "(" + prev_df + "." + inner + ").min()"
+                
+                # Handle complex names in output
+                is_complex, new_name = complex_name_solve(col)
+                if is_complex == True:
+                    # Replace these
+                    codeCompHelper.add_bracket_replace(col, new_name)
+                
+                local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
+                
+            elif "avg" in col:
+                # The aggr operation is MIN!
+                inner = str(col).split("avg")[1]
+                inner = clean_extra_brackets(inner)
+                
+                outer_string = "(" + prev_df + "." + inner + ").mean()"
+                
+                # Handle complex names in output
+                is_complex, new_name = complex_name_solve(col)
+                if is_complex == True:
+                    # Replace these
+                    codeCompHelper.add_bracket_replace(col, new_name)
+                
+                local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
+            
             elif "count" in col:
                 # The aggr operation is MAX!
                 inner = str(col).split("count")[1]
@@ -1010,7 +1079,7 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                     
                 else:
                 
-                    outer_string = "(" + inner + ").count()"
+                    outer_string = "(" + prev_df + "." + inner + ").count()"
                     
                     # Handle complex names in output
                     is_complex, new_name = complex_name_solve(col)
@@ -1019,6 +1088,24 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                         codeCompHelper.add_bracket_replace(col, new_name)
                     
                     local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
+                
+            elif "sum" in col:
+                # The aggr operation is SUM!
+                inner = str(col).split("sum")[1]
+                inner = clean_extra_brackets(inner)
+                
+                inner_string = aggregate_sum(inner, df_group=prev_df)
+              
+                outer_string = "(" + inner_string + ").sum()"
+                
+                # Handle complex names in output
+                is_complex, new_name = complex_name_solve(col)
+                if is_complex == True:
+                    # Replace these
+                    codeCompHelper.add_bracket_replace(col, new_name)
+                
+                local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
+                
                 
             else:
                 raise ValueError("Not Implemented Error, for col: " + str(col))

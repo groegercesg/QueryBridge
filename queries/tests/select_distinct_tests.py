@@ -97,6 +97,11 @@ def test_standard_select():
     
     pandas_query = str(read_from_file(TESTING_DIR+OUTPUT_NAME)).strip()
     
+    print("Pandas Query:")
+    print(pandas_query)
+    print("Pandas Expected:")
+    print(pandas_expected)
+    
     assert pandas_query == pandas_expected
     
 def test_simple_count():
@@ -124,6 +129,11 @@ def test_simple_count():
         raise Exception( f'Invalid result: { result.returncode }' )
     
     pandas_query = str(read_from_file(TESTING_DIR+OUTPUT_NAME)).strip()
+    
+    print("Pandas Query:")
+    print(pandas_query)
+    print("Pandas Expected:")
+    print(pandas_expected)
     
     assert pandas_query == pandas_expected
     
