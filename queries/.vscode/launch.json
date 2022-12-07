@@ -99,6 +99,15 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["--file", "queries/2.sql", "--output_location", "results/2", "--name", "2_pandas.py"]
+        },
+        {
+            "name": "Python: SQL to Pandas - 5",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "queries/5.sql", "--output_location", "results/5", "--name", "5_pandas.py"]
         }
     ]
 }
