@@ -105,6 +105,10 @@ def make_pandas(pandas_tree, sql, args, treeHelper, output_name=None):
                 last_column = str(pandas_tree.output[0][1])
             else:
                 last_column = str(pandas_tree.output[0])
+                
+            # Check if last_column in in codeCompHelpers
+            if ccHelper.bracket_replace.get(last_column, None) != None:
+                last_column = ccHelper.bracket_replace.get(last_column, None)
         else:
             raise ValueError("We were expecting the output attribute of pandas_tree to be a list, but it's not! Output: " + str(pandas_tree.output))
         

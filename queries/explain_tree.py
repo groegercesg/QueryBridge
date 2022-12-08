@@ -43,6 +43,7 @@ def solve_nested_loop_node(tree):
         # And can instead use functions to swap around the filter and add as a merging cond
         if hasattr(tree, "filter"):
             merging_condition = flip_cond_around(tree.filter)
+            tree.filter = None
         else:
             for individual_plan in tree.plans:
                 if individual_plan.node_type == "Index Scan":
@@ -50,7 +51,48 @@ def solve_nested_loop_node(tree):
                     if merging_condition != None:
                         # We have already found the merging condition
                         
-                        raise Exception("We have found two merging conditions")
+                        # We need to decide which based on which condition has more in common with the
+                        # present relations
+                        
+                        # Gather relations used in tree.plans:
+                        present_relations = []
+                        for i in range(len(tree.plans)):
+                            present_relations.append(tree.plans[i].relation_name)
+                        
+                        # Print out both merge_conditions
+                        merge_conditions = []
+                        for i in range(len(tree.plans)):
+                            index_cond = tree.plans[i].index_cond
+                            merge_conditions.append(index_cond)
+                        
+                        # Count up which condition has the most relations, we should use this one and leave the other to
+                        # be evaluated 
+                        counted_conds = []
+                        for i in range(len(merge_conditions)):
+                            index_cond = merge_conditions[i]
+                            
+                            if index_cond[0] == "(" and index_cond[-1] == ")":
+                                # Strip brackets
+                                index_cond = index_cond[1:-1]
+                            
+                            split_cnd = index_cond.split(" = ")
+                            for j in range(len(split_cnd)):
+                                split_cnd[j] = split_cnd[j].split(".")[0]
+                                
+                            cnd_count = 0
+                            for j in split_cnd:
+                                if j in present_relations:
+                                    cnd_count += 1
+                            
+                            counted_conds.append(cnd_count)
+                        
+                        # Find maximum value index, that index in merge conditions, is the one we should
+                        # propagate upwards
+                        decided_merge_cond = merge_conditions[counted_conds.index(max(counted_conds))]
+                        merging_condition = flip_cond_around(decided_merge_cond)
+                        
+                        #raise Exception("We have found two merging conditions")
+                        continue
                     else:
                         merging_condition = flip_cond_around(individual_plan.index_cond)
                     
@@ -74,6 +116,14 @@ def solve_nested_loop_node(tree):
                         
         if merging_condition != None:
             tree.add_merge_cond(merging_condition)
+            # iterate across individual plans, setting the merge_condition
+            # that we actually use to none and leaving the others
+            original_cond = flip_cond_around(merging_condition)
+            for individual_plan in tree.plans:
+                if hasattr(individual_plan, "index_cond"):
+                    if individual_plan.index_cond == original_cond:
+                        # Set to none
+                        individual_plan.index_cond = None
         else:
             raise Exception("Didn't find a merging condition to add to our Nested Loop node.")
     
@@ -237,7 +287,7 @@ def solve_initplan_nodes(tree):
                                 # Replace this to dollar, the standard form of set values
                                 set_value = str(set_value).replace("$", "dollar_")
                             else:
-                                raise ValueError("We have an Subplan but with no information about what it's set as!")
+                                raise ValueError("We have an InitPlan but with no information about what it's set as!")
                             
                             # Add this to the captured Trees List
                             capturedTrees.append((nodeBelow, set_value))
@@ -247,6 +297,23 @@ def solve_initplan_nodes(tree):
                             
                             # Run next iteration
                             continue
+                        elif nodeBelow.parent_relationship == "SubPlan":
+                            # We have a SubPlan
+                            # Extract the name
+                            if hasattr(nodeBelow, "subplan_name"):
+                                name = nodeBelow.subplan_name
+                            else:
+                                raise ValueError("We have a SubPlan but with no name")
+                            
+                            # Add this to the captured Trees List
+                            capturedTrees.append((nodeBelow, name))
+                            
+                            # Add the id of nodeBelow to dropClasses
+                            dropClasses.add(get_class_id(nodeBelow))
+                            
+                            # Run next iteration
+                            continue
+                            
                         
                     # Add them to the queue
                     treeQueue.put(nodeBelow)
@@ -321,6 +388,8 @@ def recurse_and_replace(tree, replaces):
                         modified_attribute[i] = modified_attribute[i].replace(original, new)
                 elif isinstance(modified_attribute, str):
                     modified_attribute = modified_attribute.replace(original, new)
+                elif modified_attribute is None:
+                    continue
                 else:
                     raise ValueError("Attribute is not a type we expected")
                 # Set it back

@@ -407,6 +407,9 @@ class filter_node():
     def set_instructions(self, instructions):
         self.instructions = instructions
         
+    def set_index_cond(self, index_cond):
+        self.index_cond = clean_filter_params(self, index_cond)
+        
     def to_pandas(self, prev_df, this_df, codeCompHelper):
         subplan_mode = False
 
@@ -441,6 +444,9 @@ class filter_node():
                 params = self.params.replace(self.data, prev_df)
                 statement1_string = this_df + " = " + prev_df + "[" + str(params) + "]"
                 instructions.append(statement1_string)
+                
+                if hasattr(self, "index_cond"):
+                    instructions.append(self.index_cond)
             
                 output_cols = choose_aliases(self, codeCompHelper)
                 
@@ -451,6 +457,8 @@ class filter_node():
         else:            
             output_cols = choose_aliases(self, codeCompHelper)
             
+            
+            
             # Limit to output columns
             if codeCompHelper.column_limiting:
                 statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
@@ -458,6 +466,9 @@ class filter_node():
             else:
                 statement2_string = this_df + " = " + prev_df
                 instructions.append(statement2_string)
+                
+            if hasattr(self, "index_cond"):
+                instructions.append(this_df + " = " + this_df + "['" + str(self.index_cond) + "']")
             
         return instructions
              
@@ -1521,7 +1532,7 @@ class merge_node():
         if self.filter != None:
             # We need to replace any relation name with this_df, use codeComp to know these
             for relation in codeCompHelper.relations:
-                self.filter = self.filter.replace(relation, this_df)
+                self.filter = self.filter.replace(relation+".", this_df+".")
             statement = this_df + " = " + this_df + "[" + str(self.filter) + "]"
             instructions.append(statement)
         
@@ -1731,6 +1742,10 @@ def create_tree(class_tree, sql_class):
         if hasattr(current_node, "filters"):
             # Check if is a filter type of Seq Scan
             node_class.set_params(current_node.filters)
+            
+        if hasattr(current_node, "index_cond"):
+            if current_node.index_cond != None:
+                node_class.set_index_cond(current_node.index_cond)
     elif node_type == "Subquery Scan":
         # Make a Subquery Scan into a "rename node"
         node_class = rename_node(current_node.output, current_node.alias)
