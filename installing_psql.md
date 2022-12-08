@@ -42,4 +42,15 @@ Enter password, in back of book
 - Enable timing:
 `\timing on`
 
+## Editing config
 
+```bash
+# Edit the file
+sudo vim /var/lib/pgsql/14/data/postgresql.conf
+# See a list of all running services
+systemctl --type=service
+# Restart the postgres service
+systemctl restart postgresql-14
+# Check it came back up
+systemctl status postgresql-14
+```

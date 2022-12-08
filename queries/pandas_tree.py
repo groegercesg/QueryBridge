@@ -363,6 +363,10 @@ def clean_filter_params(self, params):
                 # Catch potential error
                 if len(split_like) != 2:
                     raise ValueError("Expected only 2 parts to this statement")
+                
+                # Clear quotes if exist
+                if (split_like[1][0] == "'") and (split_like[1][-1] == "'"):
+                    split_like[1] = split_like[1][1:-1]
                     
                 data_name = split_like[0].strip()
                 regex_cmd = sql_like_fragment_to_regex_string(split_like[1])
@@ -375,6 +379,10 @@ def clean_filter_params(self, params):
                 else:
                     # Otherwise, just close the bracket
                     line_split[i] = line_split[i] + ")"
+                    
+            # Do equals
+            if " = " in line_split[i]:
+                line_split[i] = line_split[i].replace(" = ", " == ")
               
         # Clear leading/trailing spaces
         line_split[i] = line_split[i].strip()
@@ -1739,7 +1747,10 @@ def create_tree(class_tree, sql_class):
         # Make an index scan into a filter node
         node_class = filter_node(current_node.relation_name, current_node.output)
             
-        if hasattr(current_node, "filters"):
+        if hasattr(current_node, "filter"):
+            # Check if is a filter type of Seq Scan
+            node_class.set_params(current_node.filter)
+        elif hasattr(current_node, "filters"):
             # Check if is a filter type of Seq Scan
             node_class.set_params(current_node.filters)
             

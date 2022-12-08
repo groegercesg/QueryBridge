@@ -102,3 +102,12 @@ def test_contains_value():
     out_string = pandas_tree.clean_filter_params(None, in_string)
 
     assert out_string == target_string, "Test Assertion Failed"
+    
+def test_quotes_value():
+    # WHERE p_type LIKE '%BRASS'
+    
+    target_string = '(part.p_type.str.contains("^.*?BRASS$", regex=True)) & (part.p_size == 15)'
+    in_string = "(((part.p_type)::text ~~ '%BRASS'::text) AND (part.p_size = 15))"
+    out_string = pandas_tree.clean_filter_params(None, in_string)
+
+    assert out_string == target_string, "Test Assertion Failed"
