@@ -117,6 +117,33 @@
             "console": "integratedTerminal",
             "justMyCode": true,
             "args": ["--file", "queries/test.sql", "--output_location", "results/test", "--name", "test_pandas.py"]
+        },
+        {
+            "name": "Python: SQL to Pandas - 4",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "queries/4.sql", "--output_location", "results/4", "--name", "4_pandas.py"]
+        },
+        {
+            "name": "Python: SQL to Pandas - 6",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "queries/6.sql", "--output_location", "results/6", "--name", "6_pandas.py"]
+        },
+        {
+            "name": "Python: SQL to Pandas - 19",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": ["--file", "queries/19.sql", "--output_location", "results/19", "--name", "19_pandas.py"]
         }
     ]
 }
