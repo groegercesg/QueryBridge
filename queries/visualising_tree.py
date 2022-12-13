@@ -123,6 +123,43 @@ def walk_class_tree(graph, class_tree, parent_node=None):
         if class_tree.plans is not None:
             for plan in class_tree.plans:
                 walk_class_tree(graph, plan, node_from)
+                
+def walk_exp_tree(graph, class_tree, parent_node=None):
+    """
+    Plotting function for the tree of our class
+    """
+
+    if parent_node is not None:
+
+        from_name = parent_node.get_name().replace("\"", "") + '_' + str(class_tree.val) + '_' + str(get_class_id(class_tree)) # unique name
+        from_label = str(class_tree.val)
+
+        node_from = pydot.Node(from_name, label=from_label)
+        graph.add_node(node_from)
+        graph.add_edge(pydot.Edge(parent_node, node_from) )
+
+        # Run on leaves below this node
+        if class_tree.left is not None:
+            walk_exp_tree(graph, class_tree.left, node_from)
+        if class_tree.right is not None:
+            walk_exp_tree(graph, class_tree.right, node_from)
+
+        # if leaf node
+        if class_tree.left == None and class_tree.right == None:
+            # Change node_from shape to box
+            node_from.obj_dict['attributes']['shape'] = "box"
+
+    else:
+        # Root
+        from_name =  str(class_tree.val)
+        from_label = str(class_tree.val)
+
+        node_from = pydot.Node(from_name, label=from_label)
+        graph.add_node(node_from)
+        if class_tree.left is not None:
+            walk_exp_tree(graph, class_tree.left, node_from)
+        if class_tree.right is not None:
+            walk_exp_tree(graph, class_tree.right, node_from)
 
 def plot_tree(tree, name):
     
@@ -134,10 +171,17 @@ def plot_tree(tree, name):
     graph.write_pdf(name+'.pdf')
     
 def plot_pandas_tree(tree, name):
-    
     # first we create a new graph, we do that with pydot.Dot()
     graph = pydot.Dot(graph_type='graph')
 
     walk_pandas_tree(graph, tree)
+
+    graph.write_pdf(name+'.pdf')
+    
+def plot_exp_tree(tree, name):
+    # first we create a new graph, we do that with pydot.Dot()
+    graph = pydot.Dot(graph_type='graph', strict=True)
+
+    walk_exp_tree(graph, tree)
 
     graph.write_pdf(name+'.pdf')
