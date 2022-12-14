@@ -4,7 +4,7 @@ Queries from [link](https://github.com/dragansah/tpch-dbgen/tree/master/queries)
 
 Setup from: https://github.com/Data-Science-Platform/tpch-pgsql
 
-## Tests
+## Tests for sql_to_pandas
 
 Located in [queries/tests](queries/tests). Can be run with the following command:
 

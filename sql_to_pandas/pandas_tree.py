@@ -9,7 +9,7 @@ import regex
 import re
 
 # Expression Parsing
-from . import expr_tree 
+from expr_tree import Expression_Solver
 
 def clean_extra_brackets(s):
     for i in s:s=regex.sub('(\(|^)\K(\((((?2)|[^()])*)\))(?=\)|$)',r'\3',s)
@@ -899,7 +899,7 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper, treeHelper):
             else:
                 output_name = False
             
-            tree = expr_tree.Expression_Solver(str(col[0]), output_name, prev_df)
+            tree = Expression_Solver(str(col[0]), output_name, prev_df)
             pandas = tree.evaluate()
             code_line = str(current_df) + "['" + str(col[1]) + "'] = [" + str(pandas) + "]"
             local_instructions.append(code_line)
@@ -917,7 +917,7 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper, treeHelper):
                 # Means no visualisation will be created
                 output_name = False
             
-            tree = expr_tree.Expression_Solver(str(col), output_name, prev_df)
+            tree = Expression_Solver(str(col), output_name, prev_df)
             pandas = tree.evaluate()
             
             # Handle complex names in output

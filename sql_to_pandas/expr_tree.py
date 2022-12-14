@@ -1,5 +1,5 @@
 import re
-from . import visualising_tree
+from visualising_tree import plot_exp_tree
 
 class Expression_Tree_Node:
     def __init__(self, val):
@@ -15,7 +15,7 @@ class Expression_Solver:
         self.prev_df = previous_dataframe
         self.expression_tree = self.expTree(s)
         if visualise != False:
-            visualising_tree.plot_exp_tree(self.expression_tree, visualise)
+            plot_exp_tree(self.expression_tree, visualise)
             
     def evaluate(self):
         if self.expression_tree is None:

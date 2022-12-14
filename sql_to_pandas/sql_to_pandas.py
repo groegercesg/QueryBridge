@@ -139,7 +139,7 @@ def main():
     query_name = str(query_file.split("/")[-1]).split(".")[0]
 
     # Delete if already exists
-    folder_path = Path("results" + "/" + query_name)
+    folder_path = Path(args.output_location)
     if folder_path.exists() and folder_path.is_dir():
         shutil.rmtree(folder_path)
     # Make a folder

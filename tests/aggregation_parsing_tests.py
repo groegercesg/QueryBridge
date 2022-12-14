@@ -4,8 +4,8 @@ import shutil
 import subprocess
 import inspect
 
-from  ..  import pandas_tree
-from  ..  import pandas_tree_to_pandas
+import sql_to_pandas.pandas_tree as pandas_tree
+import sql_to_pandas.pandas_tree_to_pandas as pandas_tree_to_pandas
 
 """
 Tests of parsing aggregations:
@@ -190,7 +190,7 @@ def test_parse_agg_nest_complex_alias():
 
 TESTING_DIR = "../testing_outputs/"
 QUERY_NAME = "query.sql"
-CONVERTER_LOC = "../sql_to_pandas.py"
+CONVERTER_LOC = "sql_to_pandas/sql_to_pandas.py"
 OUTPUT_NAME = "query.py"
 RESULTS_LOC = "results"
 
