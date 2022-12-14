@@ -7,6 +7,10 @@ from sqlglot import parse_one, exp
 # Clean up redundant brackets
 import regex
 import re
+
+# Expression Parsing
+from expr_tree import Expression_Solver
+
 def clean_extra_brackets(s):
     for i in s:s=regex.sub('(\(|^)\K(\((((?2)|[^()])*)\))(?=\)|$)',r'\3',s)
     return s
@@ -885,6 +889,28 @@ def aggregate_case(inner_string, prev_df):
 def do_aggregation(self, prev_df, current_df, codeCompHelper):
     local_instructions = []
     for col in self.output:
+        
+        if isinstance(col, tuple):
+            # Where we have an alias
+            tree = Expression_Solver(str(col[0]), "expression_tree", prev_df)
+            pandas = tree.evaluate()
+            code_line = str(current_df) + "['" + str(col[1]) + "'] = " + str(pandas)
+            local_instructions.append(code_line)
+        else:
+            # Where we have an alias
+            tree = Expression_Solver(str(col), "expression_tree", prev_df)
+            pandas = tree.evaluate()
+            
+            # Handle complex names in output
+            is_complex, new_name = complex_name_solve(col)
+            if is_complex == True:
+                # Replace these
+                codeCompHelper.add_bracket_replace(col, new_name)
+            
+            code_line = str(current_df) + "['" + str(new_name) + "'] = [" + str(pandas) + "]"
+            local_instructions.append(code_line)
+        
+        """
         if isinstance(col, tuple):
             if "/" in col[0]:
                 # Split on this, handle agg of both sides individually
@@ -1128,6 +1154,8 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
                 
             else:
                 raise ValueError("Not Implemented Error, for col: " + str(col))
+        """
+        
 
     return local_instructions
 

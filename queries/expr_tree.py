@@ -1,7 +1,7 @@
 import re
 from visualising_tree import plot_exp_tree
 
-class Node:
+class Expression_Tree_Node:
     def __init__(self, val):
         self.val = val
         self.left = None
@@ -10,7 +10,7 @@ class Node:
     def isLeaf(self):
         return self.left == None and self.right == None
         
-class Solver:
+class Expression_Solver:
     def __init__(self, s, visualise, previous_dataframe):
         self.prev_df = previous_dataframe
         self.expression_tree = self.expTree(s)
@@ -125,12 +125,12 @@ class Solver:
             if ch == '(':
                 ops.append(ch)
             elif ch.isdigit():
-                stack.append(Node(ch))
+                stack.append(Expression_Tree_Node(ch))
             elif not any(char.isdigit() for char in ch) and self.prio.get(ch, None) == None and ch != "(" and ch != ")":
                 # No digits and not in the priority dictionary
                 # Create string for the name:
                 name = "(" + self.prev_df + "." + ch + ")"
-                stack.append(Node(name))
+                stack.append(Expression_Tree_Node(name))
             elif ch == ')':
                 while ops[-1] != '(':
                     self.combine(ops, stack)
@@ -143,7 +143,7 @@ class Solver:
 
                 ops.append(ch)
 
-        while len(stack) > 1:
+        while (len(stack) > 1) or (len(ops) >= 1):
             self.combine(ops, stack)
 
         return stack[0]
@@ -152,7 +152,7 @@ class Solver:
         if not ops:
             return
         
-        root = Node(ops.pop())
+        root = Expression_Tree_Node(ops.pop())
         if root.val in self.agg_funcs:
             # We have a special aggr function, only set the right
             root.right = stack.pop()
@@ -170,7 +170,8 @@ if __name__ == "__main__":
     sql_easy_eqn = "o_totalprice + 2"
     sql_basic_eqn = "sum(o_totalprice) / avg(o_custkey)"
     sql_complex_eqn = "(count(o_custkey) + avg(o_totalprice)) / (sum(o_orderkey) + min(o_shippriority)) * 25"
+    sql_simple_eqn = "sum(o_totalprice)"
     
-    tree = Solver(sql_complex_eqn, "SQL Complex Equation", "PREV_DF")
+    tree = Expression_Solver(sql_simple_eqn, "SQL Complex Equation", "PREV_DF")
     pandas = tree.evaluate()
     print(pandas)
