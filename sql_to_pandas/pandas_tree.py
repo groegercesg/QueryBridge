@@ -85,7 +85,7 @@ def process_output(self, output, codecomphelper):
         else:
             output[i] = cleaned_output
         
-        # Performance the replaces to the output, removing the relations
+        # Perform the replaces to the output, removing the relations
         # This is crucial
         if replaces != []:
             for replace_relation in replaces:
@@ -1534,6 +1534,9 @@ def complex_name_solve(in_name):
         new_name = in_name
         for item in complex_items:
             new_name = new_name.replace(item, "")
+            
+        # To lower, after all replacements made
+        new_name = new_name.lower()
     
     # returns
     #   is_complex  -  True or False as to whether complex

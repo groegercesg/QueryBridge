@@ -146,6 +146,8 @@ class Expression_Solver:
         
         # Check for adjacent negatives
         s_split = self.solve_adj_minuses(s_split)
+        
+        print(s_split)
 
         for ch in s_split:
             # print("Currently doing: " + str(ch))

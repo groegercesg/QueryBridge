@@ -1,4 +1,4 @@
-from  ..  import pandas_tree
+from .context import pandas_tree as pandas_tree
 
 """
 Examples from: https://www.w3schools.com/sql/sql_where.asp
