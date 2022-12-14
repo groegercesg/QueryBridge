@@ -49,7 +49,8 @@ def test_parse_agg_simple():
     in_string = ["sum(o_totalprice)"]
     in_class = content(in_string)
     ccHelper = pandas_tree_to_pandas.CodeCompilation("", False, False)
-    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper)
+    tHelper = pandas_tree_to_pandas.TreeHelper("", True)
+    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper, tHelper)
     
     print("Out String:")
     print(out_string)
@@ -60,11 +61,12 @@ def test_parse_agg_simple():
     
 def test_parse_agg_nest_simple():
     # A sum divided by an average
-    target_string = ["CURRENT_DF['sumo_totalprice'] = [(PREV_DF.o_totalprice).sum() / (PREV_DF.o_custkey).mean()]"]
+    target_string = ["CURRENT_DF['sumo_totalpriceavgo_custkey'] = [((PREV_DF.o_totalprice).sum() / (PREV_DF.o_custkey).mean())]"]
     in_string = ["sum(o_totalprice) / avg(o_custkey)"]
     in_class = content(in_string)
     ccHelper = pandas_tree_to_pandas.CodeCompilation("", False, False)
-    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper)
+    tHelper = pandas_tree_to_pandas.TreeHelper("", True)
+    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper, tHelper)
     
     print("Out String:")
     print(out_string)
@@ -75,11 +77,12 @@ def test_parse_agg_nest_simple():
     
 def test_parse_agg_nest_simple_alias():
     # A sum divided by an average, with an alias
-    target_string = ["CURRENT_DF['fun_aggregate'] = [(PREV_DF.o_totalprice).sum() / (PREV_DF.o_custkey).mean()]"]
-    in_string = [["sum(o_totalprice) / avg(o_custkey)", "fun_aggregate"]]
+    target_string = ["CURRENT_DF['fun_aggregate'] = [((PREV_DF.o_totalprice).sum() / (PREV_DF.o_custkey).mean())]"]
+    in_string = [("sum(o_totalprice) / avg(o_custkey)", "fun_aggregate")]
     in_class = content(in_string)
     ccHelper = pandas_tree_to_pandas.CodeCompilation("", False, False)
-    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper)
+    tHelper = pandas_tree_to_pandas.TreeHelper("", True)
+    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper, tHelper)
     
     print("Out String:")
     print(out_string)
@@ -90,11 +93,12 @@ def test_parse_agg_nest_simple_alias():
     
 def test_parse_agg_nest_alternate():
     # A sum multiplied by a count
-    target_string = ["CURRENT_DF['sumo_totalprice'] = [(PREV_DF.o_totalprice).sum() * (PREV_DF.o_custkey).count()]"]
+    target_string = ["CURRENT_DF['sumo_totalpricecounto_custkey'] = [((PREV_DF.o_totalprice).sum() * (PREV_DF.o_custkey).count())]"]
     in_string = ["sum(o_totalprice) * count(o_custkey)"]
     in_class = content(in_string)
     ccHelper = pandas_tree_to_pandas.CodeCompilation("", False, False)
-    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper)
+    tHelper = pandas_tree_to_pandas.TreeHelper("", True)
+    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper, tHelper)
     
     print("Out String:")
     print(out_string)
@@ -105,11 +109,12 @@ def test_parse_agg_nest_alternate():
     
 def test_parse_agg_nest_alternate_alias():
     # A sum multiplied by a count, with an alias
-    target_string = ["CURRENT_DF['multiply'] = [(PREV_DF.o_totalprice).sum() / (PREV_DF.o_custkey).mean()]"]
-    in_string = [["sum(o_totalprice) * count(o_custkey)", "multiply"]]
+    target_string = ["CURRENT_DF['multiply'] = [((PREV_DF.o_totalprice).sum() * (PREV_DF.o_custkey).count())]"]
+    in_string = [("sum(o_totalprice) * count(o_custkey)", "multiply")]
     in_class = content(in_string)
     ccHelper = pandas_tree_to_pandas.CodeCompilation("", False, False)
-    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper)
+    tHelper = pandas_tree_to_pandas.TreeHelper("", True)
+    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper, tHelper)
     
     print("Out String:")
     print(out_string)
@@ -120,11 +125,12 @@ def test_parse_agg_nest_alternate_alias():
     
 def test_parse_agg_nest_minus():
     # A min minuses a max
-    target_string = ["CURRENT_DF['mino_totalprice'] = [(PREV_DF.o_totalprice).min() - (PREV_DF.o_totalprice).max()]"]
+    target_string = ["CURRENT_DF['mino_totalpricemaxo_totalprice'] = [((PREV_DF.o_totalprice).min() - (PREV_DF.o_totalprice).max())]"]
     in_string = ["min(o_totalprice) - max(o_totalprice)"]
     in_class = content(in_string)
     ccHelper = pandas_tree_to_pandas.CodeCompilation("", False, False)
-    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper)
+    tHelper = pandas_tree_to_pandas.TreeHelper("", True)
+    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper, tHelper)
     
     print("Out String:")
     print(out_string)
@@ -135,11 +141,12 @@ def test_parse_agg_nest_minus():
     
 def test_parse_agg_nest_minus_alias():
     # A min minuses a max, with an alias
-    target_string = ["CURRENT_DF['minus_agg'] = [(PREV_DF.o_totalprice).min() - (PREV_DF.o_custkey).max()]"]
-    in_string = [["min(o_totalprice) - max(o_totalprice)", "minus_agg"]]
+    target_string = ["CURRENT_DF['minus_agg'] = [((PREV_DF.o_totalprice).min() - (PREV_DF.o_totalprice).max())]"]
+    in_string = [("min(o_totalprice) - max(o_totalprice)", "minus_agg")]
     in_class = content(in_string)
     ccHelper = pandas_tree_to_pandas.CodeCompilation("", False, False)
-    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper)
+    tHelper = pandas_tree_to_pandas.TreeHelper("", True)
+    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper, tHelper)
     
     print("Out String:")
     print(out_string)
@@ -150,11 +157,12 @@ def test_parse_agg_nest_minus_alias():
     
 def test_parse_agg_nest_complex():
     # A count plus an average all divided a two columns added and multiplied by 25
-    target_string = ["CURRENT_DF['counto_custkey'] = [((PREV_DF.o_custkey).count() + (PREV_DF.o_totalprice).mean()) / ((PREV_DF.o_orderkey).sum() + (PREV_DF.o_shippriority).min()) * 25]"]
+    target_string = ["CURRENT_DF['counto_custkeyavgo_totalpricesumo_orderkeymino_shippriority25'] = [((((PREV_DF.o_custkey).count() + (PREV_DF.o_totalprice).mean()) / ((PREV_DF.o_orderkey).sum() + (PREV_DF.o_shippriority).min())) * 25)]"]
     in_string = ["(count(o_custkey) + avg(o_totalprice)) / (sum(o_orderkey) + min(o_shippriority)) * 25"]
     in_class = content(in_string)
     ccHelper = pandas_tree_to_pandas.CodeCompilation("", False, False)
-    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper)
+    tHelper = pandas_tree_to_pandas.TreeHelper("", True)
+    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper, tHelper)
     
     print("Out String:")
     print(out_string)
@@ -165,11 +173,12 @@ def test_parse_agg_nest_complex():
     
 def test_parse_agg_nest_complex_alias():
     # A count plus an average all divided a two columns added and multiplied by 25
-    target_string = ["CURRENT_DF['complex_aggregation'] = [((PREV_DF.o_custkey).count() + (PREV_DF.o_totalprice).mean()) / ((PREV_DF.o_orderkey).sum() + (PREV_DF.o_shippriority).min()) * 25]"]
-    in_string = [["(count(o_custkey) + avg(o_totalprice)) / (sum(o_orderkey) + min(o_shippriority)) * 25", "complex_aggregation"]]
+    target_string = ["CURRENT_DF['complex_aggregation'] = [((((PREV_DF.o_custkey).count() + (PREV_DF.o_totalprice).mean()) / ((PREV_DF.o_orderkey).sum() + (PREV_DF.o_shippriority).min())) * 25)]"]
+    in_string = [("(count(o_custkey) + avg(o_totalprice)) / (sum(o_orderkey) + min(o_shippriority)) * 25", "complex_aggregation")]
     in_class = content(in_string)
     ccHelper = pandas_tree_to_pandas.CodeCompilation("", False, False)
-    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper)
+    tHelper = pandas_tree_to_pandas.TreeHelper("", True)
+    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper, tHelper)
     
     print("Out String:")
     print(out_string)
@@ -196,7 +205,8 @@ def read_from_file(filepath):
     return f.read()
 
 def remove_dir(folder):
-    shutil.rmtree(folder)
+    if os.path.exists(folder) and os.path.isdir(folder):
+        shutil.rmtree(folder)
     
 def delete_files_in_dir(folder):
     for filename in os.listdir(folder):
