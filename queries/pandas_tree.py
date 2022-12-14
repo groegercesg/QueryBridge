@@ -422,7 +422,7 @@ class filter_node():
     def set_index_cond(self, index_cond):
         self.index_cond = clean_filter_params(self, index_cond)
         
-    def to_pandas(self, prev_df, this_df, codeCompHelper):
+    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
         subplan_mode = False
 
         # Process output:
@@ -531,7 +531,7 @@ class sort_node():
                 keys.append(column)
         return keys, ascendings
     
-    def to_pandas(self, prev_df, this_df, codeCompHelper):
+    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
         # Set sort_keys
         self.sort_key = self.process_sort_key(codeCompHelper)
         # Process output:
@@ -566,7 +566,7 @@ class limit_node():
     def process_amount(self, sql):
         return sql.limit
     
-    def to_pandas(self, prev_df, this_df, codeCompHelper):
+    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         # Set prefixes
@@ -609,7 +609,7 @@ class unique_node():
     def set_nodes(self, nodes):
         self.nodes = nodes
     
-    def to_pandas(self, prev_df, this_df, codeCompHelper):
+    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         # Set prefixes
@@ -886,19 +886,38 @@ def aggregate_case(inner_string, prev_df):
     
     return inner_string
 
-def do_aggregation(self, prev_df, current_df, codeCompHelper):
+def do_aggregation(self, prev_df, current_df, codeCompHelper, treeHelper):
     local_instructions = []
     for col in self.output:
         
         if isinstance(col, tuple):
             # Where we have an alias
-            tree = Expression_Solver(str(col[0]), "expression_tree", prev_df)
+            # Set output_name
+            output_name = None
+            if not treeHelper.bench:
+                output_name = str(treeHelper.expr_output_path)+str(treeHelper.expr_tree_tracker)
+            else:
+                output_name = False
+            
+            tree = Expression_Solver(str(col[0]), output_name, prev_df)
             pandas = tree.evaluate()
-            code_line = str(current_df) + "['" + str(col[1]) + "'] = " + str(pandas)
+            code_line = str(current_df) + "['" + str(col[1]) + "'] = [" + str(pandas) + "]"
             local_instructions.append(code_line)
+            
+            # Increment treeHelper
+            treeHelper.expr_tree_tracker += 1
         else:
-            # Where we have an alias
-            tree = Expression_Solver(str(col), "expression_tree", prev_df)
+            # Where we have don't have an alias, use bracket replace
+            
+            # Set output_name
+            output_name = None
+            if not treeHelper.bench:
+                output_name = str(treeHelper.expr_output_path)+str(treeHelper.expr_tree_tracker)
+            else:
+                # Means no visualisation will be created
+                output_name = False
+            
+            tree = Expression_Solver(str(col), output_name, prev_df)
             pandas = tree.evaluate()
             
             # Handle complex names in output
@@ -909,6 +928,9 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper):
             
             code_line = str(current_df) + "['" + str(new_name) + "'] = [" + str(pandas) + "]"
             local_instructions.append(code_line)
+            
+            # Increment treeHelper
+            treeHelper.expr_tree_tracker += 1
         
         """
         if isinstance(col, tuple):
@@ -1346,7 +1368,7 @@ class group_aggr_node():
             grouping_keys.append(key.split(".")[1])
         return grouping_keys
     
-    def to_pandas(self, prev_df, this_df, codeCompHelper):
+    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         # Set prefixes
@@ -1552,7 +1574,7 @@ class merge_node():
         
         return str(statement)
 
-    def to_pandas(self, prev_dfs, this_df, codeCompHelper):
+    def to_pandas(self, prev_dfs, this_df, codeCompHelper, treeHelper):
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         # Set prefixes
@@ -1588,7 +1610,7 @@ class aggr_node():
     def set_nodes(self, nodes):
         self.nodes = nodes
 
-    def to_pandas(self, prev_df, this_df, codeCompHelper):
+    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         # Set prefixes
@@ -1596,7 +1618,7 @@ class aggr_node():
             raise ValueError("Inputted prev_df is not a string!")
         instructions = [this_df + " = pd.DataFrame()"]
         
-        instructions += do_aggregation(self, prev_df, this_df, codeCompHelper)
+        instructions += do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper)
         
         output_cols = choose_aliases(self, codeCompHelper)
         
@@ -1615,7 +1637,7 @@ class rename_node():
     def set_nodes(self, nodes):
         self.nodes = nodes
 
-    def to_pandas(self, prev_df, this_df, codeCompHelper):
+    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
         # Add the relation we are renaming to
         codeCompHelper.add_relation(self.alias)
         

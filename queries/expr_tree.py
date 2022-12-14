@@ -171,7 +171,8 @@ if __name__ == "__main__":
     sql_basic_eqn = "sum(o_totalprice) / avg(o_custkey)"
     sql_complex_eqn = "(count(o_custkey) + avg(o_totalprice)) / (sum(o_orderkey) + min(o_shippriority)) * 25"
     sql_simple_eqn = "sum(o_totalprice)"
+    sql_hard_eqn = "sum(l_extendedprice * (1 - l_discount) * (1 + l_tax))"
     
-    tree = Expression_Solver(sql_simple_eqn, "SQL Complex Equation", "PREV_DF")
+    tree = Expression_Solver(sql_hard_eqn, False, "PREV_DF")
     pandas = tree.evaluate()
     print(pandas)

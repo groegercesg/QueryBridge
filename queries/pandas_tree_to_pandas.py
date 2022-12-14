@@ -4,11 +4,16 @@ import functools
 
 
 class TreeHelper():
-    def __init__(self):
+    def __init__(self, expr_tree_output_path, benchmarking):
         # Dictionary to track how many "filter" nodes there have been
         self.node_type_tracker = defaultdict(int)
         # Dictionary to map class: filter_node (id: 123123) to df_name: df_filter_2
         self.node_id_tracker = {}
+        # Counter to count number of expression trees output
+        self.expr_tree_tracker = 1
+        self.expr_output_path = expr_tree_output_path
+        # Store whether we are benchmarking
+        self.bench = benchmarking
 
 class CodeCompilation():
     def __init__(self, sql_class, column_ordering, column_limiting):
@@ -175,17 +180,17 @@ def postorder_traversal(tree, pandas_statements, baseCodeCompHelper, aggrs, tree
             codeCompHelper.setAggr(True)
             if hasattr(tree, "data"):
                 codeCompHelper.add_relation(tree.data)
-            pandas_strings = tree.to_pandas(prev_node_name, df_name, codeCompHelper)
+            pandas_strings = tree.to_pandas(prev_node_name, df_name, codeCompHelper, treeHelper)
         else:
             if hasattr(tree, "data"):
                 codeCompHelper.add_relation(tree.data)
-            pandas_strings = tree.to_pandas(prev_node_name, df_name, codeCompHelper)
+            pandas_strings = tree.to_pandas(prev_node_name, df_name, codeCompHelper, treeHelper)
         
     else:
         # Add tree.data, the relation name, to codeCompHelper
         if hasattr(tree, "data"):
             codeCompHelper.add_relation(tree.data)
-        pandas_strings = tree.to_pandas(tree.data, df_name, codeCompHelper)
+        pandas_strings = tree.to_pandas(tree.data, df_name, codeCompHelper, treeHelper)
 
    
     for statement in pandas_strings:

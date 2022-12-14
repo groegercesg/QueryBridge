@@ -231,8 +231,9 @@ def main():
 
         output_file = f"{folder_path}" + "/"+query_name+"_explain_" + str(i) + ".json"
         tree_output = f"{folder_path}" + "/"+query_name+"_explain_tree_" + str(i)
-        tree_prune_output = f"{folder_path}" + "/"+query_name+"_explain_post_prune_tree_" + str(i)
-        tree_pandas_output = f"{folder_path}" + "/"+ query_name+"_pandas_tree_" + str(i)
+        tree_prune_output = f"{folder_path}" + "/" +query_name+"_explain_post_prune_tree_" + str(i)
+        tree_pandas_output = f"{folder_path}" + "/" + query_name+"_pandas_tree_" + str(i)
+        expr_tree_output = f"{folder_path}" + "/" + query_name+ "_expression_tree_"
         command = psql_file_command + explain_file
 
         from clean_up_json import run
@@ -304,7 +305,7 @@ def main():
                 
         # Create a treeHelper once for all the plans
         from pandas_tree_to_pandas import TreeHelper
-        overall_tree_helper = TreeHelper()
+        overall_tree_helper = TreeHelper(expr_tree_output, args.benchmarking)
 
         # Iterate through all of the plans
         if isinstance(output_trees, list):
