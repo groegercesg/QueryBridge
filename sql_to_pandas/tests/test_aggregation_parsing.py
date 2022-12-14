@@ -43,8 +43,6 @@ Reformed Aggregation Implementation Notes:
 class content():
     def __init__(self, output):
         self.output = output
-        
-"""
 
 def test_parse_agg_simple():    
     target_string = ["CURRENT_DF['sumo_totalprice'] = [(PREV_DF.o_totalprice).sum()]"]
@@ -188,7 +186,6 @@ def test_parse_agg_nest_complex_alias():
     print(target_string)
 
     assert out_string == target_string, "Test Assertion Failed"
-"""
 
 INPUTS_DIR = "testing_inputs/"
 OUTPUTS_DIR = "testing_outputs/"
@@ -275,7 +272,13 @@ def run_around_tests():
 def test_aggregation_complete_complex():
     # Complex aggregation, from end to end (sql to pandas).
     # Expected pandas
-    pandas_expected = inspect.cleandoc("""""").strip()
+    pandas_expected = inspect.cleandoc("""
+        df_filter_1 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+        df_aggr_1 = pd.DataFrame()
+        df_aggr_1['fun_aggregate'] = [((((df_filter_1.o_custkey).count() + (df_filter_1.o_totalprice).mean()) / ((df_filter_1.o_orderkey).sum() + (df_filter_1.o_shippriority).min())) * 25)]
+        df_aggr_1['massive_query'] = [((((df_filter_1.o_custkey).max() * (df_filter_1.o_totalprice).min()) * ((df_filter_1.o_orderkey).max() - (df_filter_1.o_shippriority).mean())) + 5)]
+        df_aggr_1 = df_aggr_1[['fun_aggregate', 'massive_query']]
+        return df_aggr_1""").strip()
     
     sql_query = "SELECT ( COUNT ( o_custkey ) + AVG ( o_totalprice ) ) / ( SUM(o_orderkey) + MIN(o_shippriority) ) * 25 as fun_aggregate, ( MAX ( o_custkey ) * MIN ( o_totalprice ) ) * ( MAX(o_orderkey) - AVG(o_shippriority) ) - -5 as massive_query FROM orders;"
     
