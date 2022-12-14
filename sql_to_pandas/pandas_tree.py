@@ -226,7 +226,9 @@ def clean_type_information(self, content):
         if valueFind == "Quotes":
             replaces.append(("'"+value+"'", new_value))
         elif valueFind == "Brackets":
-            replaces.append(("("+value+")", new_value))
+            # BUG: This replacement here, with the brackets, sometimes causes the string to be woefully unsuitable
+            if value != new_value:
+                replaces.append(("("+value+")", new_value))
         else:
             raise ValueError("Unrecognised value for valueFind: " + str(valueFind))
         

@@ -100,6 +100,30 @@ class Expression_Solver:
             del s_split[idx]
         
         return s_split
+    
+    
+    def solve_adj_minuses(self, s_split):
+        # Track the position of items we want to delete
+        deletes = []
+        for i in range(len(s_split) - 1):
+            if s_split[i] == "-":
+                # Check if i+1 == "-"
+                if s_split[i+1] == "-":
+                    # We need to delete this index
+                    deletes.append(i+1)
+                    # And set "i" to be a plus
+                    # That's the operation we're carrying out here, two minuses make a plus
+                    s_split[i] = "+"
+                    
+        
+        # Reverse deletes
+        deletes.reverse()
+        
+        # Carry out deletion
+        for idx in deletes:
+            del s_split[idx]
+        
+        return s_split
         
 
     def expTree(self, s):
@@ -119,6 +143,9 @@ class Expression_Solver:
         s_split = re.split(pattern, s)
         
         s_split = self.remove_empty_strings(s_split)
+        
+        # Check for adjacent negatives
+        s_split = self.solve_adj_minuses(s_split)
 
         for ch in s_split:
             # print("Currently doing: " + str(ch))

@@ -145,11 +145,6 @@ def main():
     # Make a folder
     Path(folder_path).mkdir(parents=True, exist_ok=True)
     # Move query_file into it
-    print("COPY: " + str(query_file) + " into: " + str(folder_path))
-    import os
-    print(os.getcwd())
-    print([f for f in os.listdir('.')])
-    print([f for f in os.listdir('testing_outputs')])
     shutil.copy(query_file, folder_path)
     
     # Handle multiple separate queries in one file

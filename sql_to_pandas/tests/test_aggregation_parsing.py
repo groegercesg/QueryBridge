@@ -43,6 +43,8 @@ Reformed Aggregation Implementation Notes:
 class content():
     def __init__(self, output):
         self.output = output
+        
+"""
 
 def test_parse_agg_simple():    
     target_string = ["CURRENT_DF['sumo_totalprice'] = [(PREV_DF.o_totalprice).sum()]"]
@@ -186,22 +188,19 @@ def test_parse_agg_nest_complex_alias():
     print(target_string)
 
     assert out_string == target_string, "Test Assertion Failed"
+"""
 
-
-SQL_TESTING_DIR = "testing_inputs/"
-TEST_TESTING_DIR = "testing_outputs/"
+INPUTS_DIR = "testing_inputs/"
+OUTPUTS_DIR = "testing_outputs/"
 QUERY_NAME = "query.sql"
 CONVERTER_LOC = "../sql_to_pandas.py"
 OUTPUT_NAME = "query.py"
-RESULTS_LOC = "results"
 
 # FUNCTIONS
 def write_to_file(filepath, content):
     f = open(filepath, "w")
     f.write(content)
     f.close()
-    print("file written to location")
-    print([f for f in os.listdir('testing_outputs')])
     
 def read_from_file(filepath):
     f = open(filepath, "r")
@@ -228,10 +227,10 @@ def count_files_in_directory(folder):
 
 def run_query(sql):
     # Write to a file
-    write_to_file(TEST_TESTING_DIR+QUERY_NAME, sql)
+    write_to_file(INPUTS_DIR+QUERY_NAME, sql)  
         
     # Run this query
-    cmd = ["python3", CONVERTER_LOC, '--file', SQL_TESTING_DIR+QUERY_NAME, "--output_location", SQL_TESTING_DIR, '--benchmarking', "False", "--name", OUTPUT_NAME]    
+    cmd = ["python3", CONVERTER_LOC, '--file', INPUTS_DIR+QUERY_NAME, "--output_location", OUTPUTS_DIR, '--benchmarking', "False", "--name", OUTPUT_NAME]    
     
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
     
@@ -240,31 +239,38 @@ def run_query(sql):
         print(result.stderr)
         raise Exception( f'Invalid result: { result.returncode }' )
     
-    return str(read_from_file(TEST_TESTING_DIR+OUTPUT_NAME)).strip()
+    return str(read_from_file(OUTPUTS_DIR+OUTPUT_NAME)).strip()
 
 # Before all
 @pytest.fixture(scope='module', autouse=True)
 def setup():
     print("Run Setup")
     # Create directory for tests if doesn't already exist
-    os.makedirs(TEST_TESTING_DIR, exist_ok=True)  # succeeds even if directory exists.
+    for dir in [INPUTS_DIR, OUTPUTS_DIR]:
+        os.makedirs(dir, exist_ok=True)  # succeeds even if directory exists.
     
 #  Before and after each
 @pytest.fixture(autouse=True)
 def run_around_tests():
     # Delete in Dir
-    delete_files_in_dir(TEST_TESTING_DIR)
+    for dir in [INPUTS_DIR, OUTPUTS_DIR]:
+        delete_files_in_dir(dir)
     # Code that will run before your test, for example:
-    files_before = count_files_in_directory(TEST_TESTING_DIR)
+    files_before_input = count_files_in_directory(INPUTS_DIR)
+    files_before_output = count_files_in_directory(OUTPUTS_DIR)
+    
     # A test function will be run at this point
     yield
+    
     # Delete in Dir
-    delete_files_in_dir(TEST_TESTING_DIR)
-    # Cleanup, remove results from local
-    remove_dir(RESULTS_LOC)
+    for dir in [INPUTS_DIR, OUTPUTS_DIR]:
+        delete_files_in_dir(dir)
     # Code that will run after your test, for example:
-    files_after = count_files_in_directory(TEST_TESTING_DIR)
-    assert files_before == files_after
+    files_after_input = count_files_in_directory(INPUTS_DIR)
+    files_after_output = count_files_in_directory(OUTPUTS_DIR)
+    
+    assert files_before_input == files_after_input
+    assert files_before_output == files_after_output
 
 def test_aggregation_complete_complex():
     # Complex aggregation, from end to end (sql to pandas).
@@ -319,5 +325,6 @@ def test_group_aggregation_complete_complex():
 def cleanup(request):
     """Cleanup a testing directory once we are finished."""
     def remove_cleanup():
-        remove_dir(TEST_TESTING_DIR)
+        for dir in [INPUTS_DIR, OUTPUTS_DIR]:
+            remove_dir(dir)
     request.addfinalizer(remove_cleanup)
