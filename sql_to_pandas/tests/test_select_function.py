@@ -1,7 +1,5 @@
 import pytest
 import os
-import shutil
-import subprocess
 import inspect
 
 
@@ -19,80 +17,42 @@ select sum ( s_acctbal ) from supplier;
 
 """
 
-TESTING_DIR = "../testing_outputs/"
-QUERY_NAME = "query.sql"
-CONVERTER_LOC = "../sql_to_pandas.py"
-OUTPUT_NAME = "query.py"
-RESULTS_LOC = "results"
+# Testing methods
+from general_test_functions import *
 
-# FUNCTIONS
-def write_to_file(filepath, content):
-    f = open(filepath, "w")
-    f.write(content)
-    f.close()
-    
-def read_from_file(filepath):
-    f = open(filepath, "r")
-    return f.read()
-
-def remove_dir(folder):
-    shutil.rmtree(folder)
-    
-def delete_files_in_dir(folder):
-    for filename in os.listdir(folder):
-        file_path = os.path.join(folder, filename)
-        try:
-            if os.path.isfile(file_path) or os.path.islink(file_path):
-                os.unlink(file_path)
-            elif os.path.isdir(file_path):
-                shutil.rmtree(file_path)
-        except Exception as e:
-            print('Failed to delete %s. Reason: %s' % (file_path, e))
-
-def count_files_in_directory(folder):
-    _, _, files = next(os.walk(folder))
-    return len(files)
-
-def run_query(sql):
-    # Write to a file
-    write_to_file(TESTING_DIR+QUERY_NAME, sql)
-        
-    # Run this query
-    cmd = ["python3", CONVERTER_LOC, '--file', TESTING_DIR+QUERY_NAME, "--output_location", TESTING_DIR, '--benchmarking', "False", "--name", OUTPUT_NAME]    
-    
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-    
-    if result.returncode != 0:
-        print(result.stdout)
-        print(result.stderr)
-        raise Exception( f'Invalid result: { result.returncode }' )
-    
-    return str(read_from_file(TESTING_DIR+OUTPUT_NAME)).strip()
+# Variable Names
+constants = Constants_class("testing_inputs/", "testing_outputs/", "query.sql", "../sql_to_pandas.py", "query.py")
 
 # Before all
 @pytest.fixture(scope='module', autouse=True)
 def setup():
     print("Run Setup")
     # Create directory for tests if doesn't already exist
-    os.makedirs(TESTING_DIR, exist_ok=True)  # succeeds even if directory exists.
+    for dir in [constants.INPUTS_DIR, constants.OUTPUTS_DIR]:
+        os.makedirs(dir, exist_ok=True)  # succeeds even if directory exists.
     
 #  Before and after each
 @pytest.fixture(autouse=True)
 def run_around_tests():
     # Delete in Dir
-    delete_files_in_dir(TESTING_DIR)
+    for dir in [constants.INPUTS_DIR, constants.OUTPUTS_DIR]:
+        delete_files_in_dir(dir)
     # Code that will run before your test, for example:
-    files_before = count_files_in_directory(TESTING_DIR)
-    # A test function will be run at this point
-    yield
-    # Delete in Dir
-    delete_files_in_dir(TESTING_DIR)
-    # Cleanup, remove results from local
-    remove_dir(RESULTS_LOC)
-    # Code that will run after your test, for example:
-    files_after = count_files_in_directory(TESTING_DIR)
-    assert files_before == files_after
+    files_before_input = count_files_in_directory(constants.INPUTS_DIR)
+    files_before_output = count_files_in_directory(constants.OUTPUTS_DIR)
     
+    yield
+    
+    # Delete in Dir
+    for dir in [constants.INPUTS_DIR, constants.OUTPUTS_DIR]:
+        delete_files_in_dir(dir)
+    # Code that will run after your test, for example:
+    files_after_input = count_files_in_directory(constants.INPUTS_DIR)
+    files_after_output = count_files_in_directory(constants.OUTPUTS_DIR)
+    
+    assert files_before_input == files_after_input
+    assert files_before_output == files_after_output
+
 def test_min():
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
@@ -104,7 +64,7 @@ def test_min():
     
     sql_query = "select min ( s_acctbal ) from supplier;"
     
-    pandas_query = run_query(sql_query)
+    pandas_query = run_query(sql_query, constants)
     
     print("Pandas Query:")
     print(pandas_query)
@@ -124,7 +84,7 @@ def test_min_alias():
     
     sql_query = "select min ( s_acctbal ) as min_balance from supplier;"
     
-    pandas_query = run_query(sql_query)
+    pandas_query = run_query(sql_query, constants)
     
     print("Pandas Query:")
     print(pandas_query)
@@ -144,7 +104,7 @@ def test_max():
     
     sql_query = "select max ( s_acctbal ) from supplier;"
     
-    pandas_query = run_query(sql_query)
+    pandas_query = run_query(sql_query, constants)
     
     print("Pandas Query:")
     print(pandas_query)
@@ -164,7 +124,7 @@ def test_max_alias():
     
     sql_query = "select max ( s_acctbal ) as max_balance from supplier;"
     
-    pandas_query = run_query(sql_query)
+    pandas_query = run_query(sql_query, constants)
     
     print("Pandas Query:")
     print(pandas_query)
@@ -184,7 +144,7 @@ def test_count():
     
     sql_query = "select count ( s_suppkey ) from supplier;"
     
-    pandas_query = run_query(sql_query)
+    pandas_query = run_query(sql_query, constants)
     
     print("Pandas Query:")
     print(pandas_query)
@@ -204,7 +164,7 @@ def test_count_alias():
     
     sql_query = "select count ( s_suppkey ) as cnt_key from supplier;"
     
-    pandas_query = run_query(sql_query)
+    pandas_query = run_query(sql_query, constants)
     
     print("Pandas Query:")
     print(pandas_query)
@@ -224,7 +184,7 @@ def test_avg():
     
     sql_query = "select avg ( s_acctbal ) from supplier;"
     
-    pandas_query = run_query(sql_query)
+    pandas_query = run_query(sql_query, constants)
     
     print("Pandas Query:")
     print(pandas_query)
@@ -245,7 +205,7 @@ def test_avg_alias():
     
     sql_query = "select avg ( s_acctbal ) as avg_balance from supplier;"
     
-    pandas_query = run_query(sql_query)
+    pandas_query = run_query(sql_query, constants)
     
     print("Pandas Query:")
     print(pandas_query)
@@ -265,7 +225,7 @@ def test_sum():
     
     sql_query = "select sum ( s_acctbal ) from supplier;"
     
-    pandas_query = run_query(sql_query)
+    pandas_query = run_query(sql_query, constants)
     
     print("Pandas Query:")
     print(pandas_query)
@@ -285,7 +245,7 @@ def test_sum_alias():
     
     sql_query = "select sum ( s_acctbal ) as sum_balance from supplier;"
     
-    pandas_query = run_query(sql_query)
+    pandas_query = run_query(sql_query, constants)
     
     print("Pandas Query:")
     print(pandas_query)
@@ -299,5 +259,6 @@ def test_sum_alias():
 def cleanup(request):
     """Cleanup a testing directory once we are finished."""
     def remove_cleanup():
-        remove_dir(TESTING_DIR)
+        for dir in [constants.INPUTS_DIR, constants.OUTPUTS_DIR]:
+            remove_dir(dir)
     request.addfinalizer(remove_cleanup)
