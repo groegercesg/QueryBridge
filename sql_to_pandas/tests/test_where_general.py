@@ -28,7 +28,7 @@ WHERE s_address NOT IN ('Germany', 'France', 'UK')  Value not in a set of values
 def test_equal_numeric_value():
     # WHERE s_nationkey = 14    Equal, numeric
     
-    target_string = 'supplier.s_nationkey = 14'
+    target_string = 'supplier.s_nationkey == 14'
     in_string = "(supplier.s_nationkey = 14)"
     out_string = pandas_tree.clean_filter_params(None, in_string)
 
@@ -37,7 +37,7 @@ def test_equal_numeric_value():
 def test_equal_text_value():
     # WHERE s_address = 'Bread'   Equal, text
     
-    target_string = "supplier.s_address = 'Bread'"
+    target_string = "(supplier.s_address) == 'Bread'"
     in_string = "((supplier.s_address)::text = 'Bread'::text)"
     out_string = pandas_tree.clean_filter_params(None, in_string)
 
@@ -55,7 +55,7 @@ def test_greater_than_value():
 def test_less_than_value():
     # WHERE s_nationkey < 27.3 Less than
     
-    target_string = 'supplier.s_nationkey < 27.3'
+    target_string = '(supplier.s_nationkey) < 27.3'
     in_string = "((supplier.s_nationkey)::numeric < 27.3)"
     out_string = pandas_tree.clean_filter_params(None, in_string)
 
@@ -91,7 +91,7 @@ def test_not_equal_numeric_value():
 def test_not_equal_text_value():
     # WHERE s_address <> "Simon"	Not equal, text
     
-    target_string = "supplier.s_address != 'Simon'"
+    target_string = "(supplier.s_address) != 'Simon'"
     in_string = "((supplier.s_address)::text <> 'Simon'::text)"
     out_string = pandas_tree.clean_filter_params(None, in_string)
 
@@ -109,7 +109,7 @@ def test_between_numeric():
 def test_between_text():
     # WHERE s_address BETWEEN 'And' AND 'But' Between a certain range, textual
     
-    target_string = "(supplier.s_address >= 'And') & (supplier.s_address <= 'But')"
+    target_string = "((supplier.s_address) >= 'And') & ((supplier.s_address) <= 'But')"
     in_string = "(((supplier.s_address)::text >= 'And'::text) AND ((supplier.s_address)::text <= 'But'::text))"
     out_string = pandas_tree.clean_filter_params(None, in_string)
 
@@ -127,7 +127,7 @@ def test_not_between_numeric():
 def test_in_values():
     # WHERE s_address IN ('Germany', 'France', 'UK')  Value in a set of values
     
-    target_string = "supplier.s_address.isin(['Germany','France','UK'])"
+    target_string = "(supplier.s_address).isin(['Germany','France','UK'])"
     in_string = "((supplier.s_address)::text = ANY ('{Germany,France,UK}'::text[]))"
     out_string = pandas_tree.clean_filter_params(None, in_string)
 
@@ -136,7 +136,7 @@ def test_in_values():
 def test_in_single_values():
     # WHERE s_address IN ('Germany')  Value in a set of values
     
-    target_string = "supplier.s_address = 'Germany'"
+    target_string = "(supplier.s_address) == 'Germany'"
     in_string = "((supplier.s_address)::text = 'Germany'::text)"
     out_string = pandas_tree.clean_filter_params(None, in_string)
 
@@ -145,7 +145,7 @@ def test_in_single_values():
 def test_not_in_values():
     # WHERE s_address NOT IN ('Germany', 'France', 'UK')  Value not in a set of values
     
-    target_string = "~supplier.s_address.isin(['Germany','France','UK'])"
+    target_string = "~(supplier.s_address).isin(['Germany','France','UK'])"
     in_string = "((supplier.s_address)::text <> ALL ('{Germany,France,UK}'::text[]))"
     out_string = pandas_tree.clean_filter_params(None, in_string)
 

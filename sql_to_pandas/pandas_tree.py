@@ -268,10 +268,12 @@ def clean_type_information(self, content):
         else:
             raise ValueError("Unrecognised value for valueFind: " + str(valueFind))
         
-    if remove_range != [] and replaces != []:
-        content = remove_range(content, remove_ranges)
+    if remove_ranges != [] or replaces != []:
+        if remove_ranges != []:
+            content = remove_range(content, remove_ranges)
         # print(content)
-        content = do_replaces(content, replaces)
+        if replaces != []:
+            content = do_replaces(content, replaces)
         # print(content)
     
     return content
