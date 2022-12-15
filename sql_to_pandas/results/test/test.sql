@@ -1,1 +1,0 @@
-select count( distinct ( o_custkey ) ) from orders;

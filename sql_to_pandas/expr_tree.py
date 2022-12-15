@@ -62,9 +62,15 @@ class Expression_Solver:
                 raise ValueError("Not recognised values for left_value: " + str(left_value) + " and right_value: " + str(right_value))
         elif node.val == "count":
             if node.left == None:
-                return str(right_value) + ".count()"
+                if node.right.val == "distinct":
+                    return "len(" + str(right_value) + ")"
+                else:
+                    return str(right_value) + ".count()"
             elif node.right == None:
-                return str(left_value) + ".count()"
+                if node.left.val == "distinct":
+                    return "len(" + str(left_value) + ")"
+                else:
+                    return str(left_value) + ".count()"
             else:
                 raise ValueError("Not recognised values for left_value: " + str(left_value) + " and right_value: " + str(right_value))
         elif node.val == "min":
@@ -79,6 +85,13 @@ class Expression_Solver:
                 return str(right_value) + ".max()"
             elif node.right == None:
                 return str(left_value) + ".max()"
+            else:
+                raise ValueError("Not recognised values for left_value: " + str(left_value) + " and right_value: " + str(right_value))
+        elif node.val == "distinct":
+            if node.left == None:
+                return str(right_value) + ".unique()"
+            elif node.right == None:
+                return str(left_value) + ".unique()"
             else:
                 raise ValueError("Not recognised values for left_value: " + str(left_value) + " and right_value: " + str(right_value))
         else:
@@ -115,7 +128,6 @@ class Expression_Solver:
                     # That's the operation we're carrying out here, two minuses make a plus
                     s_split[i] = "+"
                     
-        
         # Reverse deletes
         deletes.reverse()
         
@@ -127,8 +139,8 @@ class Expression_Solver:
         
 
     def expTree(self, s):
-        self.prio = {'(': 1, '+': 2, '-': 2, '*': 3, '/': 3, "sum": 4, "avg": 4, "count": 4, "max": 4, "min": 4}
-        self.agg_funcs = {"sum", "avg", "count", "max", "min"}
+        self.prio = {'(': 1, '+': 2, '-': 2, '*': 3, '/': 3, "sum": 4, "avg": 4, "count": 4, "max": 4, "min": 4, "distinct": 4}
+        self.agg_funcs = {"sum", "avg", "count", "max", "min", "distinct"}
         
         ops = []
         stack = []
@@ -146,8 +158,6 @@ class Expression_Solver:
         
         # Check for adjacent negatives
         s_split = self.solve_adj_minuses(s_split)
-        
-        print(s_split)
 
         for ch in s_split:
             # print("Currently doing: " + str(ch))

@@ -83,7 +83,43 @@ def process_output(self, output, codecomphelper):
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.bracket_replace[relation_cleaned_output])
         else:
-            output[i] = cleaned_output
+            if "distinct" in cleaned_output.lower():
+                # Function to delete at particular index
+                def del_at_index(strObj, index):
+                    # Slice string to remove character at index 5
+                    if len(strObj) > index:
+                        strObj = strObj[0 : index : ] + strObj[index + 1 : :]
+                    return strObj
+
+                def insert_at_index(strObj, index, insert):
+                    return strObj[:index] + str(insert) + strObj[index:]
+                                    
+                
+                # Handle a distinct in the output, we need to insert brackets
+                distinct_output = cleaned_output.lower()
+                # Find the position after the distinct
+                distinct_loc = distinct_output.find("distinct") + len("distinct")
+                
+                # Handle not found case
+                if distinct_loc == -1:
+                    raise ValueError("Distinct not found in output, despite appearing to be there")
+                
+                # If there was a space in the thing then delete it
+                if distinct_output[distinct_loc] == " ":
+                    # Delete at particular index
+                    distinct_output = del_at_index(distinct_output, distinct_loc)
+                
+                # Insert a open bracket at distinct_loc
+                distinct_output = insert_at_index(distinct_output, distinct_loc, "(")
+
+                # Determine where to insert the close bracket
+                close_position = distinct_output.find(')', distinct_loc)
+                # Insert a close bracket at close_position
+                distinct_output = insert_at_index(distinct_output, close_position, ")")
+                
+                output[i] = distinct_output
+            else:
+                output[i] = cleaned_output
         
         # Perform the replaces to the output, removing the relations
         # This is crucial

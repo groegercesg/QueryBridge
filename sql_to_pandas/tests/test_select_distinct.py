@@ -118,8 +118,9 @@ def test_count_distinct():
     pandas_expected = inspect.cleandoc("""
         df_filter_1 = orders[['o_custkey']]
         df_aggr_1 = pd.DataFrame()
-        df_aggr_1['countdistincto_custkey'] = [(df_filter_1['o_custkey']).nunique()]
-        df_aggr_1 = df_aggr_1[['countdistincto_custkey']]""").strip()
+        df_aggr_1['countdistincto_custkey'] = [len((df_filter_1.o_custkey).unique())]
+        df_aggr_1 = df_aggr_1[['countdistincto_custkey']]
+        return df_aggr_1""").strip()
     
     # A count select select
     sql_query = "select count( distinct ( o_custkey ) ) from orders;"
