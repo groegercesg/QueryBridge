@@ -79,6 +79,12 @@ def main():
     # We want this to output the converted queries to a given directory
     # This directory is specified as: manifest_json["Temporary Directory"]
     
+    def init_writer():
+        temp_path = Path(manifest_json["Temporary Directory"])
+        
+        # Write an __init__.py into the file
+        open(f"{temp_path}"+"/"+"__init__.py", 'a').close()
+            
     # Delete if already exists
     def make_temp_folder():
         temp_path = Path(manifest_json["Temporary Directory"])
@@ -88,7 +94,7 @@ def main():
         Path(temp_path).mkdir(parents=True, exist_ok=True)
         
         # Write an __init__.py into the file
-        open(f"{temp_path}"+"/"+"__init__.py", 'a').close()
+        init_writer()
         
         return temp_path
         
@@ -127,7 +133,29 @@ def main():
         
         function_default = "query"
         package_name = str(sql_query["Pandas Name"]).split(".")[0]
-        query_function = getattr(__import__(manifest_json["Temporary Directory"]+".%s" % package_name, fromlist=[function_default]), function_default)
+        
+        # Put an __init__.py file into the folder so it can be imported as a module
+        init_writer()
+        
+        print(os.getcwd())
+        
+        # Set changed Dirs to false
+        changed_dirs = False
+        if "/" in str(manifest_json["Temporary Directory"]):
+            # Split this, cd to the first part
+            split_dir = str(manifest_json["Temporary Directory"]).split("/")
+            os.chdir(split_dir[0])
+            print(os.getcwd())
+            package_location = ".".join(split_dir[1:]) + ".%s" % package_name
+            
+            # We have changed directories, 
+            changed_dirs = True
+        else:
+            package_location = str(manifest_json["Temporary Directory"]) + ".%s" % package_name
+        
+        print(package_location)
+        
+        query_function = getattr(__import__(package_location, fromlist=[function_default]), function_default)
         
         # Order of data imports
         data_order = list(query_function.__code__.co_varnames[:query_function.__code__.co_argcount])
@@ -150,6 +178,11 @@ def main():
             end_time = time.time()
             
             pandas_run_times.append(end_time - start_time)
+            
+        # Change back if we've moved
+        if changed_dirs == True:
+            os.chdir("..")
+            changed_dirs = False
          
         if args.verbose:   
             print(pandas_run_times)
