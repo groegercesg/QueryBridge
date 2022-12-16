@@ -287,12 +287,15 @@ class Expression_Solver:
         #  TODO: Once we implement minuses as unary operators, this won't be needed anymore
         # Check for adjacent negatives
         s_split = self.solve_adj_minuses(s_split)
+        
+        print(s_split)
 
         for ch in s_split:
             # print("Currently doing: " + str(ch))
             if ch == '(':
                 ops.append(ch)
-            elif ch.isdigit():
+            # For floats, we offer to replace a single decimal point and now check if it contains only digits
+            elif (ch.isdigit()) or (ch.replace(".", "", 1).isdigit()):
                 stack.append(Expression_Tree_Node(ch))
             elif not any(char.isdigit() for char in ch) and self.prio.get(ch, None) == None and ch != "(" and ch != ")":
                 # No digits and not in the priority dictionary
