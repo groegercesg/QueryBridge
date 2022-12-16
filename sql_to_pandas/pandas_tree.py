@@ -950,7 +950,7 @@ def aggregate_case(inner_string, prev_df):
     
     return inner_string
 
-def do_aggregation(self, prev_df, current_df, codeCompHelper, treeHelper):
+def do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper):
     local_instructions = []
     for col in self.output:
         
@@ -963,9 +963,9 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper, treeHelper):
             else:
                 output_name = False
             
-            tree = Expression_Solver(str(col[0]), output_name, prev_df)
+            tree = Expression_Solver(str(col[0]), output_name, prev_df, this_df)
             pandas = tree.evaluate()
-            code_line = str(current_df) + "['" + str(col[1]) + "'] = [" + str(pandas) + "]"
+            code_line = str(this_df) + "['" + str(col[1]) + "'] = [" + str(pandas) + "]"
             local_instructions.append(code_line)
             
             # Increment treeHelper
@@ -981,7 +981,7 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper, treeHelper):
                 # Means no visualisation will be created
                 output_name = False
             
-            tree = Expression_Solver(str(col), output_name, prev_df)
+            tree = Expression_Solver(str(col), output_name, prev_df, this_df)
             pandas = tree.evaluate()
             
             # Handle complex names in output
@@ -990,258 +990,11 @@ def do_aggregation(self, prev_df, current_df, codeCompHelper, treeHelper):
                 # Replace these
                 codeCompHelper.add_bracket_replace(col, new_name)
             
-            code_line = str(current_df) + "['" + str(new_name) + "'] = [" + str(pandas) + "]"
+            code_line = str(this_df) + "['" + str(new_name) + "'] = [" + str(pandas) + "]"
             local_instructions.append(code_line)
             
             # Increment treeHelper
-            treeHelper.expr_tree_tracker += 1
-        
-        """
-        if isinstance(col, tuple):
-            if "/" in col[0]:
-                # Split on this, handle agg of both sides individually
-                split_col = col[0].split("/")
-                aggr_results = []
-                for current_col in split_col:
-                    inner_agg_results = inner_aggregation(current_col.strip(), prev_df)
-                    if isinstance(inner_agg_results, list):
-                        aggr_results += inner_agg_results
-                    else:
-                        aggr_results.append(inner_agg_results)
-                
-                # Join aggr results
-                outer_string = ""
-                for i in range(len(aggr_results)):
-                    # Add to outer_string
-                    # if not the last one add with a divide
-                    add_value = ""
-                    if i < len(aggr_results) - 1:
-                        add_value = " / "
-                        
-                    if aggr_results[i][-1] == "/" or aggr_results[i][-1] == "*":
-                        add_value = " "
-                        
-                    outer_string += aggr_results[i] + add_value
-                    
-                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
-            
-            elif "max" in col[0]:
-                # max(sum(l_extendedprice * (1 - l_discount)))
-                
-                 
-                # The aggr operation is MAX!
-                inner = str(col[0]).split("max")[1]
-                inner = clean_extra_brackets(inner)
-                
-                if "sum" in inner:
-                    # Determine if inner is in the codeCompHelper.bracket_replace
-                    if hasattr(codeCompHelper, "bracket_replace"):
-                        if inner in codeCompHelper.bracket_replace:
-                            skip = True
-                            inner = codeCompHelper.bracket_replace[inner]
-                    
-                    if not skip:
-                        # The aggr operation is SUM!
-                        inner_inner = str(inner).split("sum")[1]
-                        inner_inner = clean_extra_brackets(inner_inner)
-                        
-                        inner_inner_string = aggregate_sum(inner_inner, df_group=prev_df)
-                    
-                        inner = "(" + inner_inner_string + ").sum()"
-                    
-                    # Reset skip for safety
-                    skip = False
-                    
-                outer_string = "(" + prev_df + "." + inner + ").max()"
-                
-                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
-                
-            elif "min" in col[0]:
-                # The aggr operation is MIN!
-                inner = str(col[0]).split("min")[1]
-                inner = clean_extra_brackets(inner)
-                
-                outer_string = "(" + prev_df + "." + inner + ").min()"
-                
-                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
-            
-            
-            elif "sum" in col[0]:
-                # The aggr operation is SUM!
-                inner = str(col[0]).split("sum")[1]
-                inner = clean_extra_brackets(inner)
-                
-                inner_string = aggregate_sum(inner, df_group=prev_df)
-              
-                outer_string = "(" + inner_string + ").sum()"
-                
-                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
-                
-            elif "count" in col[0]:
-                # The aggr operation is COUNT!
-                inner = str(col[0]).split("count")[1]
-                inner = clean_extra_brackets(inner)
-                
-                outer_string = "(" + prev_df + "." + inner + ").count()"
-                
-                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
-                
-            elif "avg" in col[0]:
-                # The aggr operation is MIN!
-                inner = str(col[0]).split("avg")[1]
-                inner = clean_extra_brackets(inner)
-                
-                outer_string = "(" + prev_df + "." + inner + ").mean()"
-                
-                local_instructions.append(current_df + "['" + col[1] + "'] = [" + outer_string + "]")
-                
-            else:
-                raise ValueError("Not other types of aggregation haven't been implemented yet!")
-        else:
-            # We need to handle cases in here
-            if "/" in col:
-                # Split on this, handle agg of both sides individually
-                split_col = col.split("/")
-                aggr_results = []
-                for col in split_col:
-                    inner_agg_results = inner_aggregation(col.strip(), prev_df)
-                    if isinstance(inner_agg_results, list):
-                        aggr_results += inner_agg_results
-                    else:
-                        aggr_results.append(inner_agg_results)
-                  
-                # '(df_merge_1.apply(lambda x: ( s["l_extendedprice"] * ( 1 - s["l_discount"] )) if x["p_type].startswith("PROMO") else 0, axis=1)).sum() / (df_merge_1.l_extendedprice * ( 1 - df_merge_1.l_discount )).sum()'
-                # '(100.00 * / (df_merge_1.apply(lambda x: ( s["l_extendedprice"] * ( 1 - s["l_discount"] )) if x["p_type"].startswith("PROMO") else 0, axis=1)).sum() /  / (df_merge_1.l_extendedprice * ( 1 - df_merge_1.l_discount )).sum()'
-                
-                # Join aggr results
-                outer_string = ""
-                for i in range(len(aggr_results)):
-                    # Add to outer_string
-                    # if not the last one add with a divide
-                    add_value = ""
-                    if i < len(aggr_results) - 1:
-                        add_value = " / "
-                    
-                    if aggr_results[i][-1] == "/" or aggr_results[i][-1] == "*":
-                        add_value = " "
-                        
-                    outer_string += aggr_results[i] + add_value
-                    
-                local_instructions.append(current_df + " = [" + outer_string + "]")
-            elif "max" in col:
-                skip = False
-                # max(sum(l_extendedprice * (1 - l_discount)))
-                 
-                # The aggr operation is MAX!
-                inner = str(col).split("max")[1]
-                inner = clean_extra_brackets(inner)
-                
-                if "sum" in inner.lower():
-                    # The aggr operation is SUM!
-                    inner_inner = str(inner).split("sum")[1]
-                    inner_inner = clean_extra_brackets(inner_inner)
-                    
-                    inner_inner_string = aggregate_sum(inner_inner, df_group=prev_df)
-                
-                    inner = "(" + prev_df + "." + inner_inner_string + ").sum()"
-                    skip = True
-                    
-                if skip == True:                    
-                    outer_string = "(" + inner + ").max()"
-                else:
-                    outer_string = "(" + prev_df + "." + inner + ").max()"
-                    
-                # Handle complex names in output
-                is_complex, new_name = complex_name_solve(col)
-                if is_complex == True:
-                    # Replace these
-                    codeCompHelper.add_bracket_replace(col, new_name)
-                
-                local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
-            elif "min" in col:
-                # The aggr operation is MIN!
-                inner = str(col).split("min")[1]
-                inner = clean_extra_brackets(inner)
-                
-                outer_string = "(" + prev_df + "." + inner + ").min()"
-                
-                # Handle complex names in output
-                is_complex, new_name = complex_name_solve(col)
-                if is_complex == True:
-                    # Replace these
-                    codeCompHelper.add_bracket_replace(col, new_name)
-                
-                local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
-                
-            elif "avg" in col:
-                # The aggr operation is MIN!
-                inner = str(col).split("avg")[1]
-                inner = clean_extra_brackets(inner)
-                
-                outer_string = "(" + prev_df + "." + inner + ").mean()"
-                
-                # Handle complex names in output
-                is_complex, new_name = complex_name_solve(col)
-                if is_complex == True:
-                    # Replace these
-                    codeCompHelper.add_bracket_replace(col, new_name)
-                
-                local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
-            
-            elif "count" in col:
-                # The aggr operation is MAX!
-                inner = str(col).split("count")[1]
-                inner = clean_extra_brackets(inner)
-                
-                if "distinct" in inner.lower():
-                    # The aggr operation is distinct!
-                    inner_inner = str(inner).split("DISTINCT")[1]
-                    inner_inner = clean_extra_brackets(inner_inner).strip()
-                
-                    outer_string = "(" + prev_df + "['" + inner_inner + "']).nunique()"
-                    
-                    # Handle complex names in output
-                    is_complex, new_name = complex_name_solve(col)
-                    if is_complex == True:
-                        # Replace these
-                        codeCompHelper.add_bracket_replace(col, new_name)
-                        
-                    local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
-                    
-                else:
-                
-                    outer_string = "(" + prev_df + "." + inner + ").count()"
-                    
-                    # Handle complex names in output
-                    is_complex, new_name = complex_name_solve(col)
-                    if is_complex == True:
-                        # Replace these
-                        codeCompHelper.add_bracket_replace(col, new_name)
-                    
-                    local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
-                
-            elif "sum" in col:
-                # The aggr operation is SUM!
-                inner = str(col).split("sum")[1]
-                inner = clean_extra_brackets(inner)
-                
-                inner_string = aggregate_sum(inner, df_group=prev_df)
-              
-                outer_string = "(" + inner_string + ").sum()"
-                
-                # Handle complex names in output
-                is_complex, new_name = complex_name_solve(col)
-                if is_complex == True:
-                    # Replace these
-                    codeCompHelper.add_bracket_replace(col, new_name)
-                
-                local_instructions.append(current_df + "['" + new_name + "'] = [" + outer_string + "]")
-                
-                
-            else:
-                raise ValueError("Not Implemented Error, for col: " + str(col))
-        """
-        
+            treeHelper.expr_tree_tracker += 1       
 
     return local_instructions
 
@@ -1295,23 +1048,28 @@ def choose_aliases(self, cCHelper, final_output=False):
                 output.append(appendingCol)    
     return output
 
-def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df):
+def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df, this_df):
     # Array to hold decisions
     # Before Aggrs:
         # Array for aggregations that need to happen before grouping
         # Format: [column name, instruction]
     before_aggrs = []
     
-    # After Aggrs:
-        # Array for aggregations (simple ones) that can happen after grouping
+    # During Aggrs:
+        # Array for aggregations (simple ones) that can happen during grouping
         # Format: [column name, uses column, aggr type]
+    during_aggrs = []
+    
+    # After Aggrs:
     after_aggrs = []
+    
+    # Initialise BeforeCounter
+    beforeCounter = 0
     
     # For each output in self.output
     # Determine how many columns it uses
             # Split off the sum avg or count
     for i, col in enumerate(data):
-        
         
         if isinstance(col, tuple):
             # Set output_name
@@ -1322,65 +1080,22 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df)
                 # Means no visualisation will be created
                 output_name = False
             
-            tree = Expression_Solver(str(col[0]), output_name, prev_df)
+            tree = Expression_Solver(str(col[0]), output_name, prev_df, this_df, beforeCounter)
             # Increment treeHelper
             treeHelper.expr_tree_tracker += 1
             
-            # If count > 1
-                # We need to do the inner part before, add to a before list
-                # Save the after part in after list
-            exp_tree = tree.expression_tree
-            if tree.columns_count > 1:
-                if (exp_tree.left != None) and (exp_tree.right != None):
-                    # We have a tree that features both left and right from the root
-                    # I.e. the root node isn't an aggregation function (sum, avg, min)
-                    
-                    # TODO: Not entirely sure how to do this
-                    # Current plan: calculate the aggregation in it's entirety before the group
-                    # Then "sum" the individual parts up afterwards
-                    
-                    # Add to before_aggrs
-                    before_aggrs.append([col[1], tree.evaluate()])
-                    # Add to after_aggrs, use sum as the top operation of the tree
-                    #aggr_operatio
-                    after_aggrs.append([col[1], col[1], "sum"])
-                    
-                    #raise ValueError("Both left and right contain information, we haven't written how to deal with this")
-                else:
-                    below_pandas_code = None
-                    if exp_tree.left == None:
-                        # Run on right
-                        below_pandas_code = tree.evaluate(exp_tree.right)
-                    elif exp_tree.right == None:
-                        # Run on left
-                        below_pandas_code = tree.evaluate(exp_tree.left)
-                    else:
-                        raise ValueError("Tree with only a root but no elements below that")
-                    
-                    # Add to before_aggrs
-                    before_aggrs.append([col[1], below_pandas_code])
-                    # Add to after_aggrs, use tree.val as the top operation of the tree
-                    after_aggrs.append([col[1], col[1], exp_tree.val])
-            # If count <= 1
-                # Save in after part list
-            else:
-                if (exp_tree.left != None) and (exp_tree.right != None):
-                    raise ValueError("Both left and right contain information, we haven't written how to deal with this")
-                
-                below_pandas_code = None
-                if exp_tree.left == None:
-                    # Run on right
-                    below_pandas_code = tree.evaluate(exp_tree.right)
-                elif exp_tree.right == None:
-                    # Run on left
-                    below_pandas_code = tree.evaluate(exp_tree.left)
-                else:
-                    raise ValueError("Tree with only a root but no elements below that")
-                
-                
-                # We don't want to get the whole tree
-                # We want to get the tree, one below the top operation
-                after_aggrs.append([col[1], below_pandas_code, exp_tree.val])
+            before, during, after = tree.group_aggregate()
+            before_aggrs += before
+            during_aggrs += during
+            # Edit after array
+            new_after = []
+            for item in after:
+                new_after.append([str(col[1]), item])
+            
+            after_aggrs += new_after
+            
+            # Set back beforeCounter
+            beforeCounter = tree.before_counter
                 
         else:
             # No alias for this column
@@ -1390,7 +1105,7 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df)
                 col_no_df = None   
             
             # Initialise a tree to access the aggregation functions that it recognises
-            tree = Expression_Solver(str(col), False, prev_df)
+            tree = Expression_Solver(str(col), False, prev_df, this_df)
             
             # Check if it's an index
             if col in codeCompHelper.indexes:
@@ -1404,7 +1119,7 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df)
                 # The column is one of the indexes, we skip it!
                 continue
             # No aggregation functions in the string
-            elif not any(tree.agg_funcs in col):
+            elif not any([agg in col for agg in tree.agg_funcs]):
                 # If these are aggregations in the column
                 # That are not indexes
                 # In that case we should be grouping by them
@@ -1419,157 +1134,31 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df)
                     # Means no visualisation will be created
                     output_name = False
                     
-                tree = Expression_Solver(str(col[0]), output_name, prev_df)
-                    
+                tree = Expression_Solver(str(col), output_name, prev_df, this_df, beforeCounter)
                 # Increment treeHelper
                 treeHelper.expr_tree_tracker += 1
-                # If count > 1
-                # We need to do the inner part before, add to a before list
-                # Save the after part in after list
-                if tree.columns_count > 1:
-                    if (tree.left != None) and (tree.right != None):
-                        raise ValueError("Both left and right contain information, we haven't written how to deal with this")
-                    
-                    below_pandas_code = None
-                    if tree.left == None:
-                        # Run on right
-                        below_pandas_code = tree.evaluate(tree.right)
-                    elif tree.right == None:
-                        # Run on left
-                        below_pandas_code = tree.evaluate(tree.left)
-                    else:
-                        raise ValueError("Tree with only a root but no elements below that")
-                    
-                    # Add to before_aggrs
-                    before_aggrs.append([col, below_pandas_code])
-                    # Add to after_aggrs, use tree.val as the top operation of the tree
-                    after_aggrs.append([col, col, tree.val])
-                # If count <= 1
-                    # Save in after part list
-                else:
-                    if (tree.left != None) and (tree.right != None):
-                        raise ValueError("Both left and right contain information, we haven't written how to deal with this")
-                    
-                    below_pandas_code = None
-                    if tree.left == None:
-                        # Run on right
-                        below_pandas_code = tree.evaluate(tree.right)
-                    elif tree.right == None:
-                        # Run on left
-                        below_pandas_code = tree.evaluate(tree.left)
-                    else:
-                        raise ValueError("Tree with only a root but no elements below that")
-                    
-                    
-                    # We don't want to get the whole tree
-                    # We want to get the tree, one below the top operation
-                    after_aggrs.append([col, below_pandas_code, tree.val])
                 
-        """
-        aggr_type = None
-        if isinstance(col, tuple):
-            if "sum" in col[0]:
-                aggr_type = "sum"
-                inner = str(col[0]).split("sum")[1]
-            elif "avg" in col[0]:
-                aggr_type = "avg"
-                inner = str(col[0]).split("avg")[1]
-            elif "count" in col[0]:
-                aggr_type = "count"
-                inner = str(col[0]).split("count")[1]
-                if "distinct" in col[0].lower():
-                    # Set Aggr type as Distinct
-                    aggr_type = "count_distinct"
+                before, during, after = tree.group_aggregate()
+                before_aggrs += before
+                during_aggrs += during
+                # Edit after array
+                new_after = []
+                for item in after:
                     
-                    inner = clean_extra_brackets(inner)
-                    inner = str(inner).split("DISTINCT ")[1]
-                    inner = clean_extra_brackets(inner)
-                    
-            else:
-                raise ValueError("Other types of aggr not implemented. Such as: " + str(col[0]))  
-            
-            # At the moment we only look to aggr if we have a name for a column
-            inner = clean_extra_brackets(inner)
-            cleaned_inner, count = check_aggregate(inner, df_group=prev_df)
-            # If count > 1
-                # We need to do the inner part before, add to a before list
-                # Save the after part in after list
-            if count > 1:
-                # Add to before_aggrs
-                before_aggrs.append([col[1], cleaned_inner])
-                # Add to after_aggrs
-                after_aggrs.append([col[1], col[1], aggr_type])
-            # If count <= 1
-                # Save in after part list
-            else:
-                # We don't use cleaned_inner, it's junk.
-                # We just use the inner originally
-                # Add to after_aggrs
-                after_aggrs.append([col[1], inner, aggr_type])
-            
-        else:
-            if "." in col:
-                col_no_df = str(col.split(".")[1])
-            else:
-                col_no_df = None   
-            
-            # Check if it's an index
-            if col in codeCompHelper.indexes:
-                    # The column is one of the indexes, we skip it!
-                continue
-            elif col_no_df in codeCompHelper.indexes:
-                # We sometimes have columns that look like:
-                # lineitem.l_orderkey
-                # Where l_orderkey is a known index, so we take the section after the dot 
-                # To compare it
-                # The column is one of the indexes, we skip it!
-                continue
-            elif "sum" in col:
-                #raise ValueError("SUM with no alias!")
-                aggr_type = "sum"
-                inner = str(col).split("sum")[1]
-                inner = clean_extra_brackets(inner)
+                    # Handle complex names in output
+                    is_complex, new_name = complex_name_solve(col)
+                    if is_complex == True:
+                        # Replace these
+                        codeCompHelper.add_bracket_replace(col, new_name)
+                    new_after.append([str(new_name), item])
                 
-                cleaned_inner, count = check_aggregate(inner, df_group=prev_df)
-                # If count > 1
-                    # We need to do the inner part before, add to a before list
-                    # Save the after part in after list
-                if count > 1:
-                    # Add to before_aggrs
-                    before_aggrs.append([inner, cleaned_inner])
-                    # Add to after_aggrs
-                    after_aggrs.append([col, inner, aggr_type])
-                # If count <= 1
-                    # Save in after part list
-                else:
-                    # We don't use cleaned_inner, it's junk.
-                    # We just use the inner originally
-                    # Add to after_aggrs
-                    after_aggrs.append([col, inner, aggr_type])
+                after_aggrs += new_after
                 
-            elif "avg" in col:
-                raise ValueError("AVG with no alias!")
-            elif "count" in col:
-                inner = str(col).split("count")[1]
-                inner = clean_extra_brackets(inner)
-                if "DISTINCT" in inner:
-                    aggr_type = "distinct"
-                    inner = str(inner).split("DISTINCT ")[1]
-                    inner = clean_extra_brackets(inner)
-                    cleaned_inner, count = check_aggregate(inner, df_group=prev_df)
-                    
-                    after_aggrs.append([col, inner, aggr_type])
-                else:
-                    raise ValueError("COUNT with no alias!")
-            else:
-                # If these are columns with no aggregations
-                # That are not indexes
-                # In that case we should be grouping by them
-                self.group_key.append(col)
-        """
+                # Set back beforeCounter
+                beforeCounter = tree.before_counter
      
     # Handle and rearrange output
-    return before_aggrs, after_aggrs
+    return before_aggrs, during_aggrs, after_aggrs
 
 class group_aggr_node():
     def __init__(self, output, group_key):
@@ -1635,9 +1224,9 @@ class group_aggr_node():
             filter_steps = [[cut_filter, filter_type, filter_amount]]
             
             if isinstance(self.filter, str):
-                before_filter, after_filter = handle_complex_aggregations(self, [cut_filter], codeCompHelper, treeHelper, prev_df)
+                before_filter, during_filter, after_filter = handle_complex_aggregations(self, [cut_filter], codeCompHelper, treeHelper, prev_df, this_df)
             elif isinstance(self.filter, list):
-                before_filter, after_filter = handle_complex_aggregations(self, cut_filter, codeCompHelper, treeHelper, prev_df)
+                before_filter, during_filter, after_filter = handle_complex_aggregations(self, cut_filter, codeCompHelper, treeHelper, prev_df, this_df)
             else:
                 raise ValueError("Unrecognised type of filter for the Group Aggregation Node, filter: " + str(self.filter))
         
@@ -1650,7 +1239,7 @@ class group_aggr_node():
         # Prior to grouping
         
         # Note: We decide to let the "before" aggregations happen to the previous_df
-        before_group, after_group = handle_complex_aggregations(self, self.output, codeCompHelper, treeHelper, prev_df)
+        before_group, during_group, after_group = handle_complex_aggregations(self, self.output, codeCompHelper, treeHelper, prev_df, this_df)
         
         # Combine after_filter and before filter
         if hasattr(self, "filter"):
@@ -1662,6 +1251,7 @@ class group_aggr_node():
             # Only append if not already present
             for a_filt in after_filter:
                 if a_filt not in after_group:
+                    raise ValueError("Should we be doing this?")
                     after_group.append(a_filt)
         
         # Handle before
@@ -1689,43 +1279,51 @@ class group_aggr_node():
         instructions.append("    .agg(")
         
         
-        # Handle After
+        # Handle During
         #if aggr_type == "count" and inner == "*":
         #   after_aggrs.append([col[1], "len(s.index)", aggr_type])
-        for after_name, after_col, after_operation in after_group:   
+        for during_name, during_col, during_operation in during_group:   
             # Remove prev_df "." from after_col
-            if str(prev_df+".") in after_col:
-                after_col = after_col.replace(str(prev_df+"."), "").strip()
+            if str(prev_df+".") in during_col:
+                during_col = during_col.replace(str(prev_df+"."), "").strip()
                 
             # Trim brackets from start and end of after_col
-            if (after_col[0] == "(") and (after_col[-1] == ")"):
-                after_col = after_col[1:-1]
+            if (during_col[0] == "(") and (during_col[-1] == ")"):
+                during_col = during_col[1:-1]
                       
             # Handle brackets in output
-            is_complex, new_name = complex_name_solve(after_name)
+            is_complex, new_name = complex_name_solve(during_name)
             if is_complex == True:
                 # Replace these
-                codeCompHelper.add_bracket_replace(after_name, new_name)
+                codeCompHelper.add_bracket_replace(during_name, new_name)
                 # Set to after_name for use now
-                after_name = new_name
+                during_name = new_name
             
-            if after_operation == "sum":
-                instructions.append('        ' + after_name + '=("' + after_col + '", "' + after_operation + '"),')
-            elif after_operation == "avg":
-                instructions.append('        ' + after_name + '=("' + after_col + '", "mean"),')
-            elif after_operation == "count":
-                instructions.append('        ' + after_name + '=("' + after_col + '", "count"),')
-            elif after_operation == "min":
-                instructions.append('        ' + after_name + '=("' + after_col + '", "min"),')
-            elif after_operation == "max":
-                instructions.append('        ' + after_name + '=("' + after_col + '", "max"),')
-            elif after_operation == "distinct":
-                instructions.append('        ' + after_name + '=("' + after_col + '", lambda x: x.unique()),')
+            if during_operation == "sum":
+                instructions.append('        ' + during_name + '=("' + during_col + '", "' + during_operation + '"),')
+            elif during_operation == "avg":
+                instructions.append('        ' + during_name + '=("' + during_col + '", "mean"),')
+            elif during_operation == "mean":
+                instructions.append('        ' + during_name + '=("' + during_col + '", "mean"),')
+            elif during_operation == "count":
+                instructions.append('        ' + during_name + '=("' + during_col + '", "count"),')
+            elif during_operation == "min":
+                instructions.append('        ' + during_name + '=("' + during_col + '", "min"),')
+            elif during_operation == "max":
+                instructions.append('        ' + during_name + '=("' + during_col + '", "max"),')
+            elif during_operation == "distinct":
+                instructions.append('        ' + during_name + '=("' + during_col + '", lambda x: x.unique()),')
             else:
-                raise ValueError("Operation: " + str(after_operation) + " not recognised!")
+                raise ValueError("Operation: " + str(during_operation) + " not recognised!")
             
         # Add closing bracket
         instructions.append("    )")
+        
+        # Use the after_group
+        for after_name, after_command in after_group:
+            # TODO: We have to insert this_df in the after_command
+            # Maybe we can do this in the replacement function of expr_tree
+            instructions.append(this_df + "['" + after_name + "'] = " + after_command + "")
         
         # Apply post_filters
         if hasattr(self, "filter"):

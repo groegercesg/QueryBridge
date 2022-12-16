@@ -1,5 +1,11 @@
 import re
+import copy
+from queue import Queue
 from visualising_tree import plot_exp_tree
+
+
+def get_class_id(node):
+    return str(id(node))
 
 class Expression_Tree_Node:
     def __init__(self, val):
@@ -11,13 +17,130 @@ class Expression_Tree_Node:
         return self.left == None and self.right == None
         
 class Expression_Solver:
-    def __init__(self, s, visualise, previous_dataframe):
+    def __init__(self, s, visualise, previous_dataframe, current_dataframe, before_counter=None):
         # Count number of columns used, for group_aggregate
         self.columns_count = 0
         self.prev_df = previous_dataframe
+        self.this_df = current_dataframe
+        # Set the beforecounter
+        if before_counter == None:
+            self.before_counter = 0
+        else:
+            self.before_counter = before_counter
         self.expression_tree = self.expTree(s)
         if visualise != False:
             plot_exp_tree(self.expression_tree, visualise)
+            
+    def group_aggregate(self):
+        # Process the tree into Before, During and After for the Group Aggregation operations
+        Before = []
+        During = []
+        After = []
+        
+        # Track which class_ids to new_names we need to apply after the queue
+        name_replaces = {}
+        
+        # Make a deepcopy of the tree and work on that
+        local_exp_tree = copy.deepcopy(self.expression_tree)
+        
+        # Iterate down the tree, using a queue
+        treeQueue = Queue()
+        treeQueue.put(local_exp_tree)
+        while (not treeQueue.empty()):
+            treeNode = treeQueue.get()
+            if treeNode == None:
+                continue
+            else:
+                
+                # Iterate on lower nodes
+                    
+                # If val in self.agg_funcs
+                    # We export the below to pandas using evaluate, we add it as before_1 (use a counter) to before
+                    # We set the during to be an val aggregation of before_1, name this: val_before_1
+                    # We update the val node to be: val_before_1
+                    # And don't add this node to the queue for checking
+                
+                # Act on the current node
+                if treeNode.val in self.agg_funcs:
+                    # The current node is a aggregation function
+                    if treeNode.left == None:
+                        # Work on right
+                        
+                        # Do the Before
+                        self.before_counter += 1
+                        before_name = "before_" + str(self.before_counter)
+                        
+                        Before.append([before_name, self.evaluate(treeNode.right)])
+                        
+                        # Do the During
+                        during_name = str(treeNode.val) + str("_") + str(before_name)
+                        During.append([during_name, before_name, str(treeNode.val)])
+                        
+                        # Do the After setting, for the name that we need to replace
+                        name_replaces[get_class_id(treeNode)] = during_name
+                    
+                    elif treeNode.right == None:
+                        # Work on left
+                        
+                        # Do the Before
+                        self.before_counter += 1
+                        before_name = "before_" + str(self.before_counter)
+                        
+                        Before.append([before_name, self.evaluate(treeNode.left)])
+                        
+                        # Do the During
+                        during_name = str(treeNode.val) + str("_") + str(before_name)
+                        During.append([during_name, before_name, str(treeNode.val)])
+                        
+                        # Do the After setting, for the name that we need to replace
+                        name_replaces[get_class_id(treeNode)] = during_name
+                    
+                    else:
+                        raise ValueError("Aggregation Function where both left and right of it are none.")
+                    
+                else:
+                    # Else run on whatever nodes below there may be
+                
+                    # Add the below nodes into the queue
+                    if treeNode.left != None:
+                        treeQueue.put(treeNode.left)
+                    if treeNode.right != None:
+                        treeQueue.put(treeNode.right)
+        
+        # Let's carry out the name changes to: local_exp_tree
+        self.rename_and_delete_tree_branches_by_id(local_exp_tree, name_replaces)
+            
+        # At the end we add the run evaluate on the deepcopy tree, with the val_before_1's hopefully
+        # And add that to after
+        After.append(self.evaluate(local_exp_tree))
+        
+        return Before, During, After
+    
+    def rename_and_delete_tree_branches_by_id(self, tree, name_replaces):
+        # Name Replaces = {
+        #    class_id = new_val,
+        #    ...
+        # }
+        
+        # Preorder Traversal
+                
+        # Check current node
+        if name_replaces.get(get_class_id(tree), None) != None:
+            # This is a node we have to change the name of
+            
+            # Set left and right of the node to none
+            tree.left = None
+            tree.right = None
+            
+            # Change val of tree
+            tree.val = str(self.this_df) + "." + str(name_replaces.get(get_class_id(tree), None))
+            
+        else:
+            # Run this function on below branches
+            if tree.left != None:
+                self.rename_and_delete_tree_branches_by_id(tree.left, name_replaces)
+            if tree.right != None:
+                self.rename_and_delete_tree_branches_by_id(tree.right, name_replaces)
             
     def evaluate(self, modified_start=None):
         if self.expression_tree is None:
@@ -57,7 +180,7 @@ class Expression_Solver:
                 return str(left_value) + ".sum()"
             else:
                 raise ValueError("Not recognised values for left_value: " + str(left_value) + " and right_value: " + str(right_value))
-        elif node.val == "avg":
+        elif node.val == "mean":
             if node.left == None:
                 return str(right_value) + ".mean()"
             elif node.right == None:
@@ -144,7 +267,8 @@ class Expression_Solver:
 
     def expTree(self, s):
         self.prio = {'(': 1, '+': 2, '-': 2, '*': 3, '/': 3, "sum": 4, "avg": 4, "count": 4, "max": 4, "min": 4, "distinct": 4}
-        self.agg_funcs = {"sum", "avg", "count", "max", "min", "distinct"}
+        self.agg_funcs = {"sum", "avg", "count", "max", "min", "distinct", "mean"}
+        self.agg_mapping = {"avg": "mean"}
         
         ops = []
         stack = []
@@ -160,6 +284,7 @@ class Expression_Solver:
         
         s_split = self.remove_empty_strings(s_split)
         
+        #  TODO: Once we implement minuses as unary operators, this won't be needed anymore
         # Check for adjacent negatives
         s_split = self.solve_adj_minuses(s_split)
 
@@ -197,7 +322,12 @@ class Expression_Solver:
         if not ops:
             return
         
-        root = Expression_Tree_Node(ops.pop())
+        # Map avg to mean at this point 
+        pop_ops = ops.pop()
+        if pop_ops in self.agg_mapping:
+            pop_ops = self.agg_mapping[pop_ops]
+        
+        root = Expression_Tree_Node(pop_ops)
         if root.val in self.agg_funcs:
             # We have a special aggr function, only set the right
             root.right = stack.pop()
@@ -217,7 +347,13 @@ if __name__ == "__main__":
     sql_complex_eqn = "(count(o_custkey) + avg(o_totalprice)) / (sum(o_orderkey) + min(o_shippriority)) * 25"
     sql_simple_eqn = "sum(o_totalprice)"
     sql_hard_eqn = "sum(l_extendedprice * (1 - l_discount) * (1 + l_tax))"
+    sql_mixed_eqn = "count(o_custkey * (o_totalprice / 2)) + avg(o_totalprice)"
+    # "count(o_custkey * (o_totalprice / -1)) + avg(o_totalprice)"
     
-    tree = Expression_Solver(sql_hard_eqn, False, "PREV_DF")
-    pandas = tree.evaluate()
-    print(pandas)
+    tree = Expression_Solver(sql_mixed_eqn, False, "PREV_DF")
+    # pandas = tree.evaluate()
+    # print(pandas)
+    before, during, after = tree.group_aggregate()
+    print(before)
+    print(during)
+    print(after)

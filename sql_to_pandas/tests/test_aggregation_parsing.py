@@ -139,6 +139,22 @@ def test_parse_agg_nest_minus():
 
     assert out_string == target_string, "Test Assertion Failed"
     
+def test_parse_agg_nest_minus_complex():
+    # A min minuses a max
+    target_string = ["CURRENT_DF['mino_totalpricemaxo_totalprice17'] = [((PREV_DF.o_totalprice).min() / ((PREV_DF.o_totalprice).max() * -17))]"]
+    in_string = ["min(o_totalprice) / (max(o_totalprice) * -17)"]
+    in_class = content(in_string)
+    ccHelper = pandas_tree_to_pandas.CodeCompilation("", False, False)
+    tHelper = pandas_tree_to_pandas.TreeHelper("", True)
+    out_string = pandas_tree.do_aggregation(in_class, "PREV_DF", "CURRENT_DF", ccHelper, tHelper)
+    
+    print("Out String:")
+    print(out_string)
+    print("Target String:")
+    print(target_string)
+
+    assert out_string == target_string, "Test Assertion Failed"
+    
 def test_parse_agg_nest_minus_alias():
     # A min minuses a max, with an alias
     target_string = ["CURRENT_DF['minus_agg'] = [((PREV_DF.o_totalprice).min() - (PREV_DF.o_totalprice).max())]"]
@@ -224,6 +240,32 @@ def run_around_tests():
     assert files_before_input == files_after_input
     assert files_before_output == files_after_output
 
+def test_group_aggregation_complete_basic():
+    # Tests of Group aggregation: Testing the same sort of stuff but after a group, See TPC-H Query 1
+    # Expected pandas
+    pandas_expected = inspect.cleandoc("""
+        df_filter_1 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+        df_filter_1['before_1'] = (df_filter_1.o_orderkey)
+        df_group_1 = df_filter_1 \\
+            .groupby(['o_custkey']) \\
+            .agg(
+                count_before_1=("before_1", "count"),
+            )
+        df_group_1['count_orders'] = df_group_1.count_before_1
+        df_group_1 = df_group_1[['count_orders']]
+        return df_group_1""").strip()
+    
+    sql_query = "SELECT COUNT ( o_orderkey ) as count_orders FROM orders GROUP BY o_custkey;"
+    
+    pandas_query = run_query(sql_query, constants)
+    
+    print("Pandas Query:")
+    print(pandas_query)
+    print("Pandas Expected:")
+    print(pandas_expected)
+    
+    assert pandas_query == pandas_expected
+
 def test_aggregation_complete_complex():
     # Complex aggregation, from end to end (sql to pandas).
     # Expected pandas
@@ -249,7 +291,33 @@ def test_aggregation_complete_complex():
 def test_group_aggregation_complete_simple():
     # Tests of Group aggregation: Testing the same sort of stuff but after a group, See TPC-H Query 1
     # Expected pandas
-    pandas_expected = inspect.cleandoc("""""").strip()
+    pandas_expected = inspect.cleandoc("""
+        df_filter_1 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+        df_filter_1['before_1'] = (df_filter_1.o_custkey)
+        df_filter_1['before_2'] = (df_filter_1.o_totalprice)
+        df_filter_1['before_3'] = (df_filter_1.o_orderkey)
+        df_filter_1['before_4'] = (df_filter_1.o_shippriority)
+        df_filter_1['before_5'] = (df_filter_1.o_custkey)
+        df_filter_1['before_6'] = (df_filter_1.o_totalprice)
+        df_filter_1['before_7'] = (df_filter_1.o_orderkey)
+        df_filter_1['before_8'] = (df_filter_1.o_shippriority)
+        df_group_1 = df_filter_1 \\
+            .groupby(['o_custkey']) \\
+            .agg(
+                count_before_1=("before_1", "count"),
+                mean_before_2=("before_2", "mean"),
+                sum_before_3=("before_3", "sum"),
+                min_before_4=("before_4", "min"),
+                max_before_5=("before_5", "max"),
+                min_before_6=("before_6", "min"),
+                max_before_7=("before_7", "max"),
+                mean_before_8=("before_8", "mean"),
+            )
+        df_group_1['customer'] = (df_filter_1.o_custkey)
+        df_group_1['fun_aggregate'] = (((df_group_1.count_before_1 + df_group_1.mean_before_2) / (df_group_1.sum_before_3 + df_group_1.min_before_4)) * 25)
+        df_group_1['massive_query'] = (((df_group_1.max_before_5 * df_group_1.min_before_6) * (df_group_1.max_before_7 - df_group_1.mean_before_8)) + 5)
+        df_group_1 = df_group_1[['customer', 'fun_aggregate', 'massive_query']]
+        return df_group_1""").strip()
     
     sql_query = "SELECT o_custkey as customer, ( COUNT ( o_custkey ) + AVG ( o_totalprice ) ) / ( SUM(o_orderkey) + MIN(o_shippriority) ) * 25 as fun_aggregate, ( MAX ( o_custkey ) * MIN ( o_totalprice ) ) * ( MAX(o_orderkey) - AVG(o_shippriority) ) - -5 as massive_query FROM orders GROUP BY o_custkey;"
     
