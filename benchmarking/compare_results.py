@@ -29,7 +29,7 @@ def get_columns(query):
         query = many_queries[-1]
     
     cut_query = str(str(query.lower()).split("select")[1]).split("from")[0]
-    clean_query = str(cut_query.replace("\n", ""))
+    clean_query = str(cut_query.replace("\n", "").replace("\t", ""))
     split_query = clean_query.split(",")
     for i in range(len(split_query)):
         if " as " in split_query[i]:

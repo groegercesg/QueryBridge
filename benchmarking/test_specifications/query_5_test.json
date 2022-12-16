@@ -1,0 +1,25 @@
+{
+    "Test Name":"Basic Test",
+    "SQL Queries": [
+        {
+            "Query Name": "Query 5",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/5.sql",
+            "Required Data": ["region", "nation", "customer", "orders", "lineitem", "supplier"],
+            "Pandas Name": "q5_pandas.py"
+        }
+    ],
+    "Temporary Directory": "benchmarking/temp_queries",
+    "SQL Converter Location": "sql_to_pandas/sql_to_pandas.py",
+    "Pandas Data Loader": "tpch_data_loader.py",
+    "Number of Query Runs": 5,
+    "Results Location": "benchmarking/test_results/query_5_test_results.csv",
+    "Database Connection Details": {
+            "User": "benchmarker",
+            "Password": "benchMugPassword",
+            "Host": "localhost",
+            "Port": "5432",
+            "Database": "tpchdb"
+        },
+    "Results Precision": 4
+}   

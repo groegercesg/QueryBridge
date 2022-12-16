@@ -287,8 +287,6 @@ class Expression_Solver:
         #  TODO: Once we implement minuses as unary operators, this won't be needed anymore
         # Check for adjacent negatives
         s_split = self.solve_adj_minuses(s_split)
-        
-        print(s_split)
 
         for ch in s_split:
             # print("Currently doing: " + str(ch))

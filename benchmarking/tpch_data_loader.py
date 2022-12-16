@@ -159,3 +159,21 @@ ps_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
 partsupp = pd.read_table("data/partsupp.tbl.csv", sep="|", names=ps_columnnames, dtype=ps_data_types, parse_dates=ps_parse_dates)
+
+# Region
+
+r_columnnames = ["R_REGIONKEY", "R_NAME", "R_COMMENT"]
+
+for i in range(len(r_columnnames)):
+    r_columnnames[i] = r_columnnames[i].lower()
+
+r_data_types = {
+    'r_regionkey': int,
+    'r_name': str,
+    'r_comment': str
+}
+
+r_parse_dates = []
+
+# Don't set indexes, as we can't access them with Pandas selection!
+region = pd.read_table("data/region.tbl.csv", sep="|", names=r_columnnames, dtype=r_data_types, parse_dates=r_parse_dates)

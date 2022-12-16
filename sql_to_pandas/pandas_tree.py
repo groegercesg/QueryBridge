@@ -1378,13 +1378,10 @@ class merge_node():
 
     def set_nodes(self, nodes):
         self.nodes = nodes
-
-    def process_condition_into_merge(self, left_prev_df, right_prev_df):
-        # Strip brackets
-        self.condition = clean_extra_brackets(self.condition)
         
+    def process_equating(self, cond):
         # Split into left and right
-        split_cond = str(self.condition).split(" = ")
+        split_cond = str(cond).split(" = ")
         left_side = str(split_cond[0]).split(".")
         left_table = str(left_side[0])
         left_cond = str(left_side[1])
@@ -1392,13 +1389,38 @@ class merge_node():
         right_table = str(right_side[0])
         right_cond = str(right_side[1])
         
+        # Return left_cond and right_cond
+        return left_cond, right_cond
+
+    def process_condition_into_merge(self, left_prev_df, right_prev_df):
+        # Strip brackets
+        self.condition = clean_extra_brackets(self.condition)
+        
+        # Split down into a list
+        if " AND " in self.condition:
+            self.condition = str(self.condition).split(" AND ")
+            # Strip down to clean it
+            for i in range(len(self.condition)):
+                self.condition[i] = clean_extra_brackets(self.condition[i].strip())
+        else:
+            self.condition = [self.condition]
+            
+        # Iterate through the list of conditions, adding them to this list
+        left_labels, right_labels = [], []
+        for individual_cond in self.condition:
+            left, right = self.process_equating(individual_cond)
+            left_labels.append(left)
+            right_labels.append(right)
+        
         # Create statement
         if self.join_type == "Semi":
+            if (len(left_labels) > 1) or (len(right_labels) > 1):
+                raise ValueError("Unexpected size of labels in Semi Join merge")
             # Add support for a semi join
             # df_merge_1 =  df_filter_1[df_filter_1.o_orderkey.isin(df_filter_2["l_orderkey"])]
-            statement = left_prev_df + '[' + left_prev_df + '.' + left_cond + '.isin(' + right_prev_df + '["' + right_cond + '"])]'
+            statement = left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + '["' + str(right_labels[0]) + '"])]'
         else:
-            statement = left_prev_df+'.merge('+right_prev_df+', left_on="'+left_cond+'", right_on="'+right_cond+'")'
+            statement = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+')'
         
         return str(statement)
 

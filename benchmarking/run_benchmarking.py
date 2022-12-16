@@ -137,23 +137,18 @@ def main():
         # Put an __init__.py file into the folder so it can be imported as a module
         init_writer()
         
-        print(os.getcwd())
-        
         # Set changed Dirs to false
         changed_dirs = False
         if "/" in str(manifest_json["Temporary Directory"]):
             # Split this, cd to the first part
             split_dir = str(manifest_json["Temporary Directory"]).split("/")
             os.chdir(split_dir[0])
-            print(os.getcwd())
             package_location = ".".join(split_dir[1:]) + ".%s" % package_name
             
             # We have changed directories, 
             changed_dirs = True
         else:
             package_location = str(manifest_json["Temporary Directory"]) + ".%s" % package_name
-        
-        print(package_location)
         
         query_function = getattr(__import__(package_location, fromlist=[function_default]), function_default)
         
