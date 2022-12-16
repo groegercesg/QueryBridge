@@ -262,6 +262,33 @@ def test_group_aggregation_complete_simple():
     
     assert pandas_query == pandas_expected
     
+def test_group_aggregation_complete_annoying():
+    # Tests of Group aggregation: Testing the same sort of stuff but after a group, See TPC-H Query 1
+    # Expected pandas
+    pandas_expected = inspect.cleandoc("""
+        df_filter_1 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+        df_filter_1['before'] = (df_filter_1.o_custkey * (df_filter_1.o_totalprice / -1))
+        df_group_1 = df_filter_1 \
+            .groupby(['o_custkey']) \
+            .agg(
+                count_before=("before", "count"),
+                mean_o_totalprice=("o_totalprice", "mean"),
+            )
+        df_group_1['?content?'] = (df_group_1.count_before + df_group_1.mean_o_totalprice)
+        df_group_1 = df_group_1[['?content?']]
+        return df_group_1""").strip()
+    
+    sql_query = "SELECT (COUNT ( o_custkey * (o_totalprice / -1) ) + AVG ( o_totalprice )) FROM orders GROUP BY o_custkey;"
+    
+    pandas_query = run_query(sql_query, constants)
+    
+    print("Pandas Query:")
+    print(pandas_query)
+    print("Pandas Expected:")
+    print(pandas_expected)
+    
+    assert pandas_query == pandas_expected
+    
 def test_group_aggregation_complete_complex():
     # Tests of Group aggregation: Testing the same sort of stuff but after a group, See TPC-H Query 1
     # Expected pandas

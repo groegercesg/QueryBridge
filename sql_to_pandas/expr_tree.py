@@ -12,14 +12,18 @@ class Expression_Tree_Node:
         
 class Expression_Solver:
     def __init__(self, s, visualise, previous_dataframe):
+        # Count number of columns used, for group_aggregate
+        self.columns_count = 0
         self.prev_df = previous_dataframe
         self.expression_tree = self.expTree(s)
         if visualise != False:
             plot_exp_tree(self.expression_tree, visualise)
             
-    def evaluate(self):
+    def evaluate(self, modified_start=None):
         if self.expression_tree is None:
             return 0
+        elif modified_start != None:
+            return self.internal_evaluate(modified_start)
         else:
             return self.internal_evaluate(self.expression_tree)
 
@@ -170,6 +174,8 @@ class Expression_Solver:
                 # Create string for the name:
                 name = "(" + self.prev_df + "." + ch + ")"
                 stack.append(Expression_Tree_Node(name))
+                # Increment column count, this let's us track the number of columns the tree has
+                self.columns_count += 1
             elif ch == ')':
                 while ops[-1] != '(':
                     self.combine(ops, stack)

@@ -116,7 +116,6 @@ def process_output(self, output, codecomphelper):
                 close_position = distinct_output.find(')', distinct_loc)
                 # Insert a close bracket at close_position
                 distinct_output = insert_at_index(distinct_output, close_position, ")")
-                
                 output[i] = distinct_output
             else:
                 output[i] = cleaned_output
@@ -132,6 +131,31 @@ def process_output(self, output, codecomphelper):
                     output[i] = tuple(output_tup_list)
                 else:
                     output[i] = str(output[i]).replace(replace_relation, "")
+                    
+        # Final interrupt to catch count(*)
+        if isinstance(output[i], tuple):
+            if "count(*)" in output[i][0]:
+                chosen_column = None
+                if len(codecomphelper.indexes) < 1:
+                    # Use self.output[0]
+                    chosen_column = str(self.output[0])
+                    #raise ValueError("No indexes in CodeCompHelper")
+                else: 
+                    chosen_column = str(codecomphelper.indexes[0])
+
+                output[i] = ("count(" + str(chosen_column) + ")", output[i][1])
+        else:
+            if "count(*)" in output[i]:
+                chosen_column = None
+                if len(codecomphelper.indexes) < 1:
+                    # Use self.output[0]
+                    chosen_column = str(self.output[0])
+                    #raise ValueError("No indexes in CodeCompHelper")
+                else: 
+                    chosen_column = str(codecomphelper.indexes[0])
+                
+                output[i] = "count(" + str(chosen_column) + ")"
+            
                     
     return output
 
@@ -1271,7 +1295,7 @@ def choose_aliases(self, cCHelper, final_output=False):
                 output.append(appendingCol)    
     return output
 
-def handle_complex_aggregations(self, data, codeCompHelper, prev_df):
+def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df):
     # Array to hold decisions
     # Before Aggrs:
         # Array for aggregations that need to happen before grouping
@@ -1287,6 +1311,161 @@ def handle_complex_aggregations(self, data, codeCompHelper, prev_df):
     # Determine how many columns it uses
             # Split off the sum avg or count
     for i, col in enumerate(data):
+        
+        
+        if isinstance(col, tuple):
+            # Set output_name
+            output_name = None
+            if not treeHelper.bench:
+                output_name = str(treeHelper.expr_output_path)+str(treeHelper.expr_tree_tracker)
+            else:
+                # Means no visualisation will be created
+                output_name = False
+            
+            tree = Expression_Solver(str(col[0]), output_name, prev_df)
+            # Increment treeHelper
+            treeHelper.expr_tree_tracker += 1
+            
+            # If count > 1
+                # We need to do the inner part before, add to a before list
+                # Save the after part in after list
+            exp_tree = tree.expression_tree
+            if tree.columns_count > 1:
+                if (exp_tree.left != None) and (exp_tree.right != None):
+                    # We have a tree that features both left and right from the root
+                    # I.e. the root node isn't an aggregation function (sum, avg, min)
+                    
+                    # TODO: Not entirely sure how to do this
+                    # Current plan: calculate the aggregation in it's entirety before the group
+                    # Then "sum" the individual parts up afterwards
+                    
+                    # Add to before_aggrs
+                    before_aggrs.append([col[1], tree.evaluate()])
+                    # Add to after_aggrs, use sum as the top operation of the tree
+                    #aggr_operatio
+                    after_aggrs.append([col[1], col[1], "sum"])
+                    
+                    #raise ValueError("Both left and right contain information, we haven't written how to deal with this")
+                else:
+                    below_pandas_code = None
+                    if exp_tree.left == None:
+                        # Run on right
+                        below_pandas_code = tree.evaluate(exp_tree.right)
+                    elif exp_tree.right == None:
+                        # Run on left
+                        below_pandas_code = tree.evaluate(exp_tree.left)
+                    else:
+                        raise ValueError("Tree with only a root but no elements below that")
+                    
+                    # Add to before_aggrs
+                    before_aggrs.append([col[1], below_pandas_code])
+                    # Add to after_aggrs, use tree.val as the top operation of the tree
+                    after_aggrs.append([col[1], col[1], exp_tree.val])
+            # If count <= 1
+                # Save in after part list
+            else:
+                if (exp_tree.left != None) and (exp_tree.right != None):
+                    raise ValueError("Both left and right contain information, we haven't written how to deal with this")
+                
+                below_pandas_code = None
+                if exp_tree.left == None:
+                    # Run on right
+                    below_pandas_code = tree.evaluate(exp_tree.right)
+                elif exp_tree.right == None:
+                    # Run on left
+                    below_pandas_code = tree.evaluate(exp_tree.left)
+                else:
+                    raise ValueError("Tree with only a root but no elements below that")
+                
+                
+                # We don't want to get the whole tree
+                # We want to get the tree, one below the top operation
+                after_aggrs.append([col[1], below_pandas_code, exp_tree.val])
+                
+        else:
+            # No alias for this column
+            if "." in col:
+                col_no_df = str(col.split(".")[1])
+            else:
+                col_no_df = None   
+            
+            # Initialise a tree to access the aggregation functions that it recognises
+            tree = Expression_Solver(str(col), False, prev_df)
+            
+            # Check if it's an index
+            if col in codeCompHelper.indexes:
+                    # The column is one of the indexes, we skip it!
+                continue
+            elif col_no_df in codeCompHelper.indexes:
+                # We sometimes have columns that look like:
+                # lineitem.l_orderkey
+                # Where l_orderkey is a known index, so we take the section after the dot 
+                # To compare it
+                # The column is one of the indexes, we skip it!
+                continue
+            # No aggregation functions in the string
+            elif not any(tree.agg_funcs in col):
+                # If these are aggregations in the column
+                # That are not indexes
+                # In that case we should be grouping by them
+                self.group_key.append(col)
+            else:
+                # We can process this as an expression tree
+                # Set output_name
+                output_name = None
+                if not treeHelper.bench:
+                    output_name = str(treeHelper.expr_output_path)+str(treeHelper.expr_tree_tracker)
+                else:
+                    # Means no visualisation will be created
+                    output_name = False
+                    
+                tree = Expression_Solver(str(col[0]), output_name, prev_df)
+                    
+                # Increment treeHelper
+                treeHelper.expr_tree_tracker += 1
+                # If count > 1
+                # We need to do the inner part before, add to a before list
+                # Save the after part in after list
+                if tree.columns_count > 1:
+                    if (tree.left != None) and (tree.right != None):
+                        raise ValueError("Both left and right contain information, we haven't written how to deal with this")
+                    
+                    below_pandas_code = None
+                    if tree.left == None:
+                        # Run on right
+                        below_pandas_code = tree.evaluate(tree.right)
+                    elif tree.right == None:
+                        # Run on left
+                        below_pandas_code = tree.evaluate(tree.left)
+                    else:
+                        raise ValueError("Tree with only a root but no elements below that")
+                    
+                    # Add to before_aggrs
+                    before_aggrs.append([col, below_pandas_code])
+                    # Add to after_aggrs, use tree.val as the top operation of the tree
+                    after_aggrs.append([col, col, tree.val])
+                # If count <= 1
+                    # Save in after part list
+                else:
+                    if (tree.left != None) and (tree.right != None):
+                        raise ValueError("Both left and right contain information, we haven't written how to deal with this")
+                    
+                    below_pandas_code = None
+                    if tree.left == None:
+                        # Run on right
+                        below_pandas_code = tree.evaluate(tree.right)
+                    elif tree.right == None:
+                        # Run on left
+                        below_pandas_code = tree.evaluate(tree.left)
+                    else:
+                        raise ValueError("Tree with only a root but no elements below that")
+                    
+                    
+                    # We don't want to get the whole tree
+                    # We want to get the tree, one below the top operation
+                    after_aggrs.append([col, below_pandas_code, tree.val])
+                
+        """
         aggr_type = None
         if isinstance(col, tuple):
             if "sum" in col[0]:
@@ -1387,6 +1566,7 @@ def handle_complex_aggregations(self, data, codeCompHelper, prev_df):
                 # That are not indexes
                 # In that case we should be grouping by them
                 self.group_key.append(col)
+        """
      
     # Handle and rearrange output
     return before_aggrs, after_aggrs
@@ -1455,9 +1635,9 @@ class group_aggr_node():
             filter_steps = [[cut_filter, filter_type, filter_amount]]
             
             if isinstance(self.filter, str):
-                before_filter, after_filter = handle_complex_aggregations(self, [cut_filter], codeCompHelper, prev_df)
+                before_filter, after_filter = handle_complex_aggregations(self, [cut_filter], codeCompHelper, treeHelper, prev_df)
             elif isinstance(self.filter, list):
-                before_filter, after_filter = handle_complex_aggregations(self, cut_filter, codeCompHelper, prev_df)
+                before_filter, after_filter = handle_complex_aggregations(self, cut_filter, codeCompHelper, treeHelper, prev_df)
             else:
                 raise ValueError("Unrecognised type of filter for the Group Aggregation Node, filter: " + str(self.filter))
         
@@ -1470,7 +1650,7 @@ class group_aggr_node():
         # Prior to grouping
         
         # Note: We decide to let the "before" aggregations happen to the previous_df
-        before_group, after_group = handle_complex_aggregations(self, self.output, codeCompHelper, prev_df)
+        before_group, after_group = handle_complex_aggregations(self, self.output, codeCompHelper, treeHelper, prev_df)
         
         # Combine after_filter and before filter
         if hasattr(self, "filter"):
@@ -1501,7 +1681,7 @@ class group_aggr_node():
                 before_name = new_name
                 
             
-            instructions.append(prev_df + "['" + before_name + "'] = " + before_command)
+            instructions.append(prev_df + "['" + before_name + "'] = " + before_command + "")
         
         # Handle group
         instructions.append(this_df + " = " + prev_df + " \\")
@@ -1512,7 +1692,15 @@ class group_aggr_node():
         # Handle After
         #if aggr_type == "count" and inner == "*":
         #   after_aggrs.append([col[1], "len(s.index)", aggr_type])
-        for after_name, after_col, after_operation in after_group:             
+        for after_name, after_col, after_operation in after_group:   
+            # Remove prev_df "." from after_col
+            if str(prev_df+".") in after_col:
+                after_col = after_col.replace(str(prev_df+"."), "").strip()
+                
+            # Trim brackets from start and end of after_col
+            if (after_col[0] == "(") and (after_col[-1] == ")"):
+                after_col = after_col[1:-1]
+                      
             # Handle brackets in output
             is_complex, new_name = complex_name_solve(after_name)
             if is_complex == True:
@@ -1526,14 +1714,13 @@ class group_aggr_node():
             elif after_operation == "avg":
                 instructions.append('        ' + after_name + '=("' + after_col + '", "mean"),')
             elif after_operation == "count":
-                if after_col == "*":
-                    if len(codeCompHelper.indexes) < 1:
-                        raise ValueError("No indexes in CodeCompHelper")
-                    instructions.append('        ' + after_name + '=("' + codeCompHelper.indexes[0] + '", "count"),')
-                else:
-                    instructions.append('        ' + after_name + '=("' + after_col + '", "count"),')
-            elif after_operation == "count_distinct":
-                instructions.append('        ' + after_name + '=("' + after_col + '", lambda x: x.nunique()),')
+                instructions.append('        ' + after_name + '=("' + after_col + '", "count"),')
+            elif after_operation == "min":
+                instructions.append('        ' + after_name + '=("' + after_col + '", "min"),')
+            elif after_operation == "max":
+                instructions.append('        ' + after_name + '=("' + after_col + '", "max"),')
+            elif after_operation == "distinct":
+                instructions.append('        ' + after_name + '=("' + after_col + '", lambda x: x.unique()),')
             else:
                 raise ValueError("Operation: " + str(after_operation) + " not recognised!")
             
