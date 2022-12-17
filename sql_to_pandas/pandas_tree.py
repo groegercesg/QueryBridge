@@ -1189,8 +1189,8 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
 class group_aggr_node():
     def __init__(self, output, group_key):
         self.output = output
-        self.group_key = self.process_group_key(group_key)
-        
+        self.group_key = group_key
+    
     def add_filter(self, in_filter):
         self.filter = clean_filter_params(self, in_filter)
         
@@ -1200,17 +1200,49 @@ class group_aggr_node():
     def process_group_key(self, group_key):
         grouping_keys = []
         for key in group_key:
-            grouping_keys.append(key.split(".")[1])
+            if "." in key:
+                grouping_keys.append(key.split(".")[1])
+            else:
+                grouping_keys.append(key)
         return grouping_keys
     
     def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
+        # TODO: Sometimes, we have a sort_key that is in the output, that gets processed into something different
+        group_output_index = None
+        for i in range(len(self.output)):
+            if self.group_key[0] == self.output[i]:
+                group_output_index = i
+        
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
+        # Choose aliases
+        output_cols = choose_aliases(self, codeCompHelper)
+        
+        # Set group_key to new thing
+        if group_output_index != None:
+            # Set sort key to this index
+            self.group_key = [output_cols[group_output_index]]
+        
+        # Process group key
+        self.group_key = self.process_group_key(self.group_key)
+        
         # Set prefixes
         if not isinstance(prev_df, str):
             raise ValueError("Inputted prev_df is not a string!")
         # Set group keys as the codeCompHelper indexes
         codeCompHelper.setIndexes(self.group_key)
+        
+        # the group key might be in output_cols, drop it
+        deletes = []
+        for i in range(len(output_cols)):
+            if output_cols[i] in self.group_key:
+                deletes.append(i)
+        # Reverse deltes
+        deletes.reverse()
+        for idx in deletes:
+            del output_cols[idx]
+            
+        
         
         if hasattr(self, "filter"):
             # We have a filter operation to do
@@ -1222,7 +1254,6 @@ class group_aggr_node():
             else:
                 raise ValueError("Unrecognised type of filter for the Group Aggregation Node, filter: " + str(self.filter))
         
-            
             if len(proc_filter) == 1:
                 self.filter = proc_filter[0]
             else:
@@ -1261,21 +1292,22 @@ class group_aggr_node():
         # Track the replaces of cases
         # DICT: [[original_look, new_look], ...]
         case_replaces = {}
-        case_tracker = "A"
+        case_tracker = "a"
         # Check for cases
-        for i in range(len(self.output)):
-            if "CASE WHEN" and "THEN" and "ELSE" in self.output[i]:
-                original_look = self.output[i]
+        # TODO: Change to output_cols
+        for i in range(len(output_cols)):
+            if "CASE WHEN" and "THEN" and "ELSE" in output_cols[i]:
+                original_look = output_cols[i]
                 # Find position of CASE
-                case_position = self.output[i].find("CASE")
+                case_position = output_cols[i].find("CASE")
                 # Check that character before is open bracket
-                if self.output[i][case_position - 1] != "(":
+                if output_cols[i][case_position - 1] != "(":
                     raise ValueError("Unexpectedly formatted CASE")
-                else_position = self.output[i].find("ELSE", case_position)
-                next_bracket = self.output[i].find(")", else_position)
+                else_position = output_cols[i].find("ELSE", case_position)
+                next_bracket = output_cols[i].find(")", else_position)
                 
                 # Extract the entire case statement
-                extract_case = self.output[i][case_position : next_bracket]
+                extract_case = output_cols[i][case_position : next_bracket]
                 # Do case aggregation
                 case_string = aggregate_case(extract_case, prev_df)
                 
@@ -1286,13 +1318,13 @@ class group_aggr_node():
                 instructions.append(statement)
                 
                 # Replace in self.output the extract_case with the new case_string
-                self.output[i] = self.output[i].replace(extract_case, case_name)
+                output_cols[i] = output_cols[i].replace(extract_case, case_name)
                 
                 # Increment case_tracker
                 case_tracker = chr(ord(case_tracker) + 1)
                 
                 # Add to case_replaces
-                case_replaces[self.output[i]] = original_look
+                case_replaces[output_cols[i]] = original_look
         
         # Out of self.output determine which of these are complex aggregations
         # I.e. ones like: 'sum(l_extendedprice * (1 - l_discount))'
@@ -1301,7 +1333,7 @@ class group_aggr_node():
         # Prior to grouping
         
         # Note: We decide to let the "before" aggregations happen to the previous_df
-        before_group, during_group, after_group = handle_complex_aggregations(self, self.output, codeCompHelper, treeHelper, prev_df, this_df, case_replaces)
+        before_group, during_group, after_group = handle_complex_aggregations(self, output_cols, codeCompHelper, treeHelper, prev_df, this_df, case_replaces)
         
         # Combine after_filter and before filter
         if hasattr(self, "filter"):
@@ -1399,7 +1431,11 @@ class group_aggr_node():
                     
                 instructions.append(this_df + " = " + this_df + "[" + this_df + "." + str(name) + " " + str(type) + " " + str(amount) + "]")
         
-        output_cols = choose_aliases(self, codeCompHelper)
+        # Check output_cols for bracket replaces
+        for i in range(len(output_cols)):
+            if codeCompHelper.bracket_replace.get(output_cols[i], None) != None:
+                # We make our replacement
+                output_cols[i] = codeCompHelper.bracket_replace.get(output_cols[i], None)
         
         # Limit to output columns
         if output_cols != [] and codeCompHelper.column_limiting:

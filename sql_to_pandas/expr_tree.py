@@ -65,35 +65,39 @@ class Expression_Solver:
                     # The current node is a aggregation function
                     if treeNode.left == None:
                         # Work on right
-                        
-                        # Do the Before
-                        self.before_counter += 1
-                        before_name = "before_" + str(self.before_counter)
-                        
-                        Before.append([before_name, self.evaluate(treeNode.right)])
-                        
-                        # Do the During
-                        during_name = str(treeNode.val) + str("_") + str(before_name)
-                        During.append([during_name, before_name, str(treeNode.val)])
-                        
-                        # Do the After setting, for the name that we need to replace
-                        name_replaces[get_class_id(treeNode)] = during_name
+                        # Count number of operators, of right tree
+                        # Only do the before if we have operators in the tree
+                        if self.count_operators(treeNode.right) > 0:
+                            # Do the Before
+                            self.before_counter += 1
+                            before_name = "before_" + str(self.before_counter)
+                            
+                            Before.append([before_name, self.evaluate(treeNode.right)])
+                            
+                            # Do the During
+                            during_name = str(treeNode.val) + str("_") + str(before_name)
+                            During.append([during_name, before_name, str(treeNode.val)])
+                            
+                            # Do the After setting, for the name that we need to replace
+                            name_replaces[get_class_id(treeNode)] = during_name
                     
                     elif treeNode.right == None:
-                        # Work on left
-                        
-                        # Do the Before
-                        self.before_counter += 1
-                        before_name = "before_" + str(self.before_counter)
-                        
-                        Before.append([before_name, self.evaluate(treeNode.left)])
-                        
-                        # Do the During
-                        during_name = str(treeNode.val) + str("_") + str(before_name)
-                        During.append([during_name, before_name, str(treeNode.val)])
-                        
-                        # Do the After setting, for the name that we need to replace
-                        name_replaces[get_class_id(treeNode)] = during_name
+                        # Work on left                        
+                        # Count number of operators, of left tree
+                        # Only do the before if we have operators in the tree
+                        if self.count_operators(treeNode.left) > 0:
+                            # Do the Before
+                            self.before_counter += 1
+                            before_name = "before_" + str(self.before_counter)
+                            
+                            Before.append([before_name, self.evaluate(treeNode.left)])
+                            
+                            # Do the During
+                            during_name = str(treeNode.val) + str("_") + str(before_name)
+                            During.append([during_name, before_name, str(treeNode.val)])
+                            
+                            # Do the After setting, for the name that we need to replace
+                            name_replaces[get_class_id(treeNode)] = during_name
                     
                     else:
                         raise ValueError("Aggregation Function where both left and right of it are none.")
@@ -114,7 +118,21 @@ class Expression_Solver:
         # And add that to after
         After.append(self.evaluate(local_exp_tree))
         
-        return Before, During, After
+        return Before, During, After        
+        
+    def count_operators(self, tree):
+        count_operators = 0
+        # Increment variable if in operator list
+        if tree.val in list(self.prio.keys()):
+            count_operators += 1
+            
+        # Run this function on below branches
+        if tree.left != None:
+            count_operators += self.count_operators(tree.left)
+        if tree.right != None:
+            count_operators += self.count_operators(tree.right)
+        
+        return count_operators
     
     def rename_and_delete_tree_branches_by_id(self, tree, name_replaces):
         # Name Replaces = {

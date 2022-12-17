@@ -30,6 +30,46 @@ def flip_cond_around(in_cond):
     # Return it out
     return new_index
 
+def process_into_relations_list(output):
+    relations = set()
+    
+    for i in range(len(output)):
+        relations.add(str(output[i].split(".")[0]).strip())
+        
+    return relations
+
+def determine_flip(tree):
+    # Process flip into left_relation and right_relation
+    index = str(tree.filter)
+    if index[0] == "(" and index[-1] == ")":
+        # Strip brackets
+        index = index[1:-1]
+    index_split = str(index).split(" = ")
+    for i in range(len(index_split)):
+        index_split[i] = str(index_split[i].split(".")[0]).strip()
+    if len(index_split) != 2:
+        raise ValueError("Unexpected result from processing")
+    left_relation = index_split[0]
+    right_relation = index_split[1]
+    
+    if len(tree.plans) != 2:
+        raise ValueError("Tree has unexpected number of nodes below it")
+    
+    # Process nodes below into left_node_relations and right
+    left_node_relations = process_into_relations_list(tree.plans[0].output)
+    right_node_relations = process_into_relations_list(tree.plans[1].output)
+    
+    # If left_relation not in left set and in right
+    if (left_relation not in left_node_relations) and (left_relation in right_node_relations) and (right_relation not in right_node_relations) and (right_relation in left_node_relations):
+        # Flip!
+        return True
+    elif (left_relation in left_node_relations) and (left_relation not in right_node_relations) and (right_relation in right_node_relations) and (right_relation not in left_node_relations):
+        # Don't flip
+        return False
+    else:
+        raise ValueError("Unable to process and analyse the relations correctly")
+    
+
 def solve_nested_loop_node(tree):
     # Preorder traversal
     
@@ -42,7 +82,13 @@ def solve_nested_loop_node(tree):
         # We don't need to carry out the searching below procedure
         # And can instead use functions to swap around the filter and add as a merging cond
         if hasattr(tree, "filter"):
-            merging_condition = flip_cond_around(tree.filter)
+            # Sometimes we need to flip the condition around, and sometimes we don't
+            if determine_flip(tree) == True:
+                # We should flip
+                merging_condition = flip_cond_around(tree.filter)
+            else:
+                # We should not flip
+                merging_condition = tree.filter 
             tree.filter = None
         else:
             for individual_plan in tree.plans:
