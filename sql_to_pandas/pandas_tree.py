@@ -134,7 +134,7 @@ def process_output(self, output, codecomphelper):
                     
         # Final interrupt to catch count(*)
         if isinstance(output[i], tuple):
-            if "count(*)" in output[i][0]:
+            if "count(*)" in output[i][0].lower():
                 chosen_column = None
                 if len(codecomphelper.indexes) < 1:
                     # Use self.output[0]
@@ -144,8 +144,10 @@ def process_output(self, output, codecomphelper):
                     chosen_column = str(codecomphelper.indexes[0])
 
                 output[i] = ("count(" + str(chosen_column) + ")", output[i][1])
+            elif "extract" in output[i][0].lower():
+                output[i] = (handle_extract(output[i][0]), output[i][1])
         else:
-            if "count(*)" in output[i]:
+            if "count(*)" in output[i].lower():
                 chosen_column = None
                 if len(codecomphelper.indexes) < 1:
                     # Use self.output[0]
@@ -155,9 +157,18 @@ def process_output(self, output, codecomphelper):
                     chosen_column = str(codecomphelper.indexes[0])
                 
                 output[i] = "count(" + str(chosen_column) + ")"
+            elif "extract" in output[i].lower():
+                output[i] = handle_extract(output[i])
             
                     
     return output
+
+def handle_extract(string):
+    # String: EXTRACT(year FROM o_orderdate)
+    # Split into param and source
+    param = str(string.split("EXTRACT(")[1].split(" FROM")[0]).strip().lower()
+    source = str(string.split("FROM ")[1].split(")")[0]).strip().lower()
+    return str(source) + ".dt." + str(param)
 
 def remove_range(sentence, matches):
     return "".join(
@@ -533,8 +544,6 @@ class filter_node():
         else:            
             output_cols = choose_aliases(self, codeCompHelper)
             
-            
-            
             # Limit to output columns
             if codeCompHelper.column_limiting:
                 statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
@@ -595,11 +604,24 @@ class sort_node():
                 keys.append(column)
         return keys, ascendings
     
-    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
-        # Set sort_keys
-        self.sort_key = self.process_sort_key(codeCompHelper)
+    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):    
+        # TODO: Sometimes, we have a sort_key that is in the output, that gets processed into something different
+        sort_output_index = None
+        for i in range(len(self.output)):
+            if self.sort_key[0] == self.output[i]:
+                sort_output_index = i
+        
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
+        # Choose aliases
+        output_cols = choose_aliases(self, codeCompHelper)
+        
+        if sort_output_index != None:
+            # Set sort key to this index
+            self.sort_key = [output_cols[sort_output_index]]
+              
+        # Set sort_keys
+        self.sort_key = self.process_sort_key(codeCompHelper)  
         # Set prefixes
         if not isinstance(prev_df, str):
             raise ValueError("Inputted prev_df is not a string!")
@@ -610,7 +632,6 @@ class sort_node():
         statement1_string = this_df + " = " + prev_df + ".sort_values(by=" + str(columns) + ", ascending=" + str(ascendings) + ")"
         instructions.append(statement1_string)
         
-        output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
         if codeCompHelper.column_limiting:
@@ -1048,7 +1069,7 @@ def choose_aliases(self, cCHelper, final_output=False):
                 output.append(appendingCol)    
     return output
 
-def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df, this_df):
+def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df, this_df, cases):
     # Array to hold decisions
     # Before Aggrs:
         # Array for aggregations that need to happen before grouping
@@ -1148,7 +1169,12 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
                     # Handle complex names in output
                     is_complex, new_name = complex_name_solve(col)
                     if is_complex == True:
-                        # Replace these
+                        if cases != {}:
+                            if cases.get(col, None) != None:
+                                # This col is in cases, this means we have to add it as it's cases form
+                                codeCompHelper.add_bracket_replace(cases.get(col, None), new_name)
+                        
+                        # It's okay that we add multiple, we need all of these                   
                         codeCompHelper.add_bracket_replace(col, new_name)
                     new_after.append([str(new_name), item])
                 
@@ -1224,13 +1250,49 @@ class group_aggr_node():
             filter_steps = [[cut_filter, filter_type, filter_amount]]
             
             if isinstance(self.filter, str):
-                before_filter, during_filter, after_filter = handle_complex_aggregations(self, [cut_filter], codeCompHelper, treeHelper, prev_df, this_df)
+                before_filter, during_filter, after_filter = handle_complex_aggregations(self, [cut_filter], codeCompHelper, treeHelper, prev_df, this_df, [])
             elif isinstance(self.filter, list):
-                before_filter, during_filter, after_filter = handle_complex_aggregations(self, cut_filter, codeCompHelper, treeHelper, prev_df, this_df)
+                before_filter, during_filter, after_filter = handle_complex_aggregations(self, cut_filter, codeCompHelper, treeHelper, prev_df, this_df, [])
             else:
                 raise ValueError("Unrecognised type of filter for the Group Aggregation Node, filter: " + str(self.filter))
         
         instructions = []
+        
+        # Track the replaces of cases
+        # DICT: [[original_look, new_look], ...]
+        case_replaces = {}
+        case_tracker = "A"
+        # Check for cases
+        for i in range(len(self.output)):
+            if "CASE WHEN" and "THEN" and "ELSE" in self.output[i]:
+                original_look = self.output[i]
+                # Find position of CASE
+                case_position = self.output[i].find("CASE")
+                # Check that character before is open bracket
+                if self.output[i][case_position - 1] != "(":
+                    raise ValueError("Unexpectedly formatted CASE")
+                else_position = self.output[i].find("ELSE", case_position)
+                next_bracket = self.output[i].find(")", else_position)
+                
+                # Extract the entire case statement
+                extract_case = self.output[i][case_position : next_bracket]
+                # Do case aggregation
+                case_string = aggregate_case(extract_case, prev_df)
+                
+                # Create case_name
+                case_name = "case_" + str(case_tracker)
+                # Append to instructions
+                statement = str(prev_df) + "['" + case_name + "'] = " + case_string
+                instructions.append(statement)
+                
+                # Replace in self.output the extract_case with the new case_string
+                self.output[i] = self.output[i].replace(extract_case, case_name)
+                
+                # Increment case_tracker
+                case_tracker = chr(ord(case_tracker) + 1)
+                
+                # Add to case_replaces
+                case_replaces[self.output[i]] = original_look
         
         # Out of self.output determine which of these are complex aggregations
         # I.e. ones like: 'sum(l_extendedprice * (1 - l_discount))'
@@ -1239,7 +1301,7 @@ class group_aggr_node():
         # Prior to grouping
         
         # Note: We decide to let the "before" aggregations happen to the previous_df
-        before_group, during_group, after_group = handle_complex_aggregations(self, self.output, codeCompHelper, treeHelper, prev_df, this_df)
+        before_group, during_group, after_group = handle_complex_aggregations(self, self.output, codeCompHelper, treeHelper, prev_df, this_df, case_replaces)
         
         # Combine after_filter and before filter
         if hasattr(self, "filter"):
@@ -1425,6 +1487,12 @@ class merge_node():
         return str(statement)
 
     def to_pandas(self, prev_dfs, this_df, codeCompHelper, treeHelper):
+        # Check if there's an extract in any of these of the self.outputs
+        extract_present = "No Extract"
+        for i in range(len(self.output)):
+            if "EXTRACT" in self.output[i]:
+                extract_present = i
+        
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         # Set prefixes
@@ -1443,6 +1511,17 @@ class merge_node():
                 self.filter = self.filter.replace(relation+".", this_df+".")
             statement = this_df + " = " + this_df + "[" + str(self.filter) + "]"
             instructions.append(statement)
+            
+        # Handle extract present
+        if extract_present != "No Extract":
+            # Output the extract at the given index, stored in extract_present
+            if isinstance(self.output[extract_present], tuple):
+                statement = str(this_df) + "['" + str(self.output[extract_present][1]) + "'] = " + this_df + "." + str(self.output[extract_present][0])
+                instructions.append(statement)
+            else:
+                raise ValueError("Extract has something we'd like to set it to")
+            # Set it to postAggr
+            codeCompHelper.usePostAggr = True
         
         output_cols = choose_aliases(self, codeCompHelper)
         
