@@ -27,13 +27,15 @@ df_merge_7 = df_merge_7[['o_year', 'n_name', 'l_extendedprice', 'l_discount']]
 df_sort_1 = df_merge_7.sort_values(by=['o_year'], ascending=[True])
 df_sort_1 = df_sort_1[['o_year', 'n_name', 'l_extendedprice', 'l_discount']]
 df_sort_1['case_a'] = df_sort_1.apply(lambda x: ( x["l_extendedprice"] * ( 1 - x["l_discount"] )) if ( x["n_name"] == 'BRAZIL' ) else 0, axis=1)
-df_sort_1['before_1'] = ((df_sort_1.l_extendedprice) * (1 - (df_sort_1.l_discount)))
+df_sort_1['before_1'] = (df_sort_1.case_a)
+df_sort_1['before_2'] = ((df_sort_1.l_extendedprice) * (1 - (df_sort_1.l_discount)))
 df_group_1 = df_sort_1 \
     .groupby(['o_year']) \
     .agg(
         sum_before_1=("before_1", "sum"),
+        sum_before_2=("before_2", "sum"),
     )
-df_group_1['sumcase_asuml_extendedprice1l_discount'] = ((df_sort_1.case_a).sum() / df_group_1.sum_before_1)
+df_group_1['sumcase_asuml_extendedprice1l_discount'] = (df_group_1.sum_before_1 / df_group_1.sum_before_2)
 df_group_1 = df_group_1[['sumcase_asuml_extendedprice1l_discount']]
 df_limit_1 = df_group_1[['sumcase_asuml_extendedprice1l_discount']]
 df_limit_1 = df_limit_1.head(1)
