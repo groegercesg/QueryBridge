@@ -17,7 +17,7 @@ class Expression_Tree_Node:
         return self.left == None and self.right == None
         
 class Expression_Solver:
-    def __init__(self, s, visualise, previous_dataframe, current_dataframe, before_counter=None):
+    def __init__(self, s, visualise, previous_dataframe, current_dataframe, before_counter=None, codeComp=None):
         # Count number of columns used, for group_aggregate
         self.columns_count = 0
         self.prev_df = previous_dataframe
@@ -30,6 +30,8 @@ class Expression_Solver:
         self.expression_tree = self.expTree(s)
         if visualise != False:
             plot_exp_tree(self.expression_tree, visualise)
+        if codeComp != None:
+            self.codeComp = codeComp
             
     def group_aggregate(self):
         # Process the tree into Before, During and After for the Group Aggregation operations
@@ -67,12 +69,38 @@ class Expression_Solver:
                         # Work on right
                         # Count number of operators, of right tree
                         # Only do the before if we have operators in the tree
-                        #if self.count_operators(treeNode.right) > 0:
-                        # Do the Before
-                        self.before_counter += 1
-                        before_name = "before_" + str(self.before_counter)
-                        
-                        Before.append([before_name, self.evaluate(treeNode.right)])
+                        if self.count_operators(treeNode.right) > 0:
+                            # Do the Before
+                            self.before_counter += 1
+                            evaluation = self.evaluate(treeNode.right)
+                            
+                            # Remove relations from evaluation
+                            no_brackets_evaluation = str(evaluation.replace("(" , "").replace(")", "")).strip()
+                            extract_relation = str(no_brackets_evaluation.split(".", 1)[0]).strip()
+                            no_relation_evaluation = str(no_brackets_evaluation.replace(extract_relation+".", "")).strip()
+                            # Discover if no_relation_evaluation is a column reference
+                            if no_relation_evaluation in self.codeComp.sql.column_references:
+                                before_name = self.codeComp.sql.column_references[no_relation_evaluation]
+                            else:
+                                # Make our own name up
+                                before_name = "before_" + str(self.before_counter)
+                            
+                            Before.append([before_name, evaluation])
+                        else:
+                            # We don't do the before section
+                            # Because we don't need at do any aggregations prior
+                            # But we can use the same during code
+                            # So we set before_name to the evaluation
+                            
+                            # But we need to remove the brackets
+                            # And get the relation name
+                            evaluation = str(self.evaluate(treeNode.right))
+                            if (evaluation[0] == "(") and (evaluation[-1] == ")"):
+                                evaluation = evaluation[1:-1]
+                            
+                            relation_name = str(evaluation.split(".")[1]).strip()
+                            
+                            before_name = str(relation_name)
                         
                         # Do the During
                         during_name = str(treeNode.val) + str("_") + str(before_name)
@@ -85,12 +113,27 @@ class Expression_Solver:
                         # Work on left                        
                         # Count number of operators, of left tree
                         # Only do the before if we have operators in the tree
-                        #if self.count_operators(treeNode.left) > 0:
-                        # Do the Before
-                        self.before_counter += 1
-                        before_name = "before_" + str(self.before_counter)
-                        
-                        Before.append([before_name, self.evaluate(treeNode.left)])
+                        if self.count_operators(treeNode.left) > 0:
+                            # Do the Before
+                            self.before_counter += 1
+                            before_name = "before_" + str(self.before_counter)
+                            
+                            Before.append([before_name, self.evaluate(treeNode.left)])
+                        else:
+                            # We don't do the before section
+                            # Because we don't need at do any aggregations prior
+                            # But we can use the same during code
+                            # So we set before_name to the evaluation
+                            
+                            # But we need to remove the brackets
+                            # And get the relation name
+                            evaluation = str(self.evaluate(treeNode.left))
+                            if (evaluation[0] == "(") and (evaluation[-1] == ")"):
+                                evaluation = evaluation[1:-1]
+                            
+                            relation_name = str(evaluation.split(".")[1]).strip()
+                            
+                            before_name = str(relation_name)
                         
                         # Do the During
                         during_name = str(treeNode.val) + str("_") + str(before_name)

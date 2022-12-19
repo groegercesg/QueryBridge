@@ -71,6 +71,8 @@ def process_output(self, output, codecomphelper):
                         codecomphelper.bracket_replace[new_key] = new_value
         
         brack_cleaned_lower_output = brack_cleaned_output.lower()
+        # A brack cleaned option that removes multiple equals into one, and get's rid of quotes
+        brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "")
         if brack_cleaned_output in codecomphelper.sql.column_references:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
@@ -79,6 +81,10 @@ def process_output(self, output, codecomphelper):
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_lower_output])
+        elif brack_cleaned_equal_quote_lower_output in codecomphelper.sql.column_references:
+            # We have an item in output that needs to be changed
+            output_original_value = cleaned_output
+            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output])
         elif relation_cleaned_output in codecomphelper.bracket_replace:
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.bracket_replace[relation_cleaned_output])
@@ -159,8 +165,16 @@ def process_output(self, output, codecomphelper):
                 output[i] = "count(" + str(chosen_column) + ")"
             elif "extract" in output[i].lower():
                 output[i] = handle_extract(output[i])
-            
-                    
+        
+        # Catch if is in codeCompHelper.useAlias
+        if isinstance(output[i], tuple):
+            if codecomphelper.useAlias.get(output[i][0], None) != None:
+                # Check that the alias is the same
+                if output[i][1] != codecomphelper.useAlias.get(output[i][0], None):
+                    raise ValueError("Aliases are unexpectedly different")
+                # This key is in useAlias, so we should cut it down to a simple alias
+                output[i] = codecomphelper.useAlias.get(output[i][0], None)
+    
     return output
 
 def handle_extract(string):
@@ -613,12 +627,10 @@ class sort_node():
         
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
-        # Choose aliases
-        output_cols = choose_aliases(self, codeCompHelper)
         
         if sort_output_index != None:
             # Set sort key to this index
-            self.sort_key = [output_cols[sort_output_index]]
+            self.sort_key = [self.output[sort_output_index]]
               
         # Set sort_keys
         self.sort_key = self.process_sort_key(codeCompHelper)  
@@ -632,6 +644,8 @@ class sort_node():
         statement1_string = this_df + " = " + prev_df + ".sort_values(by=" + str(columns) + ", ascending=" + str(ascendings) + ")"
         instructions.append(statement1_string)
         
+        # Choose aliases
+        output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
         if codeCompHelper.column_limiting:
@@ -1101,7 +1115,7 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
                 # Means no visualisation will be created
                 output_name = False
             
-            tree = Expression_Solver(str(col[0]), output_name, prev_df, this_df, beforeCounter)
+            tree = Expression_Solver(str(col[0]), output_name, prev_df, this_df, beforeCounter, codeComp=codeCompHelper)
             # Increment treeHelper
             treeHelper.expr_tree_tracker += 1
             
@@ -1155,7 +1169,7 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
                     # Means no visualisation will be created
                     output_name = False
                     
-                tree = Expression_Solver(str(col), output_name, prev_df, this_df, beforeCounter)
+                tree = Expression_Solver(str(col), output_name, prev_df, this_df, beforeCounter, codeComp=codeCompHelper)
                 # Increment treeHelper
                 treeHelper.expr_tree_tracker += 1
                 
@@ -1207,7 +1221,7 @@ class group_aggr_node():
         return grouping_keys
     
     def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
-        # TODO: Sometimes, we have a sort_key that is in the output, that gets processed into something different
+        # TODO: Sometimes, we have a group_key that is in the output, that gets processed into something different
         group_output_index = None
         for i in range(len(self.output)):
             if self.group_key[0] == self.output[i]:
@@ -1215,13 +1229,14 @@ class group_aggr_node():
         
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
-        # Choose aliases
-        output_cols = choose_aliases(self, codeCompHelper)
         
         # Set group_key to new thing
         if group_output_index != None:
             # Set sort key to this index
-            self.group_key = [output_cols[group_output_index]]
+            self.group_key = [self.output[group_output_index]]
+            # Is it a tuple, set to [1]
+            if isinstance(self.group_key[0], tuple):
+                self.group_key[0] = self.group_key[0][1]
         
         # Process group key
         self.group_key = self.process_group_key(self.group_key)
@@ -1234,15 +1249,13 @@ class group_aggr_node():
         
         # the group key might be in output_cols, drop it
         deletes = []
-        for i in range(len(output_cols)):
-            if output_cols[i] in self.group_key:
+        for i in range(len(self.output)):
+            if self.output[i] in self.group_key:
                 deletes.append(i)
         # Reverse deltes
         deletes.reverse()
         for idx in deletes:
-            del output_cols[idx]
-            
-        
+            del self.output[idx]
         
         if hasattr(self, "filter"):
             # We have a filter operation to do
@@ -1295,19 +1308,27 @@ class group_aggr_node():
         case_tracker = "a"
         # Check for cases
         # TODO: Change to output_cols
-        for i in range(len(output_cols)):
-            if "CASE WHEN" and "THEN" and "ELSE" in output_cols[i]:
-                original_look = output_cols[i]
+        for i in range(len(self.output)):
+            # Don't choose the alias
+            is_tuple = False
+            if isinstance(self.output[i], tuple):
+                current_output = self.output[i][0]
+                is_tuple = True
+            else:
+                current_output = self.output[i]
+            
+            if "CASE WHEN" and "THEN" and "ELSE" in current_output:
+                original_look = current_output
                 # Find position of CASE
-                case_position = output_cols[i].find("CASE")
+                case_position = current_output.find("CASE")
                 # Check that character before is open bracket
-                if output_cols[i][case_position - 1] != "(":
+                if current_output[case_position - 1] != "(":
                     raise ValueError("Unexpectedly formatted CASE")
-                else_position = output_cols[i].find("ELSE", case_position)
-                next_bracket = output_cols[i].find(")", else_position)
+                else_position = current_output.find("ELSE", case_position)
+                next_bracket = current_output.find(")", else_position)
                 
                 # Extract the entire case statement
-                extract_case = output_cols[i][case_position : next_bracket]
+                extract_case = current_output[case_position : next_bracket]
                 # Do case aggregation
                 case_string = aggregate_case(extract_case, prev_df)
                 
@@ -1318,13 +1339,20 @@ class group_aggr_node():
                 instructions.append(statement)
                 
                 # Replace in self.output the extract_case with the new case_string
-                output_cols[i] = output_cols[i].replace(extract_case, case_name)
+                if is_tuple == True:
+                    self.output[i] = (self.output[i][0].replace(extract_case, case_name), self.output[i][1])
+                    
+                    # Add to case_replaces
+                    case_replaces[self.output[i][0]] = original_look
+                else:
+                    self.output[i] = self.output[i].replace(extract_case, case_name)
+                    
+                    # Add to case_replaces
+                    case_replaces[self.output[i]] = original_look
                 
                 # Increment case_tracker
                 case_tracker = chr(ord(case_tracker) + 1)
                 
-                # Add to case_replaces
-                case_replaces[output_cols[i]] = original_look
         
         # Out of self.output determine which of these are complex aggregations
         # I.e. ones like: 'sum(l_extendedprice * (1 - l_discount))'
@@ -1333,7 +1361,7 @@ class group_aggr_node():
         # Prior to grouping
         
         # Note: We decide to let the "before" aggregations happen to the previous_df
-        before_group, during_group, after_group = handle_complex_aggregations(self, output_cols, codeCompHelper, treeHelper, prev_df, this_df, case_replaces)
+        before_group, during_group, after_group = handle_complex_aggregations(self, self.output, codeCompHelper, treeHelper, prev_df, this_df, case_replaces)
         
         # Combine after_filter and before filter
         if hasattr(self, "filter"):
@@ -1430,6 +1458,9 @@ class group_aggr_node():
                         name = codeCompHelper.bracket_replace.get(name)
                     
                 instructions.append(this_df + " = " + this_df + "[" + this_df + "." + str(name) + " " + str(type) + " " + str(amount) + "]")
+        
+        # Choose aliases
+        output_cols = choose_aliases(self, codeCompHelper)
         
         # Check output_cols for bracket replaces
         for i in range(len(output_cols)):
@@ -1554,10 +1585,13 @@ class merge_node():
             if isinstance(self.output[extract_present], tuple):
                 statement = str(this_df) + "['" + str(self.output[extract_present][1]) + "'] = " + this_df + "." + str(self.output[extract_present][0])
                 instructions.append(statement)
+                # Overwrite self.output, so that this element in not a tuple
+                # Set in codeComp useAlias, to track when we should use the alias
+                codeCompHelper.useAlias[self.output[extract_present][0]] =  self.output[extract_present][1]
+                # But instead set to it's column output
+                self.output[extract_present] = self.output[extract_present][1]
             else:
                 raise ValueError("Extract has something we'd like to set it to")
-            # Set it to postAggr
-            codeCompHelper.usePostAggr = True
         
         output_cols = choose_aliases(self, codeCompHelper)
         
@@ -1647,14 +1681,39 @@ class sql_class():
         # Get column projection aliases from SQL file, 
         self.column_references = self.get_col_refs()
         
+        # Process column_references, discover nested ones, and insert new ones
+        self.fix_column_references()
+        
         # Value of limit
         # TODO: Hardcoded to a single limit statement, what about multiple?
         self.limit = self.get_limit()
         
+    def fix_column_references(self):
+        # Iterate through values and keys
+        orig_dict_values = list(self.column_references.values())
+        orig_dict_keys = list(self.column_references.keys())
+        for i in range(len(orig_dict_values)):
+            # New dictionary values
+            new_dict_values = []
+            for j in range(len(list(self.column_references.keys()))):
+                # If the value is inside this key
+                if orig_dict_values[i] in list(self.column_references.keys())[j]:
+                    get_key = list(self.column_references.keys())[j]
+                    # Replace the value with the key for that value
+                    replace_key = get_key.replace(orig_dict_values[i], orig_dict_keys[i])
+                    # Get the value for this new replace_key
+                    replace_key_value = list(self.column_references.values())[j]
+                    
+                    # Add to new_dict_values
+                    new_dict_values.append((replace_key, replace_key_value))
+            
+            # Add in new dictionary values
+            for key, value in new_dict_values:
+                self.column_references[key] = value
+        
     def get_limit(self):
         local_file = self.file_content.lower()
         if "limit" in local_file.lower():
-            # limit_amount = 0
             limit_amount = local_file.split("limit")[1].split(";")[0].strip()
             # for limit in parse_one(self.file_content).find_all(exp.Limit):
             #     limit_amount = int(limit.expression.alias_or_name)
@@ -1684,6 +1743,10 @@ class sql_class():
                         # Get rid of apostrophes
                         if "'" in projection_original:
                             projection_original = projection_original.replace("'", "")
+                            
+                        # Get rid of "." and relation if present
+                        if "." in projection_original:
+                            projection_original = str(projection_original.split(".")[1]).strip()
                             
                         column_references[projection_original] = str(projection.alias_or_name)
 

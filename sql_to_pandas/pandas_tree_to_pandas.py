@@ -24,6 +24,7 @@ class CodeCompilation():
         self.column_ordering = column_ordering
         self.column_limiting = column_limiting
         self.bracket_replace = {}
+        self.useAlias = {}
         
     def setAggr(self, aggr):
         self.usePostAggr = aggr
@@ -57,6 +58,8 @@ class CodeCompilation():
         new_sql = self.sql
         # usePostAggr
         new_use_post_aggr = self.usePostAggr or other.usePostAggr
+        # useAlias
+        new_use_alias = self.useAlias | other.useAlias
         
         # Make class
         returningCodeComp = CodeCompilation(new_sql, new_column_ordering, new_column_limiting)
@@ -64,6 +67,7 @@ class CodeCompilation():
         returningCodeComp.relations = new_relations
         returningCodeComp.indexes = new_indexes
         returningCodeComp.bracket_replace = new_bracket_replace
+        returningCodeComp.useAlias = new_use_alias
         
         return returningCodeComp
 
