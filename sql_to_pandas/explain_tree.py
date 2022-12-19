@@ -271,6 +271,7 @@ def solve_prune_node(prune_type, tree):
             solve_prune_node(prune_type, individual_plan)               
             
 alias_locations = {
+    "Index Only Scan": ["output", "filter"],
     "Index Scan": ["output", "index_cond"],
     "Seq Scan": ["output", "filters"],
     "Group Aggregate": ["group_key", "output", "filter"],
@@ -374,6 +375,8 @@ def solve_initplan_nodes(tree):
                             # Run next iteration
                             continue
                         elif nodeBelow.parent_relationship == "SubPlan":
+                            # TODO: Do continue for now, we haven't decided how to use this functionality
+                            continue
                             # We have a SubPlan
                             # Extract the name
                             if hasattr(nodeBelow, "subplan_name"):
@@ -385,7 +388,7 @@ def solve_initplan_nodes(tree):
                             capturedTrees.append((nodeBelow, name))
                             
                             # Add the id of nodeBelow to dropClasses
-                            dropClasses.add(get_class_id(nodeBelow))
+                            # dropClasses.add(get_class_id(nodeBelow))
                             
                             # Run next iteration
                             continue
@@ -431,8 +434,16 @@ def solve_view_set_values(tree_list):
     for i in range(len(tree_list)):
         if isinstance(tree_list[i], tuple):
             # We have a replace
-            set_value_new = tree_list[i][1]
-            replaces.append((set_value_new.replace("dollar_", "$"), set_value_new))
+            set_value = tree_list[i][1]
+            # Edit set_value
+            new_set_value = set_value.lower()
+            if "dollar" in set_value:
+                new_set_value = new_set_value.replace("dollar_", "$")
+                
+                replaces.append((new_set_value, set_value))
+            elif "subplan " in set_value.lower():
+                new_set_value = new_set_value.replace("subplan ", "subplan_")
+                replaces.append((set_value, new_set_value))
     
     # Recursively move through the tree, changing if we see the presence of replace[i][0] to replace[i][1]
     for i in range(len(tree_list)):

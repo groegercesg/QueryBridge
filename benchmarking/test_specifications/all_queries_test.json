@@ -1,0 +1,116 @@
+{
+    "Test Name":"All Queries Test",
+    "SQL Queries": [
+        {
+            "Query Name": "Query 1",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/1.sql",
+            "Required Data": ["lineitem"],
+            "Pandas Name": "q1_pandas.py"
+        },
+        {
+            "Query Name": "Query 3",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/3.sql",
+            "Required Data": ["customer", "orders", "lineitem"],
+            "Pandas Name": "q3_pandas.py"
+        },
+        {
+            "Query Name": "Query 4",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/4.sql",
+            "Required Data": ["orders", "lineitem"],
+            "Pandas Name": "q4_pandas.py"
+        },
+        {
+            "Query Name": "Query 5",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/5.sql",
+            "Required Data": ["customer", "orders", "lineitem", "supplier", "nation", "region"],
+            "Pandas Name": "q5_pandas.py"
+        },
+        {
+            "Query Name": "Query 6",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/6.sql",
+            "Required Data": ["lineitem"],
+            "Pandas Name": "q6_pandas.py"
+        },
+        {
+            "Query Name": "Query 8",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/8.sql",
+            "Required Data": ["part", "supplier", "lineitem", "orders", "customer", "nation", "region"],
+            "Pandas Name": "q8_pandas.py"
+        },
+        {
+            "Query Name": "Query 9",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/9.sql",
+            "Required Data": ["part", "supplier", "lineitem", "partsupp", "orders", "nation"],
+            "Pandas Name": "q9_pandas.py"
+        },
+        {
+            "Query Name": "Query 10",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/10.sql",
+            "Required Data": ["customer", "orders", "lineitem", "nation"],
+            "Pandas Name": "q10_pandas.py"
+        },
+        {
+            "Query Name": "Query 11",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/11.sql",
+            "Required Data": ["partsupp", "supplier", "nation"],
+            "Pandas Name": "q11_pandas.py"
+        },
+        {
+            "Query Name": "Query 14",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/14.sql",
+            "Required Data": ["lineitem", "part"],
+            "Pandas Name": "q14_pandas.py"
+        },
+        {
+            "Query Name": "Query 15",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/15.sql",
+            "Required Data": ["lineitem", "supplier"],
+            "Pandas Name": "q15_pandas.py"
+        },
+        {
+            "Query Name": "Query 16",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/16.sql",
+            "Required Data": ["partsupp", "part", "supplier"],
+            "Pandas Name": "q16_pandas.py"
+        },
+        {
+            "Query Name": "Query 18",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/18.sql",
+            "Required Data": ["customer", "orders", "lineitem"],
+            "Pandas Name": "q18_pandas.py"
+        },
+        {
+            "Query Name": "Query 19",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/19.sql",
+            "Required Data": ["lineitem", "part"],
+            "Pandas Name": "q19_pandas.py"
+        }
+    ],
+    "Temporary Directory": "benchmarking/temp_queries",
+    "SQL Converter Location": "sql_to_pandas/sql_to_pandas.py",
+    "Pandas Data Loader": "tpch_data_loader.py",
+    "Number of Query Runs": 1,
+    "Results Location": "benchmarking/test_results/all_queries_test_results.csv",
+    "Database Connection Details": {
+            "User": "benchmarker",
+            "Password": "benchMugPassword",
+            "Host": "localhost",
+            "Port": "5432",
+            "Database": "tpchdb"
+        },
+    "Results Precision": 4
+}   

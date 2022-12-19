@@ -33,7 +33,11 @@ def get_columns(query):
     split_query = clean_query.split(",")
     for i in range(len(split_query)):
         if " as " in split_query[i]:
-            split_query[i] = str(split_query[i]).split(" as ")[1]
+            split_query[i] = str(str(split_query[i]).split(" as ")[1]).strip()
+            
+            if (split_query[i][0] == '"') and (split_query[i][-1] == '"'):
+                # If the start and end are quotation marks, strip these
+                split_query[i] = split_query[i][1:-1]
         
         split_query[i] = str(split_query[i]).replace(" ", "")
     return split_query

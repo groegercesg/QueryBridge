@@ -356,7 +356,7 @@ class Expression_Solver:
             # For floats, we offer to replace a single decimal point and now check if it contains only digits
             elif (ch.isdigit()) or (ch.replace(".", "", 1).isdigit()):
                 stack.append(Expression_Tree_Node(ch))
-            elif not any(char.isdigit() for char in ch) and self.prio.get(ch, None) == None and ch != "(" and ch != ")":
+            elif not all(char.isdigit() for char in ch) and self.prio.get(ch, None) == None and ch != "(" and ch != ")":
                 # No digits and not in the priority dictionary
                 # Create string for the name:
                 name = "(" + self.prev_df + "." + ch + ")"

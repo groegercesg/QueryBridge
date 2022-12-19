@@ -11,6 +11,18 @@ from query_database import run_query
 from compare_results import compare
 import os
 
+class color:
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -213,9 +225,9 @@ def main():
         # We should check if pandas_result is the same as sql_result
         compare_decision, columns = compare(sql_query["Query Location"], pandas_result, sql_result, manifest_json["Results Precision"])
         if compare_decision:
-            print("The returned data was equivalent for both SQL and Pandas")
+            print(color.BOLD + "The returned data was equivalent for both SQL and Pandas" + color.END)
         else:
-            print("The returned data was not equivalent!")
+            print(color.RED + "The returned data was not equivalent!" + color.END)
             print("Pandas Data:")
             print(pandas_result)
             print("SQL Data:")
@@ -225,7 +237,7 @@ def main():
         
         delete_temp_folder()
     
-    print("Testing is complete and results have been written to: " + str(manifest_json["Results Location"]))    
+    print(color.GREEN + "Testing is complete and results have been written to: " + str(manifest_json["Results Location"]) + color.END)    
     
     delete_temp_folder()
         

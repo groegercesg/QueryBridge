@@ -351,12 +351,12 @@ def clean_subplan_params(self, in_filters, prev_df, this_df):
         if "NOT " in line_split[i]:
             line_split[i] = line_split[i].replace("NOT ", "")
             inner = clean_extra_brackets(line_split[i])
-            inner_split = inner.split("SubPlan ")
+            inner_split = inner.split("SubPlan")
             
             if len(inner_split) != 2:
                 raise ValueError("Unexpected formulation of inner_split: " + str(inner_split))
             
-            subplan_name = "SubPlan " + inner_split[1]
+            subplan_name = str("SubPlan") + str(" ") + str(inner_split[1]).strip()
             
             if subplan_name != self.nodes[0].subplan_name:
                 raise ValueError("The SubPlan names are different, desired name: " + str(subplan_name) + " but the detected SubPlan had name: " + str(self.nodes[0].subplan_name))
@@ -519,7 +519,7 @@ class filter_node():
         
         # Check if "SubPlan"
         if self.params != None:
-            if "SubPlan" in self.params:
+            if "subplan" in self.params.lower():
                 subplan_mode = True
                 self.params = clean_subplan_params(self, self.params, prev_df, self.data)
         
@@ -1040,6 +1040,16 @@ def aggregate_case(inner_string, prev_df):
             else:
                 raise ValueError("Aggregate Case, not sure what to clean")
             
+            # Iterate through split_starts, cleaning the parts that are ill-formatted
+            for j in range(len(split_starts)):
+                # Remove brackets at start and end of string
+                if (split_starts[j][0] == "(") and (split_starts[j][-1] == ")"):
+                    split_starts[j] = split_starts[j][1:-1]
+                    
+                # Remove quotes at start and end of string
+                if (split_starts[j][0] == "'") and (split_starts[j][-1] == "'"):
+                    split_starts[j] = split_starts[j][1:-1]
+            
             values[i] = 'x["' + split_starts[0] + '"].startswith("' + split_starts[1] + '")'
             
         # Hand this off to the s_group function
@@ -1178,6 +1188,16 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
     for i, col in enumerate(data):
         
         if isinstance(col, tuple):
+            if ("count" in str(col[0]).lower()) and ("distinct" in str(col[0]).lower()):
+                # TODO: Make this more elegant
+                # Hardcoded support for count distinct
+                
+                # Don't add any before
+                during_aggrs.append([str(col[1]), col[0].lower().split("distinct ")[1].replace("(", "").replace(")", "").strip(), "count_distinct"])
+                            
+                # Don't run rest of this iteration
+                continue
+            
             # Set output_name
             output_name = None
             if not treeHelper.bench:
@@ -1320,16 +1340,6 @@ class group_aggr_node():
         # Set group keys as the codeCompHelper indexes
         codeCompHelper.setIndexes(self.group_key)
         
-        # the group key might be in output_cols, drop it
-        deletes = []
-        for i in range(len(self.output)):
-            if self.output[i] in self.group_key:
-                deletes.append(i)
-        # Reverse deltes
-        deletes.reverse()
-        for idx in deletes:
-            del self.output[idx]
-        
         if hasattr(self, "filter"):
             # We have a filter operation to do
             proc_filter = None
@@ -1357,10 +1367,10 @@ class group_aggr_node():
                 filter_type = ">"
                 cut_filter = str(str(self.filter).split(">")[0]).strip()
                 filter_amount = str(str(self.filter).split(">")[1]).strip()
-            elif "=" in self.filter:
+            elif " == " in self.filter:
                 filter_type = "=="
-                cut_filter = str(str(self.filter).split("=")[0]).strip()
-                filter_amount = str(str(self.filter).split("=")[1]).strip()
+                cut_filter = str(str(self.filter).split(" == ")[0]).strip()
+                filter_amount = str(str(self.filter).split(" == ")[1]).strip()
             else:
                 raise ValueError("Haven't written Filter for Group Aggregation to manage filters like: " + str(self.filter))
             
@@ -1379,8 +1389,9 @@ class group_aggr_node():
         # DICT: [[original_look, new_look], ...]
         case_replaces = {}
         case_tracker = "a"
-        # Check for cases
-        # TODO: Change to output_cols
+        distinct_replaces = {}
+        distinct_tracker = "a"
+        # Check for cases and distincts!
         for i in range(len(self.output)):
             # Don't choose the alias
             is_tuple = False
@@ -1389,6 +1400,46 @@ class group_aggr_node():
                 is_tuple = True
             else:
                 current_output = self.output[i]
+            
+            # Distinct handling
+            # TODO: Remove this for now
+            """
+            if "distinct" in current_output.lower():
+                original_look = current_output
+                # Find position of distinct
+                distinct_position = current_output.find("DISTINCT")
+                # Check that character before is open bracket
+                if current_output[distinct_position - 1] != "(":
+                    raise ValueError("Unexpectedly formatted DISTINCT")
+                next_bracket = current_output.find(")", distinct_position)
+                
+                # Extract distinct statement
+                extract_distinct = current_output[distinct_position : next_bracket]
+                
+                # Do the creation of the distinct
+                target_column = str(extract_distinct.split("DISTINCT ")[1]).strip()
+                
+                # Create distinct_name
+                distinct_name = "distinct_" + str(distinct_tracker)
+                # Append to instructions
+                statement = str(prev_df) + "['" + distinct_name + "'] = " + str(prev_df) + "." + str(target_column) + ".unique()"
+                instructions.append(statement)
+                
+                # Replace in self.output the extract_distinct with the new distinct_name
+                if is_tuple == True:
+                    self.output[i] = (self.output[i][0].replace(extract_distinct, distinct_name), self.output[i][1])
+                    
+                    # Add to distinct_replaces
+                    distinct_replaces[self.output[i][0]] = original_look
+                else:
+                    self.output[i] = self.output[i].replace(extract_distinct, distinct_name)
+                    
+                    # Add to distinct_replaces
+                    distinct_replaces[self.output[i]] = original_look
+                
+                # Increment distinct_tracker
+                distinct_tracker = chr(ord(distinct_tracker) + 1)
+            """
             
             if "CASE WHEN" and "THEN" and "ELSE" in current_output:
                 original_look = current_output
@@ -1442,6 +1493,11 @@ class group_aggr_node():
             for b_filt in before_filter:
                 if b_filt not in before_group:
                     before_group.append(b_filt)
+                    
+            # Only append if not already present
+            for d_filt in during_filter:
+                if d_filt not in during_group:
+                    during_group.append(d_filt)
             
             # Only append if not already present
             for a_filt in after_filter:
@@ -1547,6 +1603,8 @@ class group_aggr_node():
                 instructions.append('        ' + during_name + '=("' + during_col + '", "max"),')
             elif during_operation == "distinct":
                 instructions.append('        ' + during_name + '=("' + during_col + '", lambda x: x.unique()),')
+            elif during_operation == "count_distinct":
+                instructions.append('        ' + during_name + '=("' + during_col + '", lambda x: x.nunique()),')
             else:
                 raise ValueError("Operation: " + str(during_operation) + " not recognised!")
             
@@ -1591,6 +1649,12 @@ class group_aggr_node():
         for i in range(len(self.output)):
             # Only add if it has an alias
             if isinstance(self.output[i], tuple):
+                # This column might have been involved in a distinct_replace
+                if distinct_replaces.get(self.output[i][0], None) != None:
+                    # This is in distinct replaces
+                    # Add to useAlias
+                    codeCompHelper.useAlias[distinct_replaces.get(self.output[i][0], None)] = self.output[i][1]
+                
                 # Check it's not already in there, raise an Error if it is
                 if codeCompHelper.useAlias.get(self.output[i][0], None) == None:
                     # Add to useAlias
@@ -1741,7 +1805,79 @@ class aggr_node():
         # Set prefixes
         if not isinstance(prev_df, str):
             raise ValueError("Inputted prev_df is not a string!")
-        instructions = [this_df + " = pd.DataFrame()"]
+        instructions = []
+        
+        # TODO: We need to add in CASE handling
+        # Track the replaces of cases
+        # DICT: [[original_look, new_look], ...]
+        case_replaces = {}
+        case_tracker = "a"
+        # Check for cases
+        # TODO: Change to output_cols
+        for i in range(len(self.output)):
+            # Don't choose the alias
+            is_tuple = False
+            if isinstance(self.output[i], tuple):
+                current_output = self.output[i][0]
+                is_tuple = True
+            else:
+                current_output = self.output[i]
+            
+            if "CASE WHEN" and "THEN" and "ELSE" in current_output:
+                original_look = current_output
+                # Find position of CASE
+                case_position = current_output.find("CASE")
+                # Check that character before is open bracket
+                if current_output[case_position - 1] != "(":
+                    raise ValueError("Unexpectedly formatted CASE")
+                else_position = current_output.find("ELSE", case_position)
+                next_bracket = current_output.find(")", else_position)
+                
+                # Extract the entire case statement
+                extract_case = current_output[case_position : next_bracket]
+                # Do case aggregation
+                case_string = aggregate_case(extract_case, prev_df)
+                
+                # Create case_name
+                case_name = "case_" + str(case_tracker)
+                # Append to instructions
+                statement = str(prev_df) + "['" + case_name + "'] = " + case_string
+                instructions.append(statement)
+                
+                # Replace in self.output the extract_case with the new case_string
+                if is_tuple == True:
+                    self.output[i] = (self.output[i][0].replace(extract_case, case_name), self.output[i][1])
+                    
+                    # Add to case_replaces
+                    case_replaces[self.output[i][0]] = original_look
+                else:
+                    self.output[i] = self.output[i].replace(extract_case, case_name)
+                    
+                    # Add to case_replaces
+                    case_replaces[self.output[i]] = original_look
+                
+                # Increment case_tracker
+                case_tracker = chr(ord(case_tracker) + 1)
+        
+        # Append the creation of the dataframe that we're going to add data into
+        instructions.append(this_df + " = pd.DataFrame()")
+        
+        # Check for intermediate results
+        for i in range(len(self.output)):
+            if isinstance(self.output[i], tuple):
+                # Iterate through keys in bracket_replace
+                for j in range(len(list(codeCompHelper.bracket_replace.keys()))):
+                    if (list(codeCompHelper.bracket_replace.keys())[j] in self.output[i][0]) and (list(codeCompHelper.bracket_replace.keys())[j] != self.output[i][0]):
+                        # We have a bracket replace that's inside a columnar output and not identical to it,
+                        # So we do a replace on the self.output - form a new tuple
+                        self.output[i] = (self.output[i][0].replace(list(codeCompHelper.bracket_replace.keys())[j], list(codeCompHelper.bracket_replace.values())[j]), self.output[i][1])
+            else:
+                # Iterate through keys in bracket_replace
+                for j in range(len(list(codeCompHelper.bracket_replace.keys()))):
+                    if (list(codeCompHelper.bracket_replace.keys())[j] in self.output[i]) and (list(codeCompHelper.bracket_replace.keys())[j] != self.output[i]):
+                        # We have a bracket replace that's inside a columnar output and not identical to it,
+                        # So we do a replace on the self.output - form a new tuple
+                        self.output[i] = self.output[i].replace(list(codeCompHelper.bracket_replace.keys())[j], list(codeCompHelper.bracket_replace.values())[j])   
         
         instructions += do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper)
         
@@ -1791,6 +1927,10 @@ class rename_node():
                 prev_output[i] = codeCompHelper.bracket_replace[prev_output[i]]
         # Reverse these
         prev_output.reverse()
+        
+        # Check that we have the correct number of columns for a 1-to-1 mapping between output_cols and prev_output
+        if len(output_cols) != len(prev_output):
+            raise ValueError("Incorrect number of columns collected")
         
         # Create the rename dataframe, set previous columns to current column
         for i, output in enumerate(output_cols):
@@ -1877,10 +2017,18 @@ class sql_class():
                         # Get rid of apostrophes
                         if "'" in projection_original:
                             projection_original = projection_original.replace("'", "")
-                            
+                        
                         # Get rid of "." and relation if present
                         if "." in projection_original:
-                            projection_original = str(projection_original.split(".")[1]).strip()
+                            split_proj = projection_original.split(".")
+                            # If the first part is all characters that are digits
+                            if split_proj[0].isdigit():
+                                pass
+                            else:
+                                # This is meant to catch a scenario like:
+                                    # n2.n_name
+                                    # And turn it into: n_name
+                                projection_original = str(split_proj[1]).strip()
                             
                         column_references[projection_original] = str(projection.alias_or_name)
 
@@ -1979,6 +2127,9 @@ def create_tree(class_tree, sql_class):
         if hasattr(current_node, "filters"):
             # Check if is a filter type of Seq Scan
             node_class.set_params(current_node.filters)
+        elif hasattr(current_node, "filter"):
+            # Check if is a filter type of Seq Scan
+            node_class.set_params(current_node.filter)
     elif node_type == "Bitmap Heap Scan":
         node_class = filter_node(current_node.relation_name, current_node.recheck_cond, current_node.output)
     elif node_type == "Unique":

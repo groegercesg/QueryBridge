@@ -130,7 +130,7 @@ def postorder_traversal(tree, pandas_statements, baseCodeCompHelper, aggrs, tree
     #if root is None return
     if tree==None:
         return None
-    if hasattr(tree, 'nodes'):
+    if hasattr(tree, 'nodes') and (tree.nodes != []):
         list_of_cc_helpers = []
         for node in tree.nodes:
             #traverse left subtree
