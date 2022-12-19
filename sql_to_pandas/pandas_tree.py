@@ -672,15 +672,28 @@ class sort_node():
                 
                 # Is it a tuple, set to [0]
                 if isinstance(self.sort_key[sort], tuple):
-                    # If we have a sort_key with a alias, we should rename the column to the alias, and sort by that
-                    # df_sort_4['nation'] = (df_sort_4.n_name)
-                    # Use the previous dataframe as this is happening before the sort, so we can use the alias in the sort
-                    statement = prev_df + "['" + str(self.sort_key[sort][1]) + "'] = " + str(prev_df) + "." + str(self.sort_key[sort][0])
-                    instructions.append(statement)
-                    # Set in codeComp useAlias, to track when we should use the alias
-                    codeCompHelper.useAlias[self.sort_key[sort][0]] =  self.sort_key[sort][1]
-                    # Set to index [1]
-                    self.sort_key[sort] = self.sort_key[sort][1]
+                    # Check that this is not in useAlias already
+                    if codeCompHelper.useAlias.get(self.sort_key[sort], None) != None:
+                        # This is already in useAlias
+                        # Validate aliases are the same
+                        if self.sort_key[sort][1] != codeCompHelper.useAlias.get(self.sort_key[sort], None):
+                            raise ValueError("Aliases not the same")
+                        
+                        # Set to index [1]
+                        self.sort_key[sort] = self.sort_key[sort][1]                        
+                        
+                    else:
+                        # Not in useAlias, we can add it
+                    
+                        # If we have a sort_key with a alias, we should rename the column to the alias, and sort by that
+                        # df_sort_4['nation'] = (df_sort_4.n_name)
+                        # Use the previous dataframe as this is happening before the sort, so we can use the alias in the sort
+                        statement = prev_df + "['" + str(self.sort_key[sort][1]) + "'] = " + str(prev_df) + "." + str(self.sort_key[sort][0])
+                        instructions.append(statement)
+                        # Set in codeComp useAlias, to track when we should use the alias
+                        codeCompHelper.useAlias[self.sort_key[sort][0]] =  self.sort_key[sort][1]
+                        # Set to index [1]
+                        self.sort_key[sort] = self.sort_key[sort][1]
                        
                 # If we have a sorting order then add it onto the end
                 if sort_direction != None:
@@ -1100,12 +1113,12 @@ def choose_aliases(self, cCHelper, final_output=False):
             # Check if first and last characters are brackets
             if appendingCol[0] == "(" or appendingCol[-1] == ")":
                 # It has brackets, let's clean them, then check if we need to use bracket replace
-                new_appendingCol = clean_extra_brackets(appendingCol)
+                appendingCol = clean_extra_brackets(appendingCol)
                 
-                # Check if new_appendingCol is in the cCHelper bracket_replace
-                if cCHelper.bracket_replace.get(new_appendingCol, None) != None:
-                    # This col is in the dict, use the replacement as the column in forward
-                    appendingCol = cCHelper.bracket_replace[new_appendingCol]
+            # Check if new_appendingCol is in the cCHelper bracket_replace
+            if cCHelper.bracket_replace.get(appendingCol, None) != None:
+                # This col is in the dict, use the replacement as the column in forward
+                appendingCol = cCHelper.bracket_replace[appendingCol]
                 
             # Append the column, first check if it is in the indexes, if so, skip
             if final_output:
@@ -1354,9 +1367,9 @@ class group_aggr_node():
             filter_steps = [[cut_filter, filter_type, filter_amount]]
             
             if isinstance(self.filter, str):
-                before_filter, during_filter, after_filter = handle_complex_aggregations(self, [cut_filter], codeCompHelper, treeHelper, prev_df, this_df, [])
+                before_filter, during_filter, after_filter = handle_complex_aggregations(self, [cut_filter], codeCompHelper, treeHelper, prev_df, this_df, {})
             elif isinstance(self.filter, list):
-                before_filter, during_filter, after_filter = handle_complex_aggregations(self, cut_filter, codeCompHelper, treeHelper, prev_df, this_df, [])
+                before_filter, during_filter, after_filter = handle_complex_aggregations(self, cut_filter, codeCompHelper, treeHelper, prev_df, this_df, {})
             else:
                 raise ValueError("Unrecognised type of filter for the Group Aggregation Node, filter: " + str(self.filter))
         
@@ -1423,7 +1436,7 @@ class group_aggr_node():
         # Note: We decide to let the "before" aggregations happen to the previous_df
         before_group, during_group, after_group = handle_complex_aggregations(self, self.output, codeCompHelper, treeHelper, prev_df, this_df, case_replaces)
         
-        # Combine after_filter and before filter
+        # Combine after_filter and before_filter
         if hasattr(self, "filter"):
             # Only append if not already present
             for b_filt in before_filter:
@@ -1433,8 +1446,46 @@ class group_aggr_node():
             # Only append if not already present
             for a_filt in after_filter:
                 if a_filt not in after_group:
-                    raise ValueError("Should we be doing this?")
-                    after_group.append(a_filt)
+                    # TODO: Determine answer: raise ValueError("Should we be doing this?")
+                    # At the moment this is adding information we need, but we could do without if we were smarter
+                    # We could edit filter_steps
+                    
+                    # Unspool a_filt
+                    column_name, process = a_filt
+                    # We search after_group[1] for the process,
+                    if process in [i[1] for i in after_group]:
+                        # The process is already happening
+                        # If we find it that means the process is already happening
+                        # Therefore we can get the column_name from after_group
+                        after_group_column_name = [i[0] for i in after_group if i[1] == process]
+                        # Validate after_group_column_name
+                        if len(after_group_column_name) > 1:
+                            raise ValueError("Incorrect searching")
+                        else:
+                            after_group_column_name = after_group_column_name[0]
+                            
+                        # And put that in filter_steps
+                        # Iterate through filter_steps
+                        for i in range(len(filter_steps)):
+                            # filter_steps[i]
+                                # 0 - name
+                                # 1 - type
+                                # 2 - amount                                
+                            
+                            # Check if used by bracket replaces
+                            if hasattr(codeCompHelper, "bracket_replace"):
+                                if codeCompHelper.bracket_replace.get(filter_steps[i][0], None) != None:
+                                    filter_steps[i][0] = codeCompHelper.bracket_replace.get(filter_steps[i][0])
+                            
+                            # If we find the column name, that's equal to the one from the filter originally
+                            # Then replace it with the new one
+                            if filter_steps[i][0] == column_name:
+                                filter_steps[i][0] = after_group_column_name
+                                # And stop iterating
+                                break
+                    else:
+                        # The process isn't already happening, so we have to add it
+                        after_group.append(a_filt)
         
         # Handle before
         for before_name, before_command in before_group:
@@ -1533,11 +1584,25 @@ class group_aggr_node():
         if output_cols != [] and codeCompHelper.column_limiting:
             statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
+            
+        # This is a group_aggregate node
+        # Therefore, all self.output with aliases must be in use
+        # Therefore we can add these to the codeCompHelper use Alias
+        for i in range(len(self.output)):
+            # Only add if it has an alias
+            if isinstance(self.output[i], tuple):
+                # Check it's not already in there, raise an Error if it is
+                if codeCompHelper.useAlias.get(self.output[i][0], None) == None:
+                    # Add to useAlias
+                    codeCompHelper.useAlias[self.output[i][0]] = self.output[i][1]
+                else:
+                    # Already in useAlias
+                    raise ValueError("We are trying to add an Alias to useAlias, that is already in there!")
         
         return instructions   
     
 def complex_name_solve(in_name):
-    complex_items = ["*", "-", "(", ")", " ", "/", "+", "-", "*"]
+    complex_items = ["*", "-", "(", ")", " ", "/", "+", "-", "*", "."]
     is_complex = False
     new_name = None
     
@@ -1787,10 +1852,18 @@ class sql_class():
         for select in parse_one(self.file_content).find_all(exp.Select):
             for projection in select.expressions:
                 if str(projection) != str(projection.alias_or_name):
-                    projection_original = " ".join(str(projection).split()[:-2]).lower()
+                    # Do we have an alias, remove if we do
+                    if "as" in str(projection).lower():
+                        # Remove as
+                        projection_original = str(" ".join(str(projection).split()[:-2]).lower()).strip()
+                    else:
+                        # Keep as the same
+                        projection_original = str(projection).strip()
+                    
                     # Remove all brackets for comparison purposes
                     projection_original = projection_original.replace("(", "").replace(")", "")
                     if projection_original in column_references:
+                        # Check the existing key is the same as 
                         raise ValueError("We are trying to process a SQL but finding multiple identical projections")
                     else:
                         # Like replacement
