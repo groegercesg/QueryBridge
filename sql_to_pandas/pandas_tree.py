@@ -534,6 +534,9 @@ class filter_node():
                 # Do output for subplan mode
                 instructions.append(this_df + " = " + self.params)
                 
+                if hasattr(self, "index_cond"):
+                    instructions.append(self.index_cond)
+                
                 output_cols = choose_aliases(self, codeCompHelper)
                 
                 # Limit to output columns
@@ -590,7 +593,13 @@ class sort_node():
             if len(sort_split) == 1:
                 # No DESC/ASC, therefore is ASC (implied)
                 # Use process_output to      the relation if present
-                column = (process_output(self, [sort_split[0]], codeCompHelper))[0]
+                # This may return a tuple, with the name and an alias, handle this appropriately
+                proc_output = process_output(self, [sort_split[0]], codeCompHelper)
+                if isinstance(proc_output[0], tuple):
+                    column = proc_output[0][0]
+                else:
+                    column = proc_output[0]
+                    
                 keys.append(column)
                 ascendings.append(True)
             else:
@@ -618,26 +627,70 @@ class sort_node():
                 keys.append(column)
         return keys, ascendings
     
-    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):    
-        # TODO: Sometimes, we have a sort_key that is in the output, that gets processed into something different
-        sort_output_index = None
-        for i in range(len(self.output)):
-            if self.sort_key[0] == self.output[i]:
-                sort_output_index = i
+    def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
+        # Variable to store all the instructions we generate
+        instructions = []
         
+        # TODO: Sometimes, we have a sort_key that is in the output, that gets processed into something different
+        sort_output_indexes = []
+        # Compare the sort key with each of the outputs
+        for j in range(len(self.sort_key)):
+            for i in range(len(self.output)):
+                # sort_key might have desc or asc in it
+                sort_key_stripped = str(str(self.sort_key[j]).replace("DESC", "").replace("ASC", "")).strip()
+                if self.sort_key[j] == self.output[i]:
+                    sort_output_indexes.append((j, i))
+                elif sort_key_stripped == self.output[i]:
+                    # Determine what type of sorting it is
+                    if "DESC" == self.sort_key[j][-4:]:
+                        sort_output_indexes.append((j, i, "DESC"))
+                    elif "ASC" == self.sort_key[j][-3:]:
+                        sort_output_indexes.append((j, i, "ASC"))
+                    else:
+                        raise ValueError("Unknown sorting request")
+
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         
-        if sort_output_index != None:
-            # Set sort key to this index
-            self.sort_key = [self.output[sort_output_index]]
+        # Set group_key to new thing
+        if sort_output_indexes != []:
+            for sort, *output in sort_output_indexes:
+                # Unspool output
+                if len(output) == 1:
+                    sort_direction = None
+                    output = output[0]
+                elif len(output) == 2:
+                    # Set these in reverse order to what feels natural so we don't overwrite values
+                    # that we will soon need
+                    sort_direction = output[1]
+                    output = output[0]
+                else:
+                    raise ValueError("Unexpected number of values in the unpacked output")
+                
+                # Set sort key to this index
+                self.sort_key[sort] = self.output[output]
+                
+                # Is it a tuple, set to [0]
+                if isinstance(self.sort_key[sort], tuple):
+                    # If we have a sort_key with a alias, we should rename the column to the alias, and sort by that
+                    # df_sort_4['nation'] = (df_sort_4.n_name)
+                    # Use the previous dataframe as this is happening before the sort, so we can use the alias in the sort
+                    statement = prev_df + "['" + str(self.sort_key[sort][1]) + "'] = " + str(prev_df) + "." + str(self.sort_key[sort][0])
+                    instructions.append(statement)
+                    # Set in codeComp useAlias, to track when we should use the alias
+                    codeCompHelper.useAlias[self.sort_key[sort][0]] =  self.sort_key[sort][1]
+                    # Set to index [1]
+                    self.sort_key[sort] = self.sort_key[sort][1]
+                       
+                # If we have a sorting order then add it onto the end
+                if sort_direction != None:
+                    self.sort_key[sort] = str(self.sort_key[sort] + " " + sort_direction).strip()
               
         # Set sort_keys
         self.sort_key = self.process_sort_key(codeCompHelper)  
         # Set prefixes
         if not isinstance(prev_df, str):
             raise ValueError("Inputted prev_df is not a string!")
-        instructions = []
         
         # Sorting to an intermediate dataframe
         columns, ascendings = self.sort_key
@@ -1073,6 +1126,11 @@ def choose_aliases(self, cCHelper, final_output=False):
             if cCHelper.bracket_replace.get(appendingCol, None) != None:
                 # This col is in the dict, use the replacement as the column in forward
                 appendingCol = cCHelper.bracket_replace(appendingCol)
+                
+            # Check if appendingCol is in the ccHelper useAlias
+            if cCHelper.useAlias.get(appendingCol, None) != None:
+                # The col is in the dict, use the alias stored there 
+                appendingCol = cCHelper.useAlias.get(appendingCol, None)
             
             # Append the column, first check if it is in the indexes, if so, skip
             if final_output:
@@ -1222,21 +1280,23 @@ class group_aggr_node():
     
     def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
         # TODO: Sometimes, we have a group_key that is in the output, that gets processed into something different
-        group_output_index = None
+        group_output_indexes = []
         for i in range(len(self.output)):
-            if self.group_key[0] == self.output[i]:
-                group_output_index = i
+            for j in range(len(self.group_key)):
+                if self.group_key[j] == self.output[i]:
+                    group_output_indexes.append((j, i))
         
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         
         # Set group_key to new thing
-        if group_output_index != None:
-            # Set sort key to this index
-            self.group_key = [self.output[group_output_index]]
-            # Is it a tuple, set to [1]
-            if isinstance(self.group_key[0], tuple):
-                self.group_key[0] = self.group_key[0][1]
+        if group_output_indexes != []:
+            for group, output in group_output_indexes:
+                # Set sort key to this index
+                self.group_key[group] = self.output[output]
+                # Is it a tuple, set to [0]
+                if isinstance(self.group_key[group], tuple):
+                    self.group_key[group] = self.group_key[group][0]
         
         # Process group key
         self.group_key = self.process_group_key(self.group_key)
@@ -1397,7 +1457,8 @@ class group_aggr_node():
         
         # Handle group
         instructions.append(this_df + " = " + prev_df + " \\")
-        instructions.append("    .groupby(" + str(self.group_key) + ") \\")
+        # Use the "sort=False", so that groupby doesn't change the sorting of groups themselves
+        instructions.append("    .groupby(" + str(self.group_key) + ", sort=False) \\")
         instructions.append("    .agg(")
         
         

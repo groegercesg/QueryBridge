@@ -12,23 +12,47 @@ def flip_cond_around(in_cond):
     # (a = b)
     # And we should change it to:
     # (b = a)
-    index = str(in_cond)
-    replace_brackets = False
-    if index[0] == "(" and index[-1] == ")":
+    
+    # Sometimes we have multiple conditions, that each of them we need to flip
+    if " AND " in in_cond:
         # Strip brackets
-        index = index[1:-1]
-        replace_brackets = True
+        if in_cond[0] == "(" and in_cond[-1] == ")":
+            # Strip brackets
+            in_cond = in_cond[1:-1]
         
-    index_split = str(index).split(" = ")
-    if len(index_split) != 2:
-        raise ValueError("There should be two sides to an index condition")
+        split_cond = in_cond.split(" AND ")
+        for i in range(len(split_cond)):
+            split_cond[i] = split_cond[i].strip()
     else:
-        new_index = str(index_split[1]) + " = " + str(index_split[0])
-        if replace_brackets:
-            new_index = "(" + new_index + ")"
+        # Use the same variable for processing, just set to a single element
+        split_cond = [in_cond]        
+    
+    # Iterate through split_cond
+    for i in range(len(split_cond)):
+        index = str(split_cond[i])
+        replace_brackets = False
+        if index[0] == "(" and index[-1] == ")":
+            # Strip brackets
+            index = index[1:-1]
+            replace_brackets = True
             
-    # Return it out
-    return new_index
+        index_split = str(index).split(" = ")
+        if len(index_split) != 2:
+            raise ValueError("There should be two sides to an index condition")
+        else:
+            new_index = str(index_split[1]) + " = " + str(index_split[0])
+            if replace_brackets:
+                new_index = "(" + new_index + ")"
+                
+        # Set it out
+        split_cond[i] = new_index
+        
+    if len(split_cond) == 1:
+        # Only one value
+        return str(split_cond[0].strip())
+    else:
+        # Join back together
+        return str("(" + str(" AND ".join(split_cond)).strip() + ")")
 
 def process_into_relations_list(output):
     relations = set()
@@ -85,80 +109,79 @@ def solve_nested_loop_node(tree):
             # Sometimes we need to flip the condition around, and sometimes we don't
             if determine_flip(tree) == True:
                 # We should flip
-                merging_condition = flip_cond_around(tree.filter)
-            else:
-                # We should not flip
-                merging_condition = tree.filter 
-            tree.filter = None
-        else:
-            for individual_plan in tree.plans:
-                if individual_plan.node_type == "Index Scan":
-                    # Perform work for the merging condition
-                    if merging_condition != None:
-                        # We have already found the merging condition
-                        
-                        # We need to decide which based on which condition has more in common with the
-                        # present relations
-                        
-                        # Gather relations used in tree.plans:
-                        present_relations = []
-                        for i in range(len(tree.plans)):
-                            present_relations.append(tree.plans[i].relation_name)
-                        
-                        # Print out both merge_conditions
-                        merge_conditions = []
-                        for i in range(len(tree.plans)):
-                            index_cond = tree.plans[i].index_cond
-                            merge_conditions.append(index_cond)
-                        
-                        # Count up which condition has the most relations, we should use this one and leave the other to
-                        # be evaluated 
-                        counted_conds = []
-                        for i in range(len(merge_conditions)):
-                            index_cond = merge_conditions[i]
-                            
-                            if index_cond[0] == "(" and index_cond[-1] == ")":
-                                # Strip brackets
-                                index_cond = index_cond[1:-1]
-                            
-                            split_cnd = index_cond.split(" = ")
-                            for j in range(len(split_cnd)):
-                                split_cnd[j] = split_cnd[j].split(".")[0]
-                                
-                            cnd_count = 0
-                            for j in split_cnd:
-                                if j in present_relations:
-                                    cnd_count += 1
-                            
-                            counted_conds.append(cnd_count)
-                        
-                        # Find maximum value index, that index in merge conditions, is the one we should
-                        # propagate upwards
-                        decided_merge_cond = merge_conditions[counted_conds.index(max(counted_conds))]
-                        merging_condition = flip_cond_around(decided_merge_cond)
-                        
-                        #raise Exception("We have found two merging conditions")
-                        continue
-                    else:
-                        merging_condition = flip_cond_around(individual_plan.index_cond)
+                tree.filter = flip_cond_around(tree.filter)
+            
+            # We set the filter, swap around if we need to, but generally leave it in situ
+            
+        for individual_plan in tree.plans:
+            if individual_plan.node_type == "Index Scan":
+                # Perform work for the merging condition
+                if merging_condition != None:
+                    # We have already found the merging condition
                     
-                    # Perform work for the filter condition
-                    # We are going to investigate individual_plan.filter
-                    # We want to use a regular expression to split up a string but respect nested brackets
-                    if hasattr(individual_plan, "filter"):
-                        keep_filter, up_filter = process_matches(str(individual_plan.filter)[1:-1], individual_plan.relation_name)
+                    # We need to decide which based on which condition has more in common with the
+                    # present relations
+                    
+                    # Gather relations used in tree.plans:
+                    present_relations = []
+                    for i in range(len(tree.plans)):
+                        present_relations.append(tree.plans[i].relation_name)
+                    
+                    # Print out both merge_conditions
+                    merge_conditions = []
+                    for i in range(len(tree.plans)):
+                        index_cond = tree.plans[i].index_cond
+                        merge_conditions.append(index_cond)
+                    
+                    # Count up which condition has the most relations, we should use this one and leave the other to
+                    # be evaluated 
+                    counted_conds = []
+                    for i in range(len(merge_conditions)):
+                        index_cond = merge_conditions[i]
                         
-                        # Handle keep_filter ending in "AND" or "OR"
-                        if keep_filter[-1] == "AND" or keep_filter[-1] == "OR":
-                            # Pop last element out
-                            keep_filter.pop()
+                        if index_cond[0] == "(" and index_cond[-1] == ")":
+                            # Strip brackets
+                            index_cond = index_cond[1:-1]
                         
-                        # Set individual_node filters back to keep_filter
-                        individual_plan.filter = "(" + " ".join(keep_filter) + ")"
+                        split_cnd = index_cond.split(" = ")
+                        for j in range(len(split_cnd)):
+                            split_cnd[j] = split_cnd[j].split(".")[0]
+                            
+                        cnd_count = 0
+                        for j in split_cnd:
+                            if j in present_relations:
+                                cnd_count += 1
                         
-                        # Set tree filters
-                        if up_filter != []:
-                            tree.add_filter(" ".join(up_filter))
+                        counted_conds.append(cnd_count)
+                    
+                    # Find maximum value index, that index in merge conditions, is the one we should
+                    # propagate upwards
+                    decided_merge_cond = merge_conditions[counted_conds.index(max(counted_conds))]
+                    merging_condition = flip_cond_around(decided_merge_cond)
+                    
+                    #raise Exception("We have found two merging conditions")
+                    continue
+                else:
+                    if hasattr(individual_plan, "index_cond"):
+                        merging_condition = flip_cond_around(individual_plan.index_cond)
+                
+                # Perform work for the filter condition
+                # We are going to investigate individual_plan.filter
+                # We want to use a regular expression to split up a string but respect nested brackets
+                if hasattr(individual_plan, "filter"):
+                    keep_filter, up_filter = process_matches(str(individual_plan.filter)[1:-1], individual_plan.relation_name)
+                    
+                    # Handle keep_filter ending in "AND" or "OR"
+                    if keep_filter[-1] == "AND" or keep_filter[-1] == "OR":
+                        # Pop last element out
+                        keep_filter.pop()
+                    
+                    # Set individual_node filters back to keep_filter
+                    individual_plan.filter = "(" + " ".join(keep_filter) + ")"
+                    
+                    # Set tree filters
+                    if up_filter != []:
+                        tree.add_filter(" ".join(up_filter))
                         
         if merging_condition != None:
             tree.add_merge_cond(merging_condition)
@@ -171,7 +194,14 @@ def solve_nested_loop_node(tree):
                         # Set to none
                         individual_plan.index_cond = None
         else:
-            raise Exception("Didn't find a merging condition to add to our Nested Loop node.")
+            # We haven't got a merging condition
+            # We set the filter, to be this, and wipe the filter
+            if hasattr(tree, "filter"):
+                tree.add_merge_cond(tree.filter)
+                # Set filter to none
+                tree.filter = None
+            else:
+                raise Exception("Didn't find a merging condition to add to our Nested Loop node.")
     
     if tree.plans != None:
         for individual_plan in tree.plans:
