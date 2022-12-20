@@ -1,17 +1,16 @@
 # Dataframe SQL Benchmark
 
-Queries from [link](https://github.com/dragansah/tpch-dbgen/tree/master/queries)
+## Current Comparison with SQL
 
-Setup from: https://github.com/Data-Science-Platform/tpch-pgsql
+![Comparison Table, Scaling Factor 1](benchmarking/analysis_results/all_queries_compare_queries.svg)
 
 ## Tests for sql_to_pandas
 
-Located in [queries/tests](queries/tests). Can be run with the following command:
+Located in [sql_to_pandas/tests](sql_to_pandas/tests). Can be run with the following command:
 
-```python
+```bash
 conda activate sql_benchmark
-pytest where_general_tests.py
-pytest like_operator_tests.py
-pytest select_function_tests.py
+cd sql_to_pandas/tests
+python3 -m pytest
 ```
 
