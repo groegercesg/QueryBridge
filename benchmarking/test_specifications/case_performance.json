@@ -1,0 +1,39 @@
+{
+    "Test Name":"Case Performance",
+    "SQL Queries": [
+        {
+            "Query Name": "Query 8",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/8.sql",
+            "Required Data": ["part", "supplier", "lineitem", "orders", "customer", "nation", "region"],
+            "Pandas Name": "q8_pandas.py"
+        },
+        {
+            "Query Name": "Query 12",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/12.sql",
+            "Required Data": ["orders", "lineitem"],
+            "Pandas Name": "q12_pandas.py"
+        },
+        {
+            "Query Name": "Query 14",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/14.sql",
+            "Required Data": ["lineitem", "part"],
+            "Pandas Name": "q14_pandas.py"
+        }
+    ],
+    "Temporary Directory": "benchmarking/temp_queries",
+    "SQL Converter Location": "sql_to_pandas/sql_to_pandas.py",
+    "Pandas Data Loader": "tpch_data_loader.py",
+    "Number of Query Runs": 25,
+    "Results Location": "benchmarking/test_results/before_case_performance_results.csv",
+    "Database Connection Details": {
+            "User": "benchmarker",
+            "Password": "benchMugPassword",
+            "Host": "localhost",
+            "Port": "5432",
+            "Database": "tpchdb"
+        },
+    "Results Precision": 4
+}   

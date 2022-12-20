@@ -74,7 +74,8 @@ def process_output(self, output, codecomphelper):
         
         brack_cleaned_lower_output = brack_cleaned_output.lower()
         # A brack cleaned option that removes multiple equals into one, and get's rid of quotes and dots
-        brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "").replace("." , "")
+        brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "")
+        brack_cleaned_equal_quote_lower_output_dots = brack_cleaned_equal_quote_lower_output.replace("." , "")
         if brack_cleaned_output in codecomphelper.sql.column_references:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
@@ -87,6 +88,10 @@ def process_output(self, output, codecomphelper):
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output])
+        elif brack_cleaned_equal_quote_lower_output_dots in codecomphelper.sql.column_references:
+            # We have an item in output that needs to be changed
+            output_original_value = cleaned_output
+            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_dots])
         elif relation_cleaned_output in codecomphelper.bracket_replace:
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.bracket_replace[relation_cleaned_output])
