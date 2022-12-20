@@ -144,26 +144,18 @@ def process_output(self, output, codecomphelper):
         # Final interrupt to catch count(*)
         if isinstance(output[i], tuple):
             if "count(*)" in output[i][0].lower():
-                chosen_column = None
-                if len(codecomphelper.indexes) < 1:
-                    # Use self.output[0]
-                    chosen_column = str(self.output[0])
-                    #raise ValueError("No indexes in CodeCompHelper")
-                else: 
-                    chosen_column = str(codecomphelper.indexes[0])
+                # Pick a column we know is going to exist after the group by
+                # This is therefore one that we want to output, we take the first
+                chosen_column = str(self.output[0])
 
                 output[i] = ("count(" + str(chosen_column) + ")", output[i][1])
             elif "extract" in output[i][0].lower():
                 output[i] = (handle_extract(output[i][0]), output[i][1])
         else:
             if "count(*)" in output[i].lower():
-                chosen_column = None
-                if len(codecomphelper.indexes) < 1:
-                    # Use self.output[0]
-                    chosen_column = str(self.output[0])
-                    #raise ValueError("No indexes in CodeCompHelper")
-                else: 
-                    chosen_column = str(codecomphelper.indexes[0])
+                # Pick a column we know is going to exist after the group by
+                # This is therefore one that we want to output, we take the first
+                chosen_column = str(self.output[0])
                 
                 output[i] = "count(" + str(chosen_column) + ")"
             elif "extract" in output[i].lower():
@@ -1373,7 +1365,15 @@ class group_aggr_node():
         group_output_indexes = []
         for i in range(len(self.output)):
             for j in range(len(self.group_key)):
+                # TODO: sometimes the output[i] has brackets around it, which prevents 
+                # us from making a fair and accurate comparison
+                bracket_stripped_output = None
+                if (self.output[i][0] == "(") and (self.output[i][-1] == ")"):
+                    bracket_stripped_output = self.output[i][1:-1]
+                
                 if self.group_key[j] == self.output[i]:
+                    group_output_indexes.append((j, i))
+                elif (bracket_stripped_output != None) and (self.group_key[j] == bracket_stripped_output):
                     group_output_indexes.append((j, i))
         
         # Process output:
@@ -1789,12 +1789,14 @@ class merge_node():
             right_labels.append(right)
         
         # Create statement
-        if self.join_type == "Semi":
+        if self.join_type.lower() == "semi":
             if (len(left_labels) > 1) or (len(right_labels) > 1):
                 raise ValueError("Unexpected size of labels in Semi Join merge")
             # Add support for a semi join
             # df_merge_1 =  df_filter_1[df_filter_1.o_orderkey.isin(df_filter_2["l_orderkey"])]
             statement = left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + '["' + str(right_labels[0]) + '"])]'
+        elif self.join_type.lower() == "left":
+            statement = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('left') + '")'
         else:
             statement = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+')'
         

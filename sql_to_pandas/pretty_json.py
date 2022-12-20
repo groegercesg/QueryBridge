@@ -1,5 +1,5 @@
 import json
-output_file = "results/16/16_explain_0.json"
+output_file = "results/13/13_explain_0.json"
 
 f = open(output_file)   
   
