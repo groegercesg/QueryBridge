@@ -11,6 +11,8 @@ import re
 # Expression Parsing
 from expr_tree import Expression_Solver
 
+from collections import defaultdict
+
 def clean_extra_brackets(s):
     for i in s:s=regex.sub('(\(|^)\K(\((((?2)|[^()])*)\))(?=\)|$)',r'\3',s)
     return s
@@ -72,6 +74,7 @@ def process_output(self, output, codecomphelper):
         
         brack_cleaned_lower_output = brack_cleaned_output.lower()
         # A brack cleaned option that removes multiple equals into one, and get's rid of quotes
+        # TODO: Sometimes we reach here are there are three equals
         brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "")
         if brack_cleaned_output in codecomphelper.sql.column_references:
             # We have an item in output that needs to be changed
@@ -192,8 +195,14 @@ def remove_range(sentence, matches):
          ])
     
 def do_replaces(sentence, replaces):
+    # We have a list of replacements to make, this is in order
+    # We make a dictionary of replaces and occurances, i.e. number of times to replace
+    replace_dict = defaultdict(int)
     for replace in replaces:
-        sentence = sentence.replace(replace[0], replace[1], 1)
+        replace_dict[replace] += 1
+    
+    for key in replace_dict:
+        sentence = sentence.replace(key[0], key[1], replace_dict[key])
         
     return sentence
 
@@ -320,10 +329,8 @@ def clean_type_information(self, content):
     if remove_ranges != [] or replaces != []:
         if remove_ranges != []:
             content = remove_range(content, remove_ranges)
-        # print(content)
         if replaces != []:
             content = do_replaces(content, replaces)
-        # print(content)
     
     return content
 
