@@ -65,6 +65,13 @@
             "Pandas Name": "q11_pandas.py"
         },
         {
+            "Query Name": "Query 12",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/12.sql",
+            "Required Data": ["orders", "lineitem"],
+            "Pandas Name": "q12_pandas.py"
+        },
+        {
             "Query Name": "Query 14",
             "Results Name": "Pandas",
             "Query Location": "benchmarking/queries/14.sql",

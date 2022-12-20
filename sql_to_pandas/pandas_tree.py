@@ -1095,7 +1095,10 @@ def aggregate_case(inner_string, prev_df):
                 # o_orderpriority == '1-URGENT'
                 split_on[j] = "( x['" + str(split_on_eq[0]) + "']" + str(re_assemble) + str(split_on_eq[1]) + " )"
                 
-            values[i] = str(join_on.join(split_on)).strip()                
+            values[i] = str(join_on.join(split_on)).strip()     
+            
+        elif (len(values[i]) > 1):
+            values[i] = aggregate_sum(values[i], s_group = "x")           
     
     # li_pa_join.apply(lambda x: x["l_extendedprice"] * (1 - x["l_discount"]) if x["p_type"].startswith("PROMO") else 0, axis=1)
     inner_string = prev_df + '.apply(lambda x: ' + str(values[0]) + ' if ' + str(values[1]) + ' else ' + str(values[2]) + ', axis=1)'        
