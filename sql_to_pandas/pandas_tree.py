@@ -1006,9 +1006,9 @@ def inner_aggregation(string, prev_df):
     return outer_string
 
 def aggregate_case(inner_string, prev_df):
-    else_value = inner_string.split("ELSE")[1]
-    when_value = inner_string.split("CASE WHEN")[1].split("THEN")[0]
-    then_value = inner_string.split("THEN")[1].split("ELSE")[0]
+    else_value = str(inner_string.split("ELSE")[1].split("END")[0]).strip()
+    when_value = str(inner_string.split("CASE WHEN")[1].split("THEN")[0]).strip()
+    then_value = str(inner_string.split("THEN")[1].split("ELSE")[0]).strip()
     
     # Clean values
     # Put values in the order of the pandas expression
@@ -1060,8 +1060,42 @@ def aggregate_case(inner_string, prev_df):
             values[i] = 'x["' + split_starts[0] + '"].startswith("' + split_starts[1] + '")'
             
         # Hand this off to the s_group function
-        elif ("*" or "-" in values[i]) and (len(values[i]) > 1):
+        elif ("*" in values[i]):  # and (len(values[i]) > 1)
             values[i] = aggregate_sum(values[i], s_group = "x")
+            
+        elif ("OR" in values[i]) or ("AND" in values[i]):
+            # Shuck the value
+            if (values[i][0] == "(") and (values[i][-1] == ")"):
+                values[i] = values[i][1:-1]
+            
+            if " OR " in values[i]:
+                split_on = values[i].split(" OR ")
+                join_on = " | "
+            elif " AND " in values[i]:
+                split_on = values[i].split(" AND ")
+                join_on = " & "
+            else:
+                raise ValueError("Not sure what we want to split the string on")
+            
+            for j in range(len(split_on)):
+                # If contained in brackets
+                if (split_on[j][0] == "(") and (split_on[j][-1] == ")"):
+                    split_on[j] = split_on[j][1:-1]
+                
+                if " == " in split_on[j]:
+                    split_on_eq = split_on[j].split(" == ")
+                    re_assemble = " == "
+                elif " <> " in split_on[j]:
+                    split_on_eq = split_on[j].split(" <> ")
+                    re_assemble = " != "
+                else:
+                    raise ValueError("Unknown parameter we're trying to split on")
+                    
+                # Should be of the form:
+                # o_orderpriority == '1-URGENT'
+                split_on[j] = "( x['" + str(split_on_eq[0]) + "']" + str(re_assemble) + str(split_on_eq[1]) + " )"
+                
+            values[i] = str(join_on.join(split_on)).strip()                
     
     # li_pa_join.apply(lambda x: x["l_extendedprice"] * (1 - x["l_discount"]) if x["p_type"].startswith("PROMO") else 0, axis=1)
     inner_string = prev_df + '.apply(lambda x: ' + str(values[0]) + ' if ' + str(values[1]) + ' else ' + str(values[2]) + ', axis=1)'        
@@ -1218,13 +1252,26 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
             treeHelper.expr_tree_tracker += 1
             
             before, during, after = tree.group_aggregate()
-            before_aggrs += before
-            during_aggrs += during
             # Edit after array
             new_after = []
             for item in after:
                 new_after.append([str(col[1]), item])
             
+            # Efficiency improval
+            # TODO: Hardcoded for a single element at the moment
+            if (len(new_after) == 1) and (len(during) == 1):
+                # get_temporary column_value
+                temp_col_val = str(new_after[0][1].split(".")[1]).strip()
+                if any(x in temp_col_val for x in ["*", "-", "/", "+"]):
+                    # If any aggregation function in the col, val, then don't do the efficiency boost
+                    pass
+                elif temp_col_val == during[0][0]:
+                    # Then we can do the replacement
+                    during[0][0] = new_after[0][0]
+                    del new_after[0]
+            
+            before_aggrs += before
+            during_aggrs += during
             after_aggrs += new_after
             
             # Set back beforeCounter
