@@ -245,17 +245,15 @@ def test_group_aggregation_complete_basic():
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
         df_filter_1 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
-        df_filter_1['before_1'] = (df_filter_1.o_orderkey)
         df_group_1 = df_filter_1 \\
-            .groupby(['o_custkey']) \\
+            .groupby(['o_custkey'], sort=False) \\
             .agg(
-                count_before_1=("before_1", "count"),
+                count_orders=("o_orderkey", "count"),
             )
-        df_group_1['count_orders'] = df_group_1.count_before_1
         df_group_1 = df_group_1[['count_orders']]
         return df_group_1""").strip()
     
-    sql_query = "SELECT COUNT ( o_orderkey ) as count_orders FROM orders GROUP BY o_custkey;"
+    sql_query = "SELECT o_custkey, COUNT ( o_orderkey ) as count_orders FROM orders GROUP BY o_custkey;"
     
     pandas_query = run_query(sql_query, constants)
     
@@ -293,30 +291,22 @@ def test_group_aggregation_complete_simple():
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
         df_filter_1 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
-        df_filter_1['before_1'] = (df_filter_1.o_custkey)
-        df_filter_1['before_2'] = (df_filter_1.o_totalprice)
-        df_filter_1['before_3'] = (df_filter_1.o_orderkey)
-        df_filter_1['before_4'] = (df_filter_1.o_shippriority)
-        df_filter_1['before_5'] = (df_filter_1.o_custkey)
-        df_filter_1['before_6'] = (df_filter_1.o_totalprice)
-        df_filter_1['before_7'] = (df_filter_1.o_orderkey)
-        df_filter_1['before_8'] = (df_filter_1.o_shippriority)
         df_group_1 = df_filter_1 \\
-            .groupby(['o_custkey']) \\
+            .groupby(['o_custkey'], sort=False) \\
             .agg(
-                count_before_1=("before_1", "count"),
-                mean_before_2=("before_2", "mean"),
-                sum_before_3=("before_3", "sum"),
-                min_before_4=("before_4", "min"),
-                max_before_5=("before_5", "max"),
-                min_before_6=("before_6", "min"),
-                max_before_7=("before_7", "max"),
-                mean_before_8=("before_8", "mean"),
+                count_o_custkey=("o_custkey", "count"),
+                mean_o_totalprice=("o_totalprice", "mean"),
+                sum_o_orderkey=("o_orderkey", "sum"),
+                min_o_shippriority=("o_shippriority", "min"),
+                max_o_custkey=("o_custkey", "max"),
+                min_o_totalprice=("o_totalprice", "min"),
+                max_o_orderkey=("o_orderkey", "max"),
+                mean_o_shippriority=("o_shippriority", "mean"),
             )
-        df_group_1['customer'] = (df_filter_1.o_custkey)
-        df_group_1['fun_aggregate'] = (((df_group_1.count_before_1 + df_group_1.mean_before_2) / (df_group_1.sum_before_3 + df_group_1.min_before_4)) * 25)
-        df_group_1['massive_query'] = (((df_group_1.max_before_5 * df_group_1.min_before_6) * (df_group_1.max_before_7 - df_group_1.mean_before_8)) + 5)
-        df_group_1 = df_group_1[['customer', 'fun_aggregate', 'massive_query']]
+        df_group_1.index = df_group_1.index.rename('customer')
+        df_group_1['fun_aggregate'] = (((df_group_1.count_o_custkey + df_group_1.mean_o_totalprice) / (df_group_1.sum_o_orderkey + df_group_1.min_o_shippriority)) * 25)
+        df_group_1['massive_query'] = (((df_group_1.max_o_custkey * df_group_1.min_o_totalprice) * (df_group_1.max_o_orderkey - df_group_1.mean_o_shippriority)) + 5)
+        df_group_1 = df_group_1[['fun_aggregate', 'massive_query']]
         return df_group_1""").strip()
     
     sql_query = "SELECT o_custkey as customer, ( COUNT ( o_custkey ) + AVG ( o_totalprice ) ) / ( SUM(o_orderkey) + MIN(o_shippriority) ) * 25 as fun_aggregate, ( MAX ( o_custkey ) * MIN ( o_totalprice ) ) * ( MAX(o_orderkey) - AVG(o_shippriority) ) - -5 as massive_query FROM orders GROUP BY o_custkey;"
@@ -336,8 +326,8 @@ def test_group_aggregation_complete_annoying():
     pandas_expected = inspect.cleandoc("""
         df_filter_1 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
         df_filter_1['before'] = (df_filter_1.o_custkey * (df_filter_1.o_totalprice / -1))
-        df_group_1 = df_filter_1 \
-            .groupby(['o_custkey']) \
+        df_group_1 = df_filter_1 \\
+            .groupby(['o_custkey']) \\
             .agg(
                 count_before=("before", "count"),
                 mean_o_totalprice=("o_totalprice", "mean"),
@@ -362,27 +352,21 @@ def test_group_aggregation_complete_complex():
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
         df_filter_1 = lineitem[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-        df_filter_1['before_1'] = (df_filter_1.l_quantity)
-        df_filter_1['before_2'] = ((df_filter_1.l_discount) * 0.5)
-        df_filter_1['before_3'] = (df_filter_1.l_extendedprice)
-        df_filter_1['before_4'] = (df_filter_1.l_tax)
-        df_filter_1['before_5'] = (df_filter_1.l_quantity)
-        df_filter_1['before_6'] = (df_filter_1.l_discount)
-        df_filter_1['before_7'] = (((df_filter_1.l_extendedprice) * (1 - (df_filter_1.l_discount))) * (1 + (df_filter_1.l_tax)))
+        df_filter_1['before_1'] = ((df_filter_1.l_discount) * 0.5)
+        df_filter_1['before_2'] = (((df_filter_1.l_extendedprice) * (1 - (df_filter_1.l_discount))) * (1 + (df_filter_1.l_tax)))
         df_group_1 = df_filter_1 \\
-            .groupby(['l_returnflag', 'l_linestatus']) \\
+            .groupby(['l_returnflag', 'l_linestatus'], sort=False) \\
             .agg(
-                sum_before_1=("before_1", "sum"),
-                mean_before_2=("before_2", "mean"),
-                sum_before_3=("before_3", "sum"),
-                min_before_4=("before_4", "min"),
-                count_before_5=("before_5", "count"),
-                min_before_6=("before_6", "min"),
-                sum_before_7=("before_7", "sum"),
+                sum_l_quantity=("l_quantity", "sum"),
+                mean_before_1=("before_1", "mean"),
+                sum_l_extendedprice=("l_extendedprice", "sum"),
+                min_l_tax=("l_tax", "min"),
+                count_l_quantity=("l_quantity", "count"),
+                min_l_discount=("l_discount", "min"),
+                sum_charge=("before_2", "sum"),
             )
-        df_group_1['sum_qty'] = ((df_group_1.sum_before_1 * df_group_1.mean_before_2) - 72)
-        df_group_1['sum_base_price'] = (df_group_1.sum_before_3 / (((df_group_1.count_before_5 - df_group_1.min_before_6) - df_group_1.min_before_4) * 0.5))
-        df_group_1['sum_charge'] = df_group_1.sum_before_7
+        df_group_1['sum_qty'] = ((df_group_1.sum_l_quantity * df_group_1.mean_before_1) - 72)
+        df_group_1['sum_base_price'] = (df_group_1.sum_l_extendedprice / (((df_group_1.count_l_quantity - df_group_1.min_l_discount) - df_group_1.min_l_tax) * 0.5))
         df_group_1 = df_group_1[['sum_qty', 'sum_base_price', 'sum_charge']]
         return df_group_1""").strip()
     

@@ -73,9 +73,8 @@ def process_output(self, output, codecomphelper):
                         codecomphelper.bracket_replace[new_key] = new_value
         
         brack_cleaned_lower_output = brack_cleaned_output.lower()
-        # A brack cleaned option that removes multiple equals into one, and get's rid of quotes
-        # TODO: Sometimes we reach here are there are three equals
-        brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "")
+        # A brack cleaned option that removes multiple equals into one, and get's rid of quotes and dots
+        brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "").replace("." , "")
         if brack_cleaned_output in codecomphelper.sql.column_references:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
@@ -1264,6 +1263,23 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
                     # Then we can do the replacement
                     during[0][0] = new_after[0][0]
                     del new_after[0]
+                    
+            # Column rename, for index
+            # It will have no before, during and only 1 after
+            if (before == []) and (during == []) and (len(new_after) == 1):
+                # Strip outer brackets off if they're present
+                new_after_col = new_after[0][1]
+                if (new_after_col[0] == "(") and (new_after_col[-1] == ")"):
+                    new_after_col = new_after_col[1:-1]
+                temp_col_var = str(new_after_col.split(".")[1]).strip()
+                # If it's an index
+                if temp_col_var in codeCompHelper.indexes:
+                    if len(codeCompHelper.indexes) != 1:
+                        raise ValueError("Need to write column rename code")
+                    else:
+                        # We should make the col an index
+                        codeCompHelper.setIndexes(new_after[0][0])
+                        new_after[0] = ["", this_df + str(".index.rename('") + str(new_after[0][0]) +"')"]
             
             before_aggrs += before
             during_aggrs += during
@@ -1672,8 +1688,13 @@ class group_aggr_node():
         for after_name, after_command in after_group:
             # TODO: We have to insert this_df in the after_command
             # Maybe we can do this in the replacement function of expr_tree
-            instructions.append(this_df + "['" + after_name + "'] = " + after_command + "")
-        
+            if (after_name == "") and ("index" in after_command):
+                # Do without a column, for index rename
+                # df_group_1.index = df_group_1.index.rename('customer')
+                instructions.append(this_df + ".index = " + after_command + "")
+            else:
+                instructions.append(this_df + "['" + after_name + "'] = " + after_command + "")
+            
         # Apply post_filters
         if hasattr(self, "filter"):
             # check codeCompHelper.bracket_replace
@@ -2084,10 +2105,14 @@ class sql_class():
                             if split_proj[0].isdigit():
                                 pass
                             else:
-                                # This is meant to catch a scenario like:
-                                    # n2.n_name
-                                    # And turn it into: n_name
-                                projection_original = str(split_proj[1]).strip()
+                                # If we have any operators, then we need to preserve all of the projection, but cut out the .
+                                if any(x in split_proj[0] for x in ["*", "/", "-", "+"]):
+                                    projection_original = projection_original.replace(".", "")
+                                else:
+                                    # This is meant to catch a scenario like:
+                                        # n2.n_name
+                                        # And turn it into: n_name
+                                    projection_original = str(split_proj[1]).strip()
                             
                         column_references[projection_original] = str(projection.alias_or_name)
 

@@ -1,0 +1,1 @@
+SELECT o_custkey, COUNT ( o_orderkey ) as count_orders FROM orders GROUP BY o_custkey ORDER BY o_custkey;
