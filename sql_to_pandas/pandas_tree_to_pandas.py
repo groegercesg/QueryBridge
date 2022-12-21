@@ -189,7 +189,7 @@ def postorder_traversal(tree, pandas_statements, baseCodeCompHelper, aggrs, tree
             if hasattr(tree, "data"):
                 codeCompHelper.add_relation(tree.data)
             
-            if hasattr(tree, "alias"):
+            if hasattr(tree, "alias") and hasattr(tree, "data"):
                 # Assume that we NEVER have an alias but no data
                 if tree.data != tree.alias:
                     # Add the Alias to relations
@@ -202,7 +202,7 @@ def postorder_traversal(tree, pandas_statements, baseCodeCompHelper, aggrs, tree
             if hasattr(tree, "data"):
                 codeCompHelper.add_relation(tree.data)
                 
-            if hasattr(tree, "alias"):
+            if hasattr(tree, "alias") and hasattr(tree, "data"):
                 # Assume that we NEVER have an alias but no data
                 if tree.data != tree.alias:
                     # Add the Alias to relations
@@ -217,7 +217,7 @@ def postorder_traversal(tree, pandas_statements, baseCodeCompHelper, aggrs, tree
         if hasattr(tree, "data"):
             codeCompHelper.add_relation(tree.data)
             
-        if hasattr(tree, "alias"):
+        if hasattr(tree, "alias") and hasattr(tree, "data"):
             # Assume that we NEVER have an alias but no data
             if tree.data != tree.alias:
                 # Add the Alias to relations

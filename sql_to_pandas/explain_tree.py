@@ -554,7 +554,7 @@ def make_tree(json, tree):
     elif node_type.lower() == "merge join":
         node_class = merge_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Merge Cond'], node['Parent Relationship'])
         
-        if "Join Filter":
+        if "Join Filter" in node:
             node_class.add_filter(node['Join Filter'])
     elif node_type.lower() == "materialize":
         node_class = materialize_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])

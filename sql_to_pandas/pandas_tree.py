@@ -77,7 +77,14 @@ def process_output(self, output, codecomphelper):
         brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "")
         brack_cleaned_equal_quote_lower_output_dots = brack_cleaned_equal_quote_lower_output.replace("." , "")
         dot_cleaned_output = cleaned_output.replace(".", "")
-        if brack_cleaned_output in codecomphelper.sql.column_references:
+        if dot_cleaned_output in codecomphelper.sql.column_references:
+            output_original_value = cleaned_output
+            # Make a special 3 element tuple for this situation
+            if codecomphelper.useAlias.get(dot_cleaned_output, None) != None:
+                output[i] = (codecomphelper.useAlias.get(dot_cleaned_output, None), codecomphelper.sql.column_references[dot_cleaned_output], dot_cleaned_output)
+            else:
+                output[i] = (output_original_value, codecomphelper.sql.column_references[dot_cleaned_output], dot_cleaned_output)        
+        elif brack_cleaned_output in codecomphelper.sql.column_references:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_output])
@@ -93,13 +100,6 @@ def process_output(self, output, codecomphelper):
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_dots])
-        elif dot_cleaned_output in codecomphelper.sql.column_references:
-            output_original_value = cleaned_output
-            # Make a special 3 element tuple for this situation
-            if codecomphelper.useAlias.get(dot_cleaned_output, None) != None:
-                output[i] = (codecomphelper.useAlias.get(dot_cleaned_output, None), codecomphelper.sql.column_references[dot_cleaned_output], dot_cleaned_output)
-            else:
-                output[i] = (output_original_value, codecomphelper.sql.column_references[dot_cleaned_output], dot_cleaned_output)        
         elif relation_cleaned_output in codecomphelper.bracket_replace:
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.bracket_replace[relation_cleaned_output])
@@ -2214,6 +2214,11 @@ class sql_class():
                                         # n2.n_name
                                         # And turn it into: n_name
                                     # projection_original = str(split_proj[1]).strip()
+                                    
+                                    # Add also the split after the dot of it
+                                    column_references[projection_original.split(".")[1].strip()] = str(projection.alias_or_name)
+                                    
+                                    
                                     # This doesn't work, instead we need to keep the "n1" part to differentiate it
                                     projection_original = projection_original.replace(".", "")
                             

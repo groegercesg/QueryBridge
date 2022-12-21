@@ -37,6 +37,13 @@
             "Pandas Name": "q6_pandas.py"
         },
         {
+            "Query Name": "Query 7",
+            "Results Name": "Pandas",
+            "Query Location": "benchmarking/queries/7.sql",
+            "Required Data": ["supplier", "lineitem", "orders", "customer", "nation"],
+            "Pandas Name": "q7_pandas.py"
+        },
+        {
             "Query Name": "Query 8",
             "Results Name": "Pandas",
             "Query Location": "benchmarking/queries/8.sql",
