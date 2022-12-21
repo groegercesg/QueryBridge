@@ -166,6 +166,9 @@ class merge_join_node(base_node):
         self.merge_cond = merge_cond
         self.parent_relationship = parent_relationship
         
+    def add_filter(self, in_filter):
+        self.filter = in_filter
+        
 class materialize_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, parent_relationship):
         super().__init__(node_type, parallel_aware, async_capable, output)

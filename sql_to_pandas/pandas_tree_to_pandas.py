@@ -25,6 +25,7 @@ class CodeCompilation():
         self.column_limiting = column_limiting
         self.bracket_replace = {}
         self.useAlias = {}
+        self.aliasRelationPairs = {}
         
     def setAggr(self, aggr):
         self.usePostAggr = aggr
@@ -60,6 +61,8 @@ class CodeCompilation():
         new_use_post_aggr = self.usePostAggr or other.usePostAggr
         # useAlias
         new_use_alias = self.useAlias | other.useAlias
+        # relationAliasPairs
+        new_alias_relation_pairs = self.aliasRelationPairs | other.aliasRelationPairs
         
         # Make class
         returningCodeComp = CodeCompilation(new_sql, new_column_ordering, new_column_limiting)
@@ -68,6 +71,7 @@ class CodeCompilation():
         returningCodeComp.indexes = new_indexes
         returningCodeComp.bracket_replace = new_bracket_replace
         returningCodeComp.useAlias = new_use_alias
+        returningCodeComp.aliasRelationPairs = new_alias_relation_pairs
         
         return returningCodeComp
 
@@ -184,16 +188,43 @@ def postorder_traversal(tree, pandas_statements, baseCodeCompHelper, aggrs, tree
             codeCompHelper.setAggr(True)
             if hasattr(tree, "data"):
                 codeCompHelper.add_relation(tree.data)
+            
+            if hasattr(tree, "alias"):
+                # Assume that we NEVER have an alias but no data
+                if tree.data != tree.alias:
+                    # Add the Alias to relations
+                    codeCompHelper.add_relation(tree.alias)
+                    # Add the relation alias pair to ccHelper
+                    codeCompHelper.aliasRelationPairs[tree.alias] = tree.data
+            
             pandas_strings = tree.to_pandas(prev_node_name, df_name, codeCompHelper, treeHelper)
         else:
             if hasattr(tree, "data"):
                 codeCompHelper.add_relation(tree.data)
+                
+            if hasattr(tree, "alias"):
+                # Assume that we NEVER have an alias but no data
+                if tree.data != tree.alias:
+                    # Add the Alias to relations
+                    codeCompHelper.add_relation(tree.alias)
+                    # Add the relation alias pair to ccHelper
+                    codeCompHelper.aliasRelationPairs[tree.alias] = tree.data
+            
             pandas_strings = tree.to_pandas(prev_node_name, df_name, codeCompHelper, treeHelper)
         
     else:
         # Add tree.data, the relation name, to codeCompHelper
         if hasattr(tree, "data"):
             codeCompHelper.add_relation(tree.data)
+            
+        if hasattr(tree, "alias"):
+            # Assume that we NEVER have an alias but no data
+            if tree.data != tree.alias:
+                # Add the Alias to relations
+                codeCompHelper.add_relation(tree.alias)
+                # Add the relation alias pair to ccHelper
+                codeCompHelper.aliasRelationPairs[tree.alias] = tree.data
+        
         pandas_strings = tree.to_pandas(tree.data, df_name, codeCompHelper, treeHelper)
 
    

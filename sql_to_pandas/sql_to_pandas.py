@@ -273,11 +273,11 @@ def main():
         for i in range(len(output_trees)):
             if isinstance(output_trees[i], tuple):
                 # It's a tuple, so we use the first element
-                solve_aliases(output_trees[i][0])
+                #solve_aliases(output_trees[i][0])
                 solve_nested_loop_node(output_trees[i][0])
             else:
                 # Not a tuple, just use the current element
-                solve_aliases(output_trees[i])
+                #solve_aliases(output_trees[i])
                 solve_nested_loop_node(output_trees[i])
                 
         # TODO: This may not make all the replacements that we actually need it to

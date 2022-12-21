@@ -313,7 +313,7 @@ def solve_aliases(tree, replaces = None):
             else:
                 # This is already in the dict, we don't need to add it again
                 pass
-            
+
     # Do alterations to all the alteration places, based on the content in replaces
     for key in replaces.keys():
         locs = alias_locations[tree.node_type]
@@ -553,6 +553,9 @@ def make_tree(json, tree):
         node_class = incremental_sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Parent Relationship"], node["Sort Key"], node["Presorted Key"])
     elif node_type.lower() == "merge join":
         node_class = merge_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Merge Cond'], node['Parent Relationship'])
+        
+        if "Join Filter":
+            node_class.add_filter(node['Join Filter'])
     elif node_type.lower() == "materialize":
         node_class = materialize_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
     elif node_type.lower() == "index only scan":

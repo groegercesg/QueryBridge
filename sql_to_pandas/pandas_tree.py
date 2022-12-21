@@ -76,6 +76,7 @@ def process_output(self, output, codecomphelper):
         # A brack cleaned option that removes multiple equals into one, and get's rid of quotes and dots
         brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "")
         brack_cleaned_equal_quote_lower_output_dots = brack_cleaned_equal_quote_lower_output.replace("." , "")
+        dot_cleaned_output = cleaned_output.replace(".", "")
         if brack_cleaned_output in codecomphelper.sql.column_references:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
@@ -92,6 +93,13 @@ def process_output(self, output, codecomphelper):
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_dots])
+        elif dot_cleaned_output in codecomphelper.sql.column_references:
+            output_original_value = cleaned_output
+            # Make a special 3 element tuple for this situation
+            if codecomphelper.useAlias.get(dot_cleaned_output, None) != None:
+                output[i] = (codecomphelper.useAlias.get(dot_cleaned_output, None), codecomphelper.sql.column_references[dot_cleaned_output], dot_cleaned_output)
+            else:
+                output[i] = (output_original_value, codecomphelper.sql.column_references[dot_cleaned_output], dot_cleaned_output)        
         elif relation_cleaned_output in codecomphelper.bracket_replace:
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.bracket_replace[relation_cleaned_output])
@@ -410,7 +418,40 @@ def sql_like_fragment_to_regex_string(fragment):
     return '^' + safe_fragment.replace('%', '.*?').replace('_', '.') + '$'
     
 
-def clean_filter_params(self, params):  
+def clean_filter_params(self, params, codeCompHelper):  
+    # Discover columns that are in useAlias and replace them
+    # Iterate through relations
+    if codeCompHelper.useAlias != {}:
+        # Gather replaces into array
+        replaces = []
+        for relation in codeCompHelper.relations:
+            if relation in params:
+                relation_positions = [m.start() for m in re.finditer(relation, params)]
+                
+                # Iterate through relation positions
+                for i in range(len(relation_positions)):
+                    # From the position to the next space, extract this all
+                    space_split = str(params[relation_positions[i]:].split(" ")[0]).strip()
+                    remove_dot = space_split.replace(".", "")
+                    # Remove dot is our lookup value in useAlias
+                    if codeCompHelper.useAlias.get(remove_dot, None) != None:
+                        # This is in useAlias
+                        new_column_value = str(space_split.split(".")[0]).strip() + "." + codeCompHelper.useAlias.get(remove_dot, None)
+                        replaces.append([space_split, new_column_value])
+                 
+        # Carry out our Replaces
+        if replaces != []:
+            for replacement in replaces:
+                # We want whole relations so match the replace on a string after it
+                params = params.replace(replacement[0] + " ", replacement[1] + " ", 1)
+    
+    # Clean params with codeCompHelper
+    # Iterate through all relations
+    for key in codeCompHelper.aliasRelationPairs:
+        targetRelation = str(key + ".")
+        if targetRelation in params:
+            params = params.replace(targetRelation, str(codeCompHelper.aliasRelationPairs[key] + "."))
+    
     # Replace AND with & and convert to string
     filters = str(params.replace(" AND ", " & "))
     filters = str(filters.replace(" OR ", " | "))
@@ -500,10 +541,13 @@ class filter_node():
         self.params = None
         
     def set_params(self, in_params):
-        self.params = clean_filter_params(self, in_params)
+        self.params = in_params
         
     def set_nodes(self, nodes):
         self.nodes = nodes
+        
+    def set_alias(self, alias):
+        self.alias = alias
         
     def add_subplan_name(self, in_name):
         self.subplan_name = in_name
@@ -512,9 +556,15 @@ class filter_node():
         self.instructions = instructions
         
     def set_index_cond(self, index_cond):
-        self.index_cond = clean_filter_params(self, index_cond)
+        self.index_cond = index_cond
         
     def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
+        # Clean params
+        if hasattr(self, "params") and self.params != None:
+            self.params = clean_filter_params(self, self.params, codeCompHelper)
+        if hasattr(self, "index_cond") and self.index_cond != None:
+            self.index_cond = clean_filter_params(self, self.index_cond, codeCompHelper)
+        
         subplan_mode = False
 
         # Process output:
@@ -1201,8 +1251,47 @@ def choose_aliases(self, cCHelper, final_output=False):
             if appendingCol in cCHelper.indexes:
                 continue
             else:
-                output.append(appendingCol)    
+                output.append(appendingCol)
+                
+    # TODO: add to cCHelper useAlias
+    
+    # If any two items in output are the same
+    potential_dupe_list = duplicates_in_list(output)
+    if potential_dupe_list != []:
+        # We have duplicates
+        # Iterate through dupes
+        replace_options = ["_y", "_x"]
+        for dupe_item in potential_dupe_list:
+            replace_counter = 0
+            # Iterate through output items
+            for i in range(0, len(output)):
+                # We have a duplicate!
+                if output[i] == dupe_item:
+                    if replace_counter > 1:
+                        raise ValueError("Too many replaces")
+                    else:
+                        output[i] = output[i] + replace_options[replace_counter]
+                        # Add to useAlias
+                        if isinstance(self.output[i], tuple):
+                            if len(self.output[i]) == 3:
+                                # We are in this special circumstance
+                                # Use the 2nd idx, which should be: n2n_name (no dot!)
+                                cCHelper.useAlias[self.output[i][2]] = output[i]
+                            else:
+                                cCHelper.useAlias[self.output[i][0]] = output[i]
+                        else:
+                            cCHelper.useAlias[self.output[i]] = output[i]
+                        replace_counter += 1
+
     return output
+
+def duplicates_in_list(seq_list):
+    seen = set()
+    seen_add = seen.add
+    # adds all elements it doesn't know yet to seen and all other to seen_twice
+    seen_twice = set( x for x in seq_list if x in seen or seen_add(x) )
+    # turn the set into a list (as requested)
+    return list( seen_twice )
 
 def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df, this_df, cases):
     # Array to hold decisions
@@ -1367,7 +1456,7 @@ class group_aggr_node():
         self.group_key = group_key
     
     def add_filter(self, in_filter):
-        self.filter = clean_filter_params(self, in_filter)
+        self.filter = in_filter
         
     def set_nodes(self, nodes):
         self.nodes = nodes
@@ -1382,6 +1471,10 @@ class group_aggr_node():
         return grouping_keys
     
     def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
+        # Clean filters
+        if hasattr(self, "filter") and self.filter != None:
+            self.filter = clean_filter_params(self, self.filter, codeCompHelper)
+        
         # TODO: Sometimes, we have a group_key that is in the output, that gets processed into something different
         group_output_indexes = []
         for i in range(len(self.output)):
@@ -1772,10 +1865,7 @@ class merge_node():
     def __init__(self, condition, output, join, filters=None):
         self.condition = condition
         self.output = output
-        if filters != None:
-            self.filter = clean_filter_params(self, filters)
-        else:
-            self.filter = None
+        self.filter = filters
         self.join_type = join
 
     def set_nodes(self, nodes):
@@ -1828,7 +1918,7 @@ class merge_node():
         
         return str(statement)
 
-    def to_pandas(self, prev_dfs, this_df, codeCompHelper, treeHelper):
+    def to_pandas(self, prev_dfs, this_df, codeCompHelper, treeHelper):        
         # Check if there's an extract in any of these of the self.outputs
         extract_present = "No Extract"
         for i in range(len(self.output)):
@@ -1846,14 +1936,6 @@ class merge_node():
         
         instructions.append(this_df + " = " + self.process_condition_into_merge(prev_dfs[0], prev_dfs[1]))
         
-        # After merge, we filter if we have some
-        if self.filter != None:
-            # We need to replace any relation name with this_df, use codeComp to know these
-            for relation in codeCompHelper.relations:
-                self.filter = self.filter.replace(relation+".", this_df+".")
-            statement = this_df + " = " + this_df + "[" + str(self.filter) + "]"
-            instructions.append(statement)
-            
         # Handle extract present
         if extract_present != "No Extract":
             # Output the extract at the given index, stored in extract_present
@@ -1868,7 +1950,21 @@ class merge_node():
             else:
                 raise ValueError("Extract has something we'd like to set it to")
         
+        # Process aliases here
         output_cols = choose_aliases(self, codeCompHelper)
+        
+        # Clean params
+        if hasattr(self, "filter") and self.filter != None:
+            self.filter = clean_filter_params(self, self.filter, codeCompHelper)
+        
+        # After merge, we filter if we have some
+        if self.filter != None:
+            # We need to replace any relation name with this_df, use codeComp to know these
+            for relation in codeCompHelper.relations:
+                self.filter = self.filter.replace(relation+".", this_df+".")
+            statement = this_df + " = " + this_df + "[" + str(self.filter) + "]"
+            instructions.append(statement)
+        
         
         # Limit to output columns
         if codeCompHelper.column_limiting:
@@ -2117,7 +2213,9 @@ class sql_class():
                                     # This is meant to catch a scenario like:
                                         # n2.n_name
                                         # And turn it into: n_name
-                                    projection_original = str(split_proj[1]).strip()
+                                    # projection_original = str(split_proj[1]).strip()
+                                    # This doesn't work, instead we need to keep the "n1" part to differentiate it
+                                    projection_original = projection_original.replace(".", "")
                             
                         column_references[projection_original] = str(projection.alias_or_name)
 
@@ -2168,6 +2266,10 @@ def create_tree(class_tree, sql_class):
         # Add in subplan information
         if hasattr(current_node, "subplan_name"):
             node_class.add_subplan_name(current_node.subplan_name)
+            
+        # Add in alias
+        if hasattr(current_node, "alias"):
+            node_class.set_alias(current_node.alias)
     elif node_type == "Sort":
         node_class = sort_node(current_node.output, current_node.sort_key)
     elif node_type == "Incremental Sort":
@@ -2182,7 +2284,10 @@ def create_tree(class_tree, sql_class):
     elif node_type == "Hash Join":
         node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type)
     elif node_type == "Merge Join":
-        node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type)
+        if hasattr(current_node, "filter"):
+            node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type, filters=current_node.filter)
+        else:
+            node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type)
     elif node_type == "Nested Loop":
         # Make a nested loop into a merge node
         if hasattr(current_node, "merge_cond"):
@@ -2206,6 +2311,10 @@ def create_tree(class_tree, sql_class):
         if hasattr(current_node, "index_cond"):
             if current_node.index_cond != None:
                 node_class.set_index_cond(current_node.index_cond)
+        
+        # Add in alias
+        if hasattr(current_node, "alias"):
+            node_class.set_alias(current_node.alias)
     elif node_type == "Subquery Scan":
         # Make a Subquery Scan into a "rename node"
         node_class = rename_node(current_node.output, current_node.alias)
@@ -2219,8 +2328,16 @@ def create_tree(class_tree, sql_class):
         elif hasattr(current_node, "filter"):
             # Check if is a filter type of Seq Scan
             node_class.set_params(current_node.filter)
+        
+        # Add in alias
+        if hasattr(current_node, "alias"):
+            node_class.set_alias(current_node.alias)
     elif node_type == "Bitmap Heap Scan":
         node_class = filter_node(current_node.relation_name, current_node.recheck_cond, current_node.output)
+         
+        # Add in alias
+        if hasattr(current_node, "alias"):
+            node_class.set_alias(current_node.alias)
     elif node_type == "Unique":
         node_class = unique_node(current_node.output)
     else:
