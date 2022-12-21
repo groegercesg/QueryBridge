@@ -47,7 +47,9 @@ def test_case_simple():
     
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        """).strip()
+        supplier['item'] = np.select([supplier["s_nationkey"] == 17, supplier["s_nationkey"] == 5], ['BOTTLE', 'BAG'], 'NEITHER')
+        df_filter_1 = supplier[['s_suppkey', 'item']]
+        return df_filter_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT s_suppkey,
@@ -71,7 +73,9 @@ def test_case_intermediate():
     
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        """).strip()
+        supplier['item'] = np.select([supplier["s_nationkey"] == 17, supplier["s_nationkey"] == 5, supplier["s_nationkey"] == 3, supplier["s_nationkey"] != 123, supplier["s_nationkey"] > 0], ['BOTTLE', 'BAG', 'CASE', 'MAGIC', 'BIGO'], 'NULL')
+        df_filter_1 = supplier[['s_suppkey', 'item', 's_nationkey']]
+        return df_filter_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT s_suppkey,

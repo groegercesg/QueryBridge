@@ -13,6 +13,10 @@ from expr_tree import Expression_Solver
 
 from collections import defaultdict
 
+def rreplace(s, old, new, occurrence):
+    li = s.rsplit(old, occurrence)
+    return new.join(li)
+
 def clean_extra_brackets(s):
     for i in s:s=regex.sub('(\(|^)\K(\((((?2)|[^()])*)\))(?=\)|$)',r'\3',s)
     return s
@@ -76,7 +80,12 @@ def process_output(self, output, codecomphelper):
         # A brack cleaned option that removes multiple equals into one, and get's rid of quotes and dots
         brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "")
         brack_cleaned_equal_quote_lower_output_dots = brack_cleaned_equal_quote_lower_output.replace("." , "")
-        dot_cleaned_output = cleaned_output.replace(".", "")
+        brack_cleaned_equal_quote_lower_output_dots_no_end = rreplace(rreplace(brack_cleaned_equal_quote_lower_output_dots, "end", "", 1).strip(), " else", "", 1).strip()
+        dot_cleaned_output = cleaned_output.replace(".", "").strip()
+        
+        # 'case when s_nationkey = 17 then bottle when s_nationkey = 5 then bag when s_nationkey = 3 then case when s_nationkey <> 123 then magic when s_nationkey > 0 then bigo null'
+        # 'case when s_nationkey = 17 then bottle when s_nationkey = 5 then bag when s_nationkey = 3 then case when s_nationkey <> 123 then magic when s_nationkey > 0 then bigo'
+        
         if dot_cleaned_output in codecomphelper.sql.column_references:
             output_original_value = cleaned_output
             # Make a special 3 element tuple for this situation
@@ -100,6 +109,10 @@ def process_output(self, output, codecomphelper):
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_dots])
+        elif brack_cleaned_equal_quote_lower_output_dots_no_end in codecomphelper.sql.column_references:
+            # We have an item in output that needs to be changed
+            output_original_value = cleaned_output
+            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_dots_no_end])
         elif relation_cleaned_output in codecomphelper.bracket_replace:
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.bracket_replace[relation_cleaned_output])
@@ -219,7 +232,7 @@ def count_char(char, string):
     return counter
             
 def clean_type_information(self, content):
-    regex = r"::(\w+\[*\]*)(\s+\w+)*"
+    regex = r"::(\w+\[*\]*)(\ \s+\w+)*"
     matches = re.finditer(regex, content, re.MULTILINE)
     remove_ranges = []
     replaces = []
@@ -284,10 +297,10 @@ def clean_type_information(self, content):
             new_value = str("[" + edit_value + "]")
         elif "text" in match_str:
             new_value = str(value)
-            if matchNum > 1:
+            #if matchNum > 1:
                 # If we have the second match, i.e. the first is the relation
                 # Then on the second we can add in quotes
-                new_value = "\'" + str(value) + "\'"
+            new_value = "\'" + str(value) + "\'"
         # ' (part.p_container = ANY (\'{"SM CASE","SM BOX","SM PACK","SM PKG"}\'::bpchar[])) '
         elif "bpchar[]" in match_str:
             edit_value = value[1:-1]
@@ -570,16 +583,72 @@ class filter_node():
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         
+        # Set prefixes
+        if not isinstance(prev_df, str):
+            raise ValueError("Inputted prev_df is not a string!")
+        instructions = []
+        
         # Check if "SubPlan"
         if self.params != None:
             if "subplan" in self.params.lower():
                 subplan_mode = True
                 self.params = clean_subplan_params(self, self.params, prev_df, self.data)
         
-        # Set prefixes
-        if not isinstance(prev_df, str):
-            raise ValueError("Inputted prev_df is not a string!")
-        instructions = []
+        # Check for cases!
+        case_tracker = "a"
+        for i in range(len(self.output)):
+            # Don't choose the alias
+            is_tuple = False
+            if isinstance(self.output[i], tuple):
+                current_output = self.output[i][0]
+                is_tuple = True
+            else:
+                current_output = self.output[i]
+                        
+            if "CASE WHEN" in current_output:
+                original_look = current_output
+                # Find position of CASE
+                case_position = current_output.find("CASE")
+                
+                # This means that the case is the ONLY thing in this line of output
+                if case_position == 0:
+                    # Extract the entire current output
+                    extract_case = current_output
+                    
+                    # The case name is the tuple value
+                    if is_tuple != True:
+                        raise ValueError("Case only but no tuple")
+                    
+                    case_name = self.output[i][1]
+                
+                # Check that character before is open bracket
+                elif current_output[case_position - 1] == "(":
+                    else_position = current_output.find("ELSE", case_position)
+                    next_bracket = current_output.find(")", else_position)
+                    
+                    # Extract the entire case statement
+                    extract_case = current_output[case_position : next_bracket]
+                    
+                    # Create case_name
+                    case_name = "case_" + str(case_tracker)
+                    # Increment case_tracker
+                    case_tracker = chr(ord(case_tracker) + 1)
+                
+                else:
+                    raise ValueError("Unexpectedly formatted CASE")
+                
+                # Do case aggregation
+                case_string = aggregate_case(extract_case, prev_df)
+                
+                # Append to instructions
+                statement = str(prev_df) + "['" + case_name + "'] = " + case_string
+                instructions.append(statement)
+                
+                # Replace in self.output the extract_case with the new case_string
+                if is_tuple == True:
+                    self.output[i] = (self.output[i][0].replace(extract_case, case_name), self.output[i][1])
+                else:
+                    self.output[i] = self.output[i].replace(extract_case, case_name)
         
         # Edit params:
         if self.params != None:
@@ -1051,14 +1120,8 @@ def inner_aggregation(string, prev_df):
     
     return outer_string
 
-def aggregate_case(inner_string, prev_df):
-    else_value = str(inner_string.split("ELSE")[1].split("END")[0]).strip()
-    when_value = str(inner_string.split("CASE WHEN")[1].split("THEN")[0]).strip()
-    then_value = str(inner_string.split("THEN")[1].split("ELSE")[0]).strip()
-    
+def aggregate_case_worker(values, prev_df):
     # Clean values
-    # Put values in the order of the pandas expression
-    values = [then_value, when_value, else_value]
     for i in range(len(values)):
         values[i] = values[i].strip()
         if values[i][0] == "(" and values[i][-1] == ")":
@@ -1107,7 +1170,7 @@ def aggregate_case(inner_string, prev_df):
             
         # Hand this off to the s_group function
         elif ("*" in values[i]):  # and (len(values[i]) > 1)
-            values[i] = aggregate_sum(values[i], s_group = "x")
+            values[i] = aggregate_sum(values[i], s_group = prev_df)
             
         elif ("OR" in values[i]) or ("AND" in values[i]):
             # Shuck the value
@@ -1144,10 +1207,168 @@ def aggregate_case(inner_string, prev_df):
             values[i] = str(join_on.join(split_on)).strip()     
             
         elif (len(values[i]) > 1):
-            values[i] = aggregate_sum(values[i], s_group = "x")           
+            if values[i] == "NULL":
+                pass
+            else:
+                values[i] = aggregate_sum(values[i], s_group = prev_df)
+                if " = " in values[i]:
+                    values[i] = values[i].replace(" = ", " == ")
+                
+                if " <> " in values[i]:
+                    values[i] = values[i].replace(" <> ", " != ")
+                
+        # Cleaning validation
+        values[i] = values[i].strip()
+        if (values[i][0] == "(") and (values[i][1] == " ") and (values[i][-1] == ")") and (values[i][-2] == " "):
+            values[i] = values[i][2:-2]
+            
+        if (values[i][0] == "'") and (values[i][-1] == "'"):
+            values[i] = values[i][1:-1]
+            
+    return values
+
+def aggregate_case(inner_string, prev_df):
+    # TODO: Need to support the new CASE type:
+    #   "CASE 
+    #       WHEN (s_nationkey = 17) THEN BOTTLE 
+    #       WHEN (s_nationkey = 5) THEN 'BAG' 
+    #       ELSE 'NEITHER' 
+    #   END"
     
-    # li_pa_join.apply(lambda x: x["l_extendedprice"] * (1 - x["l_discount"]) if x["p_type"].startswith("PROMO") else 0, axis=1)
-    inner_string = prev_df + '.apply(lambda x: ' + str(values[0]) + ' if ' + str(values[1]) + ' else ' + str(values[2]) + ', axis=1)'        
+    when_count = inner_string.lower().count("when")
+    then_count = inner_string.lower().count("then")
+    
+    if (when_count == then_count) and (when_count == 1):
+        # We have only 1 condition
+        # We can use NP.WHERE for this, as it's more efficient
+        
+        else_value = str(inner_string.lower().split("else")[1].split("end")[0]).strip()
+        when_value = str(inner_string.lower().split("case when")[1].split("then")[0]).strip()
+        then_value = str(inner_string.lower().split("then")[1].split("else")[0]).strip()
+    
+        # Put into an array, Put values in the order of the pandas expression
+        values = aggregate_case_worker([when_value, then_value, else_value], prev_df)
+        
+        # Create the output string,
+        # li_pa_join.apply(lambda x: x["l_extendedprice"] * (1 - x["l_discount"]) if x["p_type"].startswith("PROMO") else 0, axis=1)
+        #inner_string = prev_df + '.apply(lambda x: ' + str(values[0]) + ' if ' + str(values[1]) + ' else ' + str(values[2]) + ', axis=1)'        
+        # np.where(df['col2']<9, 'value1','value4')
+        inner_string = "np.where(" + str(values[0]) + ", " + str(values[1]) + ", " + str(values[2]) + ")"
+        
+    elif (when_count == then_count) and (when_count > 1):
+        # We have multiple WHEN and THEN conditions
+        # We use NP.SELECT for this, as it's more efficient for many conditions and has much better readability
+                
+        # "CASE WHEN (s_nationkey = 17) THEN BOTTLE WHEN (s_nationkey = 5) THEN 'BAG' ELSE 'NEITHER' END"
+        
+        if "else" in inner_string.lower():
+            # We have an else
+            if "ELSE" in inner_string:
+                else_value = str(inner_string.split("ELSE")[1].split("END")[0]).strip()
+            else:
+                else_value = str(inner_string.split("else")[1].split("end")[0]).strip()
+            
+            # Split on Else, to simplfy later steps
+            if "ELSE" in inner_string:
+                inner_string = str(inner_string.split("ELSE")[0]).strip()
+            else:
+                inner_string = str(inner_string.split("else")[0]).strip()
+                               
+            # Get rid of CASE as well
+            if "CASE" in inner_string:
+                inner_string = str(inner_string.split("CASE ", 1)[1]).strip()
+            else:
+                inner_string = str(inner_string.split("case ", 1)[1]).strip()
+            
+        else:
+            else_value = None
+            # Get rid of CASE and END
+            if "CASE" in inner_string:
+                inner_string = str(inner_string.split("CASE")[1]).strip()
+            else:
+                inner_string = str(inner_string.split("case")[1]).strip()
+                
+            if "END" in inner_string:
+                inner_string = str(inner_string.split("END")[0]).strip()
+            else:
+                inner_string = str(inner_string.split("end")[0]).strip()
+        
+        # Split on WHEN
+        if "WHEN" in inner_string:
+            split_on_when = inner_string.split("WHEN")
+        elif "when" in inner_string:
+            split_on_when = inner_string.split("when")
+        else:
+            raise ValueError("WHEN/when not found in Aggregation case")
+        
+        # Iterate through split_when, cleaning out empty elements and segmenting into whens and thens
+        whens = []
+        thens = []
+        for i in range(len(split_on_when)):
+            split_on_when[i] = split_on_when[i].strip()
+            
+            # If not an empty string, let's split on THEN
+            if split_on_when[i] != "":
+                if "THEN" in split_on_when[i]:
+                    split_on_then = split_on_when[i].split("THEN")
+                elif "then" in split_on_when[i]:
+                    split_on_then = split_on_when[i].split("then")
+                else:
+                    raise ValueError("THEN/then not found in Aggregation case")
+                
+                if len(split_on_then) != 2:
+                    raise ValueError("Unexpected Split on Then")
+                
+                # Append when and then
+                whens.append(split_on_then[0].strip())
+                thens.append(split_on_then[1].strip())
+                
+        # Validation
+        if len(whens) != when_count:
+            raise ValueError("CASE not enough WHEN conditions found")
+        elif len(thens) != then_count:
+            raise ValueError("CASE not enough THEN conditions found")
+        
+        # np.select([
+        #     (df.S == 1) & (df.A == 1),
+        #     (df.S == 1) & (df.A == 0),
+        #     (df.S == 2) & (df.A == 1),
+        #     (df.S == 2) & (df.A == 0)
+        # ], [1, 0, 0, 1], ELSE)
+        
+        # We use aggregate_case_worker to process them, then for process_whens
+        # We need to remove quotes, as these should be testable boolean constructs
+        process_whens = str(aggregate_case_worker(whens, prev_df))[1:-1]
+        # Split on comma between conditions
+        split_whens = process_whens.split(",")
+        for i in range(len(split_whens)):
+            split_whens[i] = split_whens[i].strip()
+            # Strip if true
+            if (split_whens[i][0] == "'") and (split_whens[i][-1] == "'"):
+                split_whens[i] = split_whens[i][1:-1]    
+            split_whens[i] = split_whens[i].strip()
+        process_whens = "[" + str(", ".join(split_whens)) + "]"
+        
+        process_thens = aggregate_case_worker(thens, prev_df)
+        
+        
+        # We may not have an else!
+        if else_value == None:
+            # No else
+            inner_string = "np.select(" + str(process_whens) + ", " + str(process_thens) + ")"
+        else:
+            # We have an else
+            # Use the aggregate_case_worker, input as a single element list, then pop it out
+            process_else = aggregate_case_worker([else_value], prev_df)[0]
+            
+            # Add back in quote marks if it doesn't have them
+            if (process_else[0] != "'") and (process_else[-1] != "'"):
+                process_else = "'" + process_else + "'"
+            
+            inner_string = "np.select(" + str(process_whens) + ", " + str(process_thens) + ", " + str(process_else) + ")"
+    
+    else:
+        raise ValueError("Unexpected counting from aggregation string!")
     
     return inner_string
 
@@ -2192,8 +2413,14 @@ class sql_class():
                             projection_original = projection_original.replace("like", "~~")
                         
                         # Get rid of end
-                        if "where" and "then" and "else" and "end" in projection_original:
-                            projection_original = projection_original.replace("end ", "")
+                        if "where" and "then" and "end" in projection_original:
+                            projection_original = projection_original.replace("end", "").strip()
+                         
+                            if "else" in projection_original:
+                                projection_original = projection_original.replace(" else ", " ").strip()
+                            else:
+                                # If theres no ELSE in the string, then we should add in "null"
+                                projection_original = projection_original + " null"
                             
                         # Get rid of apostrophes
                         if "'" in projection_original:
