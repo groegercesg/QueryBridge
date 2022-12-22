@@ -321,7 +321,12 @@ def test_case_expression_nested_like_filter():
     
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        """).strip()
+        part['container_format'] = np.select([part.p_container.str.contains("^.*?PKG.*?$",regex=True), part.p_container.str.contains("^.*?CASE.*?$",regex=True), part.p_container.str.contains("^.*?BAG.*?$",regex=True), part.p_container.str.contains("^.*?DRUM.*?$",regex=True), part.p_container.str.contains("^.*?.*?BOX.*?$",regex=True), part.p_container.str.contains("^.*?JAR.*?$",regex=True), part.p_container.str.contains("^.*?PACK.*?$",regex=True), part.p_container.str.contains("^.*?CAN.*?$",regex=True)], ['Package', 'Case', 'Bag', 'Drum', 'Box', 'Jar', 'Pack', 'Can'], 'Other')
+        df_filter_1 = part[part.container_format == 'Other']
+        df_filter_1 = df_filter_1[['p_partkey', 'p_name', 'container_format', 'p_container']]
+        df_sort_1 = df_filter_1.sort_values(by=['p_partkey'], ascending=[True])
+        df_sort_1 = df_sort_1[['p_partkey', 'p_name', 'container_format', 'p_container']]
+        return df_sort_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT
@@ -360,7 +365,12 @@ def test_case_maths_expressions():
     
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        """).strip()
+        df_filter_1 = lineitem[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+        df_filter_1['case_a'] = np.where(df_filter_1["l_extendedprice"] <= 2500, ( df_filter_1["l_extendedprice"] * ( 1 - df_filter_1["l_discount"] )), 0)
+        df_aggr_1 = pd.DataFrame()
+        df_aggr_1['promo_revenue'] = [((100.00 * (df_filter_1.case_a).sum()) / ((df_filter_1.l_extendedprice) * (1 - (df_filter_1.l_discount))).sum())]
+        df_aggr_1 = df_aggr_1[['promo_revenue']]
+        return df_aggr_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT

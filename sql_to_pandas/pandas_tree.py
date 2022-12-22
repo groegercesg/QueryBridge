@@ -79,13 +79,15 @@ def process_output(self, output, codecomphelper):
         brack_cleaned_lower_output = brack_cleaned_output.lower()
         # A brack cleaned option that removes multiple equals into one, and get's rid of quotes and dots
         brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "")
+        brack_cleaned_equal_quote_lower_output_no_end = rreplace(rreplace(brack_cleaned_equal_quote_lower_output, "end", " ", 1).strip(), " else", "", 1).strip()
+        brack_cleaned_equal_quote_lower_output_no_end_spaced = rreplace(rreplace(brack_cleaned_equal_quote_lower_output, " end ", "  ", 1).strip(), " else", "", 1).strip()
         brack_cleaned_equal_quote_lower_output_dots = brack_cleaned_equal_quote_lower_output.replace("." , "")
-        brack_cleaned_equal_quote_lower_output_dots_no_end = rreplace(rreplace(brack_cleaned_equal_quote_lower_output_dots, "end", "", 1).strip(), " else", "", 1).strip()
+        brack_cleaned_equal_quote_lower_output_dots_no_end = rreplace(rreplace(brack_cleaned_equal_quote_lower_output_dots, "end", " ", 1).strip(), " else", "", 1).strip()
         dot_cleaned_output = cleaned_output.replace(".", "").strip()
-        
-        # 'case when s_nationkey = 17 then bottle when s_nationkey = 5 then bag when s_nationkey = 3 then case when s_nationkey <> 123 then magic when s_nationkey > 0 then bigo null'
-        # 'case when s_nationkey = 17 then bottle when s_nationkey = 5 then bag when s_nationkey = 3 then case when s_nationkey <> 123 then magic when s_nationkey > 0 then bigo'
-        
+
+        # print(list(codecomphelper.sql.column_references.keys())[0])
+        # print(brack_cleaned_equal_quote_lower_output_no_end_spaced)
+
         if dot_cleaned_output in codecomphelper.sql.column_references:
             output_original_value = cleaned_output
             # Make a special 3 element tuple for this situation
@@ -113,6 +115,14 @@ def process_output(self, output, codecomphelper):
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_dots_no_end])
+        elif brack_cleaned_equal_quote_lower_output_no_end in codecomphelper.sql.column_references:
+            # We have an item in output that needs to be changed
+            output_original_value = cleaned_output
+            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_no_end])
+        elif brack_cleaned_equal_quote_lower_output_no_end_spaced in codecomphelper.sql.column_references:
+            # We have an item in output that needs to be changed
+            output_original_value = cleaned_output
+            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_no_end_spaced])
         elif relation_cleaned_output in codecomphelper.bracket_replace:
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.bracket_replace[relation_cleaned_output])
@@ -577,11 +587,29 @@ class filter_node():
         self.index_cond = index_cond
         
     def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
-        # Clean params
+        # Sometimes, we have a param that is in the output, that gets processed into something different
+        # Therefore we need to change it
+        
+        param_output_indexes = []
         if hasattr(self, "params") and self.params != None:
-            self.params = clean_filter_params(self, self.params, codeCompHelper)
-        if hasattr(self, "index_cond") and self.index_cond != None:
-            self.index_cond = clean_filter_params(self, self.index_cond, codeCompHelper)
+            for i in range(len(self.output)):
+                    # TODO: sometimes the output[i] has brackets around it, which prevents 
+                    # us from making a fair and accurate comparison
+                    bracket_stripped_params = None
+                    if (self.params[0] == "(") and (self.params[-1] == ")"):
+                        bracket_stripped_params = self.params[1:-1]
+                    
+                    if bracket_stripped_params != None:
+                        equal_split_params = str(bracket_stripped_params.split(" = ")[0]).strip()
+                    else:
+                        equal_split_params = None
+                    
+                    if self.params == self.output[i]:
+                        raise ValueError("Unexpected param")
+                    elif (bracket_stripped_params != None) and (bracket_stripped_params == self.output[i]):
+                        raise ValueError("Unexpected param")
+                    elif (equal_split_params != None) and (equal_split_params == self.output[i]):
+                        param_output_indexes.append((equal_split_params, i))
         
         subplan_mode = False
 
@@ -592,12 +620,6 @@ class filter_node():
         if not isinstance(prev_df, str):
             raise ValueError("Inputted prev_df is not a string!")
         instructions = []
-        
-        # Check if "SubPlan"
-        if self.params != None:
-            if "subplan" in self.params.lower():
-                subplan_mode = True
-                self.params = clean_subplan_params(self, self.params, prev_df, self.data)
         
         # Check for cases!
         case_tracker = "a"
@@ -660,6 +682,38 @@ class filter_node():
                     # extract_case
                 # # The Alias will be: case_name
                 codeCompHelper.useAlias[extract_case] = case_name
+        
+        # Replace the 1st index with the self.output[2nd index] value
+        # Set group_key to new thing
+        if param_output_indexes != []:
+            for i in range(len(param_output_indexes)):
+                # Replace
+                # Get replacement_value
+                replacement_value = self.output[param_output_indexes[i][1]]
+                # This might be a tuple
+                if isinstance(replacement_value, tuple):
+                    # Validate these are equal
+                    if replacement_value[0] != replacement_value[1]:
+                        raise ValueError("Tuple values are not equal, not good!")
+                    else:
+                        replacement_value = replacement_value[0]
+                        
+                # Add the this_df
+                replacement_value = str(prev_df) + "." + str(replacement_value)
+                
+                self.params = self.params.replace(param_output_indexes[i][0], replacement_value)
+                
+        # Clean params
+        if hasattr(self, "params") and self.params != None:
+            self.params = clean_filter_params(self, self.params, codeCompHelper)
+        if hasattr(self, "index_cond") and self.index_cond != None:
+            self.index_cond = clean_filter_params(self, self.index_cond, codeCompHelper)
+        
+        # Check if "SubPlan"
+        if self.params != None:
+            if "subplan" in self.params.lower():
+                subplan_mode = True
+                self.params = clean_subplan_params(self, self.params, prev_df, self.data)
                 
         # Edit params:
         if self.params != None:
@@ -2494,11 +2548,11 @@ class sql_class():
                             projection_original = projection_original.replace("like", "~~")
                         
                         # Get rid of end
-                        if "where" and "then" and "end" in projection_original:
-                            projection_original = projection_original.replace("end", "").strip()
+                        if "case" and " then " and "end" in projection_original:
+                            projection_original = rreplace(projection_original, " end", " ", 1).strip()
                          
                             if "else" in projection_original:
-                                projection_original = projection_original.replace(" else ", " ").strip()
+                                projection_original = rreplace(projection_original, " else ", " ", 1).strip()
                             else:
                                 # If theres no ELSE in the string, then we should add in "null"
                                 projection_original = projection_original + " null"

@@ -89,10 +89,12 @@ class seq_scan_node(base_node):
         self.filters = in_filters
 
 class sort_node(base_node):
-    def __init__(self, node_type, parallel_aware, async_capable, output, sort_key, parent_relationship):
+    def __init__(self, node_type, parallel_aware, async_capable, output, sort_key):
         super().__init__(node_type, parallel_aware, async_capable, output)
         self.sort_key = sort_key
-        self.parent_relationship = parent_relationship
+    
+    def add_parent_relationship(self, parent):
+        self.parent_relationship = parent
 
 class subquery_scan_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, output, alias, parent_relationship):

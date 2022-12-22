@@ -530,7 +530,10 @@ def make_tree(json, tree):
             if node["Parent Relationship"] == "SubPlan":
                 node_class.add_subplan_name(node["Subplan Name"])
     elif node_type.lower() == "sort":
-        node_class = sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Sort Key"], node["Parent Relationship"])
+        node_class = sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Sort Key"])
+        
+        if "Parent Relationship" in node:
+            node_class.add_parent_relationship(node["Parent Relationship"])
     elif node_type.lower() == "subquery scan":
         node_class = subquery_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Alias"], node["Parent Relationship"])
     elif node_type.lower() == "nested loop":
