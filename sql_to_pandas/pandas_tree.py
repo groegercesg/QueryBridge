@@ -242,6 +242,10 @@ def count_char(char, string):
     return counter
             
 def clean_type_information(self, content):
+    # Replace "timestamp without time zone", with just timestamp
+    if "::timestamp without time zone" in content:
+        content = content.replace("timestamp without time zone", "timestamp")
+    
     regex = r"::(\w+\[*\]*)(\ \s+\w+)*"
     matches = re.finditer(regex, content, re.MULTILINE)
     remove_ranges = []
@@ -307,10 +311,10 @@ def clean_type_information(self, content):
             new_value = str("[" + edit_value + "]")
         elif "text" in match_str:
             new_value = str(value)
-            #if matchNum > 1:
+            if matchNum > 1:
                 # If we have the second match, i.e. the first is the relation
                 # Then on the second we can add in quotes
-            new_value = "\'" + str(value) + "\'"
+                new_value = "\'" + str(value) + "\'"
         # ' (part.p_container = ANY (\'{"SM CASE","SM BOX","SM PACK","SM PKG"}\'::bpchar[])) '
         elif "bpchar[]" in match_str:
             edit_value = value[1:-1]
@@ -510,6 +514,21 @@ def clean_filter_params(self, params, codeCompHelper):
             # Do equals
             if " = " in line_split[i]:
                 line_split[i] = line_split[i].replace(" = ", " == ")
+                
+                # Do right hand side quotes replace if needed
+                eq_split = line_split[i].split(" == ")
+                if len(eq_split) != 2:
+                    raise ValueError("Unexpected number of values")
+                
+                # Check if RHS has quotes
+                if (eq_split[1][0] == "'") and (eq_split[1][-1] == "'"):
+                    pass
+                else:
+                    # Assume add both back in
+                    eq_split[1] = "'" + eq_split[1] + "'"
+                    
+                    # Then rejoin and set as line_split
+                    line_split[i] = " == ".join(eq_split)
               
         # Clear leading/trailing spaces
         line_split[i] = line_split[i].strip()
@@ -542,6 +561,10 @@ def do_like_handling(string):
     # Catch potential error
     if len(split_like) != 2:
         raise ValueError("Expected only 2 parts to this statement")
+    
+    for i in range(len(split_like)):
+        if (split_like[i][0] == "(") and (split_like[i][-1] == ")"):
+            split_like[i] = split_like[i][1:-1]
     
     # Clear quotes if exist
     if (split_like[1][0] == "'") and (split_like[1][-1] == "'"):
@@ -1243,7 +1266,7 @@ def aggregate_case_worker(values, prev_df):
             """
             
         # Hand this off to the s_group function
-        elif any(x in values[i] for x in ["*", "-", "/", "+"]):  
+        elif any(x in values[i] for x in [" * ", " - ", " / ", " + "]):  
             # If any numerical operators present
             # TODO: This is when the expression tree parsing should do
             values[i] = aggregate_sum(values[i], s_group = prev_df)
@@ -1308,7 +1331,7 @@ def aggregate_case_worker(values, prev_df):
             if values[i] == "NULL":
                 pass
             else:
-                if any(x in values[i] for x in [" = ", " <> ", " > ", " < ", " >= ", " <= "]):
+                if any(x in values[i] for x in [" = ", " == ", " <> ", " > ", " < ", " >= ", " <= "]):
                     # Who is this for parsing?
                     values[i] = aggregate_sum(values[i], s_group = prev_df)
                 
@@ -1346,9 +1369,27 @@ def aggregate_case(inner_string, prev_df):
         # We have only 1 condition
         # We can use NP.WHERE for this, as it's more efficient
         
-        else_value = str(inner_string.lower().split("else")[1].split("end")[0]).strip()
-        when_value = str(inner_string.lower().split("case when")[1].split("then")[0]).strip()
-        then_value = str(inner_string.lower().split("then")[1].split("else")[0]).strip()
+        # Don't make it to lower, messes up values
+        if ("ELSE" in inner_string) and ("END" in inner_string):
+            else_value = str(inner_string.split("ELSE")[1].split("END")[0]).strip()
+        elif ("else" in inner_string) and ("end" in inner_string):
+            else_value = str(inner_string.split("else")[1].split("end")[0]).strip()
+        else:
+            raise ValueError("Inconsistent capitalisation")    
+        
+        if ("CASE WHEN" in inner_string) and ("THEN" in inner_string):
+            when_value = str(inner_string.split("CASE WHEN")[1].split("THEN")[0]).strip()
+        elif ("case when" in inner_string) and ("then" in inner_string):
+            when_value = str(inner_string.split("case when")[1].split("then")[0]).strip()
+        else:
+            raise ValueError("Inconsistent capitalisation")    
+        
+        if ("THEN" in inner_string) and ("ELSE" in inner_string):
+            then_value = str(inner_string.split("THEN")[1].split("ELSE")[0]).strip()
+        elif ("then" in inner_string) and ("else" in inner_string):
+            then_value = str(inner_string.split("then")[1].split("else")[0]).strip()
+        else:
+            raise ValueError("Inconsistent capitalisation")      
     
         # Put into an array, Put values in the order of the pandas expression
         values = aggregate_case_worker([when_value, then_value, else_value], prev_df)
@@ -2548,7 +2589,7 @@ class sql_class():
                             projection_original = projection_original.replace("like", "~~")
                         
                         # Get rid of end
-                        if "case" and " then " and "end" in projection_original:
+                        if ("case" in projection_original) and (" then " in projection_original) and ("end" in projection_original):
                             projection_original = rreplace(projection_original, " end", " ", 1).strip()
                          
                             if "else" in projection_original:

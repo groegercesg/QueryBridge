@@ -339,6 +339,7 @@ def main():
         
         line_prepender(python_output_name, "def query(" + str(cleaned_relations_subqueries)[1:-1].replace("'", "") + "):\n")
         line_prepender(python_output_name, "import pandas as pd\n")
+        line_prepender(python_output_name, "import numpy as np\n")
         
     # Tear Down
     # If it's benchmarking, delete results

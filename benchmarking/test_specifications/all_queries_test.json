@@ -124,7 +124,7 @@
     "Temporary Directory": "benchmarking/temp_queries",
     "SQL Converter Location": "sql_to_pandas/sql_to_pandas.py",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 25,
+    "Number of Query Runs": 1,
     "Results Location": "benchmarking/test_results/all_queries_test_results.csv",
     "Database Connection Details": {
             "User": "benchmarker",
