@@ -495,40 +495,7 @@ def clean_filter_params(self, params, codeCompHelper):
             # Means that we have to convert this to a like statement
             # We can do this generally using a regex, this catches all cases 100% of the time
             if "~~" in line_split[i]:
-                # Variable for what type of like we have
-                not_equal_like = False
-                
-                # Strip and clean
-                line_split[i] = line_split[i].strip()
-                if (line_split[i][0] == "(") and (line_split[i][-1] == ")"):
-                    line_split[i] = clean_extra_brackets(line_split[i])
-                    
-                # Not equal
-                if " !~~ " in line_split[i]:
-                    not_equal_like = True
-                    split_like = line_split[i].split(" !~~ ")
-                else:
-                    split_like = line_split[i].split(" ~~ ") 
-                
-                # Catch potential error
-                if len(split_like) != 2:
-                    raise ValueError("Expected only 2 parts to this statement")
-                
-                # Clear quotes if exist
-                if (split_like[1][0] == "'") and (split_like[1][-1] == "'"):
-                    split_like[1] = split_like[1][1:-1]
-                    
-                data_name = split_like[0].strip()
-                regex_cmd = sql_like_fragment_to_regex_string(split_like[1])
-                
-                # Assemble the line
-                line_split[i] = '(' + data_name + '.str.contains("' + str(regex_cmd) +'", regex=True)'
-                
-                if not_equal_like == True:
-                    line_split[i] = line_split[i] + " == False)"
-                else:
-                    # Otherwise, just close the bracket
-                    line_split[i] = line_split[i] + ")"
+                line_split[i] = do_like_handling(line_split[i])
                     
             # Do equals
             if " = " in line_split[i]:
@@ -545,6 +512,44 @@ def clean_filter_params(self, params, codeCompHelper):
     filters = "".join(line_split)
     
     return filters
+
+def do_like_handling(string):
+    # Variable for what type of like we have
+    not_equal_like = False
+    
+    # Strip and clean
+    string = string.strip()
+    if (string[0] == "(") and (string[-1] == ")"):
+        string = clean_extra_brackets(string)
+        
+    # Not equal
+    if " !~~ " in string:
+        not_equal_like = True
+        split_like = string.split(" !~~ ")
+    else:
+        split_like = string.split(" ~~ ") 
+    
+    # Catch potential error
+    if len(split_like) != 2:
+        raise ValueError("Expected only 2 parts to this statement")
+    
+    # Clear quotes if exist
+    if (split_like[1][0] == "'") and (split_like[1][-1] == "'"):
+        split_like[1] = split_like[1][1:-1]
+        
+    data_name = split_like[0].strip()
+    regex_cmd = sql_like_fragment_to_regex_string(split_like[1])
+    
+    # Assemble the line
+    string = '(' + data_name + '.str.contains("' + str(regex_cmd) +'",regex=True)'
+    
+    if not_equal_like == True:
+        string = string + " == False)"
+    else:
+        # Otherwise, just close the bracket
+        string = string + ")"
+    
+    return string
 
 # Classes for pandas instructions
 class filter_node():
@@ -605,7 +610,7 @@ class filter_node():
             else:
                 current_output = self.output[i]
                         
-            if "CASE WHEN" in current_output:
+            if "CASE" in current_output:
                 original_look = current_output
                 # Find position of CASE
                 case_position = current_output.find("CASE")
@@ -649,7 +654,13 @@ class filter_node():
                     self.output[i] = (self.output[i][0].replace(extract_case, case_name), self.output[i][1])
                 else:
                     self.output[i] = self.output[i].replace(extract_case, case_name)
-        
+                    
+                # Add to useAlias
+                # The search parameter will be:
+                    # extract_case
+                # # The Alias will be: case_name
+                codeCompHelper.useAlias[extract_case] = case_name
+                
         # Edit params:
         if self.params != None:
             if subplan_mode == True:
@@ -1144,6 +1155,14 @@ def aggregate_case_worker(values, prev_df):
         # Starts with
         # https://www.postgresql.org/docs/current/functions-matching.html
         if "~~" in values[i]:
+            values[i] = do_like_handling(values[i])
+            
+            if (values[i][0] == "(") and (values[i][-1] == ")"):
+                values[i] = values[i][1:-1]
+                
+            values[i] = str(prev_df) + "." + str(values[i])
+            
+            """
             values[i] = clean_extra_brackets(values[i])
             split_starts = values[i].split(" ~~ ")
             # First element of split_starts should be the column,
@@ -1167,12 +1186,16 @@ def aggregate_case_worker(values, prev_df):
                     split_starts[j] = split_starts[j][1:-1]
             
             values[i] = 'x["' + split_starts[0] + '"].startswith("' + split_starts[1] + '")'
+            """
             
         # Hand this off to the s_group function
-        elif ("*" in values[i]):  # and (len(values[i]) > 1)
+        elif any(x in values[i] for x in ["*", "-", "/", "+"]):  
+            # If any numerical operators present
+            # TODO: This is when the expression tree parsing should do
             values[i] = aggregate_sum(values[i], s_group = prev_df)
-            
-        elif ("OR" in values[i]) or ("AND" in values[i]):
+        
+        # Make sure it's a boolean AND/OR and it contains the right kind of operators
+        elif ((" or " in values[i].lower()) or (" and " in values[i].lower())) and any(x in values[i] for x in [" = ", " == ", " <> ", " > ", " >= ", " < ", " <= "]):
             # Shuck the value
             if (values[i][0] == "(") and (values[i][-1] == ")"):
                 values[i] = values[i][1:-1]
@@ -1180,8 +1203,14 @@ def aggregate_case_worker(values, prev_df):
             if " OR " in values[i]:
                 split_on = values[i].split(" OR ")
                 join_on = " | "
+            elif " or " in values[i]:
+                split_on = values[i].split(" or ")
+                join_on = " | "
             elif " AND " in values[i]:
                 split_on = values[i].split(" AND ")
+                join_on = " & "
+            elif " and " in values[i]:
+                split_on = values[i].split(" and ")
                 join_on = " & "
             else:
                 raise ValueError("Not sure what we want to split the string on")
@@ -1191,26 +1220,44 @@ def aggregate_case_worker(values, prev_df):
                 if (split_on[j][0] == "(") and (split_on[j][-1] == ")"):
                     split_on[j] = split_on[j][1:-1]
                 
-                if " == " in split_on[j]:
+                if " = " in split_on[j]:
+                    split_on_eq = split_on[j].split(" = ")
+                    re_assemble = " == "
+                elif " == " in split_on[j]:
                     split_on_eq = split_on[j].split(" == ")
                     re_assemble = " == "
                 elif " <> " in split_on[j]:
                     split_on_eq = split_on[j].split(" <> ")
                     re_assemble = " != "
+                elif " > " in split_on[j]:
+                    split_on_eq = split_on[j].split(" > ")
+                    re_assemble = " > "
+                elif " >= " in split_on[j]:
+                    split_on_eq = split_on[j].split(" >= ")
+                    re_assemble = " >= "
+                elif " <= " in split_on[j]:
+                    split_on_eq = split_on[j].split(" <= ")
+                    re_assemble = " <= "
+                elif " < " in split_on[j]:
+                    split_on_eq = split_on[j].split(" < ")
+                    re_assemble = " < "
                 else:
                     raise ValueError("Unknown parameter we're trying to split on")
                     
                 # Should be of the form:
                 # o_orderpriority == '1-URGENT'
-                split_on[j] = "( x['" + str(split_on_eq[0]) + "']" + str(re_assemble) + str(split_on_eq[1]) + " )"
-                
+                split_on[j] = "(" + prev_df + "['" + str(split_on_eq[0]) + "']" + str(re_assemble) + str(split_on_eq[1]) + ")"
+               
             values[i] = str(join_on.join(split_on)).strip()     
             
-        elif (len(values[i]) > 1):
+        elif (len(values[i]) > 1): 
             if values[i] == "NULL":
                 pass
             else:
-                values[i] = aggregate_sum(values[i], s_group = prev_df)
+                if any(x in values[i] for x in [" = ", " <> ", " > ", " < ", " >= ", " <= "]):
+                    # Who is this for parsing?
+                    values[i] = aggregate_sum(values[i], s_group = prev_df)
+                
                 if " = " in values[i]:
                     values[i] = values[i].replace(" = ", " == ")
                 
@@ -1223,6 +1270,9 @@ def aggregate_case_worker(values, prev_df):
             values[i] = values[i][2:-2]
             
         if (values[i][0] == "'") and (values[i][-1] == "'"):
+            values[i] = values[i][1:-1]
+            
+        if (values[i][0] == '"') and (values[i][-1] == '"'):
             values[i] = values[i][1:-1]
             
     return values
@@ -1293,13 +1343,36 @@ def aggregate_case(inner_string, prev_df):
             else:
                 inner_string = str(inner_string.split("end")[0]).strip()
         
+        expression_case = False
         # Split on WHEN
         if "WHEN" in inner_string:
             split_on_when = inner_string.split("WHEN")
+            
+            if (inner_string.strip()).split(" ")[0].strip() == "WHEN":
+                expression_case = False
+            else:
+                expression_case = (inner_string.strip()).split(" ")[0].strip()
+            
         elif "when" in inner_string:
             split_on_when = inner_string.split("when")
+            
+            if (inner_string.strip()).split(" ")[0].strip() == "when":
+                expression_case = False
+            else:
+                expression_case = (inner_string.strip()).split(" ")[0].strip()
         else:
             raise ValueError("WHEN/when not found in Aggregation case")
+        
+        # Check if we have an expression case, which look like:
+        # CASE p_container
+        #     WHEN 'JUMBO PKG' THEN 'Jumbo Package'
+        #     WHEN 'SM PKG' THEN 'Small Package'
+        #     ELSE 'Other'
+        # END as container_annotation
+        # We can do this by checking whether the "WHEN" or "when" is the first word
+        if expression_case != False:
+            # Let's remove the first element of split_on_when
+            del split_on_when[0]
         
         # Iterate through split_when, cleaning out empty elements and segmenting into whens and thens
         whens = []
@@ -1336,16 +1409,24 @@ def aggregate_case(inner_string, prev_df):
         #     (df.S == 2) & (df.A == 0)
         # ], [1, 0, 0, 1], ELSE)
         
+        # TODO: What if it's not equals!
+        # Expression case, add the expression case and == to all of the whens
+        if expression_case != False:
+            for i in range(len(whens)):
+                whens[i] = prev_df + "['" + str(expression_case) + "'] == " + str(whens[i])
+        
         # We use aggregate_case_worker to process them, then for process_whens
         # We need to remove quotes, as these should be testable boolean constructs
         process_whens = str(aggregate_case_worker(whens, prev_df))[1:-1]
         # Split on comma between conditions
-        split_whens = process_whens.split(",")
+        split_whens = process_whens.split(", ")
         for i in range(len(split_whens)):
             split_whens[i] = split_whens[i].strip()
             # Strip if true
             if (split_whens[i][0] == "'") and (split_whens[i][-1] == "'"):
-                split_whens[i] = split_whens[i][1:-1]    
+                split_whens[i] = split_whens[i][1:-1]
+            if (split_whens[i][0] == '"') and (split_whens[i][-1] == '"'):
+                split_whens[i] = split_whens[i][1:-1]   
             split_whens[i] = split_whens[i].strip()
         process_whens = "[" + str(", ".join(split_whens)) + "]"
         

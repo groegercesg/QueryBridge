@@ -543,11 +543,14 @@ def make_tree(json, tree):
     elif node_type.lower() == "hash":
         node_class = hash_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
     elif node_type.lower() == "index scan":
-        node_class = index_scan_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Scan Direction'], node['Index Name'], node['Relation Name'], node['Schema'], node['Alias'], node['Output'], node['Parent Relationship']) 
+        node_class = index_scan_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Scan Direction'], node['Index Name'], node['Relation Name'], node['Schema'], node['Alias'], node['Output']) 
+        
         if "Index Cond" in node:
             node_class.add_index_cond(node['Index Cond'])
         if "Filter" in node:
             node_class.add_filter(node['Filter'])
+        if "Parent Relationship" in node:
+            node_class.add_parent_relationship(node["Parent Relationship"])
     elif node_type.lower() == "incremental sort":
         # node_type, parallel_aware, async_capable, output, parent_relationship, sort_key, presorted_key
         node_class = incremental_sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Parent Relationship"], node["Sort Key"], node["Presorted Key"])

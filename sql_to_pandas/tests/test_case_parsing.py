@@ -101,7 +101,9 @@ def test_case_conditions():
     
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        """).strip()
+        supplier['case_column'] = np.select([(supplier['s_nationkey'] > 0) & (supplier['s_nationkey'] <= 50), (supplier['s_nationkey'] > 50) & (supplier['s_nationkey'] <= 120), supplier["s_nationkey"] > 120], ['Young Nation', 'Medium Nation', 'Old Nation'], 'NULL')
+        df_filter_1 = supplier[['s_suppkey', 'case_column', 's_nationkey']]
+        return df_filter_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT s_suppkey,
@@ -129,7 +131,9 @@ def test_case_or_conditions():
     
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        """).strip()
+        supplier['case_column'] = np.select([(supplier['s_nationkey'] > 0) & (supplier['s_nationkey'] < 20), (supplier['s_nationkey'] > 20) | (supplier['s_nationkey'] == 20)], ['Young Nation', 'Medium and Above Nation'], 'NULL')
+        df_filter_1 = supplier[['s_suppkey', 'case_column', 's_nationkey']]
+        return df_filter_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT s_suppkey,
@@ -156,7 +160,16 @@ def test_case_aggr_nested():
     
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        """).strip()
+        df_filter_1 = supplier[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
+        df_filter_1['case_a'] = np.where(df_filter_1["s_acctbal"] < 1000, 1, 0)
+        df_filter_1['case_b'] = np.where((df_filter_1['s_acctbal'] >= 1000) & (df_filter_1['s_acctbal'] < 5000), 1, 0)
+        df_filter_1['case_c'] = np.where(df_filter_1["s_acctbal"] >= 5000, 1, 0)
+        df_aggr_1 = pd.DataFrame()
+        df_aggr_1['Risky'] = [(df_filter_1.case_a).sum()]
+        df_aggr_1['Normal'] = [(df_filter_1.case_b).sum()]
+        df_aggr_1['Bloated'] = [(df_filter_1.case_c).sum()]
+        df_aggr_1 = df_aggr_1[['Risky', 'Normal', 'Bloated']]
+        return df_aggr_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT
@@ -195,7 +208,9 @@ def test_case_expression():
     
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        """).strip()
+        part['container_annotation'] = np.select([part['p_container'] == 'JUMBO PKG', part['p_container'] == 'SM PKG'], ['Jumbo Package', 'Small Package'], 'Other')
+        df_filter_1 = part[['p_partkey', 'p_name', 'container_annotation']]
+        return df_filter_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT 
@@ -223,7 +238,9 @@ def test_case_expression_nested_like():
     
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        """).strip()
+        part['container_format'] = np.select([part.p_container.str.contains("^.*?PKG.*?$",regex=True), part.p_container.str.contains("^.*?CASE.*?$",regex=True), part.p_container.str.contains("^.*?BAG.*?$",regex=True), part.p_container.str.contains("^.*?DRUM.*?$",regex=True), part.p_container.str.contains("^.*?.*?BOX.*?$",regex=True), part.p_container.str.contains("^.*?JAR.*?$",regex=True), part.p_container.str.contains("^.*?PACK.*?$",regex=True)], ['Package', 'Case', 'Bag', 'Drum', 'Box', 'Jar', 'Pack'], 'Other')
+        df_filter_1 = part[['p_partkey', 'p_name', 'container_format', 'p_container']]
+        return df_filter_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT 
@@ -257,7 +274,15 @@ def test_case_expression_nested_like_group():
     
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        """).strip()
+        part['container_format'] = np.select([part.p_container.str.contains("^.*?PKG.*?$",regex=True), part.p_container.str.contains("^.*?CASE.*?$",regex=True), part.p_container.str.contains("^.*?BAG.*?$",regex=True), part.p_container.str.contains("^.*?DRUM.*?$",regex=True), part.p_container.str.contains("^.*?.*?BOX.*?$",regex=True), part.p_container.str.contains("^.*?JAR.*?$",regex=True), part.p_container.str.contains("^.*?PACK.*?$",regex=True), part.p_container.str.contains("^.*?CAN.*?$",regex=True)], ['Package', 'Case', 'Bag', 'Drum', 'Box', 'Jar', 'Pack', 'Can'], 'Other')
+        df_filter_1 = part[['p_partkey', 'container_format']]
+        df_group_1 = df_filter_1 \\
+            .groupby(['container_format'], sort=False) \\
+            .agg(
+                container_count=("container_format", "count"),
+            )
+        df_group_1 = df_group_1[['container_count']]
+        return df_group_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT
@@ -265,7 +290,6 @@ def test_case_expression_nested_like_group():
             count(*) as container_count
         FROM (
             SELECT p_partkey,
-                p_name,
                 CASE 
                     WHEN p_container LIKE '%PKG%' THEN 'Package'
                     WHEN p_container LIKE '%CASE%' THEN 'Case'
@@ -276,7 +300,7 @@ def test_case_expression_nested_like_group():
                     WHEN p_container LIKE '%PACK%' THEN 'Pack'
                     WHEN p_container LIKE '%CAN%' THEN 'Can'
                     ELSE 'Other'
-                END as container_format, p_container
+                END as container_format 
             FROM part
             ORDER BY p_partkey
             ) as container_agg

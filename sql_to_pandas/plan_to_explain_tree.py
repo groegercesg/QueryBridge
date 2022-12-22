@@ -127,9 +127,8 @@ class hash_node(base_node):
         self.parent_relationship = parent_relationship
         
 class index_scan_node(base_node):
-    def __init__(self, node_type, parallel_aware, async_capable, scan_direction, index_name, relation_name, schema, alias, output, parent_relationship):
+    def __init__(self, node_type, parallel_aware, async_capable, scan_direction, index_name, relation_name, schema, alias, output):
         super().__init__(node_type, parallel_aware, async_capable, output)
-        self.parent_relationship = parent_relationship
         self.scan_direction = scan_direction
         self.index_name = index_name
         self.relation_name = relation_name
@@ -141,6 +140,9 @@ class index_scan_node(base_node):
         
     def add_filter(self, in_filter):
         self.filter = in_filter
+    
+    def add_parent_relationship(self, parent):
+        self.parent_relationship = parent
         
 class bitmap_index_scan_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, index_name, parent_relationship):
