@@ -529,6 +529,9 @@ def clean_filter_params(self, params, codeCompHelper):
                 # Else if we have a valid subquery variable, so we don't add the quotes
                 elif valid_subquery_variable(eq_split[1]):
                     pass
+                # Else if all are not alphabetical characters
+                elif all(x.isalpha() == False for x in eq_split[1]):
+                    pass
                 else:
                     # Assume add both back in
                     eq_split[1] = "'" + eq_split[1] + "'"
