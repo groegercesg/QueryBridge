@@ -366,7 +366,7 @@ def test_case_maths_expressions():
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
         df_filter_1 = lineitem[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-        df_filter_1['case_a'] = np.where(df_filter_1["l_extendedprice"] <= 2500, ( df_filter_1["l_extendedprice"] * ( 1 - df_filter_1["l_discount"] )), 0)
+        df_filter_1['case_a'] = np.where(df_filter_1["l_extendedprice"] <= 2500, ((df_filter_1.l_extendedprice) * (1 - (df_filter_1.l_discount))), 0)
         df_aggr_1 = pd.DataFrame()
         df_aggr_1['promo_revenue'] = [((100.00 * (df_filter_1.case_a).sum()) / ((df_filter_1.l_extendedprice) * (1 - (df_filter_1.l_discount))).sum())]
         df_aggr_1 = df_aggr_1[['promo_revenue']]

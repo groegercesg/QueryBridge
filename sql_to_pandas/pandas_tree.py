@@ -703,7 +703,7 @@ class filter_node():
                     raise ValueError("Unexpectedly formatted CASE")
                 
                 # Do case aggregation
-                case_string = aggregate_case(extract_case, prev_df)
+                case_string = aggregate_case(extract_case, prev_df, this_df, treeHelper)
                 
                 # Append to instructions
                 statement = str(prev_df) + "['" + case_name + "'] = " + case_string
@@ -1167,7 +1167,8 @@ def aggregate_sum(sum_string, s_group=None, df_group=None):
     
     return inner_string
 
-def inner_aggregation(string, prev_df):
+# TODO: Does this even need to be here
+def inner_aggregation(string, prev_df, this_df, treeHelper):
     if "sum" in string:
         # The aggr operation is SUM!
         inner = str(string).split("sum")[1:]
@@ -1204,7 +1205,7 @@ def inner_aggregation(string, prev_df):
         
         if "CASE WHEN" and "THEN" and "ELSE" in inner:
             # Do case aggregation
-            inner_string = aggregate_case(inner, prev_df)
+            inner_string = aggregate_case(inner, prev_df, this_df, treeHelper)
         else:
             inner_string = aggregate_sum(inner, df_group=prev_df)
         
@@ -1223,7 +1224,7 @@ def inner_aggregation(string, prev_df):
     
     return outer_string
 
-def aggregate_case_worker(values, prev_df):
+def aggregate_case_worker(values, prev_df, this_df, treeHelper):
     # Clean values
     for i in range(len(values)):
         values[i] = values[i].strip()
@@ -1254,37 +1255,26 @@ def aggregate_case_worker(values, prev_df):
                 
             values[i] = str(prev_df) + "." + str(values[i])
             
-            """
-            values[i] = clean_extra_brackets(values[i])
-            split_starts = values[i].split(" ~~ ")
-            # First element of split_starts should be the column,
-            # Second should be the comparator
-            if len(split_starts) != 2:
-                raise ValueError("Split Starts for case Aggregation should be of length 2")
-            
-            if "%" in split_starts[1]:
-                split_starts[1] = split_starts[1].replace("%", "")
-            else:
-                raise ValueError("Aggregate Case, not sure what to clean")
-            
-            # Iterate through split_starts, cleaning the parts that are ill-formatted
-            for j in range(len(split_starts)):
-                # Remove brackets at start and end of string
-                if (split_starts[j][0] == "(") and (split_starts[j][-1] == ")"):
-                    split_starts[j] = split_starts[j][1:-1]
-                    
-                # Remove quotes at start and end of string
-                if (split_starts[j][0] == "'") and (split_starts[j][-1] == "'"):
-                    split_starts[j] = split_starts[j][1:-1]
-            
-            values[i] = 'x["' + split_starts[0] + '"].startswith("' + split_starts[1] + '")'
-            """
-            
         # Hand this off to the s_group function
         elif any(x in values[i] for x in [" * ", " - ", " / ", " + "]):  
             # If any numerical operators present
             # TODO: This is when the expression tree parsing should do
-            values[i] = aggregate_sum(values[i], s_group = prev_df)
+            
+            # Set output_name
+            output_name = None
+            if not treeHelper.bench:
+                output_name = str(treeHelper.expr_output_path)+str(treeHelper.expr_tree_tracker)
+            else:
+                output_name = False
+            
+            tree = Expression_Solver(str(values[i]), output_name, prev_df, this_df)
+            values[i] = tree.evaluate()
+            
+            # Increment treeHelper
+            treeHelper.expr_tree_tracker += 1
+            
+            # Old method, using aggregate_sum
+            # values[i] = aggregate_sum(values[i], s_group = prev_df)
         
         # Make sure it's a boolean AND/OR and it contains the right kind of operators
         elif ((" or " in values[i].lower()) or (" and " in values[i].lower())) and any(x in values[i] for x in [" = ", " == ", " <> ", " > ", " >= ", " < ", " <= "]):
@@ -1369,7 +1359,7 @@ def aggregate_case_worker(values, prev_df):
             
     return values
 
-def aggregate_case(inner_string, prev_df):
+def aggregate_case(inner_string, prev_df, this_df, treeHelper):
     # TODO: Need to support the new CASE type:
     #   "CASE 
     #       WHEN (s_nationkey = 17) THEN BOTTLE 
@@ -1407,7 +1397,7 @@ def aggregate_case(inner_string, prev_df):
             raise ValueError("Inconsistent capitalisation")      
     
         # Put into an array, Put values in the order of the pandas expression
-        values = aggregate_case_worker([when_value, then_value, else_value], prev_df)
+        values = aggregate_case_worker([when_value, then_value, else_value], prev_df, this_df, treeHelper)
         
         # Create the output string,
         # li_pa_join.apply(lambda x: x["l_extendedprice"] * (1 - x["l_discount"]) if x["p_type"].startswith("PROMO") else 0, axis=1)
@@ -1527,7 +1517,7 @@ def aggregate_case(inner_string, prev_df):
         
         # We use aggregate_case_worker to process them, then for process_whens
         # We need to remove quotes, as these should be testable boolean constructs
-        process_whens = str(aggregate_case_worker(whens, prev_df))[1:-1]
+        process_whens = str(aggregate_case_worker(whens, prev_df, this_df, treeHelper))[1:-1]
         # Split on comma between conditions
         split_whens = process_whens.split(", ")
         for i in range(len(split_whens)):
@@ -1540,8 +1530,7 @@ def aggregate_case(inner_string, prev_df):
             split_whens[i] = split_whens[i].strip()
         process_whens = "[" + str(", ".join(split_whens)) + "]"
         
-        process_thens = aggregate_case_worker(thens, prev_df)
-        
+        process_thens = aggregate_case_worker(thens, prev_df, this_df, treeHelper)
         
         # We may not have an else!
         if else_value == None:
@@ -1550,7 +1539,7 @@ def aggregate_case(inner_string, prev_df):
         else:
             # We have an else
             # Use the aggregate_case_worker, input as a single element list, then pop it out
-            process_else = aggregate_case_worker([else_value], prev_df)[0]
+            process_else = aggregate_case_worker([else_value], prev_df, this_df, treeHelper)[0]
             
             # Add back in quote marks if it doesn't have them
             if (process_else[0] != "'") and (process_else[-1] != "'"):
@@ -2037,7 +2026,7 @@ class group_aggr_node():
                 # Extract the entire case statement
                 extract_case = current_output[case_position : next_bracket]
                 # Do case aggregation
-                case_string = aggregate_case(extract_case, prev_df)
+                case_string = aggregate_case(extract_case, prev_df, this_df, treeHelper)
                 
                 # Create case_name
                 case_name = "case_" + str(case_tracker)
@@ -2429,7 +2418,7 @@ class aggr_node():
                 # Extract the entire case statement
                 extract_case = current_output[case_position : next_bracket]
                 # Do case aggregation
-                case_string = aggregate_case(extract_case, prev_df)
+                case_string = aggregate_case(extract_case, prev_df, this_df, treeHelper)
                 
                 # Create case_name
                 case_name = "case_" + str(case_tracker)
