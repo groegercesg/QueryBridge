@@ -523,6 +523,12 @@ def clean_filter_params(self, params, codeCompHelper):
                 # Check if RHS has quotes
                 if (eq_split[1][0] == "'") and (eq_split[1][-1] == "'"):
                     pass
+                # Else if relation in RHS then don't add quotes back in
+                elif any((x+".") in eq_split[1] for x in codeCompHelper.relations):
+                    pass
+                # Else if we have a valid subquery variable, so we don't add the quotes
+                elif valid_subquery_variable(eq_split[1]):
+                    pass
                 else:
                     # Assume add both back in
                     eq_split[1] = "'" + eq_split[1] + "'"
@@ -541,6 +547,15 @@ def clean_filter_params(self, params, codeCompHelper):
     filters = "".join(line_split)
     
     return filters
+
+def valid_subquery_variable(string):
+    if string[-1].isdigit() != True:
+        return False
+    
+    if string[-2] != "_":
+        return False
+    
+    return True
 
 def do_like_handling(string):
     # Variable for what type of like we have
