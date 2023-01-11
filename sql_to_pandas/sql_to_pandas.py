@@ -6,6 +6,9 @@ import argparse
 import shlex
 import subprocess
 
+# Prepare database file
+from prepare_database import prep_db
+
 def str2bool(v):
     if isinstance(v, bool):
         return v
@@ -63,6 +66,12 @@ def init_argparse() -> argparse.ArgumentParser:
                     const=True, 
                     default=True,
                     help='Whether we would like our columns between nodes to be limited, can help with ongoing memory usage.')
+
+    parser.add_argument('--db_file',
+                    metavar='db_file',
+                    type=str,
+                    help='The file containing details for how and which database to connect to.')
+
 
     return parser
 
@@ -162,6 +171,15 @@ def main():
     # Create the filename
     python_output_name = args.output_location + "/" + args.name
     
+    # Variable to store the explain content
+    explain_content = ""
+    
+    # Validation for db_file
+    if args.db_file == None:
+        raise Exception("No database connection file specified")
+    
+    db = prep_db(args.db_file)
+    
     # Iterate through every subquery
     for i, sub_query in enumerate(split_query):
         
@@ -171,16 +189,13 @@ def main():
             # Skip iteration if empty
             continue
         elif cleaned_sub_q[:4] == "drop":
-            cleaned_sub_q = cleaned_sub_q + ";"
-            command = psql_string_command + cleaned_sub_q + "'"
 
-            cmd = subprocess.run(shlex.split(command), check=True, stdout=subprocess.DEVNULL)
-            
+            # Drop command with the DB connection object
+            db.execute_query(cleaned_sub_q + ";")
+
             # Don't iterate after dropping
             continue
 
-        # Automatically create explain_file from query_file
-        explain_file = f"{folder_path}" + "/"+ query_name+"_explain_" + str(i) + ".sql"
         
         view_query = False
         # Determine whether this sub_query is a view or not
@@ -189,21 +204,8 @@ def main():
             view_name = str(str(sub_query.split("create view ")[1]).split("(")[0]).strip()
             view_names.append(view_name)
             
-            # Exectute dropping this view
-            command = psql_string_command + "drop view " + view_name + ";'"
-
-            result = subprocess.run(shlex.split(command), stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)       
-            captureError = str(result.stderr.decode('UTF-8')).strip()
-            
-            # Check if the error relates to the view not existing, fine, or something else!
-            if captureError == "":
-                # No error 
-                pass
-            elif captureError == 'ERROR:  view "' + view_name + '" does not exist' :
-                # This error is okay
-                pass
-            else:
-                raise ValueError(captureError)
+            # Execute dropping this view
+            db.execute_query("drop view " + view_name + ";")
             
             continue
         else:
@@ -212,42 +214,41 @@ def main():
                 # There has been a view, therefore use the previous query
                 sub_query = split_query[i-1].strip() + ";" + "\n\n" + explain_opts + "\n" + sub_query.strip() + ";"
         
-        # Write subquery into explain file
-        with open(explain_file, "w") as writer:
-            # Add a semicolon to the last character if we don't already have one
-            if sub_query[-1] != ";":
-                sub_query = sub_query + ";"
-            writer.write(sub_query)
+        # Write subquery into explain the explain_content variable
+        if sub_query[-1] != ";":
+            sub_query = sub_query + ";"
+        explain_content += sub_query
             
         # Write the explain options out to the file
         # We already do this we have created a view beforehand
         if view_query == True:
-            line_prepender(explain_file, explain_opts)
+            explain_content = explain_opts.rstrip('\r\n') + '\n' + explain_content
             
         # Check if no views then do line_prepender
         if len(split_query) == 2 and split_query[1] == "":
             # We have no view, so have to prepend the explain options
-            line_prepender(explain_file, explain_opts)
+            explain_content = explain_opts.rstrip('\r\n') + '\n' + explain_content
 
-        output_file = f"{folder_path}" + "/"+query_name+"_explain_" + str(i) + ".json"
+        explain_output_path = f"{folder_path}" + "/"+ query_name+"_explain_" + str(i) + ".json"
         tree_output = f"{folder_path}" + "/"+query_name+"_explain_tree_" + str(i)
         tree_prune_output = f"{folder_path}" + "/" +query_name+"_explain_post_prune_tree_" + str(i)
         tree_pandas_output = f"{folder_path}" + "/" + query_name+"_pandas_tree_" + str(i)
         expr_tree_output = f"{folder_path}" + "/" + query_name+ "_expression_tree_"
-        command = psql_file_command + explain_file
+        
+        if db.is_database_empty() == True:
+            # Database is empty
+            raise Exception("The database is empty, please specify a connection to a database with tables")
+        
+        # Else, we can request the explain data from the database
+        explain_json = db.get_explain(explain_content)
 
-        from clean_up_json import run
-        # Execute the command, get the json and clean it
-        run(command, output_file)
-
-        # Load json from written file
-        explain_json = ""
-        with open(output_file) as f:
-            # returns JSON object as a dictionary
-            explain_json = json.load(f)[0]
+        # Write out explain_content to explain_file_path
+        with open(explain_output_path, "w") as outfile:
+            # returns JSON object as a dictionary, write that to outfile
+            outfile.write(json.dumps(explain_json, indent=4))
 
         # Print out the json
-        # print(json.dumps(explain_json, indent=4))
+        # print(json.dumps(explain_content, indent=4))
 
         from explain_tree import make_tree
         # Build a class structure that is nested within each other
