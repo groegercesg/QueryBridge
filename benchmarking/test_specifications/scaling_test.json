@@ -1,6 +1,6 @@
 {
     "Test Name": "Scaling Test",
-    "Scaling Factors": [1, 2, 4],
+    "Scaling Factors": [1, 2, 4, 8, 16, 32],
     "SQL Queries": [
         {
             "Query Name": "Query 1",
