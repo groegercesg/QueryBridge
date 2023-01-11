@@ -155,7 +155,6 @@ class prep_db():
             exit(1)
         print("Done creating indexes and foreign keys")
         
-        print("-"*15)
         print("Complete: Database is prepared and loaded")
         
     def index_tables(self, constants_dir):
@@ -185,7 +184,6 @@ class prep_db():
             non zero otherwise
         """
         cursor = self.connection.cursor()
-        print(os.getcwd())
         try:
             for table in self.tables:
                 filepath = os.path.join(self.data_dir, table.lower() + ".tbl.csv")
@@ -193,7 +191,6 @@ class prep_db():
                     cursor.copy_from(in_file, table=table.lower(), sep="|")
             self.connection.commit()
         except Exception as e:
-            print(os.listdir())
             print("Unable to run load tables. %s" %e)
             return 1
         cursor.close()
@@ -231,6 +228,10 @@ class prep_db():
         # Change into the dbgen dir
         os.chdir(self.dbgen_path)
         
+        # Delete all tbl files in folder
+        for in_fname in glob.glob("*.tbl"):
+            os.remove(in_fname)
+        
         p = subprocess.Popen([os.path.join(".", "dbgen"), "-vf", "-s", str(self.scaling_factor)], stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
         
@@ -242,6 +243,8 @@ class prep_db():
                     os.makedirs("../" + self.data_dir, exist_ok=True)
                     # Match anything in self.dbgen_path with an extension of .tbl
                     for in_fname in glob.glob("*.tbl"):
+                        # Change the file permissions
+                        os.chmod(in_fname, 0o777)
                         fname = os.path.basename(in_fname)
                         out_fname = os.path.join("../" + self.data_dir, fname + ".csv")
                         try:

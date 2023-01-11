@@ -1,0 +1,5 @@
+Data Type,Scaling Factor,Query Name,Average,Runs
+Pandas,1,Query 1,4.2,[4.19602632522583]
+SQL,1,Query 1,5.46,[5.462345123291016]
+Pandas,2,Query 1,9.02,[9.021462440490723]
+SQL,2,Query 1,13.2,[13.199184656143188]

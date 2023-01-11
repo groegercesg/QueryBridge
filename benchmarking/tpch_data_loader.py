@@ -27,7 +27,7 @@ l_data_types = {
 l_parse_dates = ['l_shipdate', 'l_commitdate', 'l_receiptdate']
 
 # Don't set indexes, as we can't access them with Pandas selection!
-lineitem = pd.read_table("data/lineitem.tbl.csv", sep="|", names=l_columnnames, dtype=l_data_types, parse_dates=l_parse_dates)
+lineitem = pd.read_table("data_storage/lineitem.tbl.csv", sep="|", names=l_columnnames, dtype=l_data_types, parse_dates=l_parse_dates)
 
 # Order
 
@@ -50,7 +50,7 @@ o_data_types = {
 o_parse_dates = ['o_orderdate']
 
 # Don't set indexes, as we can't access them with Pandas selection!
-orders = pd.read_table("data/orders.tbl.csv", sep="|", names=o_columnnames, dtype=o_data_types, parse_dates=o_parse_dates)
+orders = pd.read_table("data_storage/orders.tbl.csv", sep="|", names=o_columnnames, dtype=o_data_types, parse_dates=o_parse_dates)
 
 # Customer
 
@@ -73,7 +73,7 @@ c_data_types = {
 c_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-customer = pd.read_table("data/customer.tbl.csv", sep="|", names=c_columnnames, dtype=c_data_types, parse_dates=c_parse_dates)
+customer = pd.read_table("data_storage/customer.tbl.csv", sep="|", names=c_columnnames, dtype=c_data_types, parse_dates=c_parse_dates)
 
 # Part
 
@@ -97,7 +97,7 @@ p_data_types = {
 p_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-part = pd.read_table("data/part.tbl.csv", sep="|", names=p_columnnames, dtype=p_data_types, parse_dates=p_parse_dates)
+part = pd.read_table("data_storage/part.tbl.csv", sep="|", names=p_columnnames, dtype=p_data_types, parse_dates=p_parse_dates)
 
 # Nation
 
@@ -116,7 +116,7 @@ n_data_types = {
 n_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-nation = pd.read_table("data/nation.tbl.csv", sep="|", names=n_columnnames, dtype=n_data_types, parse_dates=n_parse_dates)
+nation = pd.read_table("data_storage/nation.tbl.csv", sep="|", names=n_columnnames, dtype=n_data_types, parse_dates=n_parse_dates)
 
 # Supplier
 
@@ -138,7 +138,7 @@ s_data_types = {
 s_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-supplier = pd.read_table("data/supplier.tbl.csv", sep="|", names=s_columnnames, dtype=s_data_types, parse_dates=s_parse_dates)
+supplier = pd.read_table("data_storage/supplier.tbl.csv", sep="|", names=s_columnnames, dtype=s_data_types, parse_dates=s_parse_dates)
 
 # Partsupp
 
@@ -158,7 +158,7 @@ ps_data_types = {
 ps_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-partsupp = pd.read_table("data/partsupp.tbl.csv", sep="|", names=ps_columnnames, dtype=ps_data_types, parse_dates=ps_parse_dates)
+partsupp = pd.read_table("data_storage/partsupp.tbl.csv", sep="|", names=ps_columnnames, dtype=ps_data_types, parse_dates=ps_parse_dates)
 
 # Region
 
@@ -176,4 +176,4 @@ r_data_types = {
 r_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-region = pd.read_table("data/region.tbl.csv", sep="|", names=r_columnnames, dtype=r_data_types, parse_dates=r_parse_dates)
+region = pd.read_table("data_storage/region.tbl.csv", sep="|", names=r_columnnames, dtype=r_data_types, parse_dates=r_parse_dates)
