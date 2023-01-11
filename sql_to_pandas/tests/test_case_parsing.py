@@ -103,7 +103,9 @@ def test_case_conditions():
     pandas_expected = inspect.cleandoc("""
         supplier['case_column'] = np.select([(supplier['s_nationkey'] > 0) & (supplier['s_nationkey'] <= 50), (supplier['s_nationkey'] > 50) & (supplier['s_nationkey'] <= 120), supplier["s_nationkey"] > 120], ['Young Nation', 'Medium Nation', 'Old Nation'], 'NULL')
         df_filter_1 = supplier[['s_suppkey', 'case_column', 's_nationkey']]
-        return df_filter_1""").strip()
+        df_sort_1 = df_filter_1.sort_values(by=['s_suppkey'], ascending=[True])
+        df_sort_1 = df_sort_1[['s_suppkey', 'case_column', 's_nationkey']]
+        return df_sort_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT s_suppkey,
@@ -133,7 +135,9 @@ def test_case_or_conditions():
     pandas_expected = inspect.cleandoc("""
         supplier['case_column'] = np.select([(supplier['s_nationkey'] > 0) & (supplier['s_nationkey'] < 20), (supplier['s_nationkey'] > 20) | (supplier['s_nationkey'] == 20)], ['Young Nation', 'Medium and Above Nation'], 'NULL')
         df_filter_1 = supplier[['s_suppkey', 'case_column', 's_nationkey']]
-        return df_filter_1""").strip()
+        df_sort_1 = df_filter_1.sort_values(by=['s_suppkey'], ascending=[True])
+        df_sort_1 = df_sort_1[['s_suppkey', 'case_column', 's_nationkey']]
+        return df_sort_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT s_suppkey,
@@ -210,7 +214,9 @@ def test_case_expression():
     pandas_expected = inspect.cleandoc("""
         part['container_annotation'] = np.select([part['p_container'] == 'JUMBO PKG', part['p_container'] == 'SM PKG'], ['Jumbo Package', 'Small Package'], 'Other')
         df_filter_1 = part[['p_partkey', 'p_name', 'container_annotation']]
-        return df_filter_1""").strip()
+        df_sort_1 = df_filter_1.sort_values(by=['p_partkey'], ascending=[True])
+        df_sort_1 = df_sort_1[['p_partkey', 'p_name', 'container_annotation']]
+        return df_sort_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT 
@@ -240,7 +246,9 @@ def test_case_expression_nested_like():
     pandas_expected = inspect.cleandoc("""
         part['container_format'] = np.select([part.p_container.str.contains("^.*?PKG.*?$",regex=True), part.p_container.str.contains("^.*?CASE.*?$",regex=True), part.p_container.str.contains("^.*?BAG.*?$",regex=True), part.p_container.str.contains("^.*?DRUM.*?$",regex=True), part.p_container.str.contains("^.*?.*?BOX.*?$",regex=True), part.p_container.str.contains("^.*?JAR.*?$",regex=True), part.p_container.str.contains("^.*?PACK.*?$",regex=True)], ['Package', 'Case', 'Bag', 'Drum', 'Box', 'Jar', 'Pack'], 'Other')
         df_filter_1 = part[['p_partkey', 'p_name', 'container_format', 'p_container']]
-        return df_filter_1""").strip()
+        df_sort_1 = df_filter_1.sort_values(by=['p_partkey'], ascending=[True])
+        df_sort_1 = df_sort_1[['p_partkey', 'p_name', 'container_format', 'p_container']]
+        return df_sort_1""").strip()
     
     sql_query = inspect.cleandoc("""
         SELECT 
@@ -276,7 +284,9 @@ def test_case_expression_nested_like_group():
     pandas_expected = inspect.cleandoc("""
         part['container_format'] = np.select([part.p_container.str.contains("^.*?PKG.*?$",regex=True), part.p_container.str.contains("^.*?CASE.*?$",regex=True), part.p_container.str.contains("^.*?BAG.*?$",regex=True), part.p_container.str.contains("^.*?DRUM.*?$",regex=True), part.p_container.str.contains("^.*?.*?BOX.*?$",regex=True), part.p_container.str.contains("^.*?JAR.*?$",regex=True), part.p_container.str.contains("^.*?PACK.*?$",regex=True), part.p_container.str.contains("^.*?CAN.*?$",regex=True)], ['Package', 'Case', 'Bag', 'Drum', 'Box', 'Jar', 'Pack', 'Can'], 'Other')
         df_filter_1 = part[['p_partkey', 'container_format']]
-        df_group_1 = df_filter_1 \\
+        df_sort_1 = df_filter_1.sort_values(by=['p_partkey'], ascending=[True])
+        df_sort_1 = df_sort_1[['p_partkey', 'container_format']]
+        df_group_1 = df_sort_1 \\
             .groupby(['container_format'], sort=False) \\
             .agg(
                 container_count=("container_format", "count"),

@@ -136,7 +136,7 @@ def test_max_alias():
 def test_count():
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        df_filter_1 = supplier[['s_suppkey']]
+        df_filter_1 = supplier[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
         df_aggr_1 = pd.DataFrame()
         df_aggr_1['counts_suppkey'] = [(df_filter_1.s_suppkey).count()]
         df_aggr_1 = df_aggr_1[['counts_suppkey']]
@@ -156,7 +156,7 @@ def test_count():
 def test_count_alias():
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        df_filter_1 = supplier[['s_suppkey']]
+        df_filter_1 = supplier[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
         df_aggr_1 = pd.DataFrame()
         df_aggr_1['cnt_key'] = [(df_filter_1.s_suppkey).count()]
         df_aggr_1 = df_aggr_1[['cnt_key']]

@@ -47,7 +47,7 @@ def run_query(sql, constants):
     write_to_file(constants.INPUTS_DIR+constants.QUERY_NAME, sql)  
         
     # Run this query
-    cmd = ["python3", constants.CONVERTER_LOC, '--file', constants.INPUTS_DIR+constants.QUERY_NAME, "--output_location", constants.OUTPUTS_DIR, '--benchmarking', "False", "--name", constants.OUTPUT_NAME]    
+    cmd = ["python3", constants.CONVERTER_LOC, '--file', constants.INPUTS_DIR+constants.QUERY_NAME, "--output_location", constants.OUTPUTS_DIR, '--benchmarking', "False", "--name", constants.OUTPUT_NAME, "--db_file", "../../database_connection.json"]    
     
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
     

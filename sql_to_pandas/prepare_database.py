@@ -87,6 +87,31 @@ class prep_db():
         cursor.close()
         return cursor_fetch
     
+    def prepare_test_database(self, data_dir, constants_dir):
+        self.data_dir = data_dir
+        # Load Data
+            # Clean Database
+        if self.clean_database():
+            print("Could not clean the database.")
+            exit(1)
+        print("Cleaned database %s" % self.connection_details["Database"])
+            # Create Schema
+        if self.create_schema(constants_dir):
+            print("Could not create schema.")
+            exit(1)
+        print("Done creating schemas")
+            # Load Tables
+        if self.load_tables():
+            print("Could not load data to tables")
+            exit(1)
+        print("Done loading data to tables")    
+        
+        # Don't index tables, we have cut our data up so indexes and foreign keys won't work
+        
+        print("-"*15)
+        print("Complete: Database is prepared and loaded")
+        
+    
     def prepare_database(self, data_dir, constants_dir, scaling_factor = 1):
         # Prepare the database, at the connection object!
         self.scaling_factor = scaling_factor
@@ -160,6 +185,7 @@ class prep_db():
             non zero otherwise
         """
         cursor = self.connection.cursor()
+        print(os.getcwd())
         try:
             for table in self.tables:
                 filepath = os.path.join(self.data_dir, table.lower() + ".tbl.csv")
@@ -167,6 +193,7 @@ class prep_db():
                     cursor.copy_from(in_file, table=table.lower(), sep="|")
             self.connection.commit()
         except Exception as e:
+            print(os.listdir())
             print("Unable to run load tables. %s" %e)
             return 1
         cursor.close()
@@ -244,6 +271,11 @@ class prep_db():
             os.chdir(cur_dir)
             print(out)
             print(err)
+            
+            # TODO:
+            # Sometimes we get here, because a file is locked, permission issues
+            # We can resolve this by deleting all the "*.tbl" files in self.dbgen_path
+            # And rerunning this current function
             return p.returncode
     
     def build_dbgen(self):
@@ -259,10 +291,15 @@ class prep_db():
         # Change into the dbgen dir
         os.chdir(self.dbgen_path)
         
-        p = subprocess.Popen(["make", "-f", os.path.join(cur_dir, "makefile")], stdout=DEVNULL, stderr=STDOUT)
-        p.communicate()
+        p = subprocess.Popen(["make", "-f", os.path.join(cur_dir, "makefile")], stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
         
         # Change back out of it
         os.chdir(cur_dir)
         
-        return p.returncode
+        if not p.returncode:
+            return p.returncode
+        else:
+            print(out)
+            print(err)
+            return p.returncode

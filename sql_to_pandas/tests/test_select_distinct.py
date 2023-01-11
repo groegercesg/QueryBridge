@@ -70,7 +70,7 @@ def test_standard_select():
 def test_simple_count():
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        df_filter_1 = orders[['o_custkey']]
+        df_filter_1 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
         df_aggr_1 = pd.DataFrame()
         df_aggr_1['counto_custkey'] = [(df_filter_1.o_custkey).count()]
         df_aggr_1 = df_aggr_1[['counto_custkey']]
@@ -114,7 +114,7 @@ def test_simple_distinct():
 def test_count_distinct():
     # Expected pandas
     pandas_expected = inspect.cleandoc("""
-        df_filter_1 = orders[['o_custkey']]
+        df_filter_1 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
         df_aggr_1 = pd.DataFrame()
         df_aggr_1['countdistincto_custkey'] = [len((df_filter_1.o_custkey).unique())]
         df_aggr_1 = df_aggr_1[['countdistincto_custkey']]
