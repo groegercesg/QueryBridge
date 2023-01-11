@@ -2,7 +2,7 @@ import json
 import psycopg2
 import os
 import subprocess
-from subprocess import DEVNULL, STDOUT
+from subprocess import DEVNULL, STDOUT, PIPE
 import glob
 import re
 
@@ -17,6 +17,9 @@ class prep_db():
         # Set dbgen_path
         self.dbgen_path = dbgen_path
         
+        # Store TPC-H tables
+        self.tables = ['LINEITEM', 'PARTSUPP', 'ORDERS', 'CUSTOMER', 'SUPPLIER', 'NATION', 'REGION', 'PART']
+        
     def open_connection(self):
         return psycopg2.connect(user=self.connection_details["User"],
                                     password=self.connection_details["Password"],
@@ -25,8 +28,23 @@ class prep_db():
                                     database=self.connection_details["Database"])
         
     def clean_database(self):
-        # Using the initialise connection object, clean all tables at this database
-        pass
+        """
+        Using the initialise connection object, clean all tables at this database
+        Drops the tables if they exist
+        Return:
+            0 if successful
+            non zero otherwise
+        """
+        cursor = self.connection.cursor()
+        try:
+            for table in self.tables:
+                cursor.execute("DROP TABLE IF EXISTS %s " % table)
+            self.connection.commit()
+        except Exception as e:
+            print("Unable to remove existing tables. %s" % e)
+            return 1
+        cursor.close()
+        return 0
     
     def is_database_empty(self):
         # Return TRUE if database has no tables at connection obj, FALSE if it has tables
@@ -69,7 +87,7 @@ class prep_db():
         cursor.close()
         return cursor_fetch
     
-    def prepare_database(self, data_dir, scaling_factor = 1):
+    def prepare_database(self, data_dir, constants_dir, scaling_factor = 1):
         # Prepare the database, at the connection object!
         self.scaling_factor = scaling_factor
         self.data_dir = data_dir
@@ -90,26 +108,108 @@ class prep_db():
             exit(1)
         print("Created data files in %s" % data_dir)
         
-        
         # Load Data
             # Clean Database
+        if self.clean_database():
+            print("Could not clean the database.")
+            exit(1)
+        print("Cleaned database %s" % self.connection_details["Database"])
             # Create Schema
+        if self.create_schema(constants_dir):
+            print("Could not create schema.")
+            exit(1)
+        print("Done creating schemas")
             # Load Tables
+        if self.load_tables():
+            print("Could not load data to tables")
+            exit(1)
+        print("Done loading data to tables")    
             # Index Tables
+        if self.index_tables(constants_dir):
+            print("Could not create indexes for tables")
+            exit(1)
+        print("Done creating indexes and foreign keys")
+        
+        print("-"*15)
+        print("Complete: Database is prepared and loaded")
+        
+    def index_tables(self, constants_dir):
+        """
+        Creates indexes and foreign keys for loaded tables.
+        Return:
+            0 if successful
+            non zero otherwise
+        """
+        cursor = self.connection.cursor()
+        try:
+            with open(os.path.join(constants_dir, "create_idx.sql")) as query_file:
+                query = query_file.read()
+                cursor.execute(query)
+            self.connection.commit()
+        except Exception as e:
+            print("Unable to run index tables. %s" % e)
+            return 1
+        cursor.close()
+        return 0
+                 
+    def load_tables(self):
+        """
+        Loads data into tables. Expects that tables are already empty and initialised.
+        Return:
+            0 if successful
+            non zero otherwise
+        """
+        cursor = self.connection.cursor()
+        try:
+            for table in self.tables:
+                filepath = os.path.join(self.data_dir, table.lower() + ".tbl.csv")
+                with open(filepath, 'r') as in_file:
+                    cursor.copy_from(in_file, table=table.lower(), sep="|")
+            self.connection.commit()
+        except Exception as e:
+            print("Unable to run load tables. %s" %e)
+            return 1
+        cursor.close()
+        return 0
+            
+    def create_schema(self, constants_dir):
+        """
+        Creates the schema for the tables.
+        Return:
+            0 if successful
+            non zero otherwise
+        """
+        cursor = self.connection.cursor()
+        try:
+            with open(os.path.join(constants_dir, "create_tbl.sql")) as query_file:
+                query = query_file.read()
+                cursor.execute(query)
+            self.connection.commit()
+        except Exception as e:
+            print("Unable to run create tables. %s" % e)
+            return 1
+        cursor.close()
+        return 0
+    
             
     def generate_data(self):
+        """
+        Generates the data from dbgen, and moves it into the data_dir directory.
+        Return:
+            0 if successful
+            non zero otherwise
+        """
         cur_dir = os.getcwd()
         
         # Change into the dbgen dir
         os.chdir(self.dbgen_path)
         
-        p = subprocess.Popen([os.path.join(".", "dbgen"), "-vf", "-s", str(self.scaling_factor)], stdout=DEVNULL, stderr=STDOUT)
-        p.communicate()        
+        p = subprocess.Popen([os.path.join(".", "dbgen"), "-vf", "-s", str(self.scaling_factor)], stdout=PIPE, stderr=PIPE)
+        out, err = p.communicate()
         
         if not p.returncode:
             # We have generated the data files successfully, but they're all in the dbgen_path
             # We should move them to self.data_dir
-            
                 try:
                     # TODO: This is hardcoded and sloppy, but it works for now
                     os.makedirs("../" + self.data_dir, exist_ok=True)
@@ -124,12 +224,12 @@ class prep_db():
                                     out_file.write(outline)
                             os.remove(in_fname)
                         except IOError as e:
-                            print("something bad happened while transforming data files. (%s)" % e)
+                            print("Something bad happened while transforming data files. (%s)" % e)
                             # Change back out of it
                             os.chdir(cur_dir)
                             return 1
                 except IOError as e:
-                    print("unable to create data directory %s. (%s)" % (self.data_dir, e))
+                    print("Unable to create data directory %s. (%s)" % (self.data_dir, e))
                     # Change back out of it
                     os.chdir(cur_dir)
                     return 1
@@ -142,15 +242,14 @@ class prep_db():
             
             # Change back out of it
             os.chdir(cur_dir)
+            print(out)
+            print(err)
             return p.returncode
-    
     
     def build_dbgen(self):
         """
         Compiles the dbgen from source.
         The Makefile must be present in the same directory as this script.
-        Args:
-            dbgen_dir (str): Directory in which the source code is placed.
         Return:
             0 if successful
             non zero otherwise
