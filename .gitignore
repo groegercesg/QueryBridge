@@ -4,3 +4,7 @@ __pycache__/
 .vscode/
 data/
 sql_to_pandas/results/
+tpch-dbgen/
+makefile
+data_storage/
+sql_to_pandas/test.py
