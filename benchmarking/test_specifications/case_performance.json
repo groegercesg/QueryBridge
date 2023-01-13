@@ -1,39 +1,87 @@
 {
-    "Test Name":"Case Performance",
-    "SQL Queries": [
+    "Test Name": "Case Performance",
+    "Scaling Factors": [1],
+    "Queries": [
         {
             "Query Name": "Query 8",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/8.sql",
             "Required Data": ["part", "supplier", "lineitem", "orders", "customer", "nation", "region"],
-            "Pandas Name": "q8_pandas.py"
+            "SQL Name": "8.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q8_pandas.py",
+                    "Results Name": "Pandas Converter"
+                }, 
+                {
+                    "Type": "Pandas",
+                    "Converter": "False",
+                    "File Name": "old_query_8.py",
+                    "Results Name": "Pandas By-Hand"
+                }
+            ]
         },
         {
             "Query Name": "Query 12",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/12.sql",
             "Required Data": ["orders", "lineitem"],
-            "Pandas Name": "q12_pandas.py"
+            "SQL Name": "12.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q12_pandas.py",
+                    "Results Name": "Pandas Converter"
+                }, 
+                {
+                    "Type": "Pandas",
+                    "Converter": "False",
+                    "File Name": "old_query_12.py",
+                    "Results Name": "Pandas By-Hand"
+                }
+            ]
         },
         {
             "Query Name": "Query 14",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/14.sql",
             "Required Data": ["lineitem", "part"],
-            "Pandas Name": "q14_pandas.py"
+            "SQL Name": "14.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q14_pandas.py",
+                    "Results Name": "Converted Pandas"
+                }, 
+                {
+                    "Type": "Pandas",
+                    "Converter": "False",
+                    "File Name": "old_query_14.py",
+                    "Results Name": "Pandas By-Hand"
+                }
+            ]
         }
     ],
     "Temporary Directory": "benchmarking/temp_queries",
     "SQL Converter Location": "sql_to_pandas/sql_to_pandas.py",
+    "SQL Queries Location": "benchmarking/queries",
+    "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 25,
-    "Results Location": "benchmarking/test_results/after_case_performance_results.csv",
-    "Database Connection Details": {
-            "User": "benchmarker",
-            "Password": "benchMugPassword",
-            "Host": "localhost",
-            "Port": "5432",
-            "Database": "tpchdb"
-        },
+    "Number of Query Runs": 1,
+    "Results Location": "benchmarking/test_results/case_performance_results.csv",
+    "Database Connection Details": "database_connection.json",
+    "DB Gen Location": "tpch-dbgen",
+    "Constants Location": "tpch-prep",
+    "Data Storage": "data_storage",
     "Results Precision": 4
-}   
+}

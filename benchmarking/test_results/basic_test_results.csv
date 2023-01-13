@@ -1,2 +1,3 @@
-Data Type,Query Name,Average,Runs
-Pandas,Query 1,6.54,"[8.04646611213684, 7.037800312042236, 5.466570138931274, 5.958579778671265, 6.21486496925354]"
+Data Type,Scaling Factor,Query Name,Average,Runs
+SQL,1,SQL,6.6,[6.598453521728516]
+Pandas,1,Pandas Converter,3.26,[3.2554759979248047]

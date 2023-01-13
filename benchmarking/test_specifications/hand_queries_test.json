@@ -1,5 +1,5 @@
 {
-    "Test Name": "Basic Test",
+    "Test Name": "Hand Queries Test",
     "Scaling Factors": [1],
     "Queries": [
         {
@@ -16,6 +16,12 @@
                     "Converter": "True",
                     "Converted Name": "q1_pandas.py",
                     "Results Name": "Pandas Converter"
+                }, 
+                {
+                    "Type": "Pandas",
+                    "Converter": "False",
+                    "File Name": "hesam_query_1.py",
+                    "Results Name": "Pandas By-Hand"
                 }
             ]
         }
@@ -26,7 +32,7 @@
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 1,
-    "Results Location": "benchmarking/test_results/basic_test_results.csv",
+    "Results Location": "benchmarking/test_results/hand_queries_test_results.csv",
     "Database Connection Details": "database_connection.json",
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",

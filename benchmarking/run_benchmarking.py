@@ -12,12 +12,30 @@ from compare_results import compare
 import os
 import importlib.util
 import sys
+from contextlib import contextmanager
+
+class HiddenPrinting:
+    def __enter__(self):
+        self._original_stdout = sys.stdout
+        sys.stdout = open(os.devnull, 'w')
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout.close()
+        sys.stdout = self._original_stdout
 
 # TODO: Really gnarly import statement for 
 spec = importlib.util.spec_from_file_location("prepare_database", "sql_to_pandas/prepare_database.py")
 prepare_database = importlib.util.module_from_spec(spec)
 sys.modules["prepare_database"] = prepare_database
 spec.loader.exec_module(prepare_database)
+
+import json
+
+def validateJsonKeys(myjson):
+    if set(myjson.keys()) == {"Test Name", "Scaling Factors", "Queries", "Temporary Directory", "SQL Converter Location", "SQL Queries Location", "Stored Queries Location", "Pandas Data Loader", "Number of Query Runs", "Results Location", "Database Connection Details", "DB Gen Location", "Constants Location", "Data Storage", "Results Precision"}:
+        return True
+    else:
+        return False
 
 class color:
     PURPLE = '\033[95m'
@@ -85,6 +103,10 @@ def main():
     manifest = args.file
     manifest_json = json.load(open(manifest))
     
+    # Validate JSON
+    # TODO: Could make this validation stronger, using: https://pypi.org/project/jsonschema/
+    validateJsonKeys(manifest_json)
+    
     with open(manifest_json["Database Connection Details"], "r") as f:
         db_details = json.load(f)
     
@@ -105,8 +127,13 @@ def main():
         
         # Prepare the database
         # Run prepare database
+        print("Preparing Database")
         db = prepare_database.prep_db(manifest_json["Database Connection Details"], manifest_json["DB Gen Location"])
-        db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
+        if args.verbose:
+            db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
+        else:
+            with HiddenPrinting():
+                db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
         print("Database prepared")
     
         # Import Pandas Data
@@ -147,120 +174,164 @@ def main():
             # Delete temporary folder
             if temp_path.exists() and temp_path.is_dir():
                 shutil.rmtree(temp_path)
+                
+        def make_sql_file_path(manifest, query):
+            file_path = None
+            if manifest[-1] != "/" and query[0] != "/":
+                file_path = manifest + "/" + query
+            elif manifest[-1] == "/" and query[0] != "/":
+                file_path = manifest + query
+            elif manifest[-1] != "/" and query[0] == "/":
+                file_path = manifest + query
+            elif manifest[-1] == "/" and query[0] == "/":
+                file_path = manifest + query[1:]
+            else:
+                raise ValueError("Manifest and Query JSON not recognised with paths: " + str(manifest) + " and " + str(query))
+            return file_path
             
         temp_path = make_temp_folder()
     
-    
         # Iterate through all the SQL Queries
-        for sql_query in manifest_json["SQL Queries"]:
+        for query in manifest_json["Queries"]:
             temp_path = make_temp_folder()
             
-            print("Doing Query: " + str(sql_query["Query Name"]))
-        
-            # Run converter
-            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_query["Query Location"], '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", sql_query["Pandas Name"], "--db_file", manifest_json["Database Connection Details"]]    
-            if "Conversion Options" in sql_query:
-                cmd += sql_query["Conversion Options"]
+            print("Doing Query: " + str(query["Query Name"]))
             
-            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+            # Store Pandas results
+            pandas_results_list = []
             
-            if result.returncode != 0:
-                print(result.stdout)
-                print(result.stderr)
-                raise Exception( f'Invalid result: { result.returncode }' )      
+            sql_file_path = make_sql_file_path(manifest_json["SQL Queries Location"], query["SQL Name"])
             
-            function_default = "query"
-            package_name = str(sql_query["Pandas Name"]).split(".")[0]
-            
-            # Put an __init__.py file into the folder so it can be imported as a module
-            init_writer()
-            
-            # Set changed Dirs to false
-            changed_dirs = False
-            if "/" in str(manifest_json["Temporary Directory"]):
-                # Split this, cd to the first part
-                split_dir = str(manifest_json["Temporary Directory"]).split("/")
-                os.chdir(split_dir[0])
-                package_location = ".".join(split_dir[1:]) + ".%s" % package_name
+            # Iterate through "Options"
+            for query_option in query["Options"]:
+                if query_option["Type"] == "SQL":
+                    sql_run_times = []
+                    
+                    sql_runs = manifest_json["Number of Query Runs"]
+                    for i in range(sql_runs):
+                        if args.verbose:
+                            print("Doing SQL Run: " + str(i+1))
+                        
+                        sql_result, run_time = run_query(db_details, sql_file_path, args.verbose)
+                        sql_run_times.append(run_time)
+                        
+                    if args.verbose:   
+                        print(sql_run_times)
+                    avg_3sf = round_sig(sum(sql_run_times)/len(sql_run_times), 3)
+                    print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
+                    results_writer(manifest_json, ["SQL", str(scaling_factor), str(query_option["Results Name"]), avg_3sf, sql_run_times])
                 
-                # We have changed directories, 
-                changed_dirs = True
-            else:
-                package_location = str(manifest_json["Temporary Directory"]) + ".%s" % package_name
+                elif query_option["Type"] == "Pandas":
+                    if query_option["Converter"] == "True":
+                        # We first convert the SQL to a Pandas Query, and then run it!
+                        # Run converter
+                        cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--db_file", manifest_json["Database Connection Details"]]    
+                        if "Conversion Options" in query_option:
+                            cmd += query_option["Conversion Options"]
+                        
+                        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+                        
+                        if result.returncode != 0:
+                            print(result.stdout)
+                            print(result.stderr)
+                            raise Exception( f'Invalid result: { result.returncode }' )      
+                        
+                        function_default = "query"
+                        package_name = str(query_option["Converted Name"]).split(".")[0]
+                        
+                        # Put an __init__.py file into the folder so it can be imported as a module
+                        init_writer()
+                        
+                        # Set located directory, the directory storing the query
+                        located_directory = manifest_json["Temporary Directory"]
+                    elif query_option["Converter"] == "False":
+                        # We don't convert, just use the file path specified to run it!    
+                                        
+                        # Set located directory, the directory storing the query
+                        located_directory = manifest_json["Stored Queries Location"]
+                        
+                        # Set Package name
+                        package_name = str(query_option["File Name"]).split(".")[0]
+                        
+                        # Set default function name
+                        function_default = "query"
+                    else:
+                        raise Exception("Unknown Converter option for a Pandas Type query: " + str(query_option["Converter"]))    
+                    
+                    # Change into the directory with the query, so as to import it
+                    # Set changed Dirs to false
+                    changed_dirs = False
+                    if "/" in str(located_directory):
+                        # Split this, cd to the first part
+                        split_dir = str(located_directory).split("/")
+                        os.chdir(split_dir[0])
+                        package_location = ".".join(split_dir[1:]) + ".%s" % package_name
+                        
+                        # We have changed directories
+                        changed_dirs = True
+                    else:
+                        package_location = str(located_directory) + ".%s" % package_name
+                    
+                    query_function = getattr(__import__(package_location, fromlist=[function_default]), function_default)
+                    
+                    # Order of data imports
+                    data_order = list(query_function.__code__.co_varnames[:query_function.__code__.co_argcount])
+                    
+                    # Get Query Data
+                    query_data = [0] * len(data_order)
+                    for relation in query["Required Data"]:
+                        # Get position of relation in data_order, use as position in query data
+                        insert_pos = data_order.index(relation)
+                        query_data[insert_pos] = getattr(data_loaded, relation)
+                        
+                    pandas_run_times = []
+                    # Run the query and get an execution time for it
+                    for i in range(manifest_json["Number of Query Runs"]):
+                        if args.verbose:
+                            print("Doing Pandas Run: " + str(i+1))
+                        
+                        start_time = time.time()
+                        pandas_result = query_function(*query_data)
+                        end_time = time.time()
+                        
+                        pandas_run_times.append(end_time - start_time)
+                        
+                    # Change back if we've moved
+                    if changed_dirs == True:
+                        os.chdir("..")
+                        changed_dirs = False
+                    
+                    if args.verbose:   
+                        print(pandas_run_times)
+                    avg_3sf = round_sig(sum(pandas_run_times)/len(pandas_run_times), 3)
+                    print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
+                    results_writer(manifest_json, ["Pandas", str(scaling_factor), str(query_option["Results Name"]), avg_3sf, pandas_run_times])
             
-            query_function = getattr(__import__(package_location, fromlist=[function_default]), function_default)
-            
-            # Order of data imports
-            data_order = list(query_function.__code__.co_varnames[:query_function.__code__.co_argcount])
-            
-            # Get Query Data
-            query_data = [0] * len(data_order)
-            for relation in sql_query["Required Data"]:
-                # Get position of relation in data_order, use as position in query data
-                insert_pos = data_order.index(relation)
-                query_data[insert_pos] = getattr(data_loaded, relation)
-            
-            pandas_run_times = []
-            # Run the query and get an execution time for it
-            for i in range(manifest_json["Number of Query Runs"]):
-                if args.verbose:
-                    print("Doing Pandas Run: " + str(i+1))
-                
-                start_time = time.time()
-                pandas_result = query_function(*query_data)
-                end_time = time.time()
-                
-                pandas_run_times.append(end_time - start_time)
-                
-            # Change back if we've moved
-            if changed_dirs == True:
-                os.chdir("..")
-                changed_dirs = False
-            
-            if args.verbose:   
-                print(pandas_run_times)
-            avg_3sf = round_sig(sum(pandas_run_times)/len(pandas_run_times), 3)
-            print("Pandas: " + str(avg_3sf))
-            results_writer(manifest_json, [str(sql_query["Results Name"]), str(scaling_factor), str(sql_query["Query Name"]), avg_3sf, pandas_run_times])
-            
-            sql_run_times = []
-            # Handle whether to run SQL many times or just run once to check correctness
-            sql_runs = None
-            if "Compare SQL" in sql_query:
-                if sql_query["Compare SQL"] == "Once":
-                    sql_runs = 1
+                    # Append to pandas_results_list, in a tuple
+                    pandas_results_list.append((query_option["Results Name"], pandas_result))
                 else:
-                    raise ValueError("Unknown Value for Compare SQL in Query: " + str(sql_query["Query Name"]) + ". This was: " + str(sql_query["Compare SQL"]))
-            else:
-                sql_runs = manifest_json["Number of Query Runs"]
-            for i in range(sql_runs):
-                if args.verbose:
-                    print("Doing SQL Run: " + str(i+1))
-                sql_result, run_time = run_query(db_details, sql_query["Query Location"], args.verbose)
-                sql_run_times.append(run_time)
+                    raise Exception("Unable to Benchmark a query type: " + str(query_option["Type"]) + " that we are unfamiliar with.")
                 
-            if args.verbose:   
-                print(sql_run_times)
-            avg_3sf = round_sig(sum(sql_run_times)/len(sql_run_times), 3)
-            print("SQL: " + str(avg_3sf))
-            if "Compare SQL" not in sql_query:
-                # If we have set our "Compare SQL", then don't write the SQL results to file
-                results_writer(manifest_json, ["SQL", str(scaling_factor), str(sql_query["Query Name"]), avg_3sf, sql_run_times])
-            
             # Checking correctness
-            # We should check if pandas_result is the same as sql_result
-            compare_decision, columns = compare(sql_query["Query Location"], pandas_result, sql_result, manifest_json["Results Precision"])
-            if compare_decision:
-                print(color.BOLD + "The returned data was equivalent for both SQL and Pandas" + color.END)
-            else:
-                print(color.RED + "The returned data was not equivalent!" + color.END)
-                print("Pandas Data:")
-                print(pandas_result)
-                print("SQL Data:")
-                print(columns)
-                for row in sql_result:
-                    print(row)
-            
+            compare_decisions_list = []
+            for pandas_name, pandas_result in pandas_results_list:
+                # We should check if pandas_result is the same as sql_result
+                compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"])
+                compare_decisions_list.append(compare_decision)
+                
+                if not compare_decision:
+                    print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(pandas_name) + " and SQL." + color.END)
+                    print("Pandas Data:")
+                    print(pandas_result)
+                    print("SQL Data:")
+                    print(columns)
+                    for row in sql_result:
+                        print(row)
+                
+            # If all compare decisions were true, then print out equivalent
+            if all(compare_decisions_list) == True:
+                print(color.BOLD + str(query["Query Name"]) + ": The returned data was equivalent for both SQL and Pandas" + color.END)
+                
             delete_temp_folder()
     
     print(color.GREEN + "Testing is complete and results have been written to: " + str(manifest_json["Results Location"]) + color.END)    

@@ -1,163 +1,426 @@
 {
-    "Test Name":"Column Limiting Test",
-    "SQL Queries": [
-
+    "Test Name": "Column Limiting Test",
+    "Scaling Factors": [1],
+    "Queries": [
         {
             "Query Name": "Query 1",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/1.sql",
             "Required Data": ["lineitem"],
-            "Pandas Name": "q1_pandas.py"
+            "SQL Name": "1.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q1_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q1_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
         },
-            {
-                "Query Name": "Query 1",
-                "Results Name": "Pandas (No Column Limiting)",
-                "Query Location": "benchmarking/queries/1.sql",
-                "Required Data": ["lineitem"],
-                "Pandas Name": "q1_pandas.py",
-                "Compare SQL": "Once",
-                "Conversion Options": ["--column_limiting", "False"]
-            },
-        {
-            "Query Name": "Query 18",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/18.sql",
-            "Required Data": ["lineitem", "orders", "customer"],
-            "Pandas Name": "q18_pandas.py"
-        },
-            {
-                "Query Name": "Query 18",
-                "Results Name": "Pandas (No Column Limiting)",
-                "Query Location": "benchmarking/queries/18.sql",
-                "Required Data": ["lineitem", "orders", "customer"],
-                "Pandas Name": "q18_pandas.py",
-                "Compare SQL": "Once",
-                "Conversion Options": ["--column_limiting", "False"]
-            },
-        {
-            "Query Name": "Query 4",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/4.sql",
-            "Required Data": ["orders", "lineitem"],
-            "Pandas Name": "q4_pandas.py"
-        },
-            {
-                "Query Name": "Query 4",
-                "Results Name": "Pandas (No Column Limiting)",
-                "Query Location": "benchmarking/queries/4.sql",
-                "Required Data": ["orders", "lineitem"],
-                "Pandas Name": "q4_pandas.py",
-                "Compare SQL": "Once",
-                "Conversion Options": ["--column_limiting", "False"]
-            },
         {
             "Query Name": "Query 3",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/3.sql",
             "Required Data": ["customer", "orders", "lineitem"],
-            "Pandas Name": "q3_pandas.py"
+            "SQL Name": "3.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q3_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q3_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
         },
-            {
-                "Query Name": "Query 3",
-                "Results Name": "Pandas (No Column Limiting)",
-                "Query Location": "benchmarking/queries/3.sql",
-                "Required Data": ["customer", "orders", "lineitem"],
-                "Pandas Name": "q3_pandas.py",
-                "Compare SQL": "Once",
-                "Conversion Options": ["--column_limiting", "False"]
-            },
+        {
+            "Query Name": "Query 4",
+            "Required Data": ["orders", "lineitem"],
+            "SQL Name": "4.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q4_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q4_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 5",
+            "Required Data": ["customer", "orders", "lineitem", "supplier", "nation", "region"],
+            "SQL Name": "5.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q5_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q5_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
+        },
         {
             "Query Name": "Query 6",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/6.sql",
             "Required Data": ["lineitem"],
-            "Pandas Name": "q6_pandas.py"
+            "SQL Name": "6.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q6_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q6_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
         },
-            {
-                "Query Name": "Query 6",
-                "Results Name": "Pandas (No Column Limiting)",
-                "Query Location": "benchmarking/queries/6.sql",
-                "Required Data": ["lineitem"],
-                "Pandas Name": "q6_pandas.py",
-                "Compare SQL": "Once",
-                "Conversion Options": ["--column_limiting", "False"]
-            },
+        {
+            "Query Name": "Query 7",
+            "Required Data": ["supplier", "lineitem", "orders", "customer", "nation"],
+            "SQL Name": "7.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q7_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q7_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 8",
+            "Required Data": ["part", "supplier", "lineitem", "orders", "customer", "nation", "region"],
+            "SQL Name": "8.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q8_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q8_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 9",
+            "Required Data": ["part", "supplier", "lineitem", "partsupp", "orders", "nation"],
+            "SQL Name": "9.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q9_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q9_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
+        },
         {
             "Query Name": "Query 10",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/10.sql",
             "Required Data": ["customer", "orders", "lineitem", "nation"],
-            "Pandas Name": "q10_pandas.py"
+            "SQL Name": "10.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q10_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q10_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
         },
-            {
-                "Query Name": "Query 10",
-                "Results Name": "Pandas (No Column Limiting)",
-                "Query Location": "benchmarking/queries/10.sql",
-                "Required Data": ["customer", "orders", "lineitem", "nation"],
-                "Pandas Name": "q10_pandas.py",
-                "Compare SQL": "Once",
-                "Conversion Options": ["--column_limiting", "False"]
-            },
         {
-            "Query Name": "Query 19",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/19.sql",
-            "Required Data": ["lineitem", "part"],
-            "Pandas Name": "q19_pandas.py"
+            "Query Name": "Query 11",
+            "Required Data": ["partsupp", "supplier", "nation"],
+            "SQL Name": "11.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q11_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q11_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
         },
-            {
-                "Query Name": "Query 19",
-                "Results Name": "Pandas (No Column Limiting)",
-                "Query Location": "benchmarking/queries/19.sql",
-                "Required Data": ["lineitem", "part"],
-                "Pandas Name": "q19_pandas.py",
-                "Compare SQL": "Once",
-                "Conversion Options": ["--column_limiting", "False"]
-            },
+        {
+            "Query Name": "Query 12",
+            "Required Data": ["orders", "lineitem"],
+            "SQL Name": "12.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q12_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q12_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 13",
+            "Required Data": ["customer", "orders"],
+            "SQL Name": "13.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q13_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q13_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
+        },
         {
             "Query Name": "Query 14",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/14.sql",
-            "Required Data": ["part", "lineitem"],
-            "Pandas Name": "q14_pandas.py"
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "14.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q14_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q14_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
         },
-            {
-                "Query Name": "Query 14",
-                "Results Name": "Pandas (No Column Limiting)",
-                "Query Location": "benchmarking/queries/14.sql",
-                "Required Data": ["part", "lineitem"],
-                "Pandas Name": "q14_pandas.py",
-                "Compare SQL": "Once",
-                "Conversion Options": ["--column_limiting", "False"]
-            },
         {
             "Query Name": "Query 15",
-            "Results Name": "Pandas",
-            "Query Location": "benchmarking/queries/15.sql",
-            "Required Data": ["supplier", "lineitem"],
-            "Pandas Name": "q15_pandas.py"
+            "Required Data": ["lineitem", "supplier"],
+            "SQL Name": "15.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q15_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q15_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
         },
-            {
-                "Query Name": "Query 15",
-                "Results Name": "Pandas (No Column Limiting)",
-                "Query Location": "benchmarking/queries/15.sql",
-                "Required Data": ["supplier", "lineitem"],
-                "Pandas Name": "q15_pandas.py",
-                "Compare SQL": "Once",
-                "Conversion Options": ["--column_limiting", "False"]
-            }
+        {
+            "Query Name": "Query 16",
+            "Required Data": ["partsupp", "part", "supplier"],
+            "SQL Name": "16.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q16_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q16_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 18",
+            "Required Data": ["customer", "orders", "lineitem"],
+            "SQL Name": "18.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q18_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q18_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 19",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "19.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q19_pandas.py",
+                    "Results Name": "Pandas Converted"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q19_pandas.py",
+                    "Results Name": "Pandas Column Limited",
+                    "Conversion Options": ["--column_limiting", "False"]
+                }
+            ]
+        }
     ],
     "Temporary Directory": "benchmarking/temp_queries",
     "SQL Converter Location": "sql_to_pandas/sql_to_pandas.py",
+    "SQL Queries Location": "benchmarking/queries",
+    "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 25,
+    "Number of Query Runs": 1,
     "Results Location": "benchmarking/test_results/column_limiting_results.csv",
-    "Database Connection Details": {
-            "User": "benchmarker",
-            "Password": "benchMugPassword",
-            "Host": "localhost",
-            "Port": "5432",
-            "Database": "tpchdb"
-        },
+    "Database Connection Details": "database_connection.json",
+    "DB Gen Location": "tpch-dbgen",
+    "Constants Location": "tpch-prep",
+    "Data Storage": "data_storage",
     "Results Precision": 4
-}   
+}

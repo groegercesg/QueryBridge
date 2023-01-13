@@ -1,0 +1,4 @@
+Data Type,Scaling Factor,Query Name,Average,Runs
+SQL,1,SQL,5.92,[5.915014982223511]
+Pandas,1,Pandas Converter,3.2,[3.2026379108428955]
+Pandas,1,Pandas By-Hand,1.66,[1.6575794219970703]

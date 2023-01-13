@@ -8,3 +8,4 @@ tpch-dbgen/
 makefile
 data_storage/
 sql_to_pandas/test.py
+stored_queries/

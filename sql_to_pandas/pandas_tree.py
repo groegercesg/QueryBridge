@@ -2141,8 +2141,12 @@ class group_aggr_node():
         instructions.append(this_df + " = " + prev_df + " \\")
         # Use the "sort=False", so that groupby doesn't change the sorting of groups themselves
         instructions.append("    .groupby(" + str(self.group_key) + ", sort=False) \\")
-        instructions.append("    .agg(")
         
+        # Incase we aren't being given any aggregation operations
+        if during_group == []:
+            instructions.append("    .last()")
+        else:
+            instructions.append("    .agg(")
         
         # Handle During
         #if aggr_type == "count" and inner == "*":
@@ -2183,8 +2187,9 @@ class group_aggr_node():
             else:
                 raise ValueError("Operation: " + str(during_operation) + " not recognised!")
             
-        # Add closing bracket
-        instructions.append("    )")
+        # Add closing bracket, only if we have added during operations
+        if during_group != []:
+            instructions.append("    )")
         
         # Use the after_group
         for after_name, after_command in after_group:
