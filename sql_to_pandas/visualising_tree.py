@@ -103,7 +103,7 @@ def walk_class_tree(graph, class_tree, parent_node=None):
 
         else: # if leaf node
             if hasattr(class_tree, "relation_name"):
-                to_name = str(class_tree.node_type) + '_' + str(class_tree.relation_name) # unique name
+                to_name = str(class_tree.node_type) + '_' + str(class_tree.relation_name) + '_' + str(get_class_id(class_tree))
                 to_label = str(class_tree.relation_name)
             else:
                 to_name = str(class_tree.node_type)

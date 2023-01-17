@@ -376,6 +376,12 @@ def solve_initplan_nodes(tree):
                             continue
                         elif nodeBelow.parent_relationship == "SubPlan":
                             # TODO: Do continue for now, we haven't decided how to use this functionality
+                            
+                            if determine_if_correlated_subquery(nodeBelow) == True:
+                                print("We have a correlated Subquery")
+                            else:
+                                print("We don't have a correlated Subquery")
+                            
                             continue
                             # We have a SubPlan
                             # Extract the name
@@ -404,6 +410,83 @@ def solve_initplan_nodes(tree):
     capturedTrees.append(tree)
     
     return capturedTrees
+
+def determine_if_correlated_subquery(tree):
+    """Determine if the explain plan features a correlated subquery or not
+
+    Args:
+        tree (object): explain tree for input SQL query, from the SubPlan declared
+    
+    Returns:
+        returnValue (boolean): true or false for whether or not we have a correlated subquery
+    """
+    returnValue = False
+    
+    # Iterate down the tree in a queue once to gather aliases
+    gatheredAliases = set()
+    treeQueue = Queue()
+    treeQueue.put(tree)
+    while (not treeQueue.empty()):
+        treeNode = treeQueue.get()
+        if treeNode == None:
+            continue
+        else:
+            # Act on the current node
+            
+            # We want to look at the nodes with aliases and relations
+            if hasattr(treeNode, "alias"):
+                gatheredAliases.add(treeNode.alias)
+                
+            # Iterate on lower nodes
+            if treeNode.plans != None:
+                for nodeBelow in treeNode.plans:
+                    # Add them to the queue
+                    treeQueue.put(nodeBelow)
+    
+    # Iterate down the tree in a queue
+    treeQueue = Queue()
+    treeQueue.put(tree)
+    while (not treeQueue.empty()):
+        treeNode = treeQueue.get()
+        if treeNode == None:
+            continue
+        else:
+            # Act on the current node
+            
+            # Iterate through it's search locations
+            for search_location in alias_locations[treeNode.node_type]:
+                if hasattr(treeNode, search_location):
+                    # If the set from relation_finder is not a subset of gathered_aliases
+                    # Then we have a correlated subquery
+                    
+                    # As we have a relation that is been detected as part of a node,
+                    # But is not one that we have gathered already, not an alias we've brought in already 
+                    if relation_finder(getattr(treeNode, search_location)).issubset(gatheredAliases):
+                        pass
+                    else:
+                        # Correlated Subquery
+                        return True
+            
+            # Iterate on lower nodes
+            if treeNode.plans != None:
+                for nodeBelow in treeNode.plans:
+                    # Add them to the queue
+                    treeQueue.put(nodeBelow)
+    
+    return returnValue
+    
+def relation_finder(in_list):
+    relations_set = set()
+    if isinstance(in_list, str):
+        in_list = [in_list]
+    
+    for process_string in in_list:
+        regex = r"[A-Za-z0-9\_]+(?=\.)"
+        matches = re.finditer(regex, process_string, re.MULTILINE)
+
+        for matchNum, match in enumerate(matches, start=1):
+            relations_set.add("{match}".format(match = match.group()))
+    return relations_set
 
 def delete_tree_branches_by_id(tree, ids):
     # Preorder Traversal

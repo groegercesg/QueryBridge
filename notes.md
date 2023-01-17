@@ -9,3 +9,11 @@ Should we control this number?
 [Documentation](https://www.postgresql.org/docs/current/sql-explain.html)
 
 Does explain include the line number for presentation: select ___ as revenue from linenumbers
+
+
+
+
+
+
+## Meeting 13.01.2023 - 14:30
+

@@ -31,7 +31,10 @@ class CodeCompilation():
         self.usePostAggr = aggr
         
     def setIndexes(self, idxs):
-        self.indexes = idxs
+        if isinstance(idxs, list):
+            self.indexes = idxs
+        else:
+            self.indexes = [idxs]
         
     def add_relation(self, relation):
         self.relations.append(relation)
