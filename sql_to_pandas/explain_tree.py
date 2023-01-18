@@ -377,8 +377,14 @@ def solve_initplan_nodes(tree):
                         elif nodeBelow.parent_relationship == "SubPlan":
                             # TODO: Do continue for now, we haven't decided how to use this functionality
                             
-                            if determine_if_correlated_subquery(nodeBelow) == True:
+                            correlated_subquery_return, gatheredAliases = determine_if_correlated_subquery(nodeBelow)
+                            if correlated_subquery_return == True:
                                 print("We have a correlated Subquery")
+                                # We should edit the tree, so that we unnest the correlated subquery.
+                                
+                                solve_correlated_subquery(tree, gatheredAliases, None, None)
+                                
+                                print(tree)
                             else:
                                 print("We don't have a correlated Subquery")
                             
@@ -411,11 +417,141 @@ def solve_initplan_nodes(tree):
     
     return capturedTrees
 
+def solve_correlated_subquery(tree, gatheredAliases, correlated_key, subplan_zone):
+    """Solve the correlated subquery
+
+    Args:
+        tree (object): the entire explain tree for an input SQL query
+    """
+    
+    # Traverse the tree recursively, in a post_order traversal
+    
+    
+    # Act on current node
+    
+    # Detect if we are entered a subplan
+    if hasattr(tree, "parent_relationship"):
+        if tree.parent_relationship == "SubPlan":
+            subplan_zone = True
+    
+    # Task 1: Convert node where actual correlation happens
+    # Iterate through search_locations of the current node
+    # Only run if we're in a subplan
+    if subplan_zone:
+        for search_location in alias_locations[tree.node_type]:
+            if hasattr(tree, search_location):
+                # If the set from relation_finder is not a subset of gathered_aliases
+                # Then we have a the node where the actual correlation happens
+                
+                # As we have a relation that is been detected as part of a node,
+                # But is not one that we have gathered already, not an alias we've brought in already
+                detected_relations = relation_finder(getattr(tree, search_location))
+                if not detected_relations.issubset(gatheredAliases):
+                    # Node of actual correlation
+                    
+                    # Convert node where the actual correlation occurs into a hash join between the
+                    # existing and new node
+                    
+                    # Edit in place
+                    tree, output_correlated_key = actual_correlation_to_join_node(tree, search_location, detected_relations - gatheredAliases)
+                    
+                    # Add the overlapping aliases to gatheredAliases
+                    gatheredAliases = gatheredAliases | (detected_relations - gatheredAliases)
+                    
+                    if correlated_key != None:
+                        raise ValueError("We have a correlated_key that we are carrying around and have just detected a new one")
+                    else:
+                        correlated_key = output_correlated_key
+                    
+    # Task 2:
+    
+    
+    # Go left, right
+    # Run this function on below nodes
+    if tree.plans != None:
+        for individual_plan in tree.plans:
+            solve_correlated_subquery(individual_plan, gatheredAliases, correlated_key, subplan_zone)
+    
+    
+
+def actual_correlation_to_join_node(node, correlation_location, correlated_relation):
+    """
+    Convert node where the actual correlation occurs into a hash join between the
+    existing and new node
+
+    Args:
+        node (object): node of the correlation, we convert this into a join
+    """
+    
+    # Reset correlated_relation
+    if isinstance(correlated_relation, set):
+        correlated_relation = list(correlated_relation)[0]
+    
+    # Separate the condition from correlation_location into before and after
+    before_condition = []
+    after_condition = []
+    # Detect AND in the correl location
+    if (" AND " in correlation_location) or (" OR " in correlation_location):
+        # filter(None, re.split("[, \-!?:]+", "Hey, you - what are you doing here!?"))
+        split_condition = filter(None, re.split(" AND | OR ", getattr(node, correlation_location)))
+        for cond in split_condition:
+            if correlated_relation in cond:
+                after_condition.append(cond)
+            else:
+                before_condition.append(cond)
+        
+        # Fix after condition        
+        if len(after_condition) == 1:
+            after_condition = after_condition[0]
+        else:
+            raise ValueError("Unexpected size of after_condition")
+        
+        # Fix before condition
+        if len(before_condition) == 1:
+            before_condition = before_condition[0]
+        else:
+            raise ValueError("Unexpected size of before_condition")
+    else:
+        after_condition = getattr(node, correlation_location)
+    
+    # Get the correlated key from the after condition
+    if " = " in after_condition:
+        local_after_cond = after_condition
+        # String brackets
+        if (after_condition[0] == "(") and (after_condition[-1] == ")"):
+            local_after_cond = after_condition[1:-1]
+        
+        for part in local_after_cond.split(" = "):
+            if correlated_relation in part:
+                correlated_key = str(part).strip()
+    else:    
+        raise Exception("Unrecognised formation for the after_condition")
+    
+    # Add the correlated key to the join output
+    join_output = list(node.output)
+    join_output.append(correlated_key)
+    
+    # Create new nodes
+    new_node = hash_join_node("Hash Join", False, False, join_output, False, "Inner", after_condition, "Outer")
+    
+    # First create the left node
+    left_node = seq_scan_node("Seq Scan", False, False, node.output, node.relation_name, node.schema, node.alias)
+    if before_condition != []:
+        left_node.add_filters(before_condition)
+        
+    # Create right node
+    right_node = seq_scan_node("Seq Scan", False, False, [correlated_key], correlated_relation, node.schema, correlated_relation)
+    
+    new_node.set_plans([left_node, right_node])
+    
+    return new_node, correlated_key
+
+
 def determine_if_correlated_subquery(tree):
     """Determine if the explain plan features a correlated subquery or not
 
     Args:
-        tree (object): explain tree for input SQL query, from the SubPlan declared
+        tree (object): explain tree for input SQL query, from the SubPlan declared node
     
     Returns:
         returnValue (boolean): true or false for whether or not we have a correlated subquery
@@ -465,7 +601,7 @@ def determine_if_correlated_subquery(tree):
                         pass
                     else:
                         # Correlated Subquery
-                        return True
+                        return True, gatheredAliases
             
             # Iterate on lower nodes
             if treeNode.plans != None:
@@ -473,7 +609,7 @@ def determine_if_correlated_subquery(tree):
                     # Add them to the queue
                     treeQueue.put(nodeBelow)
     
-    return returnValue
+    return returnValue, gatheredAliases
     
 def relation_finder(in_list):
     relations_set = set()
@@ -485,7 +621,12 @@ def relation_finder(in_list):
         matches = re.finditer(regex, process_string, re.MULTILINE)
 
         for matchNum, match in enumerate(matches, start=1):
-            relations_set.add("{match}".format(match = match.group()))
+            pending_match = str(match.group())
+            if pending_match.isdigit():
+                # Don't add a "relation" that is actually just digits, this wouldn't be valid
+                pass
+            else:
+                relations_set.add(pending_match)
     return relations_set
 
 def delete_tree_branches_by_id(tree, ids):
