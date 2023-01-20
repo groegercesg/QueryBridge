@@ -479,6 +479,21 @@ def clean_filter_params(self, params, codeCompHelper):
         if targetRelation in params:
             params = params.replace(targetRelation, str(codeCompHelper.aliasRelationPairs[key] + "."))
     
+    
+    # We try and squeeze in any bracket replaces we might have
+    # Check if we have any bracket replaces
+    # Create a relation removed version
+    
+    # TODO: Solve this!    
+    
+    relation_removed = params
+    for relation in codeCompHelper.relations:
+        relation_removed = relation_removed.replace(relation + ".", "")
+    
+    for key in codeCompHelper.bracket_replace:
+        if key in relation_removed:
+            relation_removed = relation_removed.replace(key, str(codeCompHelper.bracket_replace[key]))
+
     # Replace AND with & and convert to string
     filters = str(params.replace(" AND ", " & "))
     filters = str(filters.replace(" OR ", " | "))
@@ -2702,7 +2717,10 @@ def create_tree(class_tree, sql_class):
         if hasattr(current_node, "filter"):
             node_class.add_filter(current_node.filter)
     elif node_type == "Hash Join":
-        node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type)
+        if hasattr(current_node, "filter"):
+            node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type, filters=current_node.filter)
+        else:
+            node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type)
     elif node_type == "Merge Join":
         if hasattr(current_node, "filter"):
             node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type, filters=current_node.filter)

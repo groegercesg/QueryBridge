@@ -262,6 +262,10 @@ def solve_prune_node(prune_type, tree):
                     prune_children = current_node.plans[0]
                 else:
                     raise ValueError("We have assumed a " + prune_type + " node only has one child, not the case in reality!")
+                
+                # Set the parent of prune_children to be tree.plans[i]
+                prune_children.parent = tree.plans[i]
+                
                 # Set current_node to be the children
                 tree.plans[i] = prune_children
     
@@ -275,7 +279,7 @@ alias_locations = {
     "Index Scan": ["output", "index_cond"],
     "Seq Scan": ["output", "filters"],
     "Group Aggregate": ["group_key", "output", "filter"],
-    "Hash Join": ["hash_cond", "output"],
+    "Hash Join": ["hash_cond", "output", "filter"],
     "Sort": ["sort_key", "output"],
     "Merge Join": ["output", "merge_cond"],
     "Nested Loop": ["merge_cond", "output", "filter"],
@@ -382,9 +386,17 @@ def solve_initplan_nodes(tree):
                                 print("We have a correlated Subquery")
                                 # We should edit the tree, so that we unnest the correlated subquery.
                                 
-                                solve_correlated_subquery(tree, gatheredAliases, None, None)
+                                class correlated_key():
+                                    def __init__(self):
+                                        self.key = None
+                                    
+                                    def add_key(self, in_key):
+                                        self.key = in_key
+                                        
+                                key = correlated_key()
                                 
-                                print(tree)
+                                solve_correlated_subquery(tree, gatheredAliases, key, None)
+
                             else:
                                 print("We don't have a correlated Subquery")
                             
@@ -424,55 +436,337 @@ def solve_correlated_subquery(tree, gatheredAliases, correlated_key, subplan_zon
         tree (object): the entire explain tree for an input SQL query
     """
     
-    # Traverse the tree recursively, in a post_order traversal
+    # Traverse the tree recursively, in a pre_order traversal
     
-    
-    # Act on current node
-    
-    # Detect if we are entered a subplan
+    # Detect if we have entered a subplan
     if hasattr(tree, "parent_relationship"):
         if tree.parent_relationship == "SubPlan":
             subplan_zone = True
-    
-    # Task 1: Convert node where actual correlation happens
-    # Iterate through search_locations of the current node
-    # Only run if we're in a subplan
-    if subplan_zone:
-        for search_location in alias_locations[tree.node_type]:
-            if hasattr(tree, search_location):
-                # If the set from relation_finder is not a subset of gathered_aliases
-                # Then we have a the node where the actual correlation happens
-                
-                # As we have a relation that is been detected as part of a node,
-                # But is not one that we have gathered already, not an alias we've brought in already
-                detected_relations = relation_finder(getattr(tree, search_location))
-                if not detected_relations.issubset(gatheredAliases):
-                    # Node of actual correlation
-                    
-                    # Convert node where the actual correlation occurs into a hash join between the
-                    # existing and new node
-                    
-                    # Edit in place
-                    tree, output_correlated_key = actual_correlation_to_join_node(tree, search_location, detected_relations - gatheredAliases)
-                    
-                    # Add the overlapping aliases to gatheredAliases
-                    gatheredAliases = gatheredAliases | (detected_relations - gatheredAliases)
-                    
-                    if correlated_key != None:
-                        raise ValueError("We have a correlated_key that we are carrying around and have just detected a new one")
-                    else:
-                        correlated_key = output_correlated_key
-                    
-    # Task 2:
-    
-    
+            
     # Go left, right
     # Run this function on below nodes
     if tree.plans != None:
         for individual_plan in tree.plans:
             solve_correlated_subquery(individual_plan, gatheredAliases, correlated_key, subplan_zone)
     
+    # Act on the children of the current node
+    if tree.plans != None:
+        new_plans = []
+        for current_child in tree.plans:            
+            child_subplan = False
+            # Detect if we a child subplan
+            if hasattr(current_child, "parent_relationship"):
+                if current_child.parent_relationship == "SubPlan":
+                    child_subplan = True
+            
+            # Task 1: Convert node where actual correlation happens
+            # Iterate through search_locations of the current node
+            # Only run if we're in a subplan
+            if (child_subplan == True) or (subplan_zone == True):
+                for search_location in alias_locations[current_child.node_type]:
+                    if hasattr(current_child, search_location):
+                        # If the set from relation_finder is not a subset of gathered_aliases
+                        # Then we have a the node where the actual correlation happens
+                        
+                        # As we have a relation that is been detected as part of a node,
+                        # But is not one that we have gathered already, not an alias we've brought in already
+                        detected_relations = relation_finder(getattr(current_child, search_location))
+                        if not detected_relations.issubset(gatheredAliases):
+                            # Node of actual correlation
+                            
+                            # Convert node where the actual correlation occurs into a hash join between the
+                            # existing and new node
+                            
+                            # Edit in place
+                            current_child, output_correlated_key = actual_correlation_to_join_node(current_child, search_location, detected_relations - gatheredAliases)
+                            
+                            # Add the overlapping aliases to gatheredAliases
+                            gatheredAliases = gatheredAliases | (detected_relations - gatheredAliases)
+                            
+                            if correlated_key.key != None:
+                                raise ValueError("We have a correlated_key that we are carrying around and have just detected a new one")
+                            else:
+                                correlated_key.add_key(output_correlated_key)
+                                
+                            # Task 4: For the nodes between the actual correlation and to where the subplan is stated, we need
+                            # to add the key into their output
+                            t4_tree = current_child
+                            while not hasattr(t4_tree, "subplan_name"):
+                                if correlated_key.key not in t4_tree.output:
+                                    t4_tree.output.append(correlated_key.key)
+                                
+                                t4_tree = t4_tree.parent
+                            
+            # Task 2: Convert the node where the subplan is stated
+            # Into a group aggregate
+            # Only run if we're in a subplan
+            if (child_subplan == True) or (subplan_zone == True):
+                # If it has the attribute of "subplan_name"
+                if hasattr(current_child, "subplan_name"):
+                    # Then we have the actual node where the subplan is stated
+                    
+                    # Edit in place
+                    current_child = actual_subplan_to_group_aggr_node(current_child, correlated_key.key)
+                    
+            # Task 3: Convert the existing Join (the one that combines in the subplan)
+            # Into two joins
+            
+            # Check each of the locations
+            for search_location in alias_locations[current_child.node_type]:
+                if hasattr(current_child, search_location):
+                    if "SubPlan" in getattr(current_child, search_location):
+                        # The current child has a subplan in one of it's filters, we need to edit this
+                        # using subplan join into many joins
+                        
+                        # Edit in place
+                        current_child = subplan_join_into_many_joins(current_child, correlated_key.key)                
+            
+            # Task 4: For the nodes between the actual correlation and where the subplan started, we need to add the key into their output
+            # Do this in the Task 1 section
+            # Done above
+            
+            # Store the current children
+            new_plans.append(current_child)
+            
+        # Set the plans back into the tree
+        tree.plans = new_plans
     
+def subplan_join_into_many_joins(node, correlated_key):
+    """
+    Turn the existing hash join / merge join, that combines the subplan into the main tree, into two.
+    The first merge is the existing one, with the subplan references removed and the second one joins
+        this and the subplan to continue normal tree shape
+
+    Args:
+        node (object): the merge to be turned into two
+        correlated_key (string): key that the subplan neds to merge on
+    """
+    
+    # Check number of children, we think it should have 3
+    if len(node.plans) != 3:
+        raise Exception("Not enough children, we think the node should have 3.")
+    
+    # Join Layout:
+    #    (2)
+    #   /  \
+    # (1) [SubPlan]
+    
+    # Join parameters
+    join_1_filter = []
+    join_2_filter = []
+    
+    join_1_cond = []
+    join_2_cond = []
+    
+    # Goal here is to extract the subplan element
+    
+    # Process first the filter
+    if hasattr(node, "filter"):
+        if not "SubPlan" in node.filter:
+            # Not Subplan in filter, add to Join 1
+            join_1_filter.append(node.filter)
+        else:
+            # Subplan in filter!
+            # Separate Subplan out
+            # filter(None, re.split("[, \-!?:]+", "Hey, you - what are you doing here!?"))
+            split_filter_cond = filter(None, re.split(" AND | OR ", node.filter))
+            for individual_filter_cond in split_filter_cond:
+                if "SubPlan" in individual_filter_cond:
+                    join_2_filter.append(individual_filter_cond)
+                else:
+                    join_1_filter.append(individual_filter_cond)
+                    
+    # Fix join_1_filter condition        
+    if len(join_1_filter) == 1:
+        join_1_filter = join_1_filter[0]
+    elif join_1_filter == []:
+        pass
+    else:
+        raise ValueError("Unexpected size of join_1_filter")
+    
+    if len(join_2_filter) == 1:
+        join_2_filter = join_2_filter[0]
+    elif join_2_filter == []:
+        pass
+    else:
+        raise ValueError("Unexpected size of join_2_filter")
+    
+    # Process the condition next
+    
+    # First set cond_name
+    cond_name = None
+    if node.node_type == "Merge Join":
+        cond_name = "merge_cond"
+    elif node.node_type == "Hash Join":
+        cond_name = "hash_cond"
+    else:
+        raise Exception("Unexpected type of joining node")
+    
+    # Set connecting here
+    connecting = None
+    
+    if hasattr(node, cond_name):
+        node_condition = getattr(node, cond_name)
+        if not "SubPlan" in node_condition:
+            # No Subplan in cond, so add to join 1
+            join_1_cond.append(node_condition)
+        else:
+            # We have a SubPlan in this cond
+            # Separate Subplan out
+            
+            # Determine what's the connecting bloke
+            skip = False
+            if " AND " in node_condition:
+                connecting = " AND "
+            elif " OR " in node_condition:
+                connecting = " OR "
+            else:
+                # We have no connectors, just add to join_2
+                join_2_cond.append(node_condition)
+                skip = True
+            
+            if skip == False:
+                # filter(None, re.split("[, \-!?:]+", "Hey, you - what are you doing here!?"))
+                split_join_cond = filter(None, re.split(connecting, node_condition))
+                for individual_join_cond in split_join_cond:
+                    if "SubPlan" in individual_join_cond:
+                        join_2_cond.append(individual_join_cond)
+                    else:
+                        join_1_cond.append(individual_join_cond)
+                        
+                        
+    # Fix join_1/2_cond
+    if len(join_1_cond) == 1:
+        join_1_cond = join_1_cond[0]
+    elif join_1_cond == []:
+        pass
+    else:
+        if connecting == None:
+            raise ValueError("Unexpected size of join_1_cond")
+        else:
+            # Join back together with connecting to space it
+            join_1_cond = connecting.join(join_1_cond)
+    
+    if len(join_2_cond) == 1:
+        join_2_cond = join_2_cond[0]
+    elif join_2_cond == []:
+        pass
+    else:
+        if connecting == None:
+            raise ValueError("Unexpected size of join_2_cond")
+        else:
+            # Join back together with connecting to space it
+            join_2_cond = connecting.join(join_2_cond)
+    
+    
+    # Determine which child is the subplan
+    subplan_child = None
+    non_subplan_children = []
+    for node_child in node.plans:
+        if hasattr(node_child, "subplan_name"):
+            subplan_child = node_child
+        else:
+            non_subplan_children.append(node_child)
+            
+    # Construct JOIN 1, the lower level join
+    join_1_output = list(node.output)
+    join_1_output.append(correlated_key)
+    
+    # Make both be hash joins
+    join_1 = hash_join_node("Hash Join", node.parallel_aware, node.async_capable, join_1_output, node.inner_unique, node.join_type, join_1_cond, node.parent_relationship)
+    # Set filter
+    if join_1_filter != []:
+        join_1.add_filter(join_1_filter)
+    # Set children
+    join_1.set_plans(non_subplan_children)
+    
+    # Construct JOIN 1, the top level join    
+    # Finalise join_2_cond
+    if join_2_cond == []:
+        join_2_cond = '(' + correlated_key + ' = ' + correlated_key + ')'
+    else:
+        join_2_cond = join_2_cond + ' AND (' + correlated_key + ' = ' + correlated_key + ')'
+        
+    # Replace Subplan name in either cond or filter
+    if len(subplan_child.output) != 2:
+        raise Exception("Unexpected number of outputs from the subplan")
+    replace_key = list(subplan_child.output)
+    replace_key.remove(correlated_key)   
+    if len(replace_key) == 1:
+        replace_key = replace_key[0]
+    else:
+        raise Exception("Unexpected amount of replace_keys")
+    subplan_name = str(subplan_child.subplan_name)
+    
+    # Try in cond
+    if subplan_name in join_2_cond:
+        join_2_cond = join_2_cond.replace(subplan_name, replace_key)
+    elif join_2_filter != []:
+        if subplan_name in join_2_filter:
+            join_2_filter = join_2_filter.replace(subplan_name, replace_key)
+    else:
+        raise Exception("Subplan Name is not in the condition or the filter")
+    
+    join_2_output = list(node.output)
+    join_2 = hash_join_node("Hash Join", node.parallel_aware, node.async_capable, join_2_output, node.inner_unique, node.join_type, join_2_cond, node.parent_relationship)
+    # Set filter
+    if join_2_filter != []:
+        join_2.add_filter(join_2_filter)
+    # Set children
+    join_2.set_plans([join_1, subplan_child])
+    # Set parent
+    join_2.set_parent(node.parent)
+    
+    # Set Join 1 parent
+    join_1.set_parent(join_2)
+    
+    # Fix parents, for children of the joins
+    for non_subplan_child in non_subplan_children:
+        non_subplan_child.set_parent(join_1)
+    subplan_child.set_parent(join_2)
+    
+    return join_2
+
+def actual_subplan_to_group_aggr_node(node, correlated_key):
+    """
+    Convert the node where the subplan is stated from (hopefully) an aggregate into a group aggregate
+    """    
+    
+    # Hope this node is an aggregate
+    if node.node_type != "Aggregate":
+        raise Exception("Node is not an Aggregate, help!")
+    
+    # Add correlated_key to the node output
+    gp_aggr_output = list(node.output)
+    gp_aggr_output.append(correlated_key)
+    
+    # Add correlated_key to the node as the group key   
+    # Construct new_node
+    new_node = group_aggregate_node("Group Aggregate", node.parallel_aware, node.async_capable, gp_aggr_output, node.strategy, node.partial_mode, [correlated_key])
+    
+    # Handle adding Filter
+    if hasattr(node, "filter"):
+        new_node.add_filter(node.filter)
+    # Add SubPlan
+    if hasattr(node, "subplan_name"):
+        new_node.add_subplan(node.subplan_name)
+    # Add Parent Relationship
+    if hasattr(node, "parent_relationship"):
+        new_node.add_parent_relationship(node.parent_relationship)
+    
+    # Add in parent
+    new_node.set_parent(node.parent)
+    
+    # Set below
+    new_node.set_plans(node.plans)
+    
+    # Fix the children of this node's parent
+    if new_node.plans != None:
+        for current_child_child in new_node.plans:
+            current_child_child.parent = new_node
+
+    return new_node
+
 
 def actual_correlation_to_join_node(node, correlation_location, correlated_relation):
     """
@@ -482,6 +776,10 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
     Args:
         node (object): node of the correlation, we convert this into a join
     """
+    
+    # Check for children
+    if node.plans != None:
+        raise Exception("Correlated node has children, we haven't written to deal with this.")
     
     # Reset correlated_relation
     if isinstance(correlated_relation, set):
@@ -538,11 +836,17 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
     left_node = seq_scan_node("Seq Scan", False, False, node.output, node.relation_name, node.schema, node.alias)
     if before_condition != []:
         left_node.add_filters(before_condition)
+    # Add left node parent
+    left_node.set_parent(new_node)
         
     # Create right node
     right_node = seq_scan_node("Seq Scan", False, False, [correlated_key], correlated_relation, node.schema, correlated_relation)
+    # Add left node parent
+    right_node.set_parent(new_node)
     
     new_node.set_plans([left_node, right_node])
+    # Set new_node parent
+    new_node.set_parent(node.parent)
     
     return new_node, correlated_key
 
@@ -709,7 +1013,7 @@ def recurse_and_replace(tree, replaces):
                 # The class doesn't have this attribute, ignore it
                 pass 
     
-def make_tree(json, tree):
+def make_tree(json, tree, parent=None):
     # First node check
     if tree == None:
         node = json["Plan"]
@@ -767,6 +1071,10 @@ def make_tree(json, tree):
             node_class.add_filter(node["Join Filter"])
     elif node_type.lower() == "hash join":
         node_class = hash_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Hash Cond'], node['Parent Relationship'])
+        if "Filter" in node:
+            node_class.add_filter(node['Filter'])
+        elif "Join Filter" in node:
+            node_class.add_filter(node['Join Filter'])
     elif node_type.lower() == "hash":
         node_class = hash_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
     elif node_type.lower() == "index scan":
@@ -808,12 +1116,17 @@ def make_tree(json, tree):
             node_class.add_parent_relationship(node["Parent Relationship"])
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
+    
+    # Check if this node has a parent
+    if parent != None:
+        # We have a parent
+        node_class.set_parent(parent)
         
     # Check if this node has a child
     if "Plans" in node:
         node_class_plans = []
         for individual_plan in node['Plans']:
-            node_class_plans.append(make_tree(individual_plan, ""))
+            node_class_plans.append(make_tree(individual_plan, "", node_class))
         node_class.set_plans(node_class_plans)
     
     return node_class
