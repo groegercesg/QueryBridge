@@ -281,7 +281,7 @@ alias_locations = {
     "Group Aggregate": ["group_key", "output", "filter"],
     "Hash Join": ["hash_cond", "output", "filter"],
     "Sort": ["sort_key", "output"],
-    "Merge Join": ["output", "merge_cond"],
+    "Merge Join": ["output", "merge_cond", "filter"],
     "Nested Loop": ["merge_cond", "output", "filter"],
     "Incremental Sort": ["output", "presorted_key", "sort_key"],
     "Limit": ["output"],
