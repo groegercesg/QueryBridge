@@ -8,6 +8,9 @@ from sqlglot import parse_one, exp
 import regex
 import re
 
+# String parsing
+from string import digits
+
 # Expression Parsing
 from expr_tree import Expression_Solver
 
@@ -483,16 +486,49 @@ def clean_filter_params(self, params, codeCompHelper):
     # We try and squeeze in any bracket replaces we might have
     # Check if we have any bracket replaces
     # Create a relation removed version
-    
-    # TODO: Solve this!    
-    
-    relation_removed = params
-    for relation in codeCompHelper.relations:
-        relation_removed = relation_removed.replace(relation + ".", "")
-    
-    for key in codeCompHelper.bracket_replace:
-        if key in relation_removed:
-            relation_removed = relation_removed.replace(key, str(codeCompHelper.bracket_replace[key]))
+    # If bracket replace is not empty
+    if codeCompHelper.bracket_replace != {}:
+        # Strip outer brackets if exist 
+        bracket_replace_params = params
+        if (bracket_replace_params[0] == "(") and (bracket_replace_params[-1] == ")"):
+            bracket_replace_params = bracket_replace_params[1:-1]
+        
+        # Split into keys, on Top level brackets
+        keys = [match.group() for match in regex.finditer(r"(?:(\((?>[^()]+|(?1))*\))|\S)+", bracket_replace_params)]
+        
+        # Populate replace_dict
+        replace_dict = {}
+        
+        for key in keys:
+            process_key = key
+            # For each key, remove relations
+            capture_relation = None
+            for relation in codeCompHelper.relations:
+                process_key = process_key.replace(relation + ".", "")
+                capture_relation = relation + "."
+                    
+            # Remove extraneous brackets if needed
+            while (process_key[0] == "(") and (process_key[-1] == ")"):
+                process_key = process_key[1:-1]
+            
+            replaced = False
+            # See is is in bracket replace
+            for br_key in codeCompHelper.bracket_replace:
+                if br_key == process_key:
+                    process_key = codeCompHelper.bracket_replace[br_key]
+                    replaced = True
+                
+            # If is add to replace dict    
+            if replaced == True:
+                # Add in relation
+                if capture_relation == None:
+                    raise Exception("No relation has been captured at this point, unexpected!")
+                replace_dict[key] = str(capture_relation) + str(process_key)
+                
+        
+        # At end, carry out replace dict on params
+        for key in replace_dict.keys():
+            params = params.replace(key, replace_dict[key])
 
     # Replace AND with & and convert to string
     filters = str(params.replace(" AND ", " & "))
@@ -2280,6 +2316,14 @@ def complex_name_solve(in_name):
         # To lower, after all replacements made
         new_name = new_name.lower()
     
+    # Can't start with numbers
+    if new_name != None:
+        new_name = new_name.lstrip(digits)
+    
+        # Catch bad changes made to new_name
+        if (new_name == "") or (new_name == None):
+            raise Exception("Name created by complex_name_solve is empty or None. This could be because it contained only digits and we removed these.")
+    
     # returns
     #   is_complex  -  True or False as to whether complex
     #   new_name  -  The name that we have after this function has done it's magic
@@ -2308,7 +2352,7 @@ class merge_node():
         # Return left_cond and right_cond
         return left_cond, right_cond
 
-    def process_condition_into_merge(self, left_prev_df, right_prev_df):
+    def process_condition_into_merge(self, left_prev_df, right_prev_df, codeCompHelper):
         # Strip brackets
         self.condition = clean_extra_brackets(self.condition)
         
@@ -2320,6 +2364,57 @@ class merge_node():
                 self.condition[i] = clean_extra_brackets(self.condition[i].strip())
         else:
             self.condition = [self.condition]
+            
+        # Iterate through the conditions, try to match on CodeCompHelper Bracket Replace
+        # We try and squeeze in any bracket replaces we might have
+        
+        # Check if we have any bracket replaces
+        if codeCompHelper.bracket_replace != {}:
+            for i in range(len(self.condition)):
+            # Create a relation removed version
+            # If bracket replace is not empty
+                # Strip outer brackets if exist 
+                bracket_replace_params = self.condition[i]
+                if (bracket_replace_params[0] == "(") and (bracket_replace_params[-1] == ")"):
+                    bracket_replace_params = bracket_replace_params[1:-1]
+                
+                # Split into keys, on Top level brackets
+                keys = [match.group() for match in regex.finditer(r"(?:(\((?>[^()]+|(?1))*\))|\S)+", bracket_replace_params)]
+                
+                # Populate replace_dict
+                replace_dict = {}
+                
+                for key in keys:
+                    process_key = key
+                    # For each key, remove relations
+                    capture_relation = None
+                    for relation in codeCompHelper.relations:
+                        if relation in process_key:
+                            process_key = process_key.replace(relation + ".", "")
+                            capture_relation = relation + "."
+                            
+                    # Remove extraneous brackets if needed
+                    while (process_key[0] == "(") and (process_key[-1] == ")"):
+                        process_key = process_key[1:-1]
+                    
+                    replaced = False
+                    # See is is in bracket replace
+                    for br_key in codeCompHelper.bracket_replace:
+                        if br_key == process_key:
+                            process_key = codeCompHelper.bracket_replace[br_key]
+                            replaced = True
+                        
+                    # If is add to replace dict    
+                    if replaced == True:
+                        # Add in relation
+                        if capture_relation == None:
+                            raise Exception("No relation has been captured at this point, unexpected!")
+                        replace_dict[key] = str(capture_relation) + str(process_key)
+                        
+                
+                # At end, carry out replace dict on params
+                for key in replace_dict.keys():
+                    self.condition[i] = self.condition[i].replace(key, replace_dict[key])
             
         # Iterate through the list of conditions, adding them to this list
         left_labels, right_labels = [], []
@@ -2342,7 +2437,11 @@ class merge_node():
         
         return str(statement)
 
-    def to_pandas(self, prev_dfs, this_df, codeCompHelper, treeHelper):        
+    def to_pandas(self, prev_dfs, this_df, codeCompHelper, treeHelper): 
+        # Pandas Merge resets the index
+        # See More: https://datacomy.com/data_analysis/pandas/merge/#how-to-keep-index-when-using-pandas-merge
+        codeCompHelper.indexes = []
+               
         # Check if there's an extract in any of these of the self.outputs
         extract_present = "No Extract"
         for i in range(len(self.output)):
@@ -2358,7 +2457,7 @@ class merge_node():
             raise ValueError("Too few previous dataframes specified")
         instructions = []
         
-        instructions.append(this_df + " = " + self.process_condition_into_merge(prev_dfs[0], prev_dfs[1]))
+        instructions.append(this_df + " = " + self.process_condition_into_merge(prev_dfs[0], prev_dfs[1], codeCompHelper))
         
         # Handle extract present
         if extract_present != "No Extract":

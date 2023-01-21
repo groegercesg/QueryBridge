@@ -1,0 +1,407 @@
+{
+    "Plan": {
+        "Node Type": "Limit",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Output": [
+            "supplier.s_acctbal",
+            "supplier.s_name",
+            "nation.n_name",
+            "part.p_partkey",
+            "part.p_mfgr",
+            "supplier.s_address",
+            "supplier.s_phone",
+            "supplier.s_comment"
+        ],
+        "Plans": [
+            {
+                "Node Type": "Sort",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Output": [
+                    "supplier.s_acctbal",
+                    "supplier.s_name",
+                    "nation.n_name",
+                    "part.p_partkey",
+                    "part.p_mfgr",
+                    "supplier.s_address",
+                    "supplier.s_phone",
+                    "supplier.s_comment"
+                ],
+                "Sort Key": [
+                    "supplier.s_acctbal DESC",
+                    "nation.n_name",
+                    "supplier.s_name",
+                    "part.p_partkey"
+                ],
+                "Plans": [
+                    {
+                        "Node Type": "Hash Join",
+                        "Parent Relationship": "Outer",
+                        "Parallel Aware": false,
+                        "Async Capable": false,
+                        "Join Type": "Inner",
+                        "Output": [
+                            "supplier.s_acctbal",
+                            "supplier.s_name",
+                            "nation.n_name",
+                            "part.p_partkey",
+                            "part.p_mfgr",
+                            "supplier.s_address",
+                            "supplier.s_phone",
+                            "supplier.s_comment"
+                        ],
+                        "Inner Unique": false,
+                        "Hash Cond": "((part.p_partkey = partsupp.ps_partkey) AND ((SubPlan 1) = partsupp.ps_supplycost))",
+                        "Plans": [
+                            {
+                                "Node Type": "Seq Scan",
+                                "Parent Relationship": "Outer",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Relation Name": "part",
+                                "Schema": "public",
+                                "Alias": "part",
+                                "Output": [
+                                    "part.p_partkey",
+                                    "part.p_mfgr"
+                                ],
+                                "Filter": "(((part.p_type)::text ~~ '%BRASS'::text) AND (part.p_size = 15))"
+                            },
+                            {
+                                "Node Type": "Hash",
+                                "Parent Relationship": "Inner",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Output": [
+                                    "supplier.s_acctbal",
+                                    "supplier.s_name",
+                                    "supplier.s_address",
+                                    "supplier.s_phone",
+                                    "supplier.s_comment",
+                                    "partsupp.ps_partkey",
+                                    "partsupp.ps_supplycost",
+                                    "nation.n_name"
+                                ],
+                                "Plans": [
+                                    {
+                                        "Node Type": "Hash Join",
+                                        "Parent Relationship": "Outer",
+                                        "Parallel Aware": false,
+                                        "Async Capable": false,
+                                        "Join Type": "Inner",
+                                        "Output": [
+                                            "supplier.s_acctbal",
+                                            "supplier.s_name",
+                                            "supplier.s_address",
+                                            "supplier.s_phone",
+                                            "supplier.s_comment",
+                                            "partsupp.ps_partkey",
+                                            "partsupp.ps_supplycost",
+                                            "nation.n_name"
+                                        ],
+                                        "Inner Unique": false,
+                                        "Hash Cond": "(partsupp.ps_suppkey = supplier.s_suppkey)",
+                                        "Plans": [
+                                            {
+                                                "Node Type": "Seq Scan",
+                                                "Parent Relationship": "Outer",
+                                                "Parallel Aware": false,
+                                                "Async Capable": false,
+                                                "Relation Name": "partsupp",
+                                                "Schema": "public",
+                                                "Alias": "partsupp",
+                                                "Output": [
+                                                    "partsupp.ps_partkey",
+                                                    "partsupp.ps_suppkey",
+                                                    "partsupp.ps_availqty",
+                                                    "partsupp.ps_supplycost",
+                                                    "partsupp.ps_comment"
+                                                ]
+                                            },
+                                            {
+                                                "Node Type": "Hash",
+                                                "Parent Relationship": "Inner",
+                                                "Parallel Aware": false,
+                                                "Async Capable": false,
+                                                "Output": [
+                                                    "supplier.s_acctbal",
+                                                    "supplier.s_name",
+                                                    "supplier.s_address",
+                                                    "supplier.s_phone",
+                                                    "supplier.s_comment",
+                                                    "supplier.s_suppkey",
+                                                    "nation.n_name"
+                                                ],
+                                                "Plans": [
+                                                    {
+                                                        "Node Type": "Hash Join",
+                                                        "Parent Relationship": "Outer",
+                                                        "Parallel Aware": false,
+                                                        "Async Capable": false,
+                                                        "Join Type": "Inner",
+                                                        "Output": [
+                                                            "supplier.s_acctbal",
+                                                            "supplier.s_name",
+                                                            "supplier.s_address",
+                                                            "supplier.s_phone",
+                                                            "supplier.s_comment",
+                                                            "supplier.s_suppkey",
+                                                            "nation.n_name"
+                                                        ],
+                                                        "Inner Unique": false,
+                                                        "Hash Cond": "(supplier.s_nationkey = nation.n_nationkey)",
+                                                        "Plans": [
+                                                            {
+                                                                "Node Type": "Seq Scan",
+                                                                "Parent Relationship": "Outer",
+                                                                "Parallel Aware": false,
+                                                                "Async Capable": false,
+                                                                "Relation Name": "supplier",
+                                                                "Schema": "public",
+                                                                "Alias": "supplier",
+                                                                "Output": [
+                                                                    "supplier.s_suppkey",
+                                                                    "supplier.s_name",
+                                                                    "supplier.s_address",
+                                                                    "supplier.s_nationkey",
+                                                                    "supplier.s_phone",
+                                                                    "supplier.s_acctbal",
+                                                                    "supplier.s_comment"
+                                                                ]
+                                                            },
+                                                            {
+                                                                "Node Type": "Hash",
+                                                                "Parent Relationship": "Inner",
+                                                                "Parallel Aware": false,
+                                                                "Async Capable": false,
+                                                                "Output": [
+                                                                    "nation.n_name",
+                                                                    "nation.n_nationkey"
+                                                                ],
+                                                                "Plans": [
+                                                                    {
+                                                                        "Node Type": "Hash Join",
+                                                                        "Parent Relationship": "Outer",
+                                                                        "Parallel Aware": false,
+                                                                        "Async Capable": false,
+                                                                        "Join Type": "Inner",
+                                                                        "Output": [
+                                                                            "nation.n_name",
+                                                                            "nation.n_nationkey"
+                                                                        ],
+                                                                        "Inner Unique": true,
+                                                                        "Hash Cond": "(nation.n_regionkey = region.r_regionkey)",
+                                                                        "Plans": [
+                                                                            {
+                                                                                "Node Type": "Seq Scan",
+                                                                                "Parent Relationship": "Outer",
+                                                                                "Parallel Aware": false,
+                                                                                "Async Capable": false,
+                                                                                "Relation Name": "nation",
+                                                                                "Schema": "public",
+                                                                                "Alias": "nation",
+                                                                                "Output": [
+                                                                                    "nation.n_nationkey",
+                                                                                    "nation.n_name",
+                                                                                    "nation.n_regionkey",
+                                                                                    "nation.n_comment"
+                                                                                ]
+                                                                            },
+                                                                            {
+                                                                                "Node Type": "Hash",
+                                                                                "Parent Relationship": "Inner",
+                                                                                "Parallel Aware": false,
+                                                                                "Async Capable": false,
+                                                                                "Output": [
+                                                                                    "region.r_regionkey"
+                                                                                ],
+                                                                                "Plans": [
+                                                                                    {
+                                                                                        "Node Type": "Seq Scan",
+                                                                                        "Parent Relationship": "Outer",
+                                                                                        "Parallel Aware": false,
+                                                                                        "Async Capable": false,
+                                                                                        "Relation Name": "region",
+                                                                                        "Schema": "public",
+                                                                                        "Alias": "region",
+                                                                                        "Output": [
+                                                                                            "region.r_regionkey"
+                                                                                        ],
+                                                                                        "Filter": "(region.r_name = 'EUROPE'::bpchar)"
+                                                                                    }
+                                                                                ]
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            {
+                                "Node Type": "Aggregate",
+                                "Strategy": "Plain",
+                                "Partial Mode": "Simple",
+                                "Parent Relationship": "SubPlan",
+                                "Subplan Name": "SubPlan 1",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Output": [
+                                    "min(partsupp_1.ps_supplycost)"
+                                ],
+                                "Plans": [
+                                    {
+                                        "Node Type": "Hash Join",
+                                        "Parent Relationship": "Outer",
+                                        "Parallel Aware": false,
+                                        "Async Capable": false,
+                                        "Join Type": "Inner",
+                                        "Output": [
+                                            "partsupp_1.ps_supplycost"
+                                        ],
+                                        "Inner Unique": false,
+                                        "Hash Cond": "(supplier_1.s_nationkey = nation_1.n_nationkey)",
+                                        "Plans": [
+                                            {
+                                                "Node Type": "Hash Join",
+                                                "Parent Relationship": "Outer",
+                                                "Parallel Aware": false,
+                                                "Async Capable": false,
+                                                "Join Type": "Inner",
+                                                "Output": [
+                                                    "partsupp_1.ps_supplycost",
+                                                    "supplier_1.s_nationkey"
+                                                ],
+                                                "Inner Unique": true,
+                                                "Hash Cond": "(supplier_1.s_suppkey = partsupp_1.ps_suppkey)",
+                                                "Plans": [
+                                                    {
+                                                        "Node Type": "Seq Scan",
+                                                        "Parent Relationship": "Outer",
+                                                        "Parallel Aware": false,
+                                                        "Async Capable": false,
+                                                        "Relation Name": "supplier",
+                                                        "Schema": "public",
+                                                        "Alias": "supplier_1",
+                                                        "Output": [
+                                                            "supplier_1.s_suppkey",
+                                                            "supplier_1.s_name",
+                                                            "supplier_1.s_address",
+                                                            "supplier_1.s_nationkey",
+                                                            "supplier_1.s_phone",
+                                                            "supplier_1.s_acctbal",
+                                                            "supplier_1.s_comment"
+                                                        ]
+                                                    },
+                                                    {
+                                                        "Node Type": "Hash",
+                                                        "Parent Relationship": "Inner",
+                                                        "Parallel Aware": false,
+                                                        "Async Capable": false,
+                                                        "Output": [
+                                                            "partsupp_1.ps_supplycost",
+                                                            "partsupp_1.ps_suppkey"
+                                                        ],
+                                                        "Plans": [
+                                                            {
+                                                                "Node Type": "Index Scan",
+                                                                "Parent Relationship": "Outer",
+                                                                "Parallel Aware": false,
+                                                                "Async Capable": false,
+                                                                "Scan Direction": "Forward",
+                                                                "Index Name": "idx_partsupp_partkey",
+                                                                "Relation Name": "partsupp",
+                                                                "Schema": "public",
+                                                                "Alias": "partsupp_1",
+                                                                "Output": [
+                                                                    "partsupp_1.ps_supplycost",
+                                                                    "partsupp_1.ps_suppkey"
+                                                                ],
+                                                                "Index Cond": "(partsupp_1.ps_partkey = part.p_partkey)"
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "Node Type": "Hash",
+                                                "Parent Relationship": "Inner",
+                                                "Parallel Aware": false,
+                                                "Async Capable": false,
+                                                "Output": [
+                                                    "nation_1.n_nationkey"
+                                                ],
+                                                "Plans": [
+                                                    {
+                                                        "Node Type": "Hash Join",
+                                                        "Parent Relationship": "Outer",
+                                                        "Parallel Aware": false,
+                                                        "Async Capable": false,
+                                                        "Join Type": "Inner",
+                                                        "Output": [
+                                                            "nation_1.n_nationkey"
+                                                        ],
+                                                        "Inner Unique": true,
+                                                        "Hash Cond": "(nation_1.n_regionkey = region_1.r_regionkey)",
+                                                        "Plans": [
+                                                            {
+                                                                "Node Type": "Seq Scan",
+                                                                "Parent Relationship": "Outer",
+                                                                "Parallel Aware": false,
+                                                                "Async Capable": false,
+                                                                "Relation Name": "nation",
+                                                                "Schema": "public",
+                                                                "Alias": "nation_1",
+                                                                "Output": [
+                                                                    "nation_1.n_nationkey",
+                                                                    "nation_1.n_name",
+                                                                    "nation_1.n_regionkey",
+                                                                    "nation_1.n_comment"
+                                                                ]
+                                                            },
+                                                            {
+                                                                "Node Type": "Hash",
+                                                                "Parent Relationship": "Inner",
+                                                                "Parallel Aware": false,
+                                                                "Async Capable": false,
+                                                                "Output": [
+                                                                    "region_1.r_regionkey"
+                                                                ],
+                                                                "Plans": [
+                                                                    {
+                                                                        "Node Type": "Seq Scan",
+                                                                        "Parent Relationship": "Outer",
+                                                                        "Parallel Aware": false,
+                                                                        "Async Capable": false,
+                                                                        "Relation Name": "region",
+                                                                        "Schema": "public",
+                                                                        "Alias": "region_1",
+                                                                        "Output": [
+                                                                            "region_1.r_regionkey"
+                                                                        ],
+                                                                        "Filter": "(region_1.r_name = 'EUROPE'::bpchar)"
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}

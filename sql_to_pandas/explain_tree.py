@@ -386,16 +386,22 @@ def solve_initplan_nodes(tree):
                                 print("We have a correlated Subquery")
                                 # We should edit the tree, so that we unnest the correlated subquery.
                                 
-                                class correlated_key():
-                                    def __init__(self):
+                                # Class for the correlated key
+                                class subquery_helper():
+                                    def __init__(self, in_aliases):
                                         self.key = None
+                                        self.aliases = in_aliases
                                     
                                     def add_key(self, in_key):
                                         self.key = in_key
                                         
-                                key = correlated_key()
+                                    def add_aliases(self, new_aliases):
+                                        self.aliases = self.aliases | new_aliases
+                                        
+                                helper = subquery_helper(gatheredAliases)
                                 
-                                solve_correlated_subquery(tree, gatheredAliases, key, None)
+                                solve_correlated_subquery(tree, helper, None)
+                                print("We successfully unnest it!")
 
                             else:
                                 print("We don't have a correlated Subquery")
@@ -429,7 +435,7 @@ def solve_initplan_nodes(tree):
     
     return capturedTrees
 
-def solve_correlated_subquery(tree, gatheredAliases, correlated_key, subplan_zone):
+def solve_correlated_subquery(tree, subquery_helper, subplan_zone):
     """Solve the correlated subquery
 
     Args:
@@ -447,7 +453,7 @@ def solve_correlated_subquery(tree, gatheredAliases, correlated_key, subplan_zon
     # Run this function on below nodes
     if tree.plans != None:
         for individual_plan in tree.plans:
-            solve_correlated_subquery(individual_plan, gatheredAliases, correlated_key, subplan_zone)
+            solve_correlated_subquery(individual_plan, subquery_helper, subplan_zone)
     
     # Act on the children of the current node
     if tree.plans != None:
@@ -471,29 +477,32 @@ def solve_correlated_subquery(tree, gatheredAliases, correlated_key, subplan_zon
                         # As we have a relation that is been detected as part of a node,
                         # But is not one that we have gathered already, not an alias we've brought in already
                         detected_relations = relation_finder(getattr(current_child, search_location))
-                        if not detected_relations.issubset(gatheredAliases):
+                        if not detected_relations.issubset(subquery_helper.aliases):
                             # Node of actual correlation
                             
                             # Convert node where the actual correlation occurs into a hash join between the
                             # existing and new node
                             
+                            # Alias difference
+                            alias_difference = detected_relations - subquery_helper.aliases
+                            
                             # Edit in place
-                            current_child, output_correlated_key = actual_correlation_to_join_node(current_child, search_location, detected_relations - gatheredAliases)
+                            current_child, output_correlated_key = actual_correlation_to_join_node(current_child, search_location, alias_difference)
                             
                             # Add the overlapping aliases to gatheredAliases
-                            gatheredAliases = gatheredAliases | (detected_relations - gatheredAliases)
+                            subquery_helper.add_aliases(alias_difference)
                             
-                            if correlated_key.key != None:
+                            if subquery_helper.key != None:
                                 raise ValueError("We have a correlated_key that we are carrying around and have just detected a new one")
                             else:
-                                correlated_key.add_key(output_correlated_key)
+                                subquery_helper.add_key(output_correlated_key)
                                 
                             # Task 4: For the nodes between the actual correlation and to where the subplan is stated, we need
                             # to add the key into their output
                             t4_tree = current_child
                             while not hasattr(t4_tree, "subplan_name"):
-                                if correlated_key.key not in t4_tree.output:
-                                    t4_tree.output.append(correlated_key.key)
+                                if subquery_helper.key not in t4_tree.output:
+                                    t4_tree.output.append(subquery_helper.key)
                                 
                                 t4_tree = t4_tree.parent
                             
@@ -506,7 +515,7 @@ def solve_correlated_subquery(tree, gatheredAliases, correlated_key, subplan_zon
                     # Then we have the actual node where the subplan is stated
                     
                     # Edit in place
-                    current_child = actual_subplan_to_group_aggr_node(current_child, correlated_key.key)
+                    current_child = actual_subplan_to_group_aggr_node(current_child, subquery_helper.key)
                     
             # Task 3: Convert the existing Join (the one that combines in the subplan)
             # Into two joins
@@ -519,7 +528,7 @@ def solve_correlated_subquery(tree, gatheredAliases, correlated_key, subplan_zon
                         # using subplan join into many joins
                         
                         # Edit in place
-                        current_child = subplan_join_into_many_joins(current_child, correlated_key.key)                
+                        current_child = subplan_join_into_many_joins(current_child, subquery_helper.key)                
             
             # Task 4: For the nodes between the actual correlation and where the subplan started, we need to add the key into their output
             # Do this in the Task 1 section
@@ -626,11 +635,51 @@ def subplan_join_into_many_joins(node, correlated_key):
                 skip = True
             
             if skip == False:
+                # strip outer brackets if exist
+                if (node_condition[0] == "(") and (node_condition[-1] == ")"):
+                    node_condition = node_condition[1:-1]
+                
                 # filter(None, re.split("[, \-!?:]+", "Hey, you - what are you doing here!?"))
                 split_join_cond = filter(None, re.split(connecting, node_condition))
                 for individual_join_cond in split_join_cond:
                     if "SubPlan" in individual_join_cond:
-                        join_2_cond.append(individual_join_cond)
+                        
+                        # We want the SubPlan key on the righthand side of the equals
+                        # Let's determine if it is, and it it's not, we split
+                        
+                        # Remove brackets first
+                        remove_brackets = False
+                        bracket_process = individual_join_cond
+                        if (bracket_process[0] == "(") and (bracket_process[-1] == ")"):
+                            bracket_process = bracket_process[1:-1]
+                            remove_brackets = True
+                            
+                        split_bp = []
+                        split_cond = None
+                        if " = " in bracket_process:
+                            split_cond = " = "
+                            split_bp = bracket_process.split(split_cond)
+                        else:
+                            raise Exception("Unexpected format of join condition, doesn't have an equals in it")
+                        
+                        if len(split_bp) != 2:
+                            raise Exception("Unexpected size of split of the join condition")
+                        
+                        # Determine which side it's in
+                        # Right side, append and move on
+                        # Left side, rearrangement needed
+                        
+                        if "SubPlan" in split_bp[1]:
+                            join_2_cond.append(individual_join_cond)
+                        else:
+                            # Must be in left side, we need to rearrange
+                            if remove_brackets == True:
+                                new_join_cond = "(" + split_bp[1] + split_cond + split_bp[0] + ")"
+                            else:
+                                new_join_cond = split_bp[1] + split_cond + split_bp[0]
+                                
+                            # Add to array
+                            join_2_cond.append(new_join_cond)
                     else:
                         join_1_cond.append(individual_join_cond)
                         
@@ -670,7 +719,30 @@ def subplan_join_into_many_joins(node, correlated_key):
             
     # Construct JOIN 1, the lower level join
     join_1_output = list(node.output)
-    join_1_output.append(correlated_key)
+    if correlated_key not in join_1_output:
+        join_1_output.append(correlated_key)
+    
+    # Get all the relations out of join_2_filter, check they are in join_1_output,
+    # If they are not then add then in
+    # Do this for join_2_filter and join_2_cond
+    searching_arrays = [join_2_filter, join_2_cond]
+    for search_target in searching_arrays:
+        if search_target != []:
+            special_temp = search_target
+            if (special_temp[0] == "(") and (special_temp[-1] == ")"):
+                special_temp = special_temp[1:-1]
+            j2_relations = [match.group() for match in regex.finditer(r"(?:(\((?>[^()]+|(?1))*\))|\S)+", special_temp)]
+            # Filter out operators and SubPlan
+            clean_j2 = []
+            for item in j2_relations:
+                if any(c.isalpha() for c in item):
+                    if "SubPlan" not in item:
+                        clean_j2.append(item)
+            # Add to join_1_output if not already in there
+            for j2_item in clean_j2:
+                if j2_item not in join_1_output:
+                    join_1_output.append(j2_item) 
+    
     
     # Make both be hash joins
     join_1 = hash_join_node("Hash Join", node.parallel_aware, node.async_capable, join_1_output, node.inner_unique, node.join_type, join_1_cond, node.parent_relationship)
@@ -813,6 +885,7 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
         after_condition = getattr(node, correlation_location)
     
     # Get the correlated key from the after condition
+    left_node_condition = None
     if " = " in after_condition:
         local_after_cond = after_condition
         # String brackets
@@ -820,8 +893,11 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
             local_after_cond = after_condition[1:-1]
         
         for part in local_after_cond.split(" = "):
-            if correlated_relation in part:
+            if str(correlated_relation+".") in part:
                 correlated_key = str(part).strip()
+            else:    
+                # Set the left_node condition
+                left_node_condition = str(part).strip()
     else:    
         raise Exception("Unrecognised formation for the after_condition")
     
@@ -833,7 +909,12 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
     new_node = hash_join_node("Hash Join", False, False, join_output, False, "Inner", after_condition, "Outer")
     
     # First create the left node
-    left_node = seq_scan_node("Seq Scan", False, False, node.output, node.relation_name, node.schema, node.alias)
+    # Create the left node output
+    left_node_output = list(node.output)
+    # Check if the left_node condition is in the output, add it if not
+    if left_node_condition not in left_node_output:
+        left_node_output.append(left_node_condition)
+    left_node = seq_scan_node("Seq Scan", False, False, left_node_output, node.relation_name, node.schema, node.alias)
     if before_condition != []:
         left_node.add_filters(before_condition)
     # Add left node parent
