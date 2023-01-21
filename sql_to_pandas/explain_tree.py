@@ -276,7 +276,7 @@ def solve_prune_node(prune_type, tree):
             
 alias_locations = {
     "Index Only Scan": ["output", "filter"],
-    "Index Scan": ["output", "index_cond"],
+    "Index Scan": ["output", "index_cond", "filter"],
     "Seq Scan": ["output", "filters"],
     "Group Aggregate": ["group_key", "output", "filter"],
     "Hash Join": ["hash_cond", "output", "filter"],
@@ -528,7 +528,12 @@ def solve_correlated_subquery(tree, subquery_helper, subplan_zone):
                         # using subplan join into many joins
                         
                         # Edit in place
-                        current_child = subplan_join_into_many_joins(current_child, subquery_helper.key)                
+                        supported_joins = ["Hash Join", "Merge Join"]
+                        if getattr(current_child, "node_type") in supported_joins:
+                            current_child = subplan_join_into_many_joins(current_child, subquery_helper.key)
+                        else:
+                            # TODO: Add support Index Scan type of Task 3
+                            raise Exception(" We have to do Task 3 on a node that isn't supported. Node Type: " + str(getattr(current_child, "node_type")))
             
             # Task 4: For the nodes between the actual correlation and where the subplan started, we need to add the key into their output
             # Do this in the Task 1 section
@@ -860,46 +865,66 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
     # Separate the condition from correlation_location into before and after
     before_condition = []
     after_condition = []
-    # Detect AND in the correl location
-    if (" AND " in correlation_location) or (" OR " in correlation_location):
+    # Detect AND in the correlation location
+    connector = None
+    if (" AND " in getattr(node, correlation_location)):
+        connector = " AND "
+    elif (" OR " in getattr(node, correlation_location)):
+        connector = " OR "
+    
+    if (connector in getattr(node, correlation_location)) and (connector != None):
         # filter(None, re.split("[, \-!?:]+", "Hey, you - what are you doing here!?"))
-        split_condition = filter(None, re.split(" AND | OR ", getattr(node, correlation_location)))
+        # Strip outer brackets
+        outer_brackets = False
+        local_corr = getattr(node, correlation_location)
+        if (local_corr[0] == "(") and (local_corr[-1] == ")"):
+            local_corr = local_corr[1:-1]
+            outer_brackets = True
+        
+        split_condition = filter(None, re.split(connector, local_corr))
         for cond in split_condition:
             if correlated_relation in cond:
                 after_condition.append(cond)
             else:
                 before_condition.append(cond)
         
-        # Fix after condition        
-        if len(after_condition) == 1:
-            after_condition = after_condition[0]
-        else:
-            raise ValueError("Unexpected size of after_condition")
-        
         # Fix before condition
         if len(before_condition) == 1:
             before_condition = before_condition[0]
         else:
-            raise ValueError("Unexpected size of before_condition")
+            before_condition = connector.join(before_condition)
+            if (outer_brackets == True) and (before_condition != ""):
+                before_condition = "(" + before_condition + ")"
     else:
         after_condition = getattr(node, correlation_location)
     
     # Get the correlated key from the after condition
-    left_node_condition = None
-    if " = " in after_condition:
-        local_after_cond = after_condition
-        # String brackets
-        if (after_condition[0] == "(") and (after_condition[-1] == ")"):
-            local_after_cond = after_condition[1:-1]
-        
-        for part in local_after_cond.split(" = "):
-            if str(correlated_relation+".") in part:
-                correlated_key = str(part).strip()
-            else:    
-                # Set the left_node condition
-                left_node_condition = str(part).strip()
-    else:    
-        raise Exception("Unrecognised formation for the after_condition")
+    left_node_condition = []
+    for af_cond in after_condition:
+        if " = " in af_cond:
+            local_after_cond = af_cond
+            # String brackets
+            if (local_after_cond[0] == "(") and (local_after_cond[-1] == ")"):
+                local_after_cond = local_after_cond[1:-1]
+            
+            for part in local_after_cond.split(" = "):
+                if str(correlated_relation+".") in part:
+                    # TODO: Should we just be overwriting the correlated_key like this, what if we have two?!
+                    correlated_key = str(part).strip()
+                else:    
+                    # Set the left_node condition
+                    left_node_condition.append(str(part).strip())
+        else:    
+            raise Exception("Unrecognised formation for the after_condition")
+    
+    # Fix after condition        
+    if len(after_condition) == 1:
+        after_condition = after_condition[0]
+    else:
+        after_condition = connector.join(after_condition)
+        # Add back in if we have removed them
+        if (outer_brackets == True) and (after_condition != ""):
+            after_condition = "(" + after_condition + ")"
     
     # Add the correlated key to the join output
     join_output = list(node.output)
@@ -912,11 +937,18 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
     # Create the left node output
     left_node_output = list(node.output)
     # Check if the left_node condition is in the output, add it if not
-    if left_node_condition not in left_node_output:
-        left_node_output.append(left_node_condition)
+    for ln_cond in left_node_condition:
+        if ln_cond not in left_node_output:
+            left_node_output.append(ln_cond)
     left_node = seq_scan_node("Seq Scan", False, False, left_node_output, node.relation_name, node.schema, node.alias)
-    if before_condition != []:
+    
+    if before_condition != "":
         left_node.add_filters(before_condition)
+        if hasattr(node, "filter"):
+            raise Exception("We have some filters to carry forward and have also added something already to filters, we are unsure how to combine these!")
+    elif hasattr(node, "filter"):
+        # Add node filters if it has filters
+        left_node.add_filters(node.filter)
     # Add left node parent
     left_node.set_parent(new_node)
         
