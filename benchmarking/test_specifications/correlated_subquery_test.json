@@ -35,6 +35,23 @@
                     "Results Name": "Pandas Converter"
                 }
             ]
+        },
+        {
+            "Query Name": "Query 20",
+            "Required Data": ["supplier", "nation", "partsupp", "part", "lineitem"],
+            "SQL Name": "20.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q20_pandas.py",
+                    "Results Name": "Pandas Converter"
+                }
+            ]
         }
     ],
     "Temporary Directory": "benchmarking/temp_queries",
