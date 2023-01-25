@@ -178,7 +178,7 @@ def process_output(self, output, codecomphelper):
                     output[i] = tuple(output_tup_list)
                 else:
                     output[i] = str(output[i]).replace(replace_relation, "")
-                    
+        
         # Final interrupt to catch count(*)
         if isinstance(output[i], tuple):
             if "count(*)" in output[i][0].lower():
@@ -189,6 +189,8 @@ def process_output(self, output, codecomphelper):
                 output[i] = ("count(" + str(chosen_column) + ")", output[i][1])
             elif "extract" in output[i][0].lower():
                 output[i] = (handle_extract(output[i][0]), output[i][1])
+            elif "substring" in output[i][0].lower():
+                output[i] = (handle_substring(output[i][0]), output[i][1])
         else:
             if "count(*)" in output[i].lower():
                 # Pick a column we know is going to exist after the group by
@@ -198,6 +200,8 @@ def process_output(self, output, codecomphelper):
                 output[i] = "count(" + str(chosen_column) + ")"
             elif "extract" in output[i].lower():
                 output[i] = handle_extract(output[i])
+            elif "substring" in output[i].lower():
+                output[i] = handle_substring(output[i])
         
         # Catch if is in codeCompHelper.useAlias
         if isinstance(output[i], tuple):
@@ -207,6 +211,10 @@ def process_output(self, output, codecomphelper):
                     raise ValueError("Aliases are unexpectedly different")
                 # This key is in useAlias, so we should cut it down to a simple alias
                 output[i] = codecomphelper.useAlias.get(output[i][0], None)
+        else:
+            if codecomphelper.useAlias.get(output[i], None) != None:
+                # This key is in useAlias, so we should cut it down to a simple alias
+                output[i] = codecomphelper.useAlias.get(output[i], None)
     
     return output
 
@@ -216,6 +224,20 @@ def handle_extract(string):
     param = str(string.split("EXTRACT(")[1].split(" FROM")[0]).strip().lower()
     source = str(string.split("FROM ")[1].split(")")[0]).strip().lower()
     return str(source) + ".dt." + str(param)
+
+def handle_substring(string):
+    # String: SUBSTRING(c_phone FROM 1 FOR 2)
+    # Split into where, from and for
+    
+    # Check is actually a substring
+    if "SUBSTRING" not in string:
+        raise Exception("How did we get here!")
+    
+    where_value = str(str(string[10:]).split(" ")[0]).strip()
+    from_value = int(str(str(string.split(" FROM ")[1]).split(" FOR ")[0]).strip())
+    for_value = int(str(str(string.split(" FOR ")[1]).split(")")[0]).strip())
+    
+    return str(where_value) + ".str.slice(" + str(from_value - 1) + ", " + str((from_value - 1) + for_value) + ")"
 
 def remove_range(sentence, matches):
     return "".join(
@@ -589,7 +611,13 @@ def clean_filter_params(self, params, codeCompHelper):
                     
                     # Then rejoin and set as line_split
                     line_split[i] = " == ".join(eq_split)
-              
+                    
+            # Do substring
+            if "SUBSTRING" in line_split[i]:
+                substring_part = "SUBSTRING" + str(str(str(line_split[i].split("SUBSTRING")[1]).split(")")[0]).strip()) + ")"
+                substring_replace = handle_substring(substring_part)
+                line_split[i] = line_split[i].replace(substring_part, substring_replace)
+                
         # Clear leading/trailing spaces
         line_split[i] = line_split[i].strip()
         
@@ -882,6 +910,12 @@ class sort_node():
                 keys.append(column)
                 ascendings.append(True)
             else:
+                # TODO: Temporary skip, remove after support for substring working
+                if sort_split[0][:9] == "SUBSTRING":
+                    ascendings.append(True)
+                    keys.append(individual_sort)
+                    continue
+                
                 # There is a DESC or ASC
                 column = None
                 if sort_split[-1] == "DESC":
@@ -973,7 +1007,14 @@ class sort_node():
                         codeCompHelper.useAlias[self.sort_key[sort][0]] =  self.sort_key[sort][1]
                         # Set to index [1]
                         self.sort_key[sort] = self.sort_key[sort][1]
-                       
+                
+                # It's a tuple, check if it's in use_alias
+                if codeCompHelper.useAlias != {}:
+                    for i in range(len(self.sort_key)):
+                        if codeCompHelper.useAlias.get(self.sort_key[i], None) != None:
+                            # In useAlias
+                            self.sort_key[i] = codeCompHelper.useAlias.get(self.sort_key[i], None)                  
+                        
                 # If we have a sorting order then add it onto the end
                 if sort_direction != None:
                     self.sort_key[sort] = str(self.sort_key[sort] + " " + sort_direction).strip()
@@ -2323,6 +2364,9 @@ def complex_name_solve(in_name):
         # Catch bad changes made to new_name
         if (new_name == "") or (new_name == None):
             raise Exception("Name created by complex_name_solve is empty or None. This could be because it contained only digits and we removed these.")
+        
+        if "strslice" in new_name:
+            new_name = str("slice_" + str(new_name.split("strslice")[0]).strip()).strip()
     
     # returns
     #   is_complex  -  True or False as to whether complex
@@ -2352,7 +2396,7 @@ class merge_node():
         # Return left_cond and right_cond
         return left_cond, right_cond
 
-    def process_condition_into_merge(self, left_prev_df, right_prev_df, codeCompHelper):
+    def process_condition_into_merge(self, left_prev_df, right_prev_df, this_df, codeCompHelper):
         # Strip brackets
         self.condition = clean_extra_brackets(self.condition)
         
@@ -2424,18 +2468,33 @@ class merge_node():
             right_labels.append(right)
         
         # Create statement
+        statements = []
         if self.join_type.lower() == "semi":
             if (len(left_labels) > 1) or (len(right_labels) > 1):
                 raise ValueError("Unexpected size of labels in Semi Join merge")
             # Add support for a semi join
             # df_merge_1 =  df_filter_1[df_filter_1.o_orderkey.isin(df_filter_2["l_orderkey"])]
-            statement = left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + '["' + str(right_labels[0]) + '"])]'
+            local_statement = left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + '["' + str(right_labels[0]) + '"])]'
+            statements.append(local_statement)
         elif self.join_type.lower() == "left":
-            statement = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('left') + '")'
+            local_statement = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('left') + '")'
+            statements.append(local_statement)
+        elif self.join_type.lower() == "inner":
+            local_statement = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('inner') + '")'
+            statements.append(local_statement)
+        elif self.join_type.lower() == "anti":
+            # Do an anti_join
+            #df_merge_1 = df_sort_1.merge(df_filter_3, left_on=['c_custkey'], right_on=['o_custkey'], how='outer', indicator=True)
+            local_statement_1 = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('outer') + '", indicator=True)'
+            statements.append(local_statement_1)
+            #df_merge_1 = df_merge_1[df_merge_1._merge == "left_only"]
+            local_statement_2 = this_df + '[' + this_df + '._merge == "left_only"]' 
+            statements.append(local_statement_2)
+            pass
         else:
-            statement = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+')'
+            raise Exception("Unexpected type of Join given: " + str(self.join_type))
         
-        return str(statement)
+        return statements
 
     def to_pandas(self, prev_dfs, this_df, codeCompHelper, treeHelper): 
         # Pandas Merge resets the index
@@ -2447,6 +2506,11 @@ class merge_node():
         for i in range(len(self.output)):
             if "EXTRACT" in self.output[i]:
                 extract_present = i
+        # Check if there's a substring in any of the self.outputs
+        substring_present = "No Substring"
+        for i in range(len(self.output)):
+            if "SUBSTRING" in self.output[i]:
+                substring_present = i
         
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
@@ -2457,7 +2521,9 @@ class merge_node():
             raise ValueError("Too few previous dataframes specified")
         instructions = []
         
-        instructions.append(this_df + " = " + self.process_condition_into_merge(prev_dfs[0], prev_dfs[1], codeCompHelper))
+        merge_statements = self.process_condition_into_merge(prev_dfs[0], prev_dfs[1], this_df, codeCompHelper)
+        for individual_statement in merge_statements:
+            instructions.append(this_df + " = " + individual_statement)
         
         # Handle extract present
         if extract_present != "No Extract":
@@ -2471,7 +2537,35 @@ class merge_node():
                 # But instead set to it's column output
                 self.output[extract_present] = self.output[extract_present][1]
             else:
-                raise ValueError("Extract has something we'd like to set it to")
+                raise ValueError("Extract does not have something we'd like to set it to")
+        # Handle substring present
+        if substring_present != "No Substring":
+            # Output the substring at the given index, stored in substring_present
+            if isinstance(self.output[substring_present], tuple):
+                statement = str(this_df) + "['" + str(self.output[substring_present][1]) + "'] = " + this_df + "." + str(self.output[substring_present][0])
+                instructions.append(statement)
+                # Overwrite self.output, so that this element in not a tuple
+                # Set in codeComp useAlias, to track when we should use the alias
+                codeCompHelper.useAlias[self.output[substring_present][0]] =  self.output[substring_present][1]
+                # But instead set to it's column output
+                self.output[substring_present] = self.output[substring_present][1]
+            else:
+                # Output has no column name
+                # Use solve_complex_name
+                
+                is_complex, new_name = complex_name_solve(self.output[substring_present]) 
+                if is_complex == True:
+                    statement = str(this_df) + "['" + str(new_name) + "'] = " + this_df + "." + str(self.output[substring_present])
+                    instructions.append(statement)
+                    # Overwrite self.output, so that this element in not a tuple
+                    # Set in codeComp useAlias, to track when we should use the alias
+                    codeCompHelper.useAlias[self.output[substring_present]] =  new_name
+                    # But instead set to it's column output
+                    self.output[substring_present] = new_name
+                else:
+                    raise Exception("String that was meant to be complex apparently isn't   ")
+                
+                # raise ValueError("Substring does not have something we'd like to set it to")
         
         # Process aliases here
         output_cols = choose_aliases(self, codeCompHelper)
