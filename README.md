@@ -109,12 +109,24 @@ systemctl status postgresql-14
 
 The second command should inform whether the database has come back up
 
+## Setup python
+
+This project requires python version 3.10 or higher, check this by running:
+
+```bash
+python --version
+```
+
+Then install the corresponding version of the Conda package manager, using the below link:
+
+[Guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
+
 ### Setup the python environment
 
 Back in the root directory of this project, we now need to setup the conda environment for the project (this provides us all the dependencies):
 
 ```bash
-conda env create -n sql_benchmark --file enivironment.yml
+conda env create -n sql_benchmark --file environment.yml
 conda activate sql_benchmark
 ```
 

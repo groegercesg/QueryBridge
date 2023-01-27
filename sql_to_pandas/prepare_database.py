@@ -344,17 +344,17 @@ def init_argparse() -> argparse.ArgumentParser:
                         required=True)
     requiredNamed.add_argument('--db_gen',
                         metavar='db_gen',
-                        type=int,
+                        type=str,
                         help='The location of db gen',
                         required=True)
     requiredNamed.add_argument('--data_storage',
                         metavar='data_storage',
-                        type=int,
+                        type=str,
                         help='The location where the preparation tool should store the data',
                         required=True)
     requiredNamed.add_argument('--constants',
                         metavar='constants',
-                        type=int,
+                        type=str,
                         help='The location where information like prep_queries are stored',
                         required=True)
     
