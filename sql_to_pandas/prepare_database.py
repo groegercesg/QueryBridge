@@ -5,6 +5,8 @@ import subprocess
 from subprocess import DEVNULL, STDOUT, PIPE
 import glob
 import re
+import argparse
+import sys
 
 class prep_db():
     def __init__(self, connection_details, dbgen_path = None):
@@ -306,3 +308,71 @@ class prep_db():
             print(out)
             print(err)
             return p.returncode
+
+def actually_setup_database(db_conn_file, scaling_factor, db_gen, data_storage, constants_loc):
+    # Prepare the database
+    
+    print("Preparing Database")
+    
+    db = prep_db(db_conn_file, db_gen)
+
+    db.prepare_database(data_storage, constants_loc, scaling_factor=int(scaling_factor))
+
+    print("Database prepared")
+    
+def init_argparse() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        usage="%(prog)s [OPTION] [FILE]...",
+        description="Prepare the Database"
+    )
+    parser.add_argument(
+        "-v", "--version", action="version",
+        version = f"{parser.prog} version 0.0.1"
+    )
+    
+    requiredNamed = parser.add_argument_group('required named arguments')
+    
+    requiredNamed.add_argument('--database_connection',
+                        metavar='database_connection',
+                        type=str,
+                        help='The file that contains the database connection details',
+                        required=True)
+    requiredNamed.add_argument('--scaling_factor',
+                        metavar='scaling_factor',
+                        type=int,
+                        help='The scaling factor for our data',
+                        required=True)
+    requiredNamed.add_argument('--db_gen',
+                        metavar='db_gen',
+                        type=int,
+                        help='The location of db gen',
+                        required=True)
+    requiredNamed.add_argument('--data_storage',
+                        metavar='data_storage',
+                        type=int,
+                        help='The location where the preparation tool should store the data',
+                        required=True)
+    requiredNamed.add_argument('--constants',
+                        metavar='constants',
+                        type=int,
+                        help='The location where information like prep_queries are stored',
+                        required=True)
+    
+    return parser
+    
+if __name__ == "__main__":
+    
+    parser = init_argparse()
+    args = parser.parse_args()
+    
+    if len(sys.argv)==1:
+        # display help message when no args are passed.
+        parser.print_help()
+        sys.exit(1)
+        
+    db_conn_file = args.database_connection
+    
+    with open(db_conn_file, "r") as f:
+        db_details = json.load(f)
+    
+    actually_setup_database(db_conn_file, args.scaling_factor, args.db_gen, args.data_storage, args.constants)
