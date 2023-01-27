@@ -7,9 +7,17 @@
 ## Setup
 ### Getting DBGEN
 
+Grab the DBgen version
+
 ```bash
 git clone https://github.com/edin-dal/tpch-dbgen
 cp tpch-dbgen/makefile .
+```
+
+Also, get gcc and make if you don't already have these
+
+```bash
+sudo apt-get install -y make gcc
 ```
 
 ### Setting up the connection file
@@ -134,7 +142,7 @@ And the second command activates it for us.
 
 ### Populate the database with data
 
-With Postgres setup and our database existing, the next step is to populate our database. Run the following command, or customise the parameters:
+With Postgres setup and our database existing, the next step is to populate our database. Run the following command in the root of the project directory, or customise the parameters:
 
 ```bash
 python3 sql_to_pandas/prepare_database.py --database_connection database_connection.json --scaling_factor 1 --db_gen tpch-dbgen --data_storage data_storage --constants tpch-prep
@@ -146,7 +154,7 @@ Assuming you have completed the setup, you can now run the command below to gene
 
 ```bash
 conda activate sql_benchmark
-python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location sql_to_pandas/results/6 --name 6_pandas.py --db_file database_connection.json
+python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location query_6 --name generated_query_6_pandas.py --db_file database_connection.json
 ```
 
 ## Tests for sql_to_pandas
@@ -159,7 +167,7 @@ cd sql_to_pandas/tests
 python3 -m pytest
 ```
 
-## Code tasks
+## Pending Code tasks
 
 - **Aggregation Improvements:** Distinct, Count Distinct, CASE integration, Use Intermediate Results (useAlias) _(8h)_
 - **Explain Tree:** Make classes capture all info automatically _(2h)_
