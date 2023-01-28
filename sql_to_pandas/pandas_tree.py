@@ -2385,7 +2385,13 @@ class merge_node():
         
     def process_equating(self, cond):
         # Split into left and right
-        split_cond = str(cond).split(" = ")
+        if (" = " in cond):
+            split_cond = str(cond).split(" = ")
+        elif (" <> " in cond):
+            split_cond = str(cond).split(" <> ")
+        else:
+            raise Exception("Unknown equating operator in process_equating of the merge node")
+        
         left_side = str(split_cond[0]).split(".")
         left_table = str(left_side[0])
         left_cond = str(left_side[1])
@@ -2395,6 +2401,39 @@ class merge_node():
         
         # Return left_cond and right_cond
         return left_cond, right_cond
+    
+    def is_valid_before_join_filter(self):
+        # If filter has AND or OR in it, skip it for now
+        if (" AND " in self.filter) or (" OR " in self.filter):
+            return False
+        else:
+            # If the filter refers to two different relations
+            connector = None
+            if (" = " in self.filter):
+                connector = " = "
+            elif (" <> " in self.filter):
+                connector = " <> "
+            else:
+                raise Exception("Couldn't detect connector between merge join filter correctly")
+            
+            # Strip outer brackets
+            local_filter = self.filter
+            if (local_filter[0] == "(") and (local_filter[-1] == ")"):
+                local_filter = local_filter[1:-1]
+            
+            detected_relations = []    
+            split_l_f = local_filter.split(connector)
+            for i in range(len(split_l_f)):
+                detected_relations.append(str(split_l_f[i].split(".")[0]).strip())
+                
+            # Validate length and check aren't equal
+            if len(detected_relations) != 2:
+                raise Exception("Didn't detect enough relations!")
+            
+            if detected_relations[0] != detected_relations[1]:
+                return True
+            else:
+                return False
 
     def process_condition_into_merge(self, left_prev_df, right_prev_df, this_df, codeCompHelper):
         # Strip brackets
@@ -2466,31 +2505,95 @@ class merge_node():
             left, right = self.process_equating(individual_cond)
             left_labels.append(left)
             right_labels.append(right)
-        
+            
         # Create statement
         statements = []
+            
+        using_join_filter = False
+        # Get the filter here and prepare it
+        if hasattr(self, "filter") and self.filter != None:
+            if self.is_valid_before_join_filter() == True:
+                # Set using join_filter so we know we need to use the intermediate dataframe in the join
+                using_join_filter = True
+                
+                # Time to Join Filter
+                if (self.filter[0] == "(") and (self.filter[-1] == ")"):
+                    self.filter = self.filter[1:-1]  
+                    
+                join_left, join_right = self.process_equating(individual_cond)
+                
+                # inner_cond = df_merge_2.merge(df_filter_5, left_on='l_orderkey', right_on='l_orderkey', how='inner')
+                local_statement = "inner_cond = " + str(left_prev_df) + ".merge(" + str(right_prev_df) + ", left_on='" + str(join_left) + "', right_on='" + str(join_right) + "', how='inner')"
+                statements.append(local_statement)
+                
+                # Get filter left and right
+                before_filter_left, before_filter_right = self.process_equating(self.filter)
+                # Add prefixes to these if they're equal
+                if before_filter_left == before_filter_right:
+                    before_filter_left = before_filter_left + "_x"
+                    before_filter_right = before_filter_right + "_y"
+                    
+                # Determine equating operator
+                equating_operator = None
+                if " <> " in self.filter:
+                    equating_operator = "!="
+                elif " = " in self.filter:
+                    equating_operator = "=="
+                else:
+                    raise Exception("Unable to determine correct equating operator")
+                
+                # inner_cond = inner_cond[inner_cond.l_suppkey_x != inner_cond.l_suppkey_y]['l_orderkey']
+                local_statement = "inner_cond = inner_cond[inner_cond." + str(before_filter_left) + " " + str(equating_operator) + " inner_cond." + str(before_filter_right) + "]['" + join_left + "']" 
+                statements.append(local_statement)
+                
+                # Set self.filter to None
+                self.filter = None
+                
+            
         if self.join_type.lower() == "semi":
             if (len(left_labels) > 1) or (len(right_labels) > 1):
                 raise ValueError("Unexpected size of labels in Semi Join merge")
             # Add support for a semi join
-            # df_merge_1 =  df_filter_1[df_filter_1.o_orderkey.isin(df_filter_2["l_orderkey"])]
-            local_statement = left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + '["' + str(right_labels[0]) + '"])]'
-            statements.append(local_statement)
+            
+            if using_join_filter == True:
+                # df_merge_5 = df_merge_4[df_merge_4.o_orderkey.isin(inner_cond)]
+                
+                # Overwrite right_prev_df
+                right_prev_df = "inner_cond"
+                
+                local_statement = this_df + " = " + left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + ')]'
+                statements.append(local_statement)
+            else:
+                # df_merge_1 =  df_filter_1[df_filter_1.o_orderkey.isin(df_filter_2["l_orderkey"])]
+                local_statement = this_df + " = " + left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + '["' + str(right_labels[0]) + '"])]'
+                statements.append(local_statement)
         elif self.join_type.lower() == "left":
-            local_statement = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('left') + '")'
+            # Handle join_filter
+            if using_join_filter == True:
+                raise Exception("We shouldn't have done an join_filter for an left join")
+            
+            local_statement = this_df + " = " + left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('left') + '")'
             statements.append(local_statement)
         elif self.join_type.lower() == "inner":
-            local_statement = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('inner') + '")'
+            # Handle join_filter
+            if using_join_filter == True:
+                raise Exception("We shouldn't have done an join_filter for an inner join")
+            
+            local_statement = this_df + " = " + left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('inner') + '")'
             statements.append(local_statement)
         elif self.join_type.lower() == "anti":
             # Do an anti_join
+            
+            if using_join_filter == True:
+                # Overwrite right_prev_df
+                right_prev_df = "inner_cond"
+                
             #df_merge_1 = df_sort_1.merge(df_filter_3, left_on=['c_custkey'], right_on=['o_custkey'], how='outer', indicator=True)
-            local_statement_1 = left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('outer') + '", indicator=True)'
+            local_statement_1 = this_df + " = " + left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('outer') + '", indicator=True)'
             statements.append(local_statement_1)
             #df_merge_1 = df_merge_1[df_merge_1._merge == "left_only"]
-            local_statement_2 = this_df + '[' + this_df + '._merge == "left_only"]' 
+            local_statement_2 = this_df + " = " + this_df + '[' + this_df + '._merge == "left_only"]' 
             statements.append(local_statement_2)
-            pass
         else:
             raise Exception("Unexpected type of Join given: " + str(self.join_type))
         
@@ -2523,7 +2626,7 @@ class merge_node():
         
         merge_statements = self.process_condition_into_merge(prev_dfs[0], prev_dfs[1], this_df, codeCompHelper)
         for individual_statement in merge_statements:
-            instructions.append(this_df + " = " + individual_statement)
+            instructions.append(individual_statement)
         
         # Handle extract present
         if extract_present != "No Extract":
