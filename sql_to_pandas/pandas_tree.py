@@ -87,9 +87,7 @@ def process_output(self, output, codecomphelper):
         brack_cleaned_equal_quote_lower_output_dots = brack_cleaned_equal_quote_lower_output.replace("." , "")
         brack_cleaned_equal_quote_lower_output_dots_no_end = rreplace(rreplace(brack_cleaned_equal_quote_lower_output_dots, "end", " ", 1).strip(), " else", "", 1).strip()
         dot_cleaned_output = cleaned_output.replace(".", "").strip()
-
-        # print(list(codecomphelper.sql.column_references.keys())[0])
-        # print(brack_cleaned_equal_quote_lower_output_no_end_spaced)
+        substring_format = brack_cleaned_lower_output.replace("from ", "").replace("for ", "").strip()
 
         if dot_cleaned_output in codecomphelper.sql.column_references:
             output_original_value = cleaned_output
@@ -129,6 +127,9 @@ def process_output(self, output, codecomphelper):
         elif relation_cleaned_output in codecomphelper.bracket_replace:
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.bracket_replace[relation_cleaned_output])
+        elif substring_format in codecomphelper.sql.column_references:
+            output_original_value = cleaned_output
+            output[i] = (output_original_value, codecomphelper.sql.column_references[substring_format])
         else:
             if "distinct" in cleaned_output.lower():
                 # Function to delete at particular index
@@ -1754,6 +1755,7 @@ def choose_aliases(self, cCHelper, final_output=False):
     # If any two items in output are the same
     potential_dupe_list = duplicates_in_list(output)
     if potential_dupe_list != []:
+        print("Potential_dupe_list: " + str(potential_dupe_list))
         # We have duplicates
         # Iterate through dupes
         replace_options = ["_y", "_x"]
@@ -2510,8 +2512,9 @@ class merge_node():
         statements = []
             
         using_join_filter = False
+        supported_before_join_filter_types = ["semi", "anti"]
         # Get the filter here and prepare it
-        if hasattr(self, "filter") and self.filter != None:
+        if hasattr(self, "filter") and (self.filter != None) and (self.join_type.lower() in supported_before_join_filter_types):
             if self.is_valid_before_join_filter() == True:
                 # Set using join_filter so we know we need to use the intermediate dataframe in the join
                 using_join_filter = True
@@ -2947,6 +2950,10 @@ class sql_class():
                                     
                                     # This doesn't work, instead we need to keep the "n1" part to differentiate it
                                     projection_original = projection_original.replace(".", "")
+                         
+                        # If comma in, get rid of comma
+                        if ("," in projection_original):
+                            projection_original = projection_original.replace(",", "")
                             
                         column_references[projection_original] = str(projection.alias_or_name)
 

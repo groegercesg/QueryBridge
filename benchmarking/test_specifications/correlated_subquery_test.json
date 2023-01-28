@@ -52,6 +52,40 @@
                     "Results Name": "Pandas Converter"
                 }
             ]
+        },
+        {
+            "Query Name": "Query 21",
+            "Required Data": ["supplier", "lineitem", "orders", "nation"],
+            "SQL Name": "21.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q21_pandas.py",
+                    "Results Name": "Pandas Converter"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 22",
+            "Required Data": ["customer", "orders"],
+            "SQL Name": "22.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q22_pandas.py",
+                    "Results Name": "Pandas Converter"
+                }
+            ]
         }
     ],
     "Temporary Directory": "benchmarking/temp_queries",

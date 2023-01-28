@@ -565,7 +565,7 @@ def subplan_scan_into_scan_and_join(node, correlated_key):
         raise Exception("Not enough children, we think the node should have 1.")
     # Check the node has a filter, otherwise what related to the subplan
     if not hasattr(node, "filter"):
-        raise Exception("Node doesn't have ability to filter")
+        raise Exception("Node doesn't have ability to filter, node: " + str(node.node_type))
     
     # New Node Layout:
     #        (top_join)
