@@ -1758,7 +1758,10 @@ def choose_aliases(self, cCHelper, final_output=False):
         print("Potential_dupe_list: " + str(potential_dupe_list))
         # We have duplicates
         # Iterate through dupes
-        replace_options = ["_y", "_x"]
+        # TODO: We need a MUCH better way of determining in which order these should go!
+        
+        # We need to look at our current node children
+        replace_options = ["_y", "_x"] 
         for dupe_item in potential_dupe_list:
             replace_counter = 0
             # Iterate through output items
@@ -1768,16 +1771,42 @@ def choose_aliases(self, cCHelper, final_output=False):
                     if replace_counter > 1:
                         raise ValueError("Too many replaces")
                     else:
-                        output[i] = output[i] + replace_options[replace_counter]
                         # Add to useAlias
                         if isinstance(self.output[i], tuple):
                             if len(self.output[i]) == 3:
+                                
+                                search_output = self.output[i]
+                                
+                                # We need to search for this in the output of children
+                                # If in child[0], then _x, if in child[1] then _y
+                                
+                                if len(self.nodes) != 2:
+                                    raise Exception("Not enough children of node")
+                                
+                                # Search left, then right, to determine the tag
+                                add_tag = None
+                                for output_tag in self.nodes[0].output:
+                                    if output_tag == search_output:
+                                        add_tag = "_x"
+                                        break
+                                for output_tag in self.nodes[1].output:
+                                    if output_tag == search_output:
+                                        add_tag = "_y"
+                                        break   
+                                    
+                                if (add_tag == None):
+                                    raise Exception("We didn't find an add_tag")
+                                
+                                output[i] = output[i] + add_tag
+                                
                                 # We are in this special circumstance
                                 # Use the 2nd idx, which should be: n2n_name (no dot!)
                                 cCHelper.useAlias[self.output[i][2]] = output[i]
                             else:
+                                output[i] = output[i] + replace_options[replace_counter]
                                 cCHelper.useAlias[self.output[i][0]] = output[i]
                         else:
+                            output[i] = output[i] + replace_options[replace_counter]
                             cCHelper.useAlias[self.output[i]] = output[i]
                         replace_counter += 1
 
@@ -2346,8 +2375,14 @@ class group_aggr_node():
     
 def complex_name_solve(in_name):
     complex_items = ["*", "-", "(", ")", " ", "/", "+", "-", "*", "."]
+    
     is_complex = False
     new_name = None
+    
+    # If in_name is part of complex_item
+    if in_name in complex_items:
+        return is_complex, in_name
+    
     
     if any(item in in_name for item in complex_items):
         # We have one of these items in our string
@@ -2552,6 +2587,30 @@ class merge_node():
                 # Set self.filter to None
                 self.filter = None
                 
+        # Check if we need to undo an index
+        # If we have a group_aggr_node below, then we need to put a statement in saying
+        # To reset the index to a standard column
+        if not hasattr(self, "nodes"):
+            raise Exception("Merge node with no children")
+        elif len(self.nodes) < 1:
+            raise Exception("Merge node with not enough children")
+        elif len(self.nodes) > 2:
+            raise Exception("Merge node with too many children")
+        
+        # Iterate through to discover
+        for i in range(len(self.nodes)):
+            if self.nodes[i].__class__.__name__ == "group_aggr_node":
+                # df_group_1 = df_group_1.reset_index(level=0)
+                using_df = None
+                if i == 0:
+                    # Create for left_node
+                    using_df = left_prev_df
+                elif i == 1:
+                    using_df = right_prev_df
+                else:
+                    raise Exception("Unexpected number of iterations")
+                    
+                statements.append(using_df + " = " + using_df + ".reset_index(level=0)")
             
         if self.join_type.lower() == "semi":
             if (len(left_labels) > 1) or (len(right_labels) > 1):
@@ -2576,6 +2635,13 @@ class merge_node():
                 raise Exception("We shouldn't have done an join_filter for an left join")
             
             local_statement = this_df + " = " + left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('left') + '")'
+            statements.append(local_statement)
+        elif self.join_type.lower() == "right":
+            # Handle join_filter
+            if using_join_filter == True:
+                raise Exception("We shouldn't have done an join_filter for an right join")
+            
+            local_statement = this_df + " = " + left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('right') + '")'
             statements.append(local_statement)
         elif self.join_type.lower() == "inner":
             # Handle join_filter

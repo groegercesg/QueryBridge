@@ -117,7 +117,7 @@ def main():
         os.remove(manifest_json["Results Location"])
         
     # For the results, write the Header
-    results_writer(manifest_json, ["Data Type", "Scaling Factor", "Query Name", "Average", "Runs"])
+    results_writer(manifest_json, ["Data Type", "Scaling Factor", "Query Name", "Query Number", "Average", "Runs"])
     
     first_run = True
     
@@ -219,7 +219,7 @@ def main():
                         print(sql_run_times)
                     avg_3sf = round_sig(sum(sql_run_times)/len(sql_run_times), 3)
                     print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
-                    results_writer(manifest_json, ["SQL", str(scaling_factor), str(query_option["Results Name"]), avg_3sf, sql_run_times])
+                    results_writer(manifest_json, ["SQL", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, sql_run_times])
                 
                 elif query_option["Type"] == "Pandas":
                     if query_option["Converter"] == "True":
@@ -305,7 +305,7 @@ def main():
                         print(pandas_run_times)
                     avg_3sf = round_sig(sum(pandas_run_times)/len(pandas_run_times), 3)
                     print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
-                    results_writer(manifest_json, ["Pandas", str(scaling_factor), str(query_option["Results Name"]), avg_3sf, pandas_run_times])
+                    results_writer(manifest_json, ["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, pandas_run_times])
             
                     # Append to pandas_results_list, in a tuple
                     pandas_results_list.append((query_option["Results Name"], pandas_result))

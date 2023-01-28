@@ -20,6 +20,23 @@
             ]
         },
         {
+            "Query Name": "Query 2",
+            "Required Data": ["part", "supplier", "partsupp", "nation", "region"],
+            "SQL Name": "2.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q2_pandas.py",
+                    "Results Name": "Pandas Converter"
+                }
+            ]
+        },
+        {
             "Query Name": "Query 3",
             "Required Data": ["customer", "orders", "lineitem"],
             "SQL Name": "3.sql",
@@ -258,6 +275,23 @@
             ]
         },
         {
+            "Query Name": "Query 17",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "17.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q17_pandas.py",
+                    "Results Name": "Pandas Converter"
+                }
+            ]
+        },
+        {
             "Query Name": "Query 18",
             "Required Data": ["customer", "orders", "lineitem"],
             "SQL Name": "18.sql",
@@ -290,6 +324,57 @@
                     "Results Name": "Pandas Converter"
                 }
             ]
+        },
+        {
+            "Query Name": "Query 20",
+            "Required Data": ["supplier", "nation", "partsupp", "part", "lineitem"],
+            "SQL Name": "20.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q20_pandas.py",
+                    "Results Name": "Pandas Converter"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 21",
+            "Required Data": ["supplier", "lineitem", "orders", "nation"],
+            "SQL Name": "21.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q21_pandas.py",
+                    "Results Name": "Pandas Converter"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 22",
+            "Required Data": ["customer", "orders"],
+            "SQL Name": "22.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "SQL"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q22_pandas.py",
+                    "Results Name": "Pandas Converter"
+                }
+            ]
         }
     ],
     "Temporary Directory": "benchmarking/temp_queries",
@@ -297,7 +382,7 @@
     "SQL Queries Location": "benchmarking/queries",
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 1,
+    "Number of Query Runs": 5,
     "Results Location": "benchmarking/test_results/all_queries_test_results.csv",
     "Database Connection Details": "database_connection.json",
     "DB Gen Location": "tpch-dbgen",

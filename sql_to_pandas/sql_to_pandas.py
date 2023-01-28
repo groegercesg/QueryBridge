@@ -70,6 +70,7 @@ def init_argparse() -> argparse.ArgumentParser:
     parser.add_argument('--db_file',
                     metavar='db_file',
                     type=str,
+                    required=True,
                     help='The file containing details for how and which database to connect to.')
 
 
@@ -117,8 +118,20 @@ def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_fil
         with open(python_output_name, 'a+') as f:
             for line in pandas:
                 f.write("    "+f"{line}\n")
-        # Store relations
-        relations_subqueries += codeCompHelper.relations
+        # Store relations, but only ones that aren't in aliasRelationPairs.keys
+        remove = []
+        ccRelations = list(codeCompHelper.relations)
+        for i in range(len(ccRelations)):
+            if ccRelations[i] in codeCompHelper.aliasRelationPairs:
+                remove.append(i)
+                
+        # Reverse remove
+        remove.reverse()
+        # Do the deletes
+        for num in remove:
+            del ccRelations[num]
+        
+        relations_subqueries += ccRelations
     else:        
         with open(python_output_name, 'a+') as f:
             for line in pandas:
