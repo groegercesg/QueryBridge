@@ -1896,6 +1896,7 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
                 # If it's an index
                 if temp_col_var in codeCompHelper.indexes:
                     if len(codeCompHelper.indexes) != 1:
+                        # TODO: Column rename code
                         raise ValueError("Need to write column rename code")
                     else:
                         # We should make the col an index

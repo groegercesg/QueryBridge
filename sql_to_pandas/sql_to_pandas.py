@@ -351,7 +351,7 @@ def main():
         # Remove view names from this
         cleaned_relations_subqueries = [x for x in relations_subqueries if x not in view_names]
         
-        line_prepender(python_output_name, "def query(" + str(cleaned_relations_subqueries)[1:-1].replace("'", "") + "):\n")
+        line_prepender(python_output_name, "def query_" + str(query_name) + "(" + str(cleaned_relations_subqueries)[1:-1].replace("'", "") + "):\n")
         line_prepender(python_output_name, "import pandas as pd\n")
         line_prepender(python_output_name, "import numpy as np\n")
         

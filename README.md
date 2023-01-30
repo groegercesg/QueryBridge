@@ -7,7 +7,9 @@
 ## Setup
 ### Getting DBGEN
 
-Grab the DBgen version
+First, change to the root of the project directory.
+
+Grab the DBgen version, clone this into the project directory.
 
 ```bash
 git clone https://github.com/edin-dal/tpch-dbgen
@@ -40,7 +42,7 @@ You can change the Username, Password and Database name as you wish, but you hav
 
 ### Install postgres and make the database
 
-Install Postgres (instructions for Ubuntu):
+Install Postgres-14 (instructions for Ubuntu 22.04):
 
 ```bash
 sudo apt update
@@ -58,6 +60,8 @@ And check it's installed with:
 ```bash
 psql -V
 ```
+
+If this version is not Postgres 14.X, please install Postgres 14
 
 Now we can create the table, use the same name as specified in your _database\_connection.json_ file. First enter the postgres shell, then create the database.
 
@@ -97,7 +101,7 @@ exit
 vim /var/lib/pgsql/14/data/postgresql.conf
 ```
 
-We don't have support for parallelisation, bitmap scans, memoize or nested loops, so we turn these off by changing the following lines:
+We don't have support for parallelisation, bitmap scans, memoize or nested loops, so we turn these off by changing the following lines, take out the comment at the beginning. If you don't have some of these options that's okay:
 
 ```bash
 max_parallel_workers_per_gather = 0
@@ -108,7 +112,11 @@ enable_memoize = off
 enable_nestloop = off
 ```
 
-Then restart the postgres server with the following commands, change your postgres version as necessary.
+Then restart the postgres server with the following commands, change the postgres service name as necessary. To find the postgresql "service", please run the below command:
+
+```bash
+systemctl --type=service | grep "postgresql"
+```
 
 ```bash
 systemctl restart postgresql-14
@@ -155,6 +163,15 @@ Assuming you have completed the setup, you can now run the command below to gene
 ```bash
 conda activate sql_benchmark
 python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location query_6 --name generated_query_6_pandas.py --db_file database_connection.json
+```
+
+## Run all the queries
+
+To use the benchmarking tool to run all the queries, run the below command:
+
+```bash
+conda activate sql_benchmark
+python3 benchmarking/run_benchmarking.py --file benchmarking/test_specifications/all_queries_test.json --verbose
 ```
 
 ## Tests for sql_to_pandas

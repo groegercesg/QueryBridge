@@ -31,5 +31,19 @@
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",
     "Data Storage": "data_storage",
-    "Results Precision": 4
+    "Results Precision": 4,
+    "Store Queries": {
+        "Name": "basic_test_pandas.py",
+        "Rename Tables": {
+            "lineitem": "li",
+            "order": "ord",
+            "customer": "cu",
+            "part": "pa",
+            "nation": "na",
+            "supplier": "su",
+            "partsupp": "ps",
+            "region": "re"
+        },
+        "Data Loader": "True"
+    }
 }   

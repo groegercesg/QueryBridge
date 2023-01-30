@@ -382,11 +382,25 @@
     "SQL Queries Location": "benchmarking/queries",
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 5,
+    "Number of Query Runs": 1,
     "Results Location": "benchmarking/test_results/all_queries_test_results.csv",
     "Database Connection Details": "database_connection.json",
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",
     "Data Storage": "data_storage",
-    "Results Precision": 4
+    "Results Precision": 4,
+    "Store Queries": {
+        "Name": "all_queries_pandas.py",
+        "Rename Tables": {
+            "lineitem": "li",
+            "order": "ord",
+            "customer": "cu",
+            "part": "pa",
+            "nation": "na",
+            "supplier": "su",
+            "partsupp": "ps",
+            "region": "re"
+        },
+        "Data Loader": "True"
+    }
 }

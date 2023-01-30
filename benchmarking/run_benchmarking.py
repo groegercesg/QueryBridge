@@ -10,6 +10,7 @@ from math import log10, floor
 from query_database import run_query
 from compare_results import compare
 import os
+from os import path
 import importlib.util
 import sys
 from contextlib import contextmanager
@@ -109,7 +110,25 @@ def main():
     
     with open(manifest_json["Database Connection Details"], "r") as f:
         db_details = json.load(f)
-    
+        
+    # Store Queries
+    store_queries = False
+    if "Store Queries" in manifest_json:
+        store_queries = True
+        store_queries_file_content = ""
+        
+        # Create variable for function call and function_body
+        store_queries_function_call = ""
+        store_queries_function_body = ""
+        
+        # Add dataloader content
+        if ("Data Loader" in manifest_json["Store Queries"]) and (manifest_json["Store Queries"]["Data Loader"] == "True"):
+            f = open("benchmarking/"+manifest_json["Pandas Data Loader"], "r")
+            dataloader_content = str(f.read())
+        
+            store_queries_file_content += dataloader_content
+            #store_queries_file_content += "\n\n\n"
+        
     print("Running Test: " + str(manifest_json['Test Name']))
     
     # Delete Results file if already exists
@@ -236,8 +255,17 @@ def main():
                             print(result.stderr)
                             raise Exception( f'Invalid result: { result.returncode }' )      
                         
-                        function_default = "query"
+                        query_name = str(query["SQL Name"].split("/")[-1]).split(".")[0]
+                        function_default = "query_" + query_name
+                        
                         package_name = str(query_option["Converted Name"]).split(".")[0]
+                        
+                        if "Store Queries" in manifest_json:
+                            # Add to store_queries_function_body
+                            f = open(path.join(manifest_json["Temporary Directory"], query_option["Converted Name"]), "r")
+                            query_pandas_content = str(f.read())
+                            
+                            store_queries_function_body += query_pandas_content
                         
                         # Put an __init__.py file into the folder so it can be imported as a module
                         init_writer()
@@ -254,7 +282,8 @@ def main():
                         package_name = str(query_option["File Name"]).split(".")[0]
                         
                         # Set default function name
-                        function_default = "query"
+                        query_name = str(query["SQL Name"].split("/")[-1]).split(".")[0]
+                        function_default = "query_" + query_name
                     else:
                         raise Exception("Unknown Converter option for a Pandas Type query: " + str(query_option["Converter"]))    
                     
@@ -279,10 +308,17 @@ def main():
                     
                     # Get Query Data
                     query_data = [0] * len(data_order)
+                    table_names = [0] * len(data_order)
                     for relation in query["Required Data"]:
                         # Get position of relation in data_order, use as position in query data
                         insert_pos = data_order.index(relation)
                         query_data[insert_pos] = getattr(data_loaded, relation)
+                        table_names[insert_pos] = relation
+                        
+                    # Store Queries
+                    if "Store Queries" in manifest_json:
+                        store_queries_function_call += str(query_function.__name__) + "(" + str(table_names)[1:-1].replace("'", "") + ")"
+                        store_queries_function_call += "\n"
                         
                     pandas_run_times = []
                     # Run the query and get an execution time for it
@@ -335,6 +371,35 @@ def main():
             delete_temp_folder()
     
     print(color.GREEN + "Testing is complete and results have been written to: " + str(manifest_json["Results Location"]) + color.END)    
+    
+    # Writing out store queries
+    if "Store Queries" in manifest_json:
+        # store_queries_file_content
+        
+        # Do replacements with "Rename Tables"
+        if "Rename Tables" in manifest_json["Store Queries"]:
+            # Iterate through tables
+            for table in manifest_json["Store Queries"]["Rename Tables"]:
+                # Do replace
+                store_queries_function_body = store_queries_function_body.replace(table, manifest_json["Store Queries"]["Rename Tables"][table])
+        
+        store_queries_file_content += store_queries_function_body
+        store_queries_file_content += "\n\n"
+        store_queries_file_content += "# ====================="
+        store_queries_file_content += "\n\n"
+        
+        store_queries_file_content += store_queries_function_call
+        
+        # Add imports 
+        store_queries_file_content = store_queries_file_content.replace("import pandas as pd", "").replace("import numpy as np", "")
+        store_queries_file_content = "import pandas as pd \nimport numpy as np\n" + store_queries_file_content
+        store_queries_file_content += "\n"
+        
+        # Write out to file, named "Name"
+        f= open(manifest_json["Store Queries"]["Name"], "w+")
+        f.write(store_queries_file_content)
+        f.close()
+        
     
     delete_temp_folder()
         

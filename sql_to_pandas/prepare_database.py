@@ -113,7 +113,6 @@ class prep_db():
         print("-"*15)
         print("Complete: Database is prepared and loaded")
         
-    
     def prepare_database(self, data_dir, constants_dir, scaling_factor = 1):
         # Prepare the database, at the connection object!
         self.scaling_factor = scaling_factor
@@ -216,8 +215,7 @@ class prep_db():
             return 1
         cursor.close()
         return 0
-    
-            
+           
     def generate_data(self):
         """
         Generates the data from dbgen, and moves it into the data_dir directory.
