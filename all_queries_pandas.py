@@ -180,50 +180,6 @@ r_parse_dates = []
 # Don't set indexes, as we can't access them with Pandas selection!
 region = pd.read_table("data_storage/region.tbl.csv", sep="|", names=r_columnnames, dtype=r_data_types, parse_dates=r_parse_dates)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 def query_1(li):
     df_filter_1 = li[li.l_shipdate <= pd.Timestamp('1998-09-02 00:00:00')]
     df_filter_1 = df_filter_1[['l_returnflag', 'l_linestatus', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax']]
