@@ -241,7 +241,9 @@ def main():
         if len(split_query) == 2 and split_query[1] == "":
             # We have no view, so have to prepend the explain options
             explain_content = explain_opts.rstrip('\r\n') + '\n' + explain_content
-
+        elif len(split_query) == 1:
+            explain_content = explain_opts.rstrip('\r\n') + '\n' + explain_content
+            
         explain_output_path = f"{folder_path}" + "/"+ query_name+"_explain_" + str(i) + ".json"
         tree_output = f"{folder_path}" + "/"+query_name+"_explain_tree_" + str(i)
         tree_prune_output = f"{folder_path}" + "/" +query_name+"_explain_post_prune_tree_" + str(i)

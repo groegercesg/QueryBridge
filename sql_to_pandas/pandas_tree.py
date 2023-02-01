@@ -3053,7 +3053,8 @@ class sql_class():
                                     # projection_original = str(split_proj[1]).strip()
                                     
                                     # Add also the split after the dot of it
-                                    column_references[projection_original.split(".")[1].strip()] = str(projection.alias_or_name)
+                                    if projection.alias_or_name != "":
+                                        column_references[projection_original.split(".")[1].strip()] = str(projection.alias_or_name)
                                     
                                     
                                     # This doesn't work, instead we need to keep the "n1" part to differentiate it
@@ -3189,6 +3190,9 @@ def create_tree(class_tree, sql_class):
             node_class.set_alias(current_node.alias)
     elif node_type == "Unique":
         node_class = unique_node(current_node.output)
+    elif node_type == "Group":
+        node_class = group_aggr_node(current_node.output, current_node.group_key)
+        
     else:
         raise ValueError("The node: " + str(current_node.node_type) + " is not recognised. Not all node have been implemented")
     

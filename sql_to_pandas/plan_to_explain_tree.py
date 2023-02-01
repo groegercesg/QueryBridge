@@ -42,6 +42,14 @@ class group_aggregate_node(aggregate_node):
             
     def add_filter(self, in_filter):
         self.filter = in_filter
+        
+class group_node(base_node):
+    def __init__(self, node_type, parallel_aware, async_capable, output, group_key):
+        super().__init__(node_type, parallel_aware, async_capable, output)
+        self.group_key = group_key
+            
+    def add_filter(self, in_filter):
+        self.filter = in_filter
 
 class index_only_scan_node(base_node):
     def __init__(self, node_type, parallel_aware, async_capable, scan_direction, index_name, relation_name, schema, alias, output, parent_relationship):
