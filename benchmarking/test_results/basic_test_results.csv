@@ -1,3 +1,3 @@
-Data Type,Scaling Factor,Query Name,Query Number,Average,Runs
-SQL,1,SQL,Query 1,6.07,[6.071401596069336]
-Pandas,1,Pandas Converter,Query 1,3.1,[3.101329803466797]
+Data Type,Scaling Factor,Query Name,Query Number,Average,Correct,Runs
+SQL,1,SQL,Query 1,6.52,True,[6.515621662139893]
+Pandas,1,Pandas Converter,Query 1,2.97,True,[2.9709420204162598]

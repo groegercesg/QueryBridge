@@ -401,6 +401,6 @@
             "partsupp": "ps",
             "region": "re"
         },
-        "Data Loader": "True"
+        "Data Loader": "benchmarking/tpch_data_loader_modified.py"
     }
 }

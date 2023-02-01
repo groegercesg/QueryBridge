@@ -307,9 +307,13 @@ def clean_type_information(self, content):
         # print("Old Value: " + str(value))
         match_str = str(str(match.group())[2:])
         if "date" in match_str:
-            new_value = "pd.Timestamp('"+str(pd.to_datetime(value, format='%Y-%m-%d'))+"')"
+            # Hesam suggestion:
+            new_value = "'" + str(pd.to_datetime(value, format='%Y-%m-%d')) + "'"
+            #new_value = "pd.Timestamp('"+str(pd.to_datetime(value, format='%Y-%m-%d'))+"')"
         elif "timestamp" in match_str:
-            new_value = "pd.Timestamp('"+str(pd.to_datetime(value, format='%Y-%m-%d %H:%M:%S'))+"')"
+            # Hesam suggestion:
+            new_value = "'" + str(pd.to_datetime(value, format='%Y-%m-%d %H:%M:%S')) + "'"
+            #new_value = "pd.Timestamp('"+str(pd.to_datetime(value, format='%Y-%m-%d'))+"')"
         elif "numeric" in match_str:
             # Bug: '(supplier.s_nationkey)::numeric < 27.3'
             # Sometimes the postgres planner refers to the relation as "numeric"
@@ -1060,32 +1064,69 @@ class limit_node():
             raise ValueError("Inputted prev_df is not a string!")
         instructions = []
         
-        if codeCompHelper.column_ordering:
-            output_cols = choose_aliases(self, codeCompHelper, final_output=True)
-            # Undo axes to normal columns
-            if codeCompHelper.indexes != []:
-                statement1_string = this_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()"
-                instructions.append(statement1_string)
-            
-            # Limit to output columns
-            if codeCompHelper.indexes != []:
-                statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-                instructions.append(statement2_string)
-            else:
-                statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
-                instructions.append(statement2_string)
-        else:
-            if codeCompHelper.column_limiting:
-                output_cols = choose_aliases(self, codeCompHelper, final_output=False)
-                statement_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
-                instructions.append(statement_string)
-            else:
-                statement_string = this_df + " = " + prev_df
-                instructions.append(statement_string)
-                    
-        statement3_string = str(this_df) + " = " + str(this_df) + ".head("+str(self.amount)+")"
-        instructions.append(statement3_string)
+        # Sometimes our output looks like:
+        #       df_aggr_1 = df_aggr_1[['avg_yearly']]
+        #       df_limit_1 = df_aggr_1[['avg_yearly']]
+        # Where we have a repeated line
+        # Check only has one children
+        if len(self.nodes) != 1:
+            raise Exception("Limit node with multiple children, something is malformed here")
         
+        # Try and determine no column out
+        no_column_output = True
+        
+        # Check length the same
+        if len(self.nodes[0].output) != len(self.output):
+            no_column_output = False
+        
+        # Check that all nodes are the same
+        child_output_list = []
+        for output_tag in list(self.nodes[0].output):
+            if isinstance(output_tag, tuple):
+                child_output_list.append(output_tag[1])
+            else:
+                child_output_list.append(output_tag)
+        child_output = dict.fromkeys(child_output_list)
+        
+        # Iterate through all keys
+        for current_key in list(self.output):
+            if child_output.get(current_key, "Not Found") == "Not Found":
+                # Not in dictionary
+                no_column_output = False
+                break      
+        
+        if not no_column_output:
+            if codeCompHelper.column_ordering:
+                output_cols = choose_aliases(self, codeCompHelper, final_output=True)
+                # Undo axes to normal columns
+                if codeCompHelper.indexes != []:
+                    statement1_string = this_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()"
+                    instructions.append(statement1_string)
+                
+                # Limit to output columns
+                if codeCompHelper.indexes != []:
+                    statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+                    instructions.append(statement2_string)
+                else:
+                    statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
+                    instructions.append(statement2_string)
+            else:
+                if codeCompHelper.column_limiting:
+                    output_cols = choose_aliases(self, codeCompHelper, final_output=False)
+                    statement_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
+                    instructions.append(statement_string)
+                else:
+                    statement_string = this_df + " = " + prev_df
+                    instructions.append(statement_string)
+         
+        if not no_column_output:           
+            statement3_string = str(this_df) + " = " + str(this_df) + ".head("+str(self.amount)+")"
+            instructions.append(statement3_string)
+        else:
+            # No column output, use prev_df in the head
+            statement3_string = str(this_df) + " = " + str(prev_df) + ".head("+str(self.amount)+")"
+            instructions.append(statement3_string)
+            
         return instructions
 
 class unique_node():

@@ -29,7 +29,7 @@ l_data_types = {
 l_parse_dates = ['l_shipdate', 'l_commitdate', 'l_receiptdate']
 
 # Don't set indexes, as we can't access them with Pandas selection!
-lineitem = pd.read_table("data_storage/lineitem.tbl.csv", sep="|", names=l_columnnames, dtype=l_data_types, parse_dates=l_parse_dates)
+li = pd.read_table("data_storage/lineitem.tbl.csv", sep="|", names=l_columnnames, dtype=l_data_types, parse_dates=l_parse_dates)
 
 # Order
 
@@ -52,7 +52,7 @@ o_data_types = {
 o_parse_dates = ['o_orderdate']
 
 # Don't set indexes, as we can't access them with Pandas selection!
-orders = pd.read_table("data_storage/orders.tbl.csv", sep="|", names=o_columnnames, dtype=o_data_types, parse_dates=o_parse_dates)
+ord = pd.read_table("data_storage/orders.tbl.csv", sep="|", names=o_columnnames, dtype=o_data_types, parse_dates=o_parse_dates)
 
 # Customer
 
@@ -75,7 +75,7 @@ c_data_types = {
 c_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-customer = pd.read_table("data_storage/customer.tbl.csv", sep="|", names=c_columnnames, dtype=c_data_types, parse_dates=c_parse_dates)
+cu = pd.read_table("data_storage/customer.tbl.csv", sep="|", names=c_columnnames, dtype=c_data_types, parse_dates=c_parse_dates)
 
 # Part
 
@@ -99,7 +99,7 @@ p_data_types = {
 p_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-part = pd.read_table("data_storage/part.tbl.csv", sep="|", names=p_columnnames, dtype=p_data_types, parse_dates=p_parse_dates)
+pa = pd.read_table("data_storage/part.tbl.csv", sep="|", names=p_columnnames, dtype=p_data_types, parse_dates=p_parse_dates)
 
 # Nation
 
@@ -118,7 +118,7 @@ n_data_types = {
 n_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-nation = pd.read_table("data_storage/nation.tbl.csv", sep="|", names=n_columnnames, dtype=n_data_types, parse_dates=n_parse_dates)
+na = pd.read_table("data_storage/nation.tbl.csv", sep="|", names=n_columnnames, dtype=n_data_types, parse_dates=n_parse_dates)
 
 # Supplier
 
@@ -140,7 +140,7 @@ s_data_types = {
 s_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-supplier = pd.read_table("data_storage/supplier.tbl.csv", sep="|", names=s_columnnames, dtype=s_data_types, parse_dates=s_parse_dates)
+su = pd.read_table("data_storage/supplier.tbl.csv", sep="|", names=s_columnnames, dtype=s_data_types, parse_dates=s_parse_dates)
 
 # Partsupp
 
@@ -160,7 +160,7 @@ ps_data_types = {
 ps_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-partsupp = pd.read_table("data_storage/partsupp.tbl.csv", sep="|", names=ps_columnnames, dtype=ps_data_types, parse_dates=ps_parse_dates)
+ps = pd.read_table("data_storage/partsupp.tbl.csv", sep="|", names=ps_columnnames, dtype=ps_data_types, parse_dates=ps_parse_dates)
 
 # Region
 
@@ -178,10 +178,10 @@ r_data_types = {
 r_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
-region = pd.read_table("data_storage/region.tbl.csv", sep="|", names=r_columnnames, dtype=r_data_types, parse_dates=r_parse_dates)
+re = pd.read_table("data_storage/region.tbl.csv", sep="|", names=r_columnnames, dtype=r_data_types, parse_dates=r_parse_dates)
 
-def query_1(li):
-    df_filter_1 = li[li.l_shipdate <= pd.Timestamp('1998-09-02 00:00:00')]
+def q1():
+    df_filter_1 = li[li.l_shipdate <= '1998-09-02 00:00:00']
     df_filter_1 = df_filter_1[['l_returnflag', 'l_linestatus', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax']]
     df_sort_1 = df_filter_1.sort_values(by=['l_returnflag', 'l_linestatus'], ascending=[True, True])
     df_sort_1 = df_sort_1[['l_returnflag', 'l_linestatus', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax']]
@@ -197,133 +197,129 @@ def query_1(li):
             avg_qty=("l_quantity", "mean"),
             avg_price=("l_extendedprice", "mean"),
             avg_disc=("l_discount", "mean"),
-            count_ord=("l_returnflag", "count"),
+            count_order=("l_returnflag", "count"),
         )
-    df_group_1 = df_group_1[['sum_qty', 'sum_base_price', 'sum_disc_price', 'sum_charge', 'avg_qty', 'avg_price', 'avg_disc', 'count_ord']]
-    df_limit_1 = df_group_1[['sum_qty', 'sum_base_price', 'sum_disc_price', 'sum_charge', 'avg_qty', 'avg_price', 'avg_disc', 'count_ord']]
-    df_limit_1 = df_limit_1.head(1)
+    df_group_1 = df_group_1[['sum_qty', 'sum_base_price', 'sum_disc_price', 'sum_charge', 'avg_qty', 'avg_price', 'avg_disc', 'count_order']]
+    df_limit_1 = df_group_1.head(1)
     return df_limit_1
 
 
-def query_2(pa, re, na, pasupp, su):
-    df_filter_1 = pasupp[['ps_pakey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
+def q2():
+    df_filter_1 = ps[['ps_partkey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
     df_filter_2 = pa[(pa.p_type.str.contains("^.*?BRASS$",regex=True)) & (pa.p_size == 15)]
-    df_filter_2 = df_filter_2[['p_pakey', 'p_mfgr']]
-    df_sort_1 = df_filter_2.sort_values(by=['p_pakey'], ascending=[True])
-    df_sort_1 = df_sort_1[['p_pakey', 'p_mfgr']]
-    df_merge_1 = df_filter_1.merge(df_sort_1, left_on=['ps_pakey'], right_on=['p_pakey'], how="inner")
-    df_merge_1 = df_merge_1[['p_pakey', 'p_mfgr', 'ps_suppkey', 'ps_supplycost']]
-    df_filter_3 = pasupp[['ps_pakey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
-    df_filter_4 = pa[['p_pakey']]
-    df_merge_2 = df_filter_3.merge(df_filter_4, left_on=['ps_pakey'], right_on=['p_pakey'], how="inner")
-    df_merge_2 = df_merge_2[['ps_pakey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment', 'p_pakey']]
-    df_filter_5 = su[['s_suppkey', 's_name', 's_address', 's_nakey', 's_phone', 's_acctbal', 's_comment']]
-    df_filter_6 = na[['n_nakey', 'n_name', 'n_rekey', 'n_comment']]
+    df_filter_2 = df_filter_2[['p_partkey', 'p_mfgr']]
+    df_sort_1 = df_filter_2.sort_values(by=['p_partkey'], ascending=[True])
+    df_sort_1 = df_sort_1[['p_partkey', 'p_mfgr']]
+    df_merge_1 = df_filter_1.merge(df_sort_1, left_on=['ps_partkey'], right_on=['p_partkey'], how="inner")
+    df_merge_1 = df_merge_1[['p_partkey', 'p_mfgr', 'ps_suppkey', 'ps_supplycost']]
+    df_filter_3 = ps[['ps_partkey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
+    df_filter_4 = pa[['p_partkey']]
+    df_merge_2 = df_filter_3.merge(df_filter_4, left_on=['ps_partkey'], right_on=['p_partkey'], how="inner")
+    df_merge_2 = df_merge_2[['ps_partkey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment', 'p_partkey']]
+    df_filter_5 = su[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
+    df_filter_6 = na[['n_nationkey', 'n_name', 'n_regionkey', 'n_comment']]
     df_filter_7 = re[re.r_name == 'EUROPE']
-    df_filter_7 = df_filter_7[['r_rekey']]
-    df_merge_3 = df_filter_6.merge(df_filter_7, left_on=['n_rekey'], right_on=['r_rekey'], how="inner")
-    df_merge_3 = df_merge_3[['n_nakey']]
-    df_merge_4 = df_filter_5.merge(df_merge_3, left_on=['s_nakey'], right_on=['n_nakey'], how="inner")
+    df_filter_7 = df_filter_7[['r_regionkey']]
+    df_merge_3 = df_filter_6.merge(df_filter_7, left_on=['n_regionkey'], right_on=['r_regionkey'], how="inner")
+    df_merge_3 = df_merge_3[['n_nationkey']]
+    df_merge_4 = df_filter_5.merge(df_merge_3, left_on=['s_nationkey'], right_on=['n_nationkey'], how="inner")
     df_merge_4 = df_merge_4[['s_suppkey']]
     df_merge_5 = df_merge_2.merge(df_merge_4, left_on=['ps_suppkey'], right_on=['s_suppkey'], how="inner")
-    df_merge_5 = df_merge_5[['ps_supplycost', 'p_pakey']]
+    df_merge_5 = df_merge_5[['ps_supplycost', 'p_partkey']]
     df_group_1 = df_merge_5 \
-        .groupby(['p_pakey'], sort=False) \
+        .groupby(['p_partkey'], sort=False) \
         .agg(
             min_ps_supplycost=("ps_supplycost", "min"),
         )
     df_group_1['minps_supplycost'] = df_group_1.min_ps_supplycost
     df_group_1 = df_group_1[['minps_supplycost']]
     df_group_1 = df_group_1.reset_index(level=0)
-    df_merge_6 = df_merge_1.merge(df_group_1, left_on=['p_pakey'], right_on=['p_pakey'], how="inner")
+    df_merge_6 = df_merge_1.merge(df_group_1, left_on=['p_partkey'], right_on=['p_partkey'], how="inner")
     df_merge_6 = df_merge_6[df_merge_6.minps_supplycost == df_merge_6.ps_supplycost]
-    df_merge_6 = df_merge_6[['p_pakey', 'p_mfgr', 'ps_suppkey']]
-    df_filter_8 = su[['s_suppkey', 's_name', 's_address', 's_nakey', 's_phone', 's_acctbal', 's_comment']]
-    df_filter_9 = na[['n_nakey', 'n_name', 'n_rekey', 'n_comment']]
+    df_merge_6 = df_merge_6[['p_partkey', 'p_mfgr', 'ps_suppkey']]
+    df_filter_8 = su[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
+    df_filter_9 = na[['n_nationkey', 'n_name', 'n_regionkey', 'n_comment']]
     df_filter_10 = re[re.r_name == 'EUROPE']
-    df_filter_10 = df_filter_10[['r_rekey']]
-    df_merge_7 = df_filter_9.merge(df_filter_10, left_on=['n_rekey'], right_on=['r_rekey'], how="inner")
-    df_merge_7 = df_merge_7[['n_name', 'n_nakey']]
-    df_merge_8 = df_filter_8.merge(df_merge_7, left_on=['s_nakey'], right_on=['n_nakey'], how="inner")
+    df_filter_10 = df_filter_10[['r_regionkey']]
+    df_merge_7 = df_filter_9.merge(df_filter_10, left_on=['n_regionkey'], right_on=['r_regionkey'], how="inner")
+    df_merge_7 = df_merge_7[['n_name', 'n_nationkey']]
+    df_merge_8 = df_filter_8.merge(df_merge_7, left_on=['s_nationkey'], right_on=['n_nationkey'], how="inner")
     df_merge_8 = df_merge_8[['s_acctbal', 's_name', 's_address', 's_phone', 's_comment', 's_suppkey', 'n_name']]
     df_merge_9 = df_merge_6.merge(df_merge_8, left_on=['ps_suppkey'], right_on=['s_suppkey'], how="inner")
-    df_merge_9 = df_merge_9[['s_acctbal', 's_name', 'n_name', 'p_pakey', 'p_mfgr', 's_address', 's_phone', 's_comment']]
-    df_sort_2 = df_merge_9.sort_values(by=['s_acctbal', 'n_name', 's_name', 'p_pakey'], ascending=[False, True, True, True])
-    df_sort_2 = df_sort_2[['s_acctbal', 's_name', 'n_name', 'p_pakey', 'p_mfgr', 's_address', 's_phone', 's_comment']]
-    df_limit_1 = df_sort_2[['s_acctbal', 's_name', 'n_name', 'p_pakey', 'p_mfgr', 's_address', 's_phone', 's_comment']]
-    df_limit_1 = df_limit_1.head(100)
+    df_merge_9 = df_merge_9[['s_acctbal', 's_name', 'n_name', 'p_partkey', 'p_mfgr', 's_address', 's_phone', 's_comment']]
+    df_sort_2 = df_merge_9.sort_values(by=['s_acctbal', 'n_name', 's_name', 'p_partkey'], ascending=[False, True, True, True])
+    df_sort_2 = df_sort_2[['s_acctbal', 's_name', 'n_name', 'p_partkey', 'p_mfgr', 's_address', 's_phone', 's_comment']]
+    df_limit_1 = df_sort_2.head(100)
     return df_limit_1
 
 
-def query_3(li, ords, cu):
-    df_filter_1 = li[li.l_shipdate > pd.Timestamp('1995-03-15 00:00:00')]
-    df_filter_1 = df_filter_1[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-    df_filter_2 = ords[ords.o_orddate < pd.Timestamp('1995-03-15 00:00:00')]
-    df_filter_2 = df_filter_2[['o_ordkey', 'o_custkey', 'o_ordstatus', 'o_totalprice', 'o_orddate', 'o_ordpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+def q3():
+    df_filter_1 = li[li.l_shipdate > '1995-03-15 00:00:00']
+    df_filter_1 = df_filter_1[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_2 = orders[orders.o_orderdate < '1995-03-15 00:00:00']
+    df_filter_2 = df_filter_2[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
     df_filter_3 = cu[cu.c_mktsegment == 'BUILDING']
     df_filter_3 = df_filter_3[['c_custkey']]
     df_merge_1 = df_filter_2.merge(df_filter_3, left_on=['o_custkey'], right_on=['c_custkey'], how="inner")
-    df_merge_1 = df_merge_1[['o_orddate', 'o_shippriority', 'o_ordkey']]
-    df_merge_2 = df_filter_1.merge(df_merge_1, left_on=['l_ordkey'], right_on=['o_ordkey'], how="inner")
-    df_merge_2 = df_merge_2[['l_ordkey', 'o_orddate', 'o_shippriority', 'l_extendedprice', 'l_discount']]
-    df_sort_1 = df_merge_2.sort_values(by=['l_ordkey', 'o_orddate', 'o_shippriority'], ascending=[True, True, True])
-    df_sort_1 = df_sort_1[['l_ordkey', 'o_orddate', 'o_shippriority', 'l_extendedprice', 'l_discount']]
+    df_merge_1 = df_merge_1[['o_orderdate', 'o_shippriority', 'o_orderkey']]
+    df_merge_2 = df_filter_1.merge(df_merge_1, left_on=['l_orderkey'], right_on=['o_orderkey'], how="inner")
+    df_merge_2 = df_merge_2[['l_orderkey', 'o_orderdate', 'o_shippriority', 'l_extendedprice', 'l_discount']]
+    df_sort_1 = df_merge_2.sort_values(by=['l_orderkey', 'o_orderdate', 'o_shippriority'], ascending=[True, True, True])
+    df_sort_1 = df_sort_1[['l_orderkey', 'o_orderdate', 'o_shippriority', 'l_extendedprice', 'l_discount']]
     df_sort_1['before_1'] = ((df_sort_1.l_extendedprice) * (1 - (df_sort_1.l_discount)))
     df_group_1 = df_sort_1 \
-        .groupby(['l_ordkey', 'o_orddate', 'o_shippriority'], sort=False) \
+        .groupby(['l_orderkey', 'o_orderdate', 'o_shippriority'], sort=False) \
         .agg(
             revenue=("before_1", "sum"),
         )
     df_group_1 = df_group_1[['revenue']]
-    df_sort_2 = df_group_1.sort_values(by=['revenue', 'o_orddate'], ascending=[False, True])
+    df_sort_2 = df_group_1.sort_values(by=['revenue', 'o_orderdate'], ascending=[False, True])
     df_sort_2 = df_sort_2[['revenue']]
-    df_limit_1 = df_sort_2[['revenue']]
-    df_limit_1 = df_limit_1.head(10)
+    df_limit_1 = df_sort_2.head(10)
     return df_limit_1
 
 
-def query_4(li, ords):
-    df_filter_1 = ords[(ords.o_orddate >= pd.Timestamp('1993-07-01 00:00:00')) & (ords.o_orddate < pd.Timestamp('1993-10-01 00:00:00'))]
-    df_filter_1 = df_filter_1[['o_ordkey', 'o_custkey', 'o_ordstatus', 'o_totalprice', 'o_orddate', 'o_ordpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+def q4():
+    df_filter_1 = orders[(orders.o_orderdate >= '1993-07-01 00:00:00') & (orders.o_orderdate < '1993-10-01 00:00:00')]
+    df_filter_1 = df_filter_1[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
     df_filter_2 = li[li.l_commitdate < li.l_receiptdate]
-    df_filter_2 = df_filter_2[['l_ordkey']]
+    df_filter_2 = df_filter_2[['l_orderkey']]
     df_group_1 = df_filter_2 \
-        .groupby(['l_ordkey'], sort=False) \
+        .groupby(['l_orderkey'], sort=False) \
         .last()
     df_group_1 = df_group_1.reset_index(level=0)
-    df_merge_1 = df_filter_1.merge(df_group_1, left_on=['o_ordkey'], right_on=['l_ordkey'], how="inner")
-    df_merge_1 = df_merge_1[['o_ordpriority']]
-    df_sort_1 = df_merge_1.sort_values(by=['o_ordpriority'], ascending=[True])
-    df_sort_1 = df_sort_1[['o_ordpriority']]
+    df_merge_1 = df_filter_1.merge(df_group_1, left_on=['o_orderkey'], right_on=['l_orderkey'], how="inner")
+    df_merge_1 = df_merge_1[['o_orderpriority']]
+    df_sort_1 = df_merge_1.sort_values(by=['o_orderpriority'], ascending=[True])
+    df_sort_1 = df_sort_1[['o_orderpriority']]
     df_group_2 = df_sort_1 \
-        .groupby(['o_ordpriority'], sort=False) \
+        .groupby(['o_orderpriority'], sort=False) \
         .agg(
-            ord_count=("o_ordpriority", "count"),
+            order_count=("o_orderpriority", "count"),
         )
-    df_group_2 = df_group_2[['ord_count']]
-    df_limit_1 = df_group_2[['ord_count']]
-    df_limit_1 = df_limit_1.head(1)
+    df_group_2 = df_group_2[['order_count']]
+    df_limit_1 = df_group_2.head(1)
     return df_limit_1
 
 
-def query_5(na, cu, su, li, ords, re):
-    df_filter_1 = li[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-    df_filter_2 = ords[(ords.o_orddate >= pd.Timestamp('1994-01-01 00:00:00')) & (ords.o_orddate < pd.Timestamp('1995-01-01 00:00:00'))]
-    df_filter_2 = df_filter_2[['o_custkey', 'o_ordkey']]
-    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_ordkey'], right_on=['o_ordkey'], how="inner")
+def q5():
+    df_filter_1 = li[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_2 = orders[(orders.o_orderdate >= '1994-01-01 00:00:00') & (orders.o_orderdate < '1995-01-01 00:00:00')]
+    df_filter_2 = df_filter_2[['o_custkey', 'o_orderkey']]
+    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_orderkey'], right_on=['o_orderkey'], how="inner")
     df_merge_1 = df_merge_1[['o_custkey', 'l_extendedprice', 'l_discount', 'l_suppkey']]
-    df_filter_3 = cu[['c_custkey', 'c_name', 'c_address', 'c_nakey', 'c_phone', 'c_acctbal', 'c_mktsegment', 'c_comment']]
-    df_filter_4 = na[['n_nakey', 'n_name', 'n_rekey', 'n_comment']]
+    df_filter_3 = cu[['c_custkey', 'c_name', 'c_address', 'c_nationkey', 'c_phone', 'c_acctbal', 'c_mktsegment', 'c_comment']]
+    df_filter_4 = na[['n_nationkey', 'n_name', 'n_regionkey', 'n_comment']]
     df_filter_5 = re[re.r_name == 'ASIA']
-    df_filter_5 = df_filter_5[['r_rekey']]
-    df_merge_2 = df_filter_4.merge(df_filter_5, left_on=['n_rekey'], right_on=['r_rekey'], how="inner")
-    df_merge_2 = df_merge_2[['n_name', 'n_nakey']]
-    df_merge_3 = df_filter_3.merge(df_merge_2, left_on=['c_nakey'], right_on=['n_nakey'], how="inner")
-    df_merge_3 = df_merge_3[['c_custkey', 'c_nakey', 'n_name', 'n_nakey']]
+    df_filter_5 = df_filter_5[['r_regionkey']]
+    df_merge_2 = df_filter_4.merge(df_filter_5, left_on=['n_regionkey'], right_on=['r_regionkey'], how="inner")
+    df_merge_2 = df_merge_2[['n_name', 'n_nationkey']]
+    df_merge_3 = df_filter_3.merge(df_merge_2, left_on=['c_nationkey'], right_on=['n_nationkey'], how="inner")
+    df_merge_3 = df_merge_3[['c_custkey', 'c_nationkey', 'n_name', 'n_nationkey']]
     df_merge_4 = df_merge_1.merge(df_merge_3, left_on=['o_custkey'], right_on=['c_custkey'], how="inner")
-    df_merge_4 = df_merge_4[['c_nakey', 'l_extendedprice', 'l_discount', 'l_suppkey', 'n_name', 'n_nakey']]
-    df_filter_6 = su[['s_suppkey', 's_nakey']]
-    df_merge_5 = df_merge_4.merge(df_filter_6, left_on=['l_suppkey', 'c_nakey'], right_on=['s_suppkey', 's_nakey'], how="inner")
+    df_merge_4 = df_merge_4[['c_nationkey', 'l_extendedprice', 'l_discount', 'l_suppkey', 'n_name', 'n_nationkey']]
+    df_filter_6 = su[['s_suppkey', 's_nationkey']]
+    df_merge_5 = df_merge_4.merge(df_filter_6, left_on=['l_suppkey', 'c_nationkey'], right_on=['s_suppkey', 's_nationkey'], how="inner")
     df_merge_5 = df_merge_5[['n_name', 'l_extendedprice', 'l_discount']]
     df_sort_1 = df_merge_5.sort_values(by=['n_name'], ascending=[True])
     df_sort_1 = df_sort_1[['n_name', 'l_extendedprice', 'l_discount']]
@@ -336,14 +332,13 @@ def query_5(na, cu, su, li, ords, re):
     df_group_1 = df_group_1[['revenue']]
     df_sort_2 = df_group_1.sort_values(by=['revenue'], ascending=[False])
     df_sort_2 = df_sort_2[['revenue']]
-    df_limit_1 = df_sort_2[['revenue']]
-    df_limit_1 = df_limit_1.head(1)
+    df_limit_1 = df_sort_2.head(1)
     return df_limit_1
 
 
-def query_6(li):
-    df_filter_1 = li[(li.l_shipdate >= pd.Timestamp('1994-01-01 00:00:00')) & (li.l_shipdate < pd.Timestamp('1995-01-01 00:00:00')) & (li.l_discount >= 0.05) & (li.l_discount <= 0.07) & (li.l_quantity < 24)]
-    df_filter_1 = df_filter_1[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+def q6():
+    df_filter_1 = li[(li.l_shipdate >= '1994-01-01 00:00:00') & (li.l_shipdate < '1995-01-01 00:00:00') & (li.l_discount >= 0.05) & (li.l_discount <= 0.07) & (li.l_quantity < 24)]
+    df_filter_1 = df_filter_1[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
     df_aggr_1 = pd.DataFrame()
     df_aggr_1['revenue'] = [((df_filter_1.l_extendedprice) * (df_filter_1.l_discount)).sum()]
     df_aggr_1 = df_aggr_1[['revenue']]
@@ -352,70 +347,69 @@ def query_6(li):
     return df_limit_1
 
 
-def query_7(na, cu, ords, li, su):
-    df_filter_1 = li[(li.l_shipdate >= pd.Timestamp('1995-01-01 00:00:00')) & (li.l_shipdate <= pd.Timestamp('1996-12-31 00:00:00'))]
-    df_filter_1 = df_filter_1[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-    df_filter_2 = su[['s_suppkey', 's_name', 's_address', 's_nakey', 's_phone', 's_acctbal', 's_comment']]
+def q7():
+    df_filter_1 = li[(li.l_shipdate >= '1995-01-01 00:00:00') & (li.l_shipdate <= '1996-12-31 00:00:00')]
+    df_filter_1 = df_filter_1[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_2 = su[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
     df_filter_3 = na[(na.n_name == 'FRANCE') | (na.n_name == 'GERMANY')]
-    df_filter_3 = df_filter_3[['n_name', 'n_nakey']]
-    df_merge_1 = df_filter_2.merge(df_filter_3, left_on=['s_nakey'], right_on=['n_nakey'], how="inner")
+    df_filter_3 = df_filter_3[['n_name', 'n_nationkey']]
+    df_merge_1 = df_filter_2.merge(df_filter_3, left_on=['s_nationkey'], right_on=['n_nationkey'], how="inner")
     df_merge_1 = df_merge_1[['s_suppkey', 'n_name']]
     df_merge_2 = df_filter_1.merge(df_merge_1, left_on=['l_suppkey'], right_on=['s_suppkey'], how="inner")
-    df_merge_2 = df_merge_2[['l_shipdate', 'l_extendedprice', 'l_discount', 'l_ordkey', 'n_name']]
-    df_filter_4 = ords[['o_ordkey', 'o_custkey', 'o_ordstatus', 'o_totalprice', 'o_orddate', 'o_ordpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
-    df_filter_5 = cu[['c_custkey', 'c_name', 'c_address', 'c_nakey', 'c_phone', 'c_acctbal', 'c_mktsegment', 'c_comment']]
+    df_merge_2 = df_merge_2[['l_shipdate', 'l_extendedprice', 'l_discount', 'l_orderkey', 'n_name']]
+    df_filter_4 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+    df_filter_5 = cu[['c_custkey', 'c_name', 'c_address', 'c_nationkey', 'c_phone', 'c_acctbal', 'c_mktsegment', 'c_comment']]
     df_filter_6 = na[(na.n_name == 'GERMANY') | (na.n_name == 'FRANCE')]
-    df_filter_6 = df_filter_6[['n_name', 'n_nakey']]
-    df_merge_3 = df_filter_5.merge(df_filter_6, left_on=['c_nakey'], right_on=['n_nakey'], how="inner")
+    df_filter_6 = df_filter_6[['n_name', 'n_nationkey']]
+    df_merge_3 = df_filter_5.merge(df_filter_6, left_on=['c_nationkey'], right_on=['n_nationkey'], how="inner")
     df_merge_3 = df_merge_3[['c_custkey', 'n_name']]
     df_merge_4 = df_filter_4.merge(df_merge_3, left_on=['o_custkey'], right_on=['c_custkey'], how="inner")
-    df_merge_4 = df_merge_4[['o_ordkey', 'n_name']]
-    df_merge_5 = df_merge_2.merge(df_merge_4, left_on=['l_ordkey'], right_on=['o_ordkey'], how="inner")
+    df_merge_4 = df_merge_4[['o_orderkey', 'n_name']]
+    df_merge_5 = df_merge_2.merge(df_merge_4, left_on=['l_orderkey'], right_on=['o_orderkey'], how="inner")
     df_merge_5['l_year'] = df_merge_5.l_shipdate.dt.year
     df_merge_5 = df_merge_5[((df_merge_5.n_name_x == 'FRANCE') & (df_merge_5.n_name_y == 'GERMANY')) | ((df_merge_5.n_name_x == 'GERMANY') & (df_merge_5.n_name_y == 'FRANCE'))]
     df_merge_5 = df_merge_5[['n_name_x', 'n_name_y', 'l_year', 'l_extendedprice', 'l_discount']]
-    df_merge_5['supp_na'] = df_merge_5.n_name_x
-    df_merge_5['cust_na'] = df_merge_5.n_name_y
-    df_sort_1 = df_merge_5.sort_values(by=['supp_na', 'cust_na', 'l_year'], ascending=[True, True, True])
-    df_sort_1 = df_sort_1[['supp_na', 'cust_na', 'l_year', 'l_extendedprice', 'l_discount']]
+    df_merge_5['supp_nation'] = df_merge_5.n_name_x
+    df_merge_5['cust_nation'] = df_merge_5.n_name_y
+    df_sort_1 = df_merge_5.sort_values(by=['supp_nation', 'cust_nation', 'l_year'], ascending=[True, True, True])
+    df_sort_1 = df_sort_1[['supp_nation', 'cust_nation', 'l_year', 'l_extendedprice', 'l_discount']]
     df_sort_1['volume'] = ((df_sort_1.l_extendedprice) * (1 - (df_sort_1.l_discount)))
     df_group_1 = df_sort_1 \
-        .groupby(['supp_na', 'cust_na', 'l_year'], sort=False) \
+        .groupby(['supp_nation', 'cust_nation', 'l_year'], sort=False) \
         .agg(
             revenue=("volume", "sum"),
         )
     df_group_1 = df_group_1[['revenue']]
-    df_limit_1 = df_group_1[['revenue']]
-    df_limit_1 = df_limit_1.head(1)
+    df_limit_1 = df_group_1.head(1)
     return df_limit_1
 
 
-def query_8(su, na, pa, re, li, cu, ords):
-    df_filter_1 = li[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+def q8():
+    df_filter_1 = li[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
     df_filter_2 = pa[(pa.p_type) == 'ECONOMY ANODIZED STEEL']
-    df_filter_2 = df_filter_2[['p_pakey']]
-    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_pakey'], right_on=['p_pakey'], how="inner")
-    df_merge_1 = df_merge_1[['l_extendedprice', 'l_discount', 'l_suppkey', 'l_ordkey']]
-    df_filter_3 = ords[(ords.o_orddate >= pd.Timestamp('1995-01-01 00:00:00')) & (ords.o_orddate <= pd.Timestamp('1996-12-31 00:00:00'))]
-    df_filter_3 = df_filter_3[['o_ordkey', 'o_custkey', 'o_ordstatus', 'o_totalprice', 'o_orddate', 'o_ordpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
-    df_filter_4 = cu[['c_custkey', 'c_name', 'c_address', 'c_nakey', 'c_phone', 'c_acctbal', 'c_mktsegment', 'c_comment']]
-    df_filter_5 = na[['n_nakey', 'n_name', 'n_rekey', 'n_comment']]
+    df_filter_2 = df_filter_2[['p_partkey']]
+    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_partkey'], right_on=['p_partkey'], how="inner")
+    df_merge_1 = df_merge_1[['l_extendedprice', 'l_discount', 'l_suppkey', 'l_orderkey']]
+    df_filter_3 = orders[(orders.o_orderdate >= '1995-01-01 00:00:00') & (orders.o_orderdate <= '1996-12-31 00:00:00')]
+    df_filter_3 = df_filter_3[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+    df_filter_4 = cu[['c_custkey', 'c_name', 'c_address', 'c_nationkey', 'c_phone', 'c_acctbal', 'c_mktsegment', 'c_comment']]
+    df_filter_5 = na[['n_nationkey', 'n_name', 'n_regionkey', 'n_comment']]
     df_filter_6 = re[re.r_name == 'AMERICA']
-    df_filter_6 = df_filter_6[['r_rekey']]
-    df_merge_2 = df_filter_5.merge(df_filter_6, left_on=['n_rekey'], right_on=['r_rekey'], how="inner")
-    df_merge_2 = df_merge_2[['n_nakey']]
-    df_merge_3 = df_filter_4.merge(df_merge_2, left_on=['c_nakey'], right_on=['n_nakey'], how="inner")
+    df_filter_6 = df_filter_6[['r_regionkey']]
+    df_merge_2 = df_filter_5.merge(df_filter_6, left_on=['n_regionkey'], right_on=['r_regionkey'], how="inner")
+    df_merge_2 = df_merge_2[['n_nationkey']]
+    df_merge_3 = df_filter_4.merge(df_merge_2, left_on=['c_nationkey'], right_on=['n_nationkey'], how="inner")
     df_merge_3 = df_merge_3[['c_custkey']]
     df_merge_4 = df_filter_3.merge(df_merge_3, left_on=['o_custkey'], right_on=['c_custkey'], how="inner")
-    df_merge_4 = df_merge_4[['o_orddate', 'o_ordkey']]
-    df_merge_5 = df_merge_1.merge(df_merge_4, left_on=['l_ordkey'], right_on=['o_ordkey'], how="inner")
-    df_merge_5 = df_merge_5[['l_extendedprice', 'l_discount', 'l_suppkey', 'o_orddate']]
-    df_filter_7 = su[['s_suppkey', 's_nakey']]
+    df_merge_4 = df_merge_4[['o_orderdate', 'o_orderkey']]
+    df_merge_5 = df_merge_1.merge(df_merge_4, left_on=['l_orderkey'], right_on=['o_orderkey'], how="inner")
+    df_merge_5 = df_merge_5[['l_extendedprice', 'l_discount', 'l_suppkey', 'o_orderdate']]
+    df_filter_7 = su[['s_suppkey', 's_nationkey']]
     df_merge_6 = df_merge_5.merge(df_filter_7, left_on=['l_suppkey'], right_on=['s_suppkey'], how="inner")
-    df_merge_6 = df_merge_6[['l_extendedprice', 'l_discount', 's_nakey', 'o_orddate']]
-    df_filter_8 = na[['n_name', 'n_nakey']]
-    df_merge_7 = df_merge_6.merge(df_filter_8, left_on=['s_nakey'], right_on=['n_nakey'], how="inner")
-    df_merge_7['o_year'] = df_merge_7.o_orddate.dt.year
+    df_merge_6 = df_merge_6[['l_extendedprice', 'l_discount', 's_nationkey', 'o_orderdate']]
+    df_filter_8 = na[['n_name', 'n_nationkey']]
+    df_merge_7 = df_merge_6.merge(df_filter_8, left_on=['s_nationkey'], right_on=['n_nationkey'], how="inner")
+    df_merge_7['o_year'] = df_merge_7.o_orderdate.dt.year
     df_merge_7 = df_merge_7[['o_year', 'n_name', 'l_extendedprice', 'l_discount']]
     df_sort_1 = df_merge_7.sort_values(by=['o_year'], ascending=[True])
     df_sort_1 = df_sort_1[['o_year', 'n_name', 'l_extendedprice', 'l_discount']]
@@ -433,78 +427,46 @@ def query_8(su, na, pa, re, li, cu, ords):
     df_limit_1 = df_limit_1.head(1)
     return df_limit_1
 
+def q9():
+	# Exception: Unable to convert query
+	pass
 
-def query_9(na, pa, ords, li, pasupp, su):
-    df_filter_1 = ords[['o_ordkey', 'o_custkey', 'o_ordstatus', 'o_totalprice', 'o_orddate', 'o_ordpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
-    df_filter_2 = pasupp[['ps_pakey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
-    df_filter_3 = li[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-    df_filter_4 = pa[(pa.p_name.str.contains("^.*?green.*?$",regex=True))]
-    df_filter_4 = df_filter_4[['p_pakey']]
-    df_merge_1 = df_filter_3.merge(df_filter_4, left_on=['l_pakey'], right_on=['p_pakey'], how="inner")
-    df_merge_1 = df_merge_1[['p_pakey', 'l_extendedprice', 'l_discount', 'l_quantity', 'l_suppkey', 'l_pakey', 'l_ordkey']]
-    df_filter_5 = su[['s_suppkey', 's_nakey']]
-    df_merge_2 = df_merge_1.merge(df_filter_5, left_on=['l_suppkey'], right_on=['s_suppkey'], how="inner")
-    df_merge_2 = df_merge_2[['p_pakey', 'l_extendedprice', 'l_discount', 'l_quantity', 'l_suppkey', 'l_pakey', 'l_ordkey', 's_suppkey', 's_nakey']]
-    df_merge_3 = df_filter_2.merge(df_merge_2, left_on=['ps_suppkey', 'ps_pakey'], right_on=['s_suppkey', 'l_pakey'], how="inner")
-    df_merge_3 = df_merge_3[['l_extendedprice', 'l_discount', 'l_quantity', 'l_ordkey', 's_nakey', 'ps_supplycost']]
-    df_sort_1 = df_merge_3.sort_values(by=['l_ordkey'], ascending=[True])
-    df_sort_1 = df_sort_1[['l_extendedprice', 'l_discount', 'l_quantity', 'l_ordkey', 's_nakey', 'ps_supplycost']]
-    df_merge_4 = df_filter_1.merge(df_sort_1, left_on=['o_ordkey'], right_on=['l_ordkey'], how="inner")
-    df_merge_4 = df_merge_4[['l_extendedprice', 'l_discount', 'l_quantity', 's_nakey', 'ps_supplycost', 'o_orddate']]
-    df_filter_6 = na[['n_name', 'n_nakey']]
-    df_merge_5 = df_merge_4.merge(df_filter_6, left_on=['s_nakey'], right_on=['n_nakey'], how="inner")
-    df_merge_5['o_year'] = df_merge_5.o_orddate.dt.year
-    df_merge_5 = df_merge_5[['n_name', 'o_year', 'l_extendedprice', 'l_discount', 'ps_supplycost', 'l_quantity']]
-    df_merge_5['na'] = df_merge_5.n_name
-    df_sort_2 = df_merge_5.sort_values(by=['na', 'o_year'], ascending=[True, False])
-    df_sort_2 = df_sort_2[['na', 'o_year', 'l_extendedprice', 'l_discount', 'ps_supplycost', 'l_quantity']]
-    df_sort_2['amount'] = (((df_sort_2.l_extendedprice) * (1 - (df_sort_2.l_discount))) - ((df_sort_2.ps_supplycost) * (df_sort_2.l_quantity)))
-    df_group_1 = df_sort_2 \
-        .groupby(['na', 'o_year'], sort=False) \
-        .agg(
-            sum_profit=("amount", "sum"),
-        )
-    df_group_1 = df_group_1[['sum_profit']]
-    df_limit_1 = df_group_1[['sum_profit']]
-    df_limit_1 = df_limit_1.head(1)
-    return df_limit_1
-
-
-def query_10(ords, cu, na, li):
-    df_filter_1 = cu[['c_custkey', 'c_name', 'c_address', 'c_nakey', 'c_phone', 'c_acctbal', 'c_mktsegment', 'c_comment']]
-    df_filter_2 = li[li.l_returnflag == 'R']
-    df_filter_2 = df_filter_2[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-    df_filter_3 = ords[(ords.o_orddate >= pd.Timestamp('1993-10-01 00:00:00')) & (ords.o_orddate < pd.Timestamp('1994-01-01 00:00:00'))]
-    df_filter_3 = df_filter_3[['o_custkey', 'o_ordkey']]
-    df_merge_1 = df_filter_2.merge(df_filter_3, left_on=['l_ordkey'], right_on=['o_ordkey'], how="inner")
-    df_merge_1 = df_merge_1[['o_custkey', 'l_extendedprice', 'l_discount']]
-    df_merge_2 = df_filter_1.merge(df_merge_1, left_on=['c_custkey'], right_on=['o_custkey'], how="inner")
-    df_merge_2 = df_merge_2[['c_custkey', 'c_name', 'c_acctbal', 'c_address', 'c_phone', 'c_comment', 'c_nakey', 'l_extendedprice', 'l_discount']]
-    df_filter_4 = na[['n_name', 'n_nakey']]
-    df_merge_3 = df_merge_2.merge(df_filter_4, left_on=['c_nakey'], right_on=['n_nakey'], how="inner")
+def q10():
+    df_filter_1 = li[li.l_returnflag == 'R']
+    df_filter_1 = df_filter_1[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_2 = cu[['c_custkey', 'c_name', 'c_address', 'c_nationkey', 'c_phone', 'c_acctbal', 'c_mktsegment', 'c_comment']]
+    df_filter_3 = orders[(orders.o_orderdate >= '1993-10-01 00:00:00') & (orders.o_orderdate < '1994-01-01 00:00:00')]
+    df_filter_3 = df_filter_3[['o_custkey', 'o_orderkey']]
+    df_sort_1 = df_filter_3.sort_values(by=['o_custkey'], ascending=[True])
+    df_sort_1 = df_sort_1[['o_custkey', 'o_orderkey']]
+    df_merge_1 = df_filter_2.merge(df_sort_1, left_on=['c_custkey'], right_on=['o_custkey'], how="inner")
+    df_merge_1 = df_merge_1[['c_custkey', 'c_name', 'c_acctbal', 'c_address', 'c_phone', 'c_comment', 'c_nationkey', 'o_orderkey']]
+    df_filter_4 = na[['n_name', 'n_nationkey']]
+    df_merge_2 = df_merge_1.merge(df_filter_4, left_on=['c_nationkey'], right_on=['n_nationkey'], how="inner")
+    df_merge_2 = df_merge_2[['c_custkey', 'c_name', 'c_acctbal', 'c_address', 'c_phone', 'c_comment', 'o_orderkey', 'n_name']]
+    df_merge_3 = df_filter_1.merge(df_merge_2, left_on=['l_orderkey'], right_on=['o_orderkey'], how="inner")
     df_merge_3 = df_merge_3[['c_custkey', 'n_name', 'c_name', 'l_extendedprice', 'l_discount', 'c_acctbal', 'c_address', 'c_phone', 'c_comment']]
-    df_sort_1 = df_merge_3.sort_values(by=['c_custkey', 'n_name'], ascending=[True, True])
-    df_sort_1 = df_sort_1[['c_custkey', 'n_name', 'c_name', 'l_extendedprice', 'l_discount', 'c_acctbal', 'c_address', 'c_phone', 'c_comment']]
-    df_sort_1['before_1'] = ((df_sort_1.l_extendedprice) * (1 - (df_sort_1.l_discount)))
-    df_group_1 = df_sort_1 \
+    df_sort_2 = df_merge_3.sort_values(by=['c_custkey', 'n_name'], ascending=[True, True])
+    df_sort_2 = df_sort_2[['c_custkey', 'n_name', 'c_name', 'l_extendedprice', 'l_discount', 'c_acctbal', 'c_address', 'c_phone', 'c_comment']]
+    df_sort_2['before_1'] = ((df_sort_2.l_extendedprice) * (1 - (df_sort_2.l_discount)))
+    df_group_1 = df_sort_2 \
         .groupby(['c_custkey', 'n_name', 'c_name', 'c_acctbal', 'c_address', 'c_phone', 'c_comment'], sort=False) \
         .agg(
             revenue=("before_1", "sum"),
         )
     df_group_1 = df_group_1[['revenue']]
-    df_sort_2 = df_group_1.sort_values(by=['revenue'], ascending=[False])
-    df_sort_2 = df_sort_2[['revenue']]
-    df_limit_1 = df_sort_2[['revenue']]
-    df_limit_1 = df_limit_1.head(20)
+    df_sort_3 = df_group_1.sort_values(by=['revenue'], ascending=[False])
+    df_sort_3 = df_sort_3[['revenue']]
+    df_limit_1 = df_sort_3.head(20)
     return df_limit_1
 
 
-def query_11(na, su, pasupp):
-    df_filter_1 = pasupp[['ps_pakey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
-    df_filter_2 = su[['s_suppkey', 's_name', 's_address', 's_nakey', 's_phone', 's_acctbal', 's_comment']]
+def q11():
+    df_filter_1 = ps[['ps_partkey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
+    df_filter_2 = su[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
     df_filter_3 = na[na.n_name == 'GERMANY']
-    df_filter_3 = df_filter_3[['n_nakey']]
-    df_merge_1 = df_filter_2.merge(df_filter_3, left_on=['s_nakey'], right_on=['n_nakey'], how="inner")
+    df_filter_3 = df_filter_3[['n_nationkey']]
+    df_merge_1 = df_filter_2.merge(df_filter_3, left_on=['s_nationkey'], right_on=['n_nationkey'], how="inner")
     df_merge_1 = df_merge_1[['s_suppkey']]
     df_merge_2 = df_filter_1.merge(df_merge_1, left_on=['ps_suppkey'], right_on=['s_suppkey'], how="inner")
     df_merge_2 = df_merge_2[['ps_supplycost', 'ps_availqty']]
@@ -513,19 +475,19 @@ def query_11(na, su, pasupp):
     df_aggr_1 = df_aggr_1[['sumps_supplycostps_availqty00001']]
     dollar_0 = df_aggr_1['sumps_supplycostps_availqty00001'][0]
     
-    df_filter_4 = pasupp[['ps_pakey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
-    df_filter_5 = su[['s_suppkey', 's_name', 's_address', 's_nakey', 's_phone', 's_acctbal', 's_comment']]
+    df_filter_4 = ps[['ps_partkey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
+    df_filter_5 = su[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
     df_filter_6 = na[na.n_name == 'GERMANY']
-    df_filter_6 = df_filter_6[['n_nakey']]
-    df_merge_3 = df_filter_5.merge(df_filter_6, left_on=['s_nakey'], right_on=['n_nakey'], how="inner")
+    df_filter_6 = df_filter_6[['n_nationkey']]
+    df_merge_3 = df_filter_5.merge(df_filter_6, left_on=['s_nationkey'], right_on=['n_nationkey'], how="inner")
     df_merge_3 = df_merge_3[['s_suppkey']]
     df_merge_4 = df_filter_4.merge(df_merge_3, left_on=['ps_suppkey'], right_on=['s_suppkey'], how="inner")
-    df_merge_4 = df_merge_4[['ps_pakey', 'ps_supplycost', 'ps_availqty']]
-    df_sort_1 = df_merge_4.sort_values(by=['ps_pakey'], ascending=[True])
-    df_sort_1 = df_sort_1[['ps_pakey', 'ps_supplycost', 'ps_availqty']]
+    df_merge_4 = df_merge_4[['ps_partkey', 'ps_supplycost', 'ps_availqty']]
+    df_sort_1 = df_merge_4.sort_values(by=['ps_partkey'], ascending=[True])
+    df_sort_1 = df_sort_1[['ps_partkey', 'ps_supplycost', 'ps_availqty']]
     df_sort_1['before_1'] = ((df_sort_1.ps_supplycost) * (df_sort_1.ps_availqty))
     df_group_1 = df_sort_1 \
-        .groupby(['ps_pakey'], sort=False) \
+        .groupby(['ps_partkey'], sort=False) \
         .agg(
             value=("before_1", "sum"),
             sum_before_1=("before_1", "sum"),
@@ -535,24 +497,21 @@ def query_11(na, su, pasupp):
     df_group_1 = df_group_1[['value']]
     df_sort_2 = df_group_1.sort_values(by=['value'], ascending=[False])
     df_sort_2 = df_sort_2[['value']]
-    df_limit_1 = df_sort_2[['value']]
-    df_limit_1 = df_limit_1.head(1)
+    df_limit_1 = df_sort_2.head(1)
     return df_limit_1
 
 
-def query_12(ords, li):
-    df_filter_1 = ords[['o_ordkey', 'o_custkey', 'o_ordstatus', 'o_totalprice', 'o_orddate', 'o_ordpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
-    df_filter_2 = li[(li.l_shipmode.isin(["MAIL","SHIP"])) & (li.l_commitdate < li.l_receiptdate) & (li.l_shipdate < li.l_commitdate) & (li.l_receiptdate >= pd.Timestamp('1994-01-01 00:00:00')) & (li.l_receiptdate < pd.Timestamp('1995-01-01 00:00:00'))]
-    df_filter_2 = df_filter_2[['l_shipmode', 'l_ordkey']]
-    df_sort_1 = df_filter_2.sort_values(by=['l_ordkey'], ascending=[True])
-    df_sort_1 = df_sort_1[['l_shipmode', 'l_ordkey']]
-    df_merge_1 = df_filter_1.merge(df_sort_1, left_on=['o_ordkey'], right_on=['l_ordkey'], how="inner")
-    df_merge_1 = df_merge_1[['l_shipmode', 'o_ordpriority']]
-    df_sort_2 = df_merge_1.sort_values(by=['l_shipmode'], ascending=[True])
-    df_sort_2 = df_sort_2[['l_shipmode', 'o_ordpriority']]
-    df_sort_2['case_a'] = np.where((df_sort_2['o_ordpriority'] == '1-URGENT') | (df_sort_2['o_ordpriority'] == '2-HIGH'), 1, 0)
-    df_sort_2['case_b'] = np.where((df_sort_2['o_ordpriority'] != '1-URGENT') & (df_sort_2['o_ordpriority'] != '2-HIGH'), 1, 0)
-    df_group_1 = df_sort_2 \
+def q12():
+    df_filter_1 = orders[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+    df_filter_2 = li[(li.l_shipmode.isin(["MAIL","SHIP"])) & (li.l_commitdate < li.l_receiptdate) & (li.l_shipdate < li.l_commitdate) & (li.l_receiptdate >= '1994-01-01 00:00:00') & (li.l_receiptdate < '1995-01-01 00:00:00')]
+    df_filter_2 = df_filter_2[['l_shipmode', 'l_orderkey']]
+    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['o_orderkey'], right_on=['l_orderkey'], how="inner")
+    df_merge_1 = df_merge_1[['l_shipmode', 'o_orderpriority']]
+    df_sort_1 = df_merge_1.sort_values(by=['l_shipmode'], ascending=[True])
+    df_sort_1 = df_sort_1[['l_shipmode', 'o_orderpriority']]
+    df_sort_1['case_a'] = np.where((df_sort_1['o_orderpriority'] == '1-URGENT') | (df_sort_1['o_orderpriority'] == '2-HIGH'), 1, 0)
+    df_sort_1['case_b'] = np.where((df_sort_1['o_orderpriority'] != '1-URGENT') & (df_sort_1['o_orderpriority'] != '2-HIGH'), 1, 0)
+    df_group_1 = df_sort_1 \
         .groupby(['l_shipmode'], sort=False) \
         .agg(
             high_line_count=("case_a", "sum"),
@@ -564,16 +523,16 @@ def query_12(ords, li):
     return df_limit_1
 
 
-def query_13(ords, cu):
-    df_filter_1 = ords[(ords.o_comment.str.contains("^.*?special.*?requests.*?$",regex=True) == False)]
-    df_filter_1 = df_filter_1[['o_ordkey', 'o_custkey']]
+def q13():
+    df_filter_1 = orders[(orders.o_comment.str.contains("^.*?special.*?requests.*?$",regex=True) == False)]
+    df_filter_1 = df_filter_1[['o_orderkey', 'o_custkey']]
     df_filter_2 = cu[['c_custkey']]
     df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['o_custkey'], right_on=['c_custkey'], how="right")
-    df_merge_1 = df_merge_1[['c_custkey', 'o_ordkey']]
+    df_merge_1 = df_merge_1[['c_custkey', 'o_orderkey']]
     df_group_1 = df_merge_1 \
         .groupby(['c_custkey'], sort=False) \
         .agg(
-            c_count=("o_ordkey", "count"),
+            c_count=("o_orderkey", "count"),
         )
     df_group_1 = df_group_1[['c_count']]
     df_group_2 = df_group_1 \
@@ -584,16 +543,15 @@ def query_13(ords, cu):
     df_group_2 = df_group_2[['custdist']]
     df_sort_1 = df_group_2.sort_values(by=['custdist', 'c_count'], ascending=[False, False])
     df_sort_1 = df_sort_1[['custdist']]
-    df_limit_1 = df_sort_1[['custdist']]
-    df_limit_1 = df_limit_1.head(1)
+    df_limit_1 = df_sort_1.head(1)
     return df_limit_1
 
 
-def query_14(li, pa):
-    df_filter_1 = li[(li.l_shipdate >= pd.Timestamp('1995-09-01 00:00:00')) & (li.l_shipdate < pd.Timestamp('1995-10-01 00:00:00'))]
-    df_filter_1 = df_filter_1[['l_extendedprice', 'l_discount', 'l_pakey']]
-    df_filter_2 = pa[['p_type', 'p_pakey']]
-    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_pakey'], right_on=['p_pakey'], how="inner")
+def q14():
+    df_filter_1 = li[(li.l_shipdate >= '1995-09-01 00:00:00') & (li.l_shipdate < '1995-10-01 00:00:00')]
+    df_filter_1 = df_filter_1[['l_extendedprice', 'l_discount', 'l_partkey']]
+    df_filter_2 = pa[['p_type', 'p_partkey']]
+    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_partkey'], right_on=['p_partkey'], how="inner")
     df_merge_1 = df_merge_1[['p_type', 'l_extendedprice', 'l_discount']]
     df_merge_1['case_a'] = np.where(df_merge_1.p_type.str.contains("^PROMO.*?$",regex=True), ((df_merge_1.l_extendedprice) * (1 - (df_merge_1.l_discount))), 0)
     df_aggr_1 = pd.DataFrame()
@@ -604,9 +562,9 @@ def query_14(li, pa):
     return df_limit_1
 
 
-def query_15(li, su):
-    df_filter_1 = li[(li.l_shipdate >= pd.Timestamp('1996-01-01 00:00:00')) & (li.l_shipdate < pd.Timestamp('1996-04-01 00:00:00'))]
-    df_filter_1 = df_filter_1[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+def q15():
+    df_filter_1 = li[(li.l_shipdate >= '1996-01-01 00:00:00') & (li.l_shipdate < '1996-04-01 00:00:00')]
+    df_filter_1 = df_filter_1[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
     df_filter_1['before_1'] = ((df_filter_1.l_extendedprice) * (1 - (df_filter_1.l_discount)))
     df_group_1 = df_filter_1 \
         .groupby(['l_suppkey'], sort=False) \
@@ -620,9 +578,9 @@ def query_15(li, su):
     df_aggr_1 = df_aggr_1[['maxsuml_extendedprice1l_discount)']]
     dollar_0 = df_aggr_1['maxsuml_extendedprice1l_discount)'][0]
     
-    df_filter_2 = su[['s_suppkey', 's_name', 's_address', 's_nakey', 's_phone', 's_acctbal', 's_comment']]
-    df_filter_3 = li[(li.l_shipdate >= pd.Timestamp('1996-01-01 00:00:00')) & (li.l_shipdate < pd.Timestamp('1996-04-01 00:00:00'))]
-    df_filter_3 = df_filter_3[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_2 = su[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
+    df_filter_3 = li[(li.l_shipdate >= '1996-01-01 00:00:00') & (li.l_shipdate < '1996-04-01 00:00:00')]
+    df_filter_3 = df_filter_3[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
     df_filter_3['before_1'] = ((df_filter_3.l_extendedprice) * (1 - (df_filter_3.l_discount)))
     df_group_2 = df_filter_3 \
         .groupby(['l_suppkey'], sort=False) \
@@ -635,59 +593,57 @@ def query_15(li, su):
     df_group_2 = df_group_2.rename_axis(['l_suppkey']).reset_index()
     df_rename_1 = pd.DataFrame()
     df_rename_1['total_revenue'] = df_group_2['suml_extendedprice1l_discount']
-    df_rename_1['su_no'] = df_group_2['l_suppkey']
-    df_sort_1 = df_rename_1.sort_values(by=['su_no'], ascending=[True])
-    df_sort_1 = df_sort_1[['total_revenue', 'su_no']]
-    df_merge_1 = df_filter_2.merge(df_sort_1, left_on=['s_suppkey'], right_on=['su_no'], how="inner")
+    df_rename_1['supplier_no'] = df_group_2['l_suppkey']
+    df_sort_1 = df_rename_1.sort_values(by=['supplier_no'], ascending=[True])
+    df_sort_1 = df_sort_1[['total_revenue', 'supplier_no']]
+    df_merge_1 = df_filter_2.merge(df_sort_1, left_on=['s_suppkey'], right_on=['supplier_no'], how="inner")
     df_merge_1 = df_merge_1[['s_suppkey', 's_name', 's_address', 's_phone', 'total_revenue']]
-    df_limit_1 = df_merge_1[['s_suppkey', 's_name', 's_address', 's_phone', 'total_revenue']]
-    df_limit_1 = df_limit_1.head(1)
+    df_limit_1 = df_merge_1.head(1)
     return df_limit_1
 
 
-def query_16(su, pasupp, pa):
+def q16():
     df_filter_1 = su[(su.s_comment.str.contains("^.*?Customer.*?Complaints.*?$",regex=True))]
     df_filter_1 = df_filter_1[['s_suppkey']]
-    df_filter_2 = pasupp[~pasupp.ps_suppkey.isin(df_filter_1["s_suppkey"])]
-    df_filter_2 = df_filter_2[['ps_pakey', 'ps_suppkey']]
+    df_filter_2 = ps[~ps.ps_suppkey.isin(df_filter_1["s_suppkey"])]
+    df_filter_2 = df_filter_2[['ps_partkey', 'ps_suppkey']]
     df_filter_3 = pa[(pa.p_brand != 'Brand#45') & (pa.p_type.str.contains("^MEDIUM POLISHED.*?$",regex=True) == False) & (pa.p_size.isin([49,14,23,45,19,3,36,9]))]
-    df_filter_3 = df_filter_3[['p_brand', 'p_type', 'p_size', 'p_pakey']]
-    df_merge_1 = df_filter_2.merge(df_filter_3, left_on=['ps_pakey'], right_on=['p_pakey'], how="inner")
+    df_filter_3 = df_filter_3[['p_brand', 'p_type', 'p_size', 'p_partkey']]
+    df_merge_1 = df_filter_2.merge(df_filter_3, left_on=['ps_partkey'], right_on=['p_partkey'], how="inner")
     df_merge_1 = df_merge_1[['p_brand', 'p_type', 'p_size', 'ps_suppkey']]
     df_sort_1 = df_merge_1.sort_values(by=['p_brand', 'p_type', 'p_size'], ascending=[True, True, True])
     df_sort_1 = df_sort_1[['p_brand', 'p_type', 'p_size', 'ps_suppkey']]
     df_group_1 = df_sort_1 \
         .groupby(['p_brand', 'p_type', 'p_size'], sort=False) \
         .agg(
-            su_cnt=("ps_suppkey", lambda x: x.nunique()),
+            supplier_cnt=("ps_suppkey", lambda x: x.nunique()),
         )
-    df_group_1 = df_group_1[['su_cnt']]
-    df_sort_2 = df_group_1.sort_values(by=['su_cnt', 'p_brand', 'p_type', 'p_size'], ascending=[False, True, True, True])
-    df_sort_2 = df_sort_2[['su_cnt']]
-    df_limit_1 = df_sort_2[['su_cnt']]
-    df_limit_1 = df_limit_1.head(1)
+    df_group_1 = df_group_1[['supplier_cnt']]
+    df_sort_2 = df_group_1.sort_values(by=['supplier_cnt', 'p_brand', 'p_type', 'p_size'], ascending=[False, True, True, True])
+    df_sort_2 = df_sort_2[['supplier_cnt']]
+    df_limit_1 = df_sort_2.head(1)
     return df_limit_1
 
 
-def query_17(pa, li):
-    df_filter_1 = li[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+def q17():
+    df_filter_1 = li[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
     df_filter_2 = pa[(pa.p_brand == 'Brand#23') & (pa.p_container == 'MED BOX')]
-    df_filter_2 = df_filter_2[['p_pakey']]
-    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_pakey'], right_on=['p_pakey'], how="inner")
-    df_merge_1 = df_merge_1[['l_extendedprice', 'p_pakey', 'l_quantity']]
-    df_filter_3 = li[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-    df_filter_4 = pa[['p_pakey']]
-    df_merge_2 = df_filter_3.merge(df_filter_4, left_on=['l_pakey'], right_on=['p_pakey'], how="inner")
-    df_merge_2 = df_merge_2[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment', 'p_pakey']]
+    df_filter_2 = df_filter_2[['p_partkey']]
+    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_partkey'], right_on=['p_partkey'], how="inner")
+    df_merge_1 = df_merge_1[['l_extendedprice', 'p_partkey', 'l_quantity']]
+    df_filter_3 = li[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_4 = pa[['p_partkey']]
+    df_merge_2 = df_filter_3.merge(df_filter_4, left_on=['l_partkey'], right_on=['p_partkey'], how="inner")
+    df_merge_2 = df_merge_2[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment', 'p_partkey']]
     df_group_1 = df_merge_2 \
-        .groupby(['p_pakey'], sort=False) \
+        .groupby(['p_partkey'], sort=False) \
         .agg(
             mean_l_quantity=("l_quantity", "mean"),
         )
     df_group_1['avgl_quantity'] = (0.2 * df_group_1.mean_l_quantity)
     df_group_1 = df_group_1[['avgl_quantity']]
     df_group_1 = df_group_1.reset_index(level=0)
-    df_merge_3 = df_merge_1.merge(df_group_1, left_on=['p_pakey'], right_on=['p_pakey'], how="inner")
+    df_merge_3 = df_merge_1.merge(df_group_1, left_on=['p_partkey'], right_on=['p_partkey'], how="inner")
     df_merge_3 = df_merge_3[df_merge_3.l_quantity < df_merge_3.avgl_quantity]
     df_merge_3 = df_merge_3[['l_extendedprice']]
     df_aggr_1 = pd.DataFrame()
@@ -698,44 +654,43 @@ def query_17(pa, li):
     return df_limit_1
 
 
-def query_18(ords, cu, li):
-    df_filter_1 = li[['l_quantity', 'l_ordkey']]
-    df_filter_2 = ords[['o_ordkey', 'o_orddate', 'o_totalprice', 'o_custkey']]
-    df_filter_3 = li[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+def q18():
+    df_filter_1 = li[['l_quantity', 'l_orderkey']]
+    df_filter_2 = orders[['o_orderkey', 'o_orderdate', 'o_totalprice', 'o_custkey']]
+    df_filter_3 = li[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
     df_group_1 = df_filter_3 \
-        .groupby(['l_ordkey'], sort=False) \
+        .groupby(['l_orderkey'], sort=False) \
         .agg(
             sum_l_quantity=("l_quantity", "sum"),
         )
     df_group_1['suml_quantity'] = df_group_1.sum_l_quantity
     df_group_1 = df_group_1[df_group_1.suml_quantity > 300]
     df_group_1 = df_group_1.reset_index(level=0)
-    df_merge_1 = df_filter_2.merge(df_group_1, left_on=['o_ordkey'], right_on=['l_ordkey'], how="inner")
-    df_merge_1 = df_merge_1[['o_ordkey', 'o_orddate', 'o_totalprice', 'o_custkey', 'l_ordkey']]
+    df_merge_1 = df_filter_2.merge(df_group_1, left_on=['o_orderkey'], right_on=['l_orderkey'], how="inner")
+    df_merge_1 = df_merge_1[['o_orderkey', 'o_orderdate', 'o_totalprice', 'o_custkey', 'l_orderkey']]
     df_filter_4 = cu[['c_name', 'c_custkey']]
     df_merge_2 = df_merge_1.merge(df_filter_4, left_on=['o_custkey'], right_on=['c_custkey'], how="inner")
-    df_merge_2 = df_merge_2[['c_name', 'c_custkey', 'o_ordkey', 'o_orddate', 'o_totalprice', 'l_ordkey']]
-    df_merge_3 = df_filter_1.merge(df_merge_2, left_on=['l_ordkey'], right_on=['o_ordkey'], how="inner")
-    df_merge_3 = df_merge_3[['c_custkey', 'o_ordkey', 'c_name', 'o_orddate', 'o_totalprice', 'l_quantity']]
+    df_merge_2 = df_merge_2[['c_name', 'c_custkey', 'o_orderkey', 'o_orderdate', 'o_totalprice', 'l_orderkey']]
+    df_merge_3 = df_filter_1.merge(df_merge_2, left_on=['l_orderkey'], right_on=['o_orderkey'], how="inner")
+    df_merge_3 = df_merge_3[['c_custkey', 'o_orderkey', 'c_name', 'o_orderdate', 'o_totalprice', 'l_quantity']]
     df_group_2 = df_merge_3 \
-        .groupby(['c_custkey', 'o_ordkey', 'c_name', 'o_orddate', 'o_totalprice'], sort=False) \
+        .groupby(['c_custkey', 'o_orderkey', 'c_name', 'o_orderdate', 'o_totalprice'], sort=False) \
         .agg(
             suml_quantity=("l_quantity", "sum"),
         )
     df_group_2 = df_group_2[['suml_quantity']]
-    df_sort_1 = df_group_2.sort_values(by=['o_totalprice', 'o_orddate'], ascending=[False, True])
+    df_sort_1 = df_group_2.sort_values(by=['o_totalprice', 'o_orderdate'], ascending=[False, True])
     df_sort_1 = df_sort_1[['suml_quantity']]
-    df_limit_1 = df_sort_1[['suml_quantity']]
-    df_limit_1 = df_limit_1.head(100)
+    df_limit_1 = df_sort_1.head(100)
     return df_limit_1
 
 
-def query_19(li, pa):
+def q19():
     df_filter_1 = li[(li.l_shipmode.isin(["AIR","AIR REG"])) & (li.l_shipinstruct == 'DELIVER IN PERSON') & (((li.l_quantity >= 1) & (li.l_quantity <= 11)) | ((li.l_quantity >= 10) & (li.l_quantity <= 20)) | ((li.l_quantity >= 20) & (li.l_quantity <= 30)))]
-    df_filter_1 = df_filter_1[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_1 = df_filter_1[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
     df_filter_2 = pa[(pa.p_size >= 1) & (((pa.p_brand == 'Brand#12') & (pa.p_container.isin(["SM CASE","SM BOX","SM PACK","SM PKG"])) & (pa.p_size <= 5)) | ((pa.p_brand == 'Brand#23') & (pa.p_container.isin(["MED BAG","MED BOX","MED PKG","MED PACK"])) & (pa.p_size <= 10)) | ((pa.p_brand == 'Brand#34') & (pa.p_container.isin(["LG CASE","LG BOX","LG PACK","LG PKG"])) & (pa.p_size <= 15)))]
-    df_filter_2 = df_filter_2[['p_pakey', 'p_brand', 'p_container', 'p_size']]
-    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_pakey'], right_on=['p_pakey'], how="inner")
+    df_filter_2 = df_filter_2[['p_partkey', 'p_brand', 'p_container', 'p_size']]
+    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_partkey'], right_on=['p_partkey'], how="inner")
     df_merge_1 = df_merge_1[((df_merge_1.p_brand == 'Brand#12') & (df_merge_1.p_container.isin(["SM CASE","SM BOX","SM PACK","SM PKG"])) & (df_merge_1.l_quantity >= 1) & (df_merge_1.l_quantity <= 11) & (df_merge_1.p_size <= 5)) | ((df_merge_1.p_brand == 'Brand#23') & (df_merge_1.p_container.isin(["MED BAG","MED BOX","MED PKG","MED PACK"])) & (df_merge_1.l_quantity >= 10) & (df_merge_1.l_quantity <= 20) & (df_merge_1.p_size <= 10)) | ((df_merge_1.p_brand == 'Brand#34') & (df_merge_1.p_container.isin(["LG CASE","LG BOX","LG PACK","LG PKG"])) & (df_merge_1.l_quantity >= 20) & (df_merge_1.l_quantity <= 30) & (df_merge_1.p_size <= 15))]
     df_merge_1 = df_merge_1[['l_extendedprice', 'l_discount']]
     df_aggr_1 = pd.DataFrame()
@@ -746,69 +701,68 @@ def query_19(li, pa):
     return df_limit_1
 
 
-def query_20(pa, pasupp, li, su, na):
-    df_filter_1 = su[['s_suppkey', 's_name', 's_address', 's_nakey', 's_phone', 's_acctbal', 's_comment']]
+def q20():
+    df_filter_1 = su[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
     df_filter_2 = na[na.n_name == 'CANADA']
-    df_filter_2 = df_filter_2[['n_nakey']]
-    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['s_nakey'], right_on=['n_nakey'], how="inner")
+    df_filter_2 = df_filter_2[['n_nationkey']]
+    df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['s_nationkey'], right_on=['n_nationkey'], how="inner")
     df_merge_1 = df_merge_1[['s_name', 's_address', 's_suppkey']]
-    df_filter_3 = pasupp[['ps_pakey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
-    df_filter_4 = li[(li.l_shipdate >= pd.Timestamp('1994-01-01 00:00:00')) & (li.l_shipdate < pd.Timestamp('1995-01-01 00:00:00'))]
-    df_filter_4 = df_filter_4[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-    df_filter_5 = pasupp[['ps_pakey', 'ps_suppkey']]
-    df_merge_2 = df_filter_4.merge(df_filter_5, left_on=['l_pakey', 'l_suppkey'], right_on=['ps_pakey', 'ps_suppkey'], how="inner")
-    df_merge_2 = df_merge_2[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment', 'ps_pakey', 'ps_suppkey']]
+    df_filter_3 = ps[['ps_partkey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
+    df_filter_4 = li[(li.l_shipdate >= '1994-01-01 00:00:00') & (li.l_shipdate < '1995-01-01 00:00:00')]
+    df_filter_4 = df_filter_4[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_5 = ps[['ps_partkey', 'ps_suppkey']]
+    df_merge_2 = df_filter_4.merge(df_filter_5, left_on=['l_partkey', 'l_suppkey'], right_on=['ps_partkey', 'ps_suppkey'], how="inner")
+    df_merge_2 = df_merge_2[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment', 'ps_partkey', 'ps_suppkey']]
     df_group_1 = df_merge_2 \
-        .groupby(['ps_pakey', 'ps_suppkey'], sort=False) \
+        .groupby(['ps_partkey', 'ps_suppkey'], sort=False) \
         .agg(
             sum_l_quantity=("l_quantity", "sum"),
         )
     df_group_1['suml_quantity'] = (0.5 * df_group_1.sum_l_quantity)
     df_group_1 = df_group_1[['suml_quantity']]
     df_group_1 = df_group_1.reset_index(level=0)
-    df_merge_3 = df_filter_3.merge(df_group_1, left_on=['ps_pakey', 'ps_suppkey'], right_on=['ps_pakey', 'ps_suppkey'], how="inner")
+    df_merge_3 = df_filter_3.merge(df_group_1, left_on=['ps_partkey', 'ps_suppkey'], right_on=['ps_partkey', 'ps_suppkey'], how="inner")
     df_merge_3 = df_merge_3[(df_merge_3.ps_availqty) > df_merge_3.suml_quantity]
-    df_merge_3 = df_merge_3[['ps_pakey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
+    df_merge_3 = df_merge_3[['ps_partkey', 'ps_suppkey', 'ps_availqty', 'ps_supplycost', 'ps_comment']]
     df_filter_6 = pa[(pa.p_name.str.contains("^forest.*?$",regex=True))]
-    df_filter_6 = df_filter_6[['p_pakey', 'p_name', 'p_mfgr', 'p_brand', 'p_type', 'p_size', 'p_container', 'p_retailprice', 'p_comment']]
-    df_merge_4 = df_merge_3.merge(df_filter_6, left_on=['ps_pakey'], right_on=['p_pakey'], how="inner")
+    df_filter_6 = df_filter_6[['p_partkey', 'p_name', 'p_mfgr', 'p_brand', 'p_type', 'p_size', 'p_container', 'p_retailprice', 'p_comment']]
+    df_merge_4 = df_merge_3.merge(df_filter_6, left_on=['ps_partkey'], right_on=['p_partkey'], how="inner")
     df_merge_4 = df_merge_4[['ps_suppkey']]
     df_merge_5 = df_merge_1[df_merge_1.s_suppkey.isin(df_merge_4["ps_suppkey"])]
     df_merge_5 = df_merge_5[['s_name', 's_address']]
     df_sort_1 = df_merge_5.sort_values(by=['s_name'], ascending=[True])
     df_sort_1 = df_sort_1[['s_name', 's_address']]
-    df_limit_1 = df_sort_1[['s_name', 's_address']]
-    df_limit_1 = df_limit_1.head(1)
+    df_limit_1 = df_sort_1.head(1)
     return df_limit_1
 
 
-def query_21(li, su, ords, na):
-    df_filter_1 = ords[ords.o_ordstatus == 'F']
-    df_filter_1 = df_filter_1[['o_ordkey', 'o_custkey', 'o_ordstatus', 'o_totalprice', 'o_orddate', 'o_ordpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+def q21():
+    df_filter_1 = orders[orders.o_orderstatus == 'F']
+    df_filter_1 = df_filter_1[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
     df_filter_2 = li[li.l_receiptdate > li.l_commitdate]
-    df_filter_2 = df_filter_2[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-    df_filter_3 = su[['s_suppkey', 's_name', 's_address', 's_nakey', 's_phone', 's_acctbal', 's_comment']]
+    df_filter_2 = df_filter_2[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_3 = su[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
     df_filter_4 = na[na.n_name == 'SAUDI ARABIA']
-    df_filter_4 = df_filter_4[['n_nakey']]
-    df_merge_1 = df_filter_3.merge(df_filter_4, left_on=['s_nakey'], right_on=['n_nakey'], how="inner")
+    df_filter_4 = df_filter_4[['n_nationkey']]
+    df_merge_1 = df_filter_3.merge(df_filter_4, left_on=['s_nationkey'], right_on=['n_nationkey'], how="inner")
     df_merge_1 = df_merge_1[['s_name', 's_suppkey']]
     df_merge_2 = df_filter_2.merge(df_merge_1, left_on=['l_suppkey'], right_on=['s_suppkey'], how="inner")
-    df_merge_2 = df_merge_2[['s_name', 'l_suppkey', 'l_ordkey']]
+    df_merge_2 = df_merge_2[['s_name', 'l_suppkey', 'l_orderkey']]
     df_filter_5 = li[li.l_receiptdate > li.l_commitdate]
-    df_filter_5 = df_filter_5[['l_ordkey', 'l_suppkey']]
-    inner_cond = df_merge_2.merge(df_filter_5, left_on='l_ordkey', right_on='l_ordkey', how='inner')
-    inner_cond = inner_cond[inner_cond.l_suppkey_x != inner_cond.l_suppkey_y]['l_ordkey']
-    df_merge_3 = df_merge_2.merge(inner_cond, left_on=['l_ordkey'], right_on=['l_ordkey'], how="outer", indicator=True)
+    df_filter_5 = df_filter_5[['l_orderkey', 'l_suppkey']]
+    inner_cond = df_merge_2.merge(df_filter_5, left_on='l_orderkey', right_on='l_orderkey', how='inner')
+    inner_cond = inner_cond[inner_cond.l_suppkey_x != inner_cond.l_suppkey_y]['l_orderkey']
+    df_merge_3 = df_merge_2.merge(inner_cond, left_on=['l_orderkey'], right_on=['l_orderkey'], how="outer", indicator=True)
     df_merge_3 = df_merge_3[df_merge_3._merge == "left_only"]
-    df_merge_3 = df_merge_3[['s_name', 'l_suppkey', 'l_ordkey']]
-    df_sort_1 = df_merge_3.sort_values(by=['l_ordkey'], ascending=[True])
-    df_sort_1 = df_sort_1[['s_name', 'l_suppkey', 'l_ordkey']]
-    df_merge_4 = df_filter_1.merge(df_sort_1, left_on=['o_ordkey'], right_on=['l_ordkey'], how="inner")
-    df_merge_4 = df_merge_4[['s_name', 'l_suppkey', 'l_ordkey', 'o_ordkey']]
-    df_filter_6 = li[['l_ordkey', 'l_pakey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
-    inner_cond = df_merge_4.merge(df_filter_6, left_on='o_ordkey', right_on='l_ordkey', how='inner')
-    inner_cond = inner_cond[inner_cond.l_suppkey_x != inner_cond.l_suppkey_y]['o_ordkey']
-    df_merge_5 = df_merge_4[df_merge_4.o_ordkey.isin(inner_cond)]
+    df_merge_3 = df_merge_3[['s_name', 'l_suppkey', 'l_orderkey']]
+    df_sort_1 = df_merge_3.sort_values(by=['l_orderkey'], ascending=[True])
+    df_sort_1 = df_sort_1[['s_name', 'l_suppkey', 'l_orderkey']]
+    df_merge_4 = df_filter_1.merge(df_sort_1, left_on=['o_orderkey'], right_on=['l_orderkey'], how="inner")
+    df_merge_4 = df_merge_4[['s_name', 'l_suppkey', 'l_orderkey', 'o_orderkey']]
+    df_filter_6 = li[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    inner_cond = df_merge_4.merge(df_filter_6, left_on='o_orderkey', right_on='l_orderkey', how='inner')
+    inner_cond = inner_cond[inner_cond.l_suppkey_x != inner_cond.l_suppkey_y]['o_orderkey']
+    df_merge_5 = df_merge_4[df_merge_4.o_orderkey.isin(inner_cond)]
     df_merge_5 = df_merge_5[['s_name']]
     df_sort_2 = df_merge_5.sort_values(by=['s_name'], ascending=[True])
     df_sort_2 = df_sort_2[['s_name']]
@@ -820,14 +774,13 @@ def query_21(li, su, ords, na):
     df_group_1 = df_group_1[['numwait']]
     df_sort_3 = df_group_1.sort_values(by=['numwait', 's_name'], ascending=[False, True])
     df_sort_3 = df_sort_3[['numwait']]
-    df_limit_1 = df_sort_3[['numwait']]
-    df_limit_1 = df_limit_1.head(100)
+    df_limit_1 = df_sort_3.head(100)
     return df_limit_1
 
 
-def query_22(cu, ords):
+def q22():
     df_filter_1 = cu[(cu.c_acctbal > 0.00) & (cu.c_phone.str.slice(0, 2).isin(['13','31','23','29','30','18','17']))]
-    df_filter_1 = df_filter_1[['c_custkey', 'c_name', 'c_address', 'c_nakey', 'c_phone', 'c_acctbal', 'c_mktsegment', 'c_comment']]
+    df_filter_1 = df_filter_1[['c_custkey', 'c_name', 'c_address', 'c_nationkey', 'c_phone', 'c_acctbal', 'c_mktsegment', 'c_comment']]
     df_aggr_1 = pd.DataFrame()
     df_aggr_1['avgc_acctbal'] = [(df_filter_1.c_acctbal).mean()]
     df_aggr_1 = df_aggr_1[['avgc_acctbal']]
@@ -837,7 +790,7 @@ def query_22(cu, ords):
     df_filter_2 = df_filter_2[['c_phone', 'c_acctbal', 'c_custkey']]
     df_sort_1 = df_filter_2.sort_values(by=['c_custkey'], ascending=[True])
     df_sort_1 = df_sort_1[['c_phone', 'c_acctbal', 'c_custkey']]
-    df_filter_3 = ords[['o_custkey']]
+    df_filter_3 = orders[['o_custkey']]
     df_merge_1 = df_sort_1.merge(df_filter_3, left_on=['c_custkey'], right_on=['o_custkey'], how="outer", indicator=True)
     df_merge_1 = df_merge_1[df_merge_1._merge == "left_only"]
     df_merge_1['cntrycode'] = df_merge_1.c_phone.str.slice(0, 2)
@@ -851,33 +804,32 @@ def query_22(cu, ords):
             totacctbal=("c_acctbal", "sum"),
         )
     df_group_1 = df_group_1[['numcust', 'totacctbal']]
-    df_limit_1 = df_group_1[['numcust', 'totacctbal']]
-    df_limit_1 = df_limit_1.head(1)
+    df_limit_1 = df_group_1.head(1)
     return df_limit_1
 
 
 # =====================
 
-query_1(lineitem)
-query_2(part, region, nation, partsupp, supplier)
-query_3(lineitem, orders, customer)
-query_4(lineitem, orders)
-query_5(nation, customer, supplier, lineitem, orders, region)
-query_6(lineitem)
-query_7(nation, customer, orders, lineitem, supplier)
-query_8(supplier, nation, part, region, lineitem, customer, orders)
-query_9(nation, part, orders, lineitem, partsupp, supplier)
-query_10(orders, customer, nation, lineitem)
-query_11(nation, supplier, partsupp)
-query_12(orders, lineitem)
-query_13(orders, customer)
-query_14(lineitem, part)
-query_15(lineitem, supplier)
-query_16(supplier, partsupp, part)
-query_17(part, lineitem)
-query_18(orders, customer, lineitem)
-query_19(lineitem, part)
-query_20(part, partsupp, lineitem, supplier, nation)
-query_21(lineitem, supplier, orders, nation)
-query_22(customer, orders)
+q1()
+q2()
+q3()
+q4()
+q5()
+q6()
+q7()
+q8()
+q9()
+q10()
+q11()
+q12()
+q13()
+q14()
+q15()
+q16()
+q17()
+q18()
+q19()
+q20()
+q21()
+q22()
 
