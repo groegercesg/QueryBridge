@@ -36,7 +36,7 @@
         "Name": "basic_test_pandas.py",
         "Rename Tables": {
             "lineitem": "li",
-            "order": "ord",
+            "orders": "ord",
             "customer": "cu",
             "part": "pa",
             "nation": "na",

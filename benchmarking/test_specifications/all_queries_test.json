@@ -393,7 +393,7 @@
         "Name": "all_queries_pandas.py",
         "Rename Tables": {
             "lineitem": "li",
-            "order": "ord",
+            "orders": "ord",
             "customer": "cu",
             "part": "pa",
             "nation": "na",
