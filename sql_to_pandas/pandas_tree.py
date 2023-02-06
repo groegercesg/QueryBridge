@@ -303,6 +303,9 @@ def clean_type_information(self, content):
                 # Equal number of open and close, use Open
                 value = content[:match.start()].split("(")[-1]
                 value = value.replace("(", "").replace(")", "")
+                
+        if value == "NULL":
+            print("a")
         
         # print("Old Value: " + str(value))
         match_str = str(str(match.group())[2:])
@@ -1342,7 +1345,13 @@ def inner_aggregation(string, prev_df, this_df, treeHelper):
         
         if "CASE WHEN" and "THEN" and "ELSE" in inner:
             # Do case aggregation
-            inner_string = aggregate_case(inner, prev_df, this_df, treeHelper)
+            if treeHelper.use_numpy == True:
+                # Numpy case
+                inner_string = aggregate_case(inner, prev_df, this_df, treeHelper)
+            else:
+                # Pandas only
+                inner_string = pandas_aggregate_case(inner, prev_df)
+                
         else:
             inner_string = aggregate_sum(inner, df_group=prev_df)
         
@@ -2019,6 +2028,106 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
     # Handle and rearrange output
     return before_aggrs, during_aggrs, after_aggrs
 
+def pandas_aggregate_case(inner_string, prev_df):
+    else_value = str(inner_string.split("ELSE")[1].split("END")[0]).strip()
+    when_value = str(inner_string.split("CASE WHEN")[1].split("THEN")[0]).strip()
+    then_value = str(inner_string.split("THEN")[1].split("ELSE")[0]).strip()
+    
+    # Clean values
+    # Put values in the order of the pandas expression
+    values = [then_value, when_value, else_value]
+    for i in range(len(values)):
+        values[i] = values[i].strip()
+        if values[i][0] == "(" and values[i][-1] == ")":
+            # This is bracket and start and end so fine:
+            pass
+        else:
+            if values[i][0] == "(":
+                # Therefore not one at end
+                values[i] = values[i][1:]
+            elif values[i][-1] == ")":
+                # Therefore not one at start
+                values[i] = values[i][:-1]
+            else:
+                # No brackets, fine
+                pass
+    
+    # Transform values into pandas equivalents
+    for i in range(len(values)):
+        # contains ~~
+        # Starts with
+        # https://www.postgresql.org/docs/current/functions-matching.html
+        if "~~" in values[i]:
+            values[i] = clean_extra_brackets(values[i])
+            split_starts = values[i].split(" ~~ ")
+            # First element of split_starts should be the column,
+            # Second should be the comparator
+            if len(split_starts) != 2:
+                raise ValueError("Split Starts for case Aggregation should be of length 2")
+            
+            if "%" in split_starts[1]:
+                split_starts[1] = split_starts[1].replace("%", "")
+            else:
+                raise ValueError("Aggregate Case, not sure what to clean")
+            
+            # Iterate through split_starts, cleaning the parts that are ill-formatted
+            for j in range(len(split_starts)):
+                # Remove brackets at start and end of string
+                if (split_starts[j][0] == "(") and (split_starts[j][-1] == ")"):
+                    split_starts[j] = split_starts[j][1:-1]
+                    
+                # Remove quotes at start and end of string
+                if (split_starts[j][0] == "'") and (split_starts[j][-1] == "'"):
+                    split_starts[j] = split_starts[j][1:-1]
+            
+            values[i] = 'x["' + split_starts[0] + '"].startswith("' + split_starts[1] + '")'
+            
+        # Hand this off to the s_group function
+        elif ("*" in values[i]):  # and (len(values[i]) > 1)
+            values[i] = aggregate_sum(values[i], s_group = "x")
+            
+        elif ("OR" in values[i]) or ("AND" in values[i]):
+            # Shuck the value
+            if (values[i][0] == "(") and (values[i][-1] == ")"):
+                values[i] = values[i][1:-1]
+            
+            if " OR " in values[i]:
+                split_on = values[i].split(" OR ")
+                join_on = " | "
+            elif " AND " in values[i]:
+                split_on = values[i].split(" AND ")
+                join_on = " & "
+            else:
+                raise ValueError("Not sure what we want to split the string on")
+            
+            for j in range(len(split_on)):
+                # If contained in brackets
+                if (split_on[j][0] == "(") and (split_on[j][-1] == ")"):
+                    split_on[j] = split_on[j][1:-1]
+                
+                if " == " in split_on[j]:
+                    split_on_eq = split_on[j].split(" == ")
+                    re_assemble = " == "
+                elif " <> " in split_on[j]:
+                    split_on_eq = split_on[j].split(" <> ")
+                    re_assemble = " != "
+                else:
+                    raise ValueError("Unknown parameter we're trying to split on")
+                    
+                # Should be of the form:
+                # o_orderpriority == '1-URGENT'
+                split_on[j] = "( x['" + str(split_on_eq[0]) + "']" + str(re_assemble) + str(split_on_eq[1]) + " )"
+                
+            values[i] = str(join_on.join(split_on)).strip()     
+            
+        elif (len(values[i]) > 1):
+            values[i] = aggregate_sum(values[i], s_group = "x")           
+    
+    # li_pa_join.apply(lambda x: x["l_extendedprice"] * (1 - x["l_discount"]) if x["p_type"].startswith("PROMO") else 0, axis=1)
+    inner_string = prev_df + '.apply(lambda x: ' + str(values[0]) + ' if ' + str(values[1]) + ' else ' + str(values[2]) + ', axis=1)'        
+    
+    return inner_string
+
 class group_aggr_node():
     def __init__(self, output, group_key):
         self.output = output
@@ -2194,7 +2303,12 @@ class group_aggr_node():
                 # Extract the entire case statement
                 extract_case = current_output[case_position : next_bracket]
                 # Do case aggregation
-                case_string = aggregate_case(extract_case, prev_df, this_df, treeHelper)
+                if treeHelper.use_numpy == True:
+                    # Numpy case
+                    case_string = aggregate_case(extract_case, prev_df, this_df, treeHelper)
+                else:
+                    # Pandas only
+                    case_string = pandas_aggregate_case(extract_case, prev_df)
                 
                 # Create case_name
                 case_name = "case_" + str(case_tracker)
@@ -2848,7 +2962,12 @@ class aggr_node():
                 # Extract the entire case statement
                 extract_case = current_output[case_position : next_bracket]
                 # Do case aggregation
-                case_string = aggregate_case(extract_case, prev_df, this_df, treeHelper)
+                if treeHelper.use_numpy == True:
+                    # Numpy case
+                    case_string = aggregate_case(extract_case, prev_df, this_df, treeHelper)
+                else:
+                    # Pandas only
+                    case_string = pandas_aggregate_case(extract_case, prev_df)
                 
                 # Create case_name
                 case_name = "case_" + str(case_tracker)

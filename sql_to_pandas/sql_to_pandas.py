@@ -72,7 +72,12 @@ def init_argparse() -> argparse.ArgumentParser:
                     type=str,
                     required=True,
                     help='The file containing details for how and which database to connect to.')
-
+    
+    parser.add_argument('--use_numpy',
+                    metavar='use_numpy',
+                    type=str2bool,
+                    required=False,
+                    help='Should we use numpy in our queries, this has been should to have a significant performance benefit')
 
     return parser
 
@@ -276,11 +281,14 @@ def main():
             plot_tree(explain_tree, tree_output)
 
         # Prune and alter the tree, for later use
-        from explain_tree import solve_nested_loop_node, solve_prune_node, solve_aliases, solve_initplan_nodes, solve_view_set_values
+        from explain_tree import solve_nested_loop_node, solve_prune_node, solve_null_output, solve_initplan_nodes, solve_view_set_values
         # We bump off hash nodes, we also need to do this with materialise nodes
         remove_nodes = ["Hash", "Materialize"]
         for node in remove_nodes:
             solve_prune_node(node, explain_tree)
+            
+        # Clear "NULL" from output
+        solve_null_output(explain_tree)
             
         # Handle InitPlan Branches in queries
         output_trees = solve_initplan_nodes(explain_tree)
@@ -319,8 +327,20 @@ def main():
                 plot_tree(output_trees, tree_prune_output)
                 
         # Create a treeHelper once for all the plans
+        
+        local_use_numpy = None
+        if hasattr(args, "use_numpy"):
+            if args.use_numpy != None:
+                # We have set use_numpy in args, use that false
+                local_use_numpy = args.use_numpy
+            else:
+                # Otherwise, we haven't, set as False
+                local_use_numpy = False
+        else:
+            # Otherwise, we haven't, set as False
+            local_use_numpy = False
         from pandas_tree_to_pandas import TreeHelper
-        overall_tree_helper = TreeHelper(expr_tree_output, args.benchmarking)
+        overall_tree_helper = TreeHelper(expr_tree_output, args.benchmarking, local_use_numpy)
 
         # Iterate through all of the plans
         if isinstance(output_trees, list):
@@ -355,7 +375,11 @@ def main():
         
         line_prepender(python_output_name, "def q" + str(query_name) + "(" + str(cleaned_relations_subqueries)[1:-1].replace("'", "") + "):\n")
         line_prepender(python_output_name, "import pandas as pd\n")
-        line_prepender(python_output_name, "import numpy as np\n")
+        
+        if hasattr(args, "use_numpy"):
+            if args.use_numpy != None and args.use_numpy == True:
+                # We have set use_numpy in args, use that false
+                line_prepender(python_output_name, "import numpy as np\n")
         
     # Tear Down
     # If it's benchmarking, delete results

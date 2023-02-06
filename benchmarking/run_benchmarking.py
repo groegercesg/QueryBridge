@@ -253,6 +253,15 @@ def main():
                         if "Conversion Options" in query_option:
                             cmd += query_option["Conversion Options"]
                         
+                        # Use Numpy
+                        if "Use Numpy" in manifest_json:
+                            if manifest_json["Use Numpy"] == "False":
+                                cmd += ["--use_numpy", "False"]
+                            elif manifest_json["Use Numpy"] == "True":
+                                cmd += ["--use_numpy", "True"]
+                            else:
+                                raise Exception("Unrecognised option in Test specification, 'Use Numpy': " + str(manifest_json["Use Numpy"]))
+                        
                         result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
                         
                         bad_query = False
@@ -435,12 +444,19 @@ def main():
         
         # Add imports 
         store_queries_file_content = store_queries_file_content.replace("import pandas as pd", "").replace("import numpy as np", "")
-        store_queries_file_content = "import pandas as pd \nimport numpy as np\n" + store_queries_file_content
-        store_queries_file_content += "\n"
+        start_store_queries_file_content = "import pandas as pd\n"
+        
+        # Use Numpy
+        if "Use Numpy" in manifest_json:
+            if manifest_json["Use Numpy"] == "True":
+                start_store_queries_file_content += "import numpy as np\n"
+        
+        start_store_queries_file_content += store_queries_file_content
+        start_store_queries_file_content += "\n"
         
         # Write out to file, named "Name"
         f= open(manifest_json["Store Queries"]["Name"], "w+")
-        f.write(store_queries_file_content)
+        f.write(start_store_queries_file_content)
         f.close()
         
     

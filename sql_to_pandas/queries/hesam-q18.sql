@@ -66,7 +66,7 @@ FROM
                             GROUP BY
                               t16.l_orderkey
                             HAVING
-                              sum_quantity > 300
+                              sum(t16.l_quantity) > 300
                           ) t17
                       ) t18
                     GROUP BY

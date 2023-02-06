@@ -239,6 +239,35 @@ def process_matches(string, relation):
 def return_matches(string):
     return [match.group() for match in regex.finditer(r"(?:(\((?>[^()]+|(?1))*\))|\S)+", string)]
  
+def solve_null_output(tree):
+    # Preorder Traversal
+ 
+    # Check current node
+    if tree.plans != None:
+        for i in range(len(tree.plans)):
+            child_node = tree.plans[i]
+            # Iterate through output
+            removes = []
+            
+            for i in range(len(child_node.output)):
+                if "NULL:" in child_node.output[i]:
+                    removes.append(i)
+            
+            removes.reverse()
+            
+            child_output_list = list(child_node.output)
+            
+            # Delete tags that have NULL in them
+            for num in removes:
+                del child_output_list[num]
+            
+            child_node.output = child_output_list
+    
+    # Run this function on below nodes
+    if tree.plans != None:
+        for individual_plan in tree.plans:
+            solve_null_output(individual_plan)   
+ 
 def solve_prune_node(prune_type, tree):
     # Modified to Support Any node we input
     

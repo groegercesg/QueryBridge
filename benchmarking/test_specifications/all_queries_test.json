@@ -388,6 +388,7 @@
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",
     "Data Storage": "data_storage",
+    "Use Numpy": "False",
     "Results Precision": 4,
     "Store Queries": {
         "Name": "all_queries_pandas.py",

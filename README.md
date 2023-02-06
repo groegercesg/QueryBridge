@@ -162,7 +162,7 @@ Assuming you have completed the setup, you can now run the command below to gene
 
 ```bash
 conda activate sql_benchmark
-python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location query_6 --name generated_query_6_pandas.py --db_file database_connection.json
+python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location query_6 --name generated_query_6_pandas.py --db_file database_connection.json --use_numpy False
 ```
 
 ## Run all the queries
