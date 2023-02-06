@@ -682,7 +682,7 @@ def subplan_scan_into_scan_and_join(node, correlated_key):
         top_join_merge_cond.append("(" + c_key + " = " + c_key + ")")
     top_join_merge_cond = "(" + " AND ".join(top_join_merge_cond) + ")"
     
-    top_join = merge_join_node("Merge Join", node.parallel_aware, node.async_capable, top_join_output, top_join_inner_unique, top_join_join_type, top_join_merge_cond, node.parent_relationship)
+    top_join = hash_join_node("Hash Join", node.parallel_aware, node.async_capable, top_join_output, top_join_inner_unique, top_join_join_type, top_join_merge_cond, node.parent_relationship)
 
     # Set top_join after_filter
     top_join.add_filter(after_filter)

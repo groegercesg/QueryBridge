@@ -2567,11 +2567,12 @@ def complex_name_solve(in_name):
     return is_complex, new_name
     
 class merge_node():
-    def __init__(self, condition, output, join, filters=None):
+    def __init__(self, condition, output, join, sort=False, filters=None):
         self.condition = condition
         self.output = output
-        self.filter = filters
         self.join_type = join
+        self.sort = sort
+        self.filter = filters
 
     def set_nodes(self, nodes):
         self.nodes = nodes
@@ -2717,7 +2718,7 @@ class merge_node():
                 join_left, join_right = self.process_equating(individual_cond)
                 
                 # inner_cond = df_merge_2.merge(df_filter_5, left_on='l_orderkey', right_on='l_orderkey', how='inner')
-                local_statement = "inner_cond = " + str(left_prev_df) + ".merge(" + str(right_prev_df) + ", left_on='" + str(join_left) + "', right_on='" + str(join_right) + "', how='inner')"
+                local_statement = "inner_cond = " + str(left_prev_df) + ".merge(" + str(right_prev_df) + ", left_on='" + str(join_left) + "', right_on='" + str(join_right) + "', how='inner', sort=" + str(self.sort) + ")"
                 statements.append(local_statement)
                 
                 # Get filter left and right
@@ -2790,21 +2791,21 @@ class merge_node():
             if using_join_filter == True:
                 raise Exception("We shouldn't have done an join_filter for an left join")
             
-            local_statement = this_df + " = " + left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('left') + '")'
+            local_statement = this_df + " = " + left_prev_df+'.merge(' + right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('left') + '", sort=' + str(self.sort) + ')'
             statements.append(local_statement)
         elif self.join_type.lower() == "right":
             # Handle join_filter
             if using_join_filter == True:
                 raise Exception("We shouldn't have done an join_filter for an right join")
             
-            local_statement = this_df + " = " + left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('right') + '")'
+            local_statement = this_df + " = " + left_prev_df+'.merge(' + right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('right') + '", sort=' + str(self.sort) + ')'
             statements.append(local_statement)
         elif self.join_type.lower() == "inner":
             # Handle join_filter
             if using_join_filter == True:
                 raise Exception("We shouldn't have done an join_filter for an inner join")
             
-            local_statement = this_df + " = " + left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('inner') + '")'
+            local_statement = this_df + " = " + left_prev_df+'.merge(' + right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('inner') + '", sort=' + str(self.sort) + ')'
             statements.append(local_statement)
         elif self.join_type.lower() == "anti":
             # Do an anti_join
@@ -2814,7 +2815,7 @@ class merge_node():
                 right_prev_df = "inner_cond"
                 
             #df_merge_1 = df_sort_1.merge(df_filter_3, left_on=['c_custkey'], right_on=['o_custkey'], how='outer', indicator=True)
-            local_statement_1 = this_df + " = " + left_prev_df+'.merge('+right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('outer') + '", indicator=True)'
+            local_statement_1 = this_df + " = " + left_prev_df+'.merge(' + right_prev_df+', left_on='+str(left_labels)+', right_on='+str(right_labels)+', how="' + str('outer') + '", indicator=True, sort=' + str(self.sort) + ')'
             statements.append(local_statement_1)
             #df_merge_1 = df_merge_1[df_merge_1._merge == "left_only"]
             local_statement_2 = this_df + " = " + this_df + '[' + this_df + '._merge == "left_only"]' 
@@ -3248,15 +3249,17 @@ def create_tree(class_tree, sql_class):
         if hasattr(current_node, "filter"):
             node_class.add_filter(current_node.filter)
     elif node_type == "Hash Join":
+        # It's a Hash Join, we have Sort = False
         if hasattr(current_node, "filter"):
-            node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type, filters=current_node.filter)
+            node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type, filters=current_node.filter, sort=False)
         else:
-            node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type)
+            node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type, sort=False)
     elif node_type == "Merge Join":
+        # It's a Hash Join, we have Sort = True
         if hasattr(current_node, "filter"):
-            node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type, filters=current_node.filter)
+            node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type, filters=current_node.filter, sort=True)
         else:
-            node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type)
+            node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type, sort=True)
     elif node_type == "Nested Loop":
         # Make a nested loop into a merge node
         if hasattr(current_node, "merge_cond"):
