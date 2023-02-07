@@ -1,0 +1,22 @@
+{
+   "name":  "Query", 
+   "result": 0.000108,
+   "timing": 0.000108,
+   "cardinality": 0,
+   "extra-info": "EXPLAIN SELECT name FROM students JOIN exams USING (sid) WHERE name LIKE 'Ma%';", 
+   "timings": [
+
+   ],
+   "children": [
+    {
+      "name": "CHUNK_SCAN",
+      "timing":0.000000,
+      "cardinality":0,
+      "extra_info": "",
+      "timings": [
+      ],
+      "children": [
+      ]
+    }
+   ]
+}
