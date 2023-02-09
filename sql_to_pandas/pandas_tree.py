@@ -89,47 +89,63 @@ def process_output(self, output, codecomphelper):
         dot_cleaned_output = cleaned_output.replace(".", "").strip()
         substring_format = brack_cleaned_lower_output.replace("from ", "").replace("for ", "").strip()
 
-        if dot_cleaned_output in codecomphelper.sql.column_references:
+        # Make a copy of column_references, with the replaces(minus final .) made
+        # As well as the ones before
+        col_ref_complete = dict(codecomphelper.sql.column_references)
+        
+        # New, old
+        new_keys = []
+        for key in col_ref_complete.keys():
+            # Iterate through replaces
+            for repl in replaces:
+                if repl[:-1] in key:
+                    new_key = key.replace(repl[:-1], "")
+                    new_keys.append([new_key, key])
+                    
+        for new, old in new_keys:
+            col_ref_complete[new] = col_ref_complete[old]
+
+        if dot_cleaned_output in col_ref_complete:
             output_original_value = cleaned_output
             # Make a special 3 element tuple for this situation
             if codecomphelper.useAlias.get(dot_cleaned_output, None) != None:
-                output[i] = (codecomphelper.useAlias.get(dot_cleaned_output, None), codecomphelper.sql.column_references[dot_cleaned_output], dot_cleaned_output)
+                output[i] = (codecomphelper.useAlias.get(dot_cleaned_output, None), col_ref_complete[dot_cleaned_output], dot_cleaned_output)
             else:
-                output[i] = (output_original_value, codecomphelper.sql.column_references[dot_cleaned_output], dot_cleaned_output)        
-        elif brack_cleaned_output in codecomphelper.sql.column_references:
+                output[i] = (output_original_value, col_ref_complete[dot_cleaned_output], dot_cleaned_output)        
+        elif brack_cleaned_output in col_ref_complete:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
-            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_output])
-        elif brack_cleaned_lower_output in codecomphelper.sql.column_references:
+            output[i] = (output_original_value, col_ref_complete[brack_cleaned_output])
+        elif brack_cleaned_lower_output in col_ref_complete:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
-            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_lower_output])
-        elif brack_cleaned_equal_quote_lower_output in codecomphelper.sql.column_references:
+            output[i] = (output_original_value, col_ref_complete[brack_cleaned_lower_output])
+        elif brack_cleaned_equal_quote_lower_output in col_ref_complete:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
-            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output])
-        elif brack_cleaned_equal_quote_lower_output_dots in codecomphelper.sql.column_references:
+            output[i] = (output_original_value, col_ref_complete[brack_cleaned_equal_quote_lower_output])
+        elif brack_cleaned_equal_quote_lower_output_dots in col_ref_complete:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
-            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_dots])
-        elif brack_cleaned_equal_quote_lower_output_dots_no_end in codecomphelper.sql.column_references:
+            output[i] = (output_original_value, col_ref_complete[brack_cleaned_equal_quote_lower_output_dots])
+        elif brack_cleaned_equal_quote_lower_output_dots_no_end in col_ref_complete:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
-            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_dots_no_end])
-        elif brack_cleaned_equal_quote_lower_output_no_end in codecomphelper.sql.column_references:
+            output[i] = (output_original_value, col_ref_complete[brack_cleaned_equal_quote_lower_output_dots_no_end])
+        elif brack_cleaned_equal_quote_lower_output_no_end in col_ref_complete:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
-            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_no_end])
-        elif brack_cleaned_equal_quote_lower_output_no_end_spaced in codecomphelper.sql.column_references:
+            output[i] = (output_original_value, col_ref_complete[brack_cleaned_equal_quote_lower_output_no_end])
+        elif brack_cleaned_equal_quote_lower_output_no_end_spaced in col_ref_complete:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
-            output[i] = (output_original_value, codecomphelper.sql.column_references[brack_cleaned_equal_quote_lower_output_no_end_spaced])
+            output[i] = (output_original_value, col_ref_complete[brack_cleaned_equal_quote_lower_output_no_end_spaced])
         elif relation_cleaned_output in codecomphelper.bracket_replace:
             output_original_value = cleaned_output
             output[i] = (output_original_value, codecomphelper.bracket_replace[relation_cleaned_output])
-        elif substring_format in codecomphelper.sql.column_references:
+        elif substring_format in col_ref_complete:
             output_original_value = cleaned_output
-            output[i] = (output_original_value, codecomphelper.sql.column_references[substring_format])
+            output[i] = (output_original_value, col_ref_complete[substring_format])
         else:
             if "distinct" in cleaned_output.lower():
                 # Function to delete at particular index
@@ -1985,8 +2001,8 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
             elif not any([agg in col for agg in tree.agg_funcs]):
                 # If these are aggregations in the column
                 # That are not indexes
-                # In that case we should be grouping by them
-                self.group_key.append(col)
+                # We should add them to during to use last
+                during_aggrs.append([col, col, "last"])
             else:
                 # We can process this as an expression tree
                 # Set output_name
@@ -2463,6 +2479,8 @@ class group_aggr_node():
                 instructions.append('        ' + during_name + '=("' + during_col + '", lambda x: x.unique()),')
             elif during_operation == "count_distinct":
                 instructions.append('        ' + during_name + '=("' + during_col + '", lambda x: x.nunique()),')
+            elif during_operation == "last":
+                instructions.append('        ' + during_name + '=("' + during_col + '", "last"),')
             else:
                 raise ValueError("Operation: " + str(during_operation) + " not recognised!")
             
@@ -3173,8 +3191,10 @@ class sql_class():
                                     # projection_original = str(split_proj[1]).strip()
                                     
                                     # Add also the split after the dot of it
-                                    if projection.alias_or_name != "":
-                                        column_references[projection_original.split(".")[1].strip()] = str(projection.alias_or_name)
+                                    #if projection.alias_or_name != "":
+                                        # Don't do this, make the functions above start enough to recognise with the alias
+                                        # column_references[projection_original.split(".")[1].strip()] = str(projection.alias_or_name)
+                                    #    pass
                                     
                                     
                                     # This doesn't work, instead we need to keep the "n1" part to differentiate it

@@ -81,9 +81,7 @@ FROM
         FROM
           lineitem t7
       ) t7 ON t22.o_orderkey = t7.l_orderkey
-  ) t24
-GROUP BY
-  t24.c_name,
+  ) t24 GROUP BY t24.c_name,
   t24.o_custkey,
   t24.o_orderkey,
   t24.o_orderdate,
