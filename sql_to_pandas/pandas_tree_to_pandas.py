@@ -4,7 +4,7 @@ import functools
 
 
 class TreeHelper():
-    def __init__(self, expr_tree_output_path, benchmarking, in_use_numpy):
+    def __init__(self, expr_tree_output_path, benchmarking, in_use_numpy, in_groupbyfusion, in_mergefusion):
         # Dictionary to track how many "filter" nodes there have been
         self.node_type_tracker = defaultdict(int)
         # Dictionary to map class: filter_node (id: 123123) to df_name: df_filter_2
@@ -15,6 +15,8 @@ class TreeHelper():
         # Store whether we are benchmarking
         self.bench = benchmarking
         self.use_numpy = in_use_numpy
+        self.groupby_fusion = in_groupbyfusion
+        self.merge_fusion = in_mergefusion
 
 class CodeCompilation():
     def __init__(self, sql_class, column_ordering, column_limiting):

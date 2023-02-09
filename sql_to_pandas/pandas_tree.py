@@ -1963,7 +1963,8 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
                 if temp_col_var in codeCompHelper.indexes:
                     if len(codeCompHelper.indexes) != 1:
                         # TODO: Column rename code
-                        raise ValueError("Need to write column rename code")
+                        #raise ValueError("Need to write column rename code")
+                        pass
                     else:
                         # We should make the col an index
                         codeCompHelper.setIndexes(new_after[0][0])
@@ -2435,7 +2436,7 @@ class group_aggr_node():
         # Handle group
         instructions.append(this_df + " = " + prev_df + " \\")
         # Use the "sort=False", so that groupby doesn't change the sorting of groups themselves
-        instructions.append("    .groupby(" + str(self.group_key) + ", sort=False) \\")
+        instructions.append("    .groupby(" + str(self.group_key) + ", sort=" + str(treeHelper.groupby_fusion) + ") \\")
         
         # Incase we aren't being given any aggregation operations
         if during_group == []:
@@ -2844,6 +2845,9 @@ class merge_node():
         return statements
 
     def to_pandas(self, prev_dfs, this_df, codeCompHelper, treeHelper): 
+        # Overwrite self.sort to be the value of treeHelper.merge_fusion
+        self.sort = treeHelper.merge_fusion
+        
         # Pandas Merge resets the index
         # See More: https://datacomy.com/data_analysis/pandas/merge/#how-to-keep-index-when-using-pandas-merge
         codeCompHelper.indexes = []
@@ -3276,7 +3280,7 @@ def create_tree(class_tree, sql_class):
         else:
             node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type, sort=False)
     elif node_type == "Merge Join":
-        # It's a Hash Join, we have Sort = True
+        # It's a Merge Join, we have Sort = True
         if hasattr(current_node, "filter"):
             node_class = merge_node(current_node.merge_cond, current_node.output, join=current_node.join_type, filters=current_node.filter, sort=True)
         else:

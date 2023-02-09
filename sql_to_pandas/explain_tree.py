@@ -267,6 +267,58 @@ def solve_null_output(tree):
     if tree.plans != None:
         for individual_plan in tree.plans:
             solve_null_output(individual_plan)   
+        
+def solve_groupby_fusion(tree):
+    # Check current node
+    # Only run checking if we're a group aggregate node
+    if tree.node_type == "Group Aggregate":
+        if tree.plans != None:
+            for i in range(len(tree.plans)):
+                current_node = tree.plans[i]
+                if current_node.node_type == "Sort":
+                    # We have found a Sort node
+                    # Get the Prune's children (child)
+                    if len(current_node.plans) == 1:
+                        prune_children = current_node.plans[0]
+                    else:
+                        raise ValueError("We have assumed a sort node only has one child, not the case in reality!")
+                    
+                    # Set the parent of prune_children to be tree.plans[i]
+                    prune_children.parent = tree
+                    
+                    # Set current_node to be the children
+                    tree.plans[i] = prune_children
+    
+    # Run this function on below nodes
+    if tree.plans != None:
+        for individual_plan in tree.plans:
+            solve_groupby_fusion(individual_plan)  
+
+def solve_merge_join_fusion(tree):
+    # Check current node
+    # Only run checking if we're a group aggregate node
+    if tree.node_type == "Merge Join" and tree.join_type.lower() != "semi":
+        if tree.plans != None:
+            for i in range(len(tree.plans)):
+                current_node = tree.plans[i]
+                if current_node.node_type == "Sort":
+                    # We have found a Sort node
+                    # Get the Prune's children (child)
+                    if len(current_node.plans) == 1:
+                        prune_children = current_node.plans[0]
+                    else:
+                        raise ValueError("We have assumed a sort node only has one child, not the case in reality!")
+                    
+                    # Set the parent of prune_children to be tree.plans[i]
+                    prune_children.parent = tree
+                    
+                    # Set current_node to be the children
+                    tree.plans[i] = prune_children
+    
+    # Run this function on below nodes
+    if tree.plans != None:
+        for individual_plan in tree.plans:
+            solve_merge_join_fusion(individual_plan)  
  
 def solve_prune_node(prune_type, tree):
     # Modified to Support Any node we input

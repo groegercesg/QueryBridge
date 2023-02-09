@@ -79,6 +79,21 @@ def init_argparse() -> argparse.ArgumentParser:
                     required=False,
                     help='Should we use numpy in our queries, this has been should to have a significant performance benefit')
 
+    parser.add_argument('--groupby_sort_fusion',
+                        metavar='groupby_sort_fusion',
+                        type=str2bool,
+                        required=False,
+                        default=False,
+                        help='Should we fuse groupby and sort operations. Defaults to False.')
+
+    parser.add_argument('--merge_join_sort_fusion',
+                        metavar='merge_join_sort_fusion',
+                        type=str2bool,
+                        required=False,
+                        default=False,
+                        help='Should we fuse merge join and sort operations. Defaults to False.')
+
+
     return parser
 
 
@@ -281,7 +296,7 @@ def main():
             plot_tree(explain_tree, tree_output)
 
         # Prune and alter the tree, for later use
-        from explain_tree import solve_nested_loop_node, solve_prune_node, solve_null_output, solve_initplan_nodes, solve_view_set_values
+        from explain_tree import solve_nested_loop_node, solve_prune_node, solve_null_output, solve_initplan_nodes, solve_view_set_values, solve_groupby_fusion, solve_merge_join_fusion
         # We bump off hash nodes, we also need to do this with materialise nodes
         remove_nodes = ["Hash", "Materialize"]
         for node in remove_nodes:
@@ -289,7 +304,14 @@ def main():
             
         # Clear "NULL" from output
         solve_null_output(explain_tree)
-            
+        
+        # Perform the groupby and merge join fusion
+        if args.groupby_sort_fusion == True:
+            solve_groupby_fusion(explain_tree)
+        
+        if args.merge_join_sort_fusion == True:
+            solve_merge_join_fusion(explain_tree)
+
         # Handle InitPlan Branches in queries
         output_trees = solve_initplan_nodes(explain_tree)
         
@@ -340,7 +362,7 @@ def main():
             # Otherwise, we haven't, set as False
             local_use_numpy = False
         from pandas_tree_to_pandas import TreeHelper
-        overall_tree_helper = TreeHelper(expr_tree_output, args.benchmarking, local_use_numpy)
+        overall_tree_helper = TreeHelper(expr_tree_output, args.benchmarking, local_use_numpy, args.groupby_sort_fusion, args.merge_join_sort_fusion)
 
         # Iterate through all of the plans
         if isinstance(output_trees, list):
