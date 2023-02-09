@@ -1,0 +1,1 @@
+SELECT sum(t15.revenue) FROM (SELECT *,(t14.l_extendedprice * t14.l_discount) as revenue FROM (SELECT * FROM lineitem t7) t14 WHERE (((t14.l_shipdate >= '1994-01-01' and t14.l_shipdate < '1995-01-01' ) and t14.l_discount >= 0.05 ) and t14.l_discount <= 0.07 ) and t14.l_quantity < 24 ) t15;

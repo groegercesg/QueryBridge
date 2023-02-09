@@ -1119,9 +1119,9 @@ class limit_node():
                 output_cols = choose_aliases(self, codeCompHelper, final_output=True)
                 # Undo axes to normal columns
                 if codeCompHelper.indexes != []:
-                    statement1_string = this_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()"
-                    instructions.append(statement1_string)
-                
+                    if codeCompHelper.indexes != []:
+                        instructions.append(prev_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()")
+        
                 # Limit to output columns
                 if codeCompHelper.indexes != []:
                     statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
@@ -3060,7 +3060,8 @@ class rename_node():
         instructions = []
         
         # Reset indexes to normal columns so we can reference them
-        instructions.append(prev_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()")
+        if codeCompHelper.indexes != []:
+            instructions.append(prev_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()")
         
         # Create the current dataframe
         instructions.append(this_df + " = pd.DataFrame()")
