@@ -173,10 +173,6 @@ def main():
     # Append the EXPLAIN options to the start of the file
     explain_opts = "EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON) "
     
-    # PSQL commands
-    psql_file_command = "psql -d tpchdb -U tpch -a -f "
-    psql_string_command = "psql -d tpchdb -U tpch -a -c '"
-
     # Create a folder for files and diagrams
     query_name = str(query_file.split("/")[-1]).split(".")[0]
 
