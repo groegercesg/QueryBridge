@@ -1,7 +1,7 @@
 import duckdb
 
 # connect to an in-memory database
-con = duckdb.connect()
+con = duckdb.connect(database='duckdb_tpch.duckdb', read_only=False)
 
 print("DuckDB Testing")
 
@@ -11,14 +11,14 @@ query_file = "sql_to_pandas/queries/4.sql"
 # TODO: Make columns lowercase
 
 create_table_commands = [
-        "CREATE TABLE PART(P_PARTKEY INTEGER, P_NAME VARCHAR, P_MFGR VARCHAR, P_BRAND VARCHAR, P_TYPE VARCHAR, P_SIZE INTEGER, P_CONTAINER VARCHAR, P_RETAILPRICE DECIMAL, P_COMMENT VARCHAR);"
-        "CREATE TABLE SUPPLIER(S_SUPPKEY INTEGER, S_NAME VARCHAR, S_ADDRESS VARCHAR, S_NATIONKEY INTEGER, S_PHONE VARCHAR, S_ACCTBAL DECIMAL, S_COMMENT VARCHAR);"
-        "CREATE TABLE PARTSUPP(PS_PARTKEY INTEGER, PS_SUPPKEY INTEGER, PS_AVAILQTY INTEGER, PS_SUPPLYCOST DECIMAL, PS_COMMENT VARCHAR);"
-        "CREATE TABLE CUSTOMER(C_CUSTKEY INTEGER, C_NAME VARCHAR, C_ADDRESS VARCHAR, C_NATIONKEY INTEGER, C_PHONE VARCHAR, C_ACCTBAL DECIMAL, C_MKTSEGMENT VARCHAR, C_COMMENT VARCHAR);"
-        "CREATE TABLE ORDERS(O_ORDERKEY INTEGER, O_CUSTKEY INTEGER, O_ORDERSTATUS VARCHAR, O_TOTALPRICE DECIMAL, O_ORDERDATE DATE, O_ORDERPRIORITY VARCHAR, O_CLERK VARCHAR, O_SHIPPRIORITY INTEGER, O_COMMENT VARCHAR);"
-        "CREATE TABLE LINEITEM(L_ORDERKEY INTEGER, L_PARTKEY INTEGER, L_SUPPKEY INTEGER, L_LINENUMBER INTEGER, L_QUANTITY DECIMAL, L_EXTENDEDPRICE DECIMAL, L_DISCOUNT DECIMAL, L_TAX DECIMAL, L_RETURNFLAG VARCHAR, L_LINESTATUS VARCHAR, L_SHIPDATE DATE, L_COMMITDATE DATE, L_RECEIPTDATE DATE, L_SHIPINSTRUCT VARCHAR, L_SHIPMODE VARCHAR, L_COMMENT VARCHAR);"
-        "CREATE TABLE NATION(N_NATIONKEY INTEGER, N_NAME VARCHAR, N_REGIONKEY INTEGER, N_COMMENT VARCHAR);"
-        "CREATE TABLE REGION(R_REGIONKEY INTEGER, R_NAME VARCHAR, R_COMMENT VARCHAR);"
+        "CREATE TABLE PART(p_partkey INTEGER, p_name VARCHAR, p_mfgr VARCHAR, p_brand VARCHAR, p_type VARCHAR, p_size INTEGER, p_container VARCHAR, p_retailprice DECIMAL, p_comment VARCHAR);"
+        "CREATE TABLE SUPPLIER(s_suppkey INTEGER, s_name VARCHAR, s_address VARCHAR, s_nationkey INTEGER, s_phone VARCHAR, s_acctbal DECIMAL, s_comment VARCHAR);"
+        "CREATE TABLE PARTSUPP(ps_partkey INTEGER, ps_suppkey INTEGER, ps_availqty INTEGER, ps_supplycost DECIMAL, ps_comment VARCHAR);"
+        "CREATE TABLE CUSTOMER(c_custkey INTEGER, c_name VARCHAR, c_address VARCHAR, c_nationkey INTEGER, c_phone VARCHAR, c_acctbal DECIMAL, c_mktsegment VARCHAR, c_comment VARCHAR);"
+        "CREATE TABLE ORDERS(o_orderkey INTEGER, o_custkey INTEGER, o_orderstatus VARCHAR, o_totalprice DECIMAL, o_orderdate DATE, o_orderpriority VARCHAR, o_clerk VARCHAR, o_shippriority INTEGER, o_comment VARCHAR);"
+        "CREATE TABLE LINEITEM(l_orderkey INTEGER, l_partkey INTEGER, l_suppkey INTEGER, l_linenumber INTEGER, l_quantity DECIMAL, l_extendedprice DECIMAL, l_discount DECIMAL, l_tax DECIMAL, l_returnflag VARCHAR, l_linestatus VARCHAR, l_shipdate DATE, l_commitdate DATE, l_receiptdate DATE, l_shipinstruct VARCHAR, l_shipmode VARCHAR, l_comment VARCHAR);"
+        "CREATE TABLE NATION(n_nationkey INTEGER, n_name VARCHAR, n_regionkey INTEGER, n_comment VARCHAR);"
+        "CREATE TABLE REGION(r_regionkey INTEGER, r_name VARCHAR, r_comment VARCHAR);"
     ]
 
 load_data_commands = [
@@ -50,7 +50,8 @@ for command in load_data_commands:
     
 for command in explain_commands:
     con.execute(command)
-    
+
+"""
 query_file_data = None
 with open(query_file, 'r') as f:
     query_file_data = f.read()
@@ -61,3 +62,4 @@ explain_command = str(query_file_data)
 results = con.execute(explain_command).fetchall()
 
 print(results)
+"""

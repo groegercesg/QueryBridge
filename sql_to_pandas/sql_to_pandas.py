@@ -7,7 +7,8 @@ import shlex
 import subprocess
 
 # Prepare database file
-from prepare_database import prep_db
+from prepare_postgres import prep_pg
+from prepare_duckdb import prep_duck
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -67,11 +68,18 @@ def init_argparse() -> argparse.ArgumentParser:
                     default=True,
                     help='Whether we would like our columns between nodes to be limited, can help with ongoing memory usage.')
 
-    parser.add_argument('--db_file',
-                    metavar='db_file',
+    parser.add_argument('--query_planner',
+                    metavar='query_planner',
                     type=str,
                     required=True,
-                    help='The file containing details for how and which database to connect to.')
+                    help='What query planner we would like to use, ')
+    
+    parser.add_argument('--planner_file',
+                    metavar='planner_file',
+                    type=str,
+                    required=False,
+                    default=None,
+                    help='The file containing details for how and which planner to connect to.')
     
     parser.add_argument('--use_numpy',
                     metavar='use_numpy',
@@ -167,6 +175,18 @@ def main():
         parser.print_help()
         sys.exit(1)
         
+    # Validate arguments
+    if args.query_planner == "Postgres":
+        print("Planning the query with: " + str(args.query_planner))
+    elif args.query_planner == "Duck_DB":
+        print("Planning the query with: " + str(args.query_planner))
+    else:
+        print("Unrecognised Query Planning option: " + str(args.query_planner))
+        print("The current supported options are: ")
+        print("\t 'Postgres'")
+        print("\t 'Duck_DB'")
+        exit(0)
+        
     # Set the Arguments
     query_file = args.file
     
@@ -203,12 +223,20 @@ def main():
     # Variable to store the explain content
     explain_content = ""
     
-    # Validation for db_file
-    if args.db_file == None:
-        raise Exception("No database connection file specified")
-    
-    db = prep_db(args.db_file)
-    
+    # Postgres planning
+    if args.query_planner == "Postgres":
+        # Validation for db_file
+        if args.planner_file == None:
+            raise Exception("No database connection file specified")
+        
+        db = prep_pg(args.planner_file)
+    elif args.query_planner == "Duck_DB":
+        # Validation for duck_db_prep
+        if args.planner_file == None:
+            raise Exception("No duck db preparation file specified")
+        
+        db = prep_duck(args.planner_file)
+        
     # Iterate through every subquery
     for i, sub_query in enumerate(split_query):
         
@@ -271,7 +299,7 @@ def main():
             raise Exception("The database is empty, please specify a connection to a database with tables")
         
         # Else, we can request the explain data from the database
-        explain_json = db.get_explain(explain_content)
+        explain_json = db.get_explain(explain_content, query_name)
 
         # Write out explain_content to explain_file_path
         with open(explain_output_path, "w") as outfile:
@@ -281,10 +309,16 @@ def main():
         # Print out the json
         # print(json.dumps(explain_content, indent=4))
 
-        from explain_tree import make_tree
+        from explain_tree import make_tree_from_pg, make_tree_from_duck
         # Build a class structure that is nested within each other
         explain_tree = None
-        explain_tree = make_tree(explain_json, explain_tree)
+        if args.query_planner == "Postgres":
+            explain_tree = make_tree_from_pg(explain_json, explain_tree)
+        elif args.query_planner == "Duck_DB":
+            explain_tree = make_tree_from_duck(explain_json, explain_tree)   
+        else:
+            raise Exception("Unknown database planner specified")
+        
 
         # Let's try and visualise the explain tree now
         from visualising_tree import plot_tree

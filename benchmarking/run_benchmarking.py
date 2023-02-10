@@ -26,10 +26,10 @@ class HiddenPrinting:
         sys.stdout = self._original_stdout
 
 # TODO: Really gnarly import statement for 
-spec = importlib.util.spec_from_file_location("prepare_database", "sql_to_pandas/prepare_database.py")
-prepare_database = importlib.util.module_from_spec(spec)
-sys.modules["prepare_database"] = prepare_database
-spec.loader.exec_module(prepare_database)
+spec = importlib.util.spec_from_file_location("prepare_postgres", "sql_to_pandas/prepare_postgres.py")
+prepare_postgres = importlib.util.module_from_spec(spec)
+sys.modules["prepare_postgres"] = prepare_postgres
+spec.loader.exec_module(prepare_postgres)
 
 import json
 
@@ -148,12 +148,12 @@ def main():
         # Prepare the database
         # Run prepare database
         print("Preparing Database")
-        db = prepare_database.prep_db(manifest_json["Database Connection Details"], manifest_json["DB Gen Location"])
+        db = prepare_postgres.prep_db(manifest_json["Database Connection Details"], manifest_json["DB Gen Location"])
         if args.verbose:
-            db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
+            db.prepare_postgres(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
         else:
             with HiddenPrinting():
-                db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
+                db.prepare_postgres(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
         print("Database prepared")
     
         # Import Pandas Data

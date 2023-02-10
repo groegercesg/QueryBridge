@@ -8,7 +8,7 @@ import re
 import argparse
 import sys
 
-class prep_db():
+class prep_pg():
     def __init__(self, connection_details, dbgen_path = None):
         # Read connection details from file to json
         with open(connection_details) as f:
@@ -78,7 +78,7 @@ class prep_db():
         finally:
             cursor.close()
              
-    def get_explain(self, query):
+    def get_explain(self, query, query_name=None):
         # Return explain data as json
 
         cursor = self.connection.cursor()

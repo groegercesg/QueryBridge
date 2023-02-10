@@ -1347,7 +1347,7 @@ def recurse_and_replace(tree, replaces):
                 # The class doesn't have this attribute, ignore it
                 pass 
     
-def make_tree(json, tree, parent=None):
+def make_tree_from_pg(json, tree, parent=None):
     # First node check
     if tree == None:
         node = json["Plan"]
@@ -1465,7 +1465,10 @@ def make_tree(json, tree, parent=None):
     if "Plans" in node:
         node_class_plans = []
         for individual_plan in node['Plans']:
-            node_class_plans.append(make_tree(individual_plan, "", node_class))
+            node_class_plans.append(make_tree_from_pg(individual_plan, "", node_class))
         node_class.set_plans(node_class_plans)
     
     return node_class
+
+def make_tree_from_duck(json, tree, parent=None):
+    pass

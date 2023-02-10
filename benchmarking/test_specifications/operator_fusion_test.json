@@ -846,7 +846,7 @@
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 3,
     "Results Location": "benchmarking/test_results/operator_fusion_test_results.csv",
-    "Database Connection Details": "database_connection.json",
+    "Database Connection Details": "postgres_connection.json",
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",
     "Data Storage": "data_storage",

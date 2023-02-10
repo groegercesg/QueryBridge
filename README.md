@@ -153,7 +153,7 @@ And the second command activates it for us.
 With Postgres setup and our database existing, the next step is to populate our database. Run the following command in the root of the project directory, or customise the parameters:
 
 ```bash
-python3 sql_to_pandas/prepare_database.py --database_connection database_connection.json --scaling_factor 1 --db_gen tpch-dbgen --data_storage data_storage --constants tpch-prep
+python3 sql_to_pandas/prepare_database.py --database_connection postgres_connection.json --scaling_factor 1 --db_gen tpch-dbgen --data_storage data_storage --constants tpch-prep
 ```
 
 ## Demo
@@ -162,7 +162,7 @@ Assuming you have completed the setup, you can now run the command below to gene
 
 ```bash
 conda activate sql_benchmark
-python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location query_6 --name generated_query_6_pandas.py --db_file database_connection.json --use_numpy False
+python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location query_6 --name generated_query_6_pandas.py --db_file postgres_connection.json --use_numpy False
 ```
 
 ## Run all the queries

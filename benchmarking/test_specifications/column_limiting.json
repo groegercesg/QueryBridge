@@ -418,7 +418,7 @@
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 1,
     "Results Location": "benchmarking/test_results/column_limiting_results.csv",
-    "Database Connection Details": "database_connection.json",
+    "Database Connection Details": "postgres_connection.json",
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",
     "Data Storage": "data_storage",
