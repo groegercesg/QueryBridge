@@ -1584,10 +1584,28 @@ def process_seq_scan(json, external_filters=None):
     else:
         output = json["extra_info"][start_info+1:end_info]
         
-        filter_pre_string = " ".join(json["extra_info"][end_info+1:])
-        
-        if filter_pre_string[:9] == "Filters: ":
-            filters = str(filter_pre_string[9:]).strip()
+        if json["extra_info"][end_info+1][:9] == "Filters: ":
+            json["extra_info"][end_info+1] = json["extra_info"][end_info+1][9:]
+            pre_filters = json["extra_info"][end_info+1:]
+            
+            # Split on AND/OR
+            for j in range(len(pre_filters)):
+                if (" AND " in pre_filters[j]) and (" OR " not in pre_filters[j]):
+                    line_split = re.split('(AND)', pre_filters[j])
+                elif (" AND " not in pre_filters[j]) and (" OR " in pre_filters[j]):
+                    line_split = re.split('(OR)', pre_filters[j])
+                else:
+                    line_split = [pre_filters[j]]
+                    
+                for i in range(len(line_split)):
+                    if (line_split[i] != "AND") and (line_split[i] != "OR"):
+                        line_split[i] = str(line_split[i]).strip()
+                        line_split[i] = relation_name + "." + line_split[i]
+                
+                pre_filters[j] = " ".join(line_split)
+                
+            filter_pre_string = " AND ".join(pre_filters)
+            filters = str(filter_pre_string).strip()
         else:
             raise Exception("Trying to format a filter string, formatting: " + str(filter_pre_string))
     

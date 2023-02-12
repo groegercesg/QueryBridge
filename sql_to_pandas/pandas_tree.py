@@ -321,7 +321,7 @@ def clean_type_information(self, content):
                 value = value.replace("(", "").replace(")", "")
                 
         if value == "NULL":
-            print("a")
+            print("NULL Value detected!")
         
         # print("Old Value: " + str(value))
         match_str = str(str(match.group())[2:])
@@ -494,7 +494,7 @@ def sql_like_fragment_to_regex_string(fragment):
     return '^' + safe_fragment.replace('%', '.*?').replace('_', '.') + '$'
     
 
-def clean_filter_params(self, params, codeCompHelper):  
+def clean_filter_params(self, params, codeCompHelper, prev_df):  
     # Discover columns that are in useAlias and replace them
     # Iterate through relations
     if codeCompHelper.useAlias != {}:
@@ -527,7 +527,6 @@ def clean_filter_params(self, params, codeCompHelper):
         targetRelation = str(key + ".")
         if targetRelation in params:
             params = params.replace(targetRelation, str(codeCompHelper.aliasRelationPairs[key] + "."))
-    
     
     # We try and squeeze in any bracket replaces we might have
     # Check if we have any bracket replaces
@@ -580,14 +579,43 @@ def clean_filter_params(self, params, codeCompHelper):
     filters = str(params.replace(" AND ", " & "))
     filters = str(filters.replace(" OR ", " | "))
     # Remove first and last brackets
-    filters = filters[1:-1]
+    if (filters[0] == "(") and (filters[-1] == ")"):
+        filters = filters[1:-1]
     
     # Split on & and |, keep in original split
     line_split = re.split('([&|])',filters)
     for i in range(len(line_split)):
         # Don't try to clean type information if we have a bare "and" or "or"
         if line_split[i] != "&" and line_split[i] != "|":
+            # Clean type information
             line_split[i] = clean_type_information(self, line_split[i])
+            
+            # Process inequalities
+            if (">=" in line_split[i]) or (">" in line_split[i]) or ("<=" in line_split[i]) or ("<" in line_split[i]):
+                inequals = [">=", ">", "<=", "<"]
+                brk_dodge = None
+                
+                local_ln_sp = line_split[i].strip()
+                if (local_ln_sp[0] == "(") and (local_ln_sp[-1] == ")"):
+                    local_ln_sp = local_ln_sp[1:-1]
+                    brk_dodge = True
+                for eql in inequals:
+                    if eql in local_ln_sp:
+                        local_split = local_ln_sp.split(eql)
+                        # Check if second half has two dashes
+                        if local_split[1].count("-"):
+                            # Date
+                            if (local_split[1][0] != "'") and (local_split[1][-1] != "'"):
+                                local_split[1] = "'" + local_split[1].strip() + "'"
+                                local_ln_sp = eql.join(local_split)
+                                # Break after inequality
+                                break
+                            
+                # Complete bracket dodge
+                if brk_dodge == True:
+                    line_split[i] = "(" + local_ln_sp + ")"
+                else:
+                    line_split[i] = local_ln_sp
             
             # If line_split[i] contains an "ANY", the replace with ".isin"
             if " = ANY " in line_split[i]:
@@ -642,11 +670,20 @@ def clean_filter_params(self, params, codeCompHelper):
                 substring_replace = handle_substring(substring_part)
                 line_split[i] = line_split[i].replace(substring_part, substring_replace)
                 
+            # Do is not NULL
+            if " IS NOT NULL" in line_split[i]:
+                line_split[i] = str(str(line_split[i]).replace("IS NOT NULL", "")).strip()
+                line_split[i] = "~" + line_split[i] + ".isnull()"
+                
         # Clear leading/trailing spaces
         line_split[i] = line_split[i].strip()
         
         if (line_split[i] == "&") or (line_split[i] == "|"):
             line_split[i] = " " + line_split[i] + " "
+        else:
+            # Add in brackets around conditions if don't exist
+            if (line_split[i][0] != "(") and ((line_split[i][-1] != ")") or ((line_split[i][-2] == "(") and (line_split[i][-1] == ")"))):
+                line_split[i] = "(" + line_split[i] + ")"
     
     # Reassemble line_split
     # Join on nothing, should have spaces still in it
@@ -849,9 +886,9 @@ class filter_node():
                 
         # Clean params
         if hasattr(self, "params") and self.params != None:
-            self.params = clean_filter_params(self, self.params, codeCompHelper)
+            self.params = clean_filter_params(self, self.params, codeCompHelper, prev_df)
         if hasattr(self, "index_cond") and self.index_cond != None:
-            self.index_cond = clean_filter_params(self, self.index_cond, codeCompHelper)
+            self.index_cond = clean_filter_params(self, self.index_cond, codeCompHelper, prev_df)
         
         # Check if "SubPlan"
         if self.params != None:
@@ -1114,29 +1151,32 @@ class limit_node():
                 no_column_output = False
                 break      
         
-        if not no_column_output:
-            if codeCompHelper.column_ordering:
-                output_cols = choose_aliases(self, codeCompHelper, final_output=True)
-                # Undo axes to normal columns
-                if codeCompHelper.indexes != []:
+        if self.output != []:
+            if not no_column_output:
+                if codeCompHelper.column_ordering:
+                    output_cols = choose_aliases(self, codeCompHelper, final_output=True)
+                    # Undo axes to normal columns
                     if codeCompHelper.indexes != []:
-                        instructions.append(prev_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()")
-        
-                # Limit to output columns
-                if codeCompHelper.indexes != []:
-                    statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
-                    instructions.append(statement2_string)
+                        if codeCompHelper.indexes != []:
+                            instructions.append(prev_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()")
+            
+                    # Limit to output columns
+                    if codeCompHelper.indexes != []:
+                        statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
+                        instructions.append(statement2_string)
+                    else:
+                        statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
+                        instructions.append(statement2_string)
                 else:
-                    statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
-                    instructions.append(statement2_string)
-            else:
-                if codeCompHelper.column_limiting:
-                    output_cols = choose_aliases(self, codeCompHelper, final_output=False)
-                    statement_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
-                    instructions.append(statement_string)
-                else:
-                    statement_string = this_df + " = " + prev_df
-                    instructions.append(statement_string)
+                    if codeCompHelper.column_limiting:
+                        output_cols = choose_aliases(self, codeCompHelper, final_output=False)
+                        statement_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
+                        instructions.append(statement_string)
+                    else:
+                        statement_string = this_df + " = " + prev_df
+                        instructions.append(statement_string)
+        else:
+            no_column_output = True
          
         if not no_column_output:           
             statement3_string = str(this_df) + " = " + str(this_df) + ".head("+str(self.amount)+")"
@@ -1729,7 +1769,10 @@ def do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper):
             
             tree = Expression_Solver(str(col[0]), output_name, prev_df, this_df)
             pandas = tree.evaluate()
-            code_line = str(this_df) + "['" + str(col[1]) + "'] = [" + str(pandas) + "]"
+            if any([True for agg in tree.agg_funcs if agg in pandas]):
+                code_line = str(this_df) + "['" + str(col[1]) + "'] = [" + str(pandas) + "]"
+            else:
+                code_line = str(this_df) + "['" + str(col[1]) + "'] = " + str(pandas)
             local_instructions.append(code_line)
             
             # Increment treeHelper
@@ -1754,7 +1797,10 @@ def do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper):
                 # Replace these
                 codeCompHelper.add_bracket_replace(col, new_name)
             
-            code_line = str(this_df) + "['" + str(new_name) + "'] = [" + str(pandas) + "]"
+            if any([True for agg in tree.agg_funcs if agg in pandas]):
+                code_line = str(this_df) + "['" + str(new_name) + "'] = " + str(pandas)
+            else:
+                code_line = str(this_df) + "['" + str(new_name) + "'] = " + str(pandas)
             local_instructions.append(code_line)
             
             # Increment treeHelper
@@ -2923,7 +2969,7 @@ class merge_node():
         
         # Clean params
         if hasattr(self, "filter") and self.filter != None:
-            self.filter = clean_filter_params(self, self.filter, codeCompHelper)
+            self.filter = clean_filter_params(self, self.filter, codeCompHelper, this_df)
         
         # After merge, we filter if we have some
         if self.filter != None:
