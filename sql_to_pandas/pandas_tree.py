@@ -3245,9 +3245,7 @@ def create_tree(class_tree, sql_class):
     if node_type == "Limit":
         node_class = limit_node(current_node.output, sql_class)
     elif node_type == "Aggregate":
-        if current_node.partial_mode == "Simple":
-            # Mode is Simple, we can add this
-            node_class = aggr_node(current_node.output)
+        node_class = aggr_node(current_node.output)
     elif node_type == "Seq Scan":
         node_class = filter_node(current_node.relation_name, current_node.output)
     

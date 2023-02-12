@@ -717,7 +717,7 @@ def subplan_scan_into_scan_and_join(node, correlated_key):
         if c_key not in lower_scan_output:
             lower_scan_output.append(c_key)
     
-    lower_scan = seq_scan_node("Seq Scan", node.parallel_aware, node.async_capable, lower_scan_output, node.relation_name, node.schema, node.alias)
+    lower_scan = seq_scan_node("Seq Scan", lower_scan_output, node.relation_name, node.alias)
     
     # Set lower_scan filter
     if before_filter != []:
@@ -734,7 +734,7 @@ def subplan_scan_into_scan_and_join(node, correlated_key):
         top_join_merge_cond.append("(" + c_key + " = " + c_key + ")")
     top_join_merge_cond = "(" + " AND ".join(top_join_merge_cond) + ")"
     
-    top_join = hash_join_node("Hash Join", node.parallel_aware, node.async_capable, top_join_output, top_join_inner_unique, top_join_join_type, top_join_merge_cond, node.parent_relationship)
+    top_join = hash_join_node("Hash Join", top_join_output, top_join_inner_unique, top_join_join_type, top_join_merge_cond)
 
     # Set top_join after_filter
     top_join.add_filter(after_filter)
@@ -958,7 +958,7 @@ def subplan_join_into_many_joins(node, correlated_key):
     
     
     # Make both be hash joins
-    join_1 = hash_join_node("Hash Join", node.parallel_aware, node.async_capable, join_1_output, node.inner_unique, node.join_type, join_1_cond, node.parent_relationship)
+    join_1 = hash_join_node("Hash Join", join_1_output, node.inner_unique, node.join_type, join_1_cond)
     # Set filter
     if join_1_filter != []:
         join_1.add_filter(join_1_filter)
@@ -1000,7 +1000,7 @@ def subplan_join_into_many_joins(node, correlated_key):
         raise Exception("Subplan Name is not in the condition or the filter")
     
     join_2_output = list(node.output)
-    join_2 = hash_join_node("Hash Join", node.parallel_aware, node.async_capable, join_2_output, node.inner_unique, node.join_type, join_2_cond, node.parent_relationship)
+    join_2 = hash_join_node("Hash Join", join_2_output, node.inner_unique, node.join_type, join_2_cond)
     # Set filter
     if join_2_filter != []:
         join_2.add_filter(join_2_filter)
@@ -1035,7 +1035,7 @@ def actual_subplan_to_group_aggr_node(node, correlated_key):
     
     # Add correlated_key to the node as the group key   
     # Construct new_node
-    new_node = group_aggregate_node("Group Aggregate", node.parallel_aware, node.async_capable, gp_aggr_output, node.strategy, node.partial_mode, correlated_key)
+    new_node = group_aggregate_node("Group Aggregate", gp_aggr_output, correlated_key)
     
     # Handle adding Filter
     if hasattr(node, "filter"):
@@ -1043,9 +1043,6 @@ def actual_subplan_to_group_aggr_node(node, correlated_key):
     # Add SubPlan
     if hasattr(node, "subplan_name"):
         new_node.add_subplan(node.subplan_name)
-    # Add Parent Relationship
-    if hasattr(node, "parent_relationship"):
-        new_node.add_parent_relationship(node.parent_relationship)
     
     # Add in parent
     new_node.set_parent(node.parent)
@@ -1152,7 +1149,7 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
         join_output.append(c_key)
     
     # Create new nodes
-    new_node = hash_join_node("Hash Join", False, False, join_output, False, "Inner", after_condition, "Outer")
+    new_node = hash_join_node("Hash Join", join_output, False, "Inner", after_condition, "Outer")
     
     # First create the left node
     # Create the left node output
@@ -1161,7 +1158,7 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
     for ln_cond in left_node_condition:
         if ln_cond not in left_node_output:
             left_node_output.append(ln_cond)
-    left_node = seq_scan_node("Seq Scan", False, False, left_node_output, node.relation_name, node.schema, node.alias)
+    left_node = seq_scan_node("Seq Scan", left_node_output, node.relation_name, node.alias)
     
     if (before_condition != "") and (before_condition != []):
         left_node.add_filters(before_condition)
@@ -1174,7 +1171,7 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
     left_node.set_parent(new_node)
         
     # Create right node
-    right_node = seq_scan_node("Seq Scan", False, False, correlated_keys, correlated_relation, node.schema, correlated_relation)
+    right_node = seq_scan_node("Seq Scan", correlated_keys, correlated_relation, correlated_relation)
     # Add left node parent
     right_node.set_parent(new_node)
     
@@ -1357,28 +1354,24 @@ def make_tree_from_pg(json, tree, parent=None):
     node_class = None    
     node_type = node["Node Type"]
     if node_type.lower() == "limit":
-        node_class = limit_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"])
+        node_class = limit_node(node_type, node["Output"])
     elif node_type.lower() == "aggregate":
         if "Group Key" in node:
-            node_class = group_aggregate_node("Group " + node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"], node["Group Key"])
+            node_class = group_aggregate_node("Group " + node_type, node["Output"], node["Group Key"])
 
             # Handle adding Filter
             if "Filter" in node:
                 node_class.add_filter(node["Filter"])
         else:
-            node_class = aggregate_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Strategy"], node["Partial Mode"])
+            node_class = aggregate_node(node_type, node["Output"])
         
         # Add SubPlan
         if "Subplan Name" in node:
             node_class.add_subplan(node["Subplan Name"])
-            
-        # Add Parent Relationship
-        if "Parent Relationship" in node:
-            node_class.add_parent_relationship(node["Parent Relationship"])
     elif node_type.lower() == "gather":    
-        node_class = gather_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Workers Planned"], node["Single Copy"], node["Parent Relationship"])
+        node_class = gather_node(node_type, node["Output"], node["Workers Planned"], node["Single Copy"])
     elif node_type.lower() == "seq scan":
-        node_class = seq_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"])
+        node_class = seq_scan_node(node_type, node["Output"], node["Relation Name"], node["Alias"])
         
         # Check if a filter exists and add it
         if "Filter" in node:
@@ -1386,75 +1379,67 @@ def make_tree_from_pg(json, tree, parent=None):
         
         # Check if a parent relationship exists and add it
         if "Parent Relationship" in node:
-            # Add to node_class
-            node_class.add_parent_relationship(node["Parent Relationship"])
             # Add Subplan
             if node["Parent Relationship"] == "SubPlan":
                 node_class.add_subplan_name(node["Subplan Name"])
     elif node_type.lower() == "sort":
-        node_class = sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Sort Key"])
+        node_class = sort_node(node_type, node["Output"], node["Sort Key"])
         
-        if "Parent Relationship" in node:
-            node_class.add_parent_relationship(node["Parent Relationship"])
     elif node_type.lower() == "subquery scan":
-        node_class = subquery_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Alias"], node["Parent Relationship"])
+        node_class = subquery_scan_node(node_type, node["Output"], node["Alias"])
     elif node_type.lower() == "nested loop":
-        node_class = nested_loop_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Parent Relationship']) 
+        node_class = nested_loop_node(node_type, node['Output'], node['Inner Unique'], node['Join Type']) 
         
         if "Join Filter" in node:
             node_class.add_filter(node["Join Filter"])
     elif node_type.lower() == "hash join":
-        node_class = hash_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Hash Cond'], node['Parent Relationship'])
+        node_class = hash_join_node(node_type, node['Output'], node['Inner Unique'], node['Join Type'], node['Hash Cond'])
         if "Filter" in node:
             node_class.add_filter(node['Filter'])
         elif "Join Filter" in node:
             node_class.add_filter(node['Join Filter'])
     elif node_type.lower() == "hash":
-        node_class = hash_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
+        node_class = hash_node(node_type, node['Output'])
     elif node_type.lower() == "index scan":
-        node_class = index_scan_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Scan Direction'], node['Index Name'], node['Relation Name'], node['Schema'], node['Alias'], node['Output']) 
+        node_class = index_scan_node(node_type, node['Scan Direction'], node['Index Name'], node['Relation Name'], node['Alias'], node['Output']) 
         
         if "Index Cond" in node:
             node_class.add_index_cond(node['Index Cond'])
         if "Filter" in node:
             node_class.add_filter(node['Filter'])
-        if "Parent Relationship" in node:
-            node_class.add_parent_relationship(node["Parent Relationship"])
     elif node_type.lower() == "incremental sort":
-        # node_type, parallel_aware, async_capable, output, parent_relationship, sort_key, presorted_key
-        node_class = incremental_sort_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Parent Relationship"], node["Sort Key"], node["Presorted Key"])
+        # node_type, parallel_aware, async_capable, output, sort_key, presorted_key
+        node_class = incremental_sort_node(node_type, node["Output"], node["Sort Key"], node["Presorted Key"])
     elif node_type.lower() == "merge join":
-        node_class = merge_join_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Inner Unique'], node['Join Type'], node['Merge Cond'], node['Parent Relationship'])
+        node_class = merge_join_node(node_type, node['Output'], node['Inner Unique'], node['Join Type'], node['Merge Cond'])
         
         if "Join Filter" in node:
             node_class.add_filter(node['Join Filter'])
     elif node_type.lower() == "materialize":
-        node_class = materialize_node(node_type, node['Parallel Aware'], node['Async Capable'], node['Output'], node['Parent Relationship'])
+        node_class = materialize_node(node_type, node['Output'])
     elif node_type.lower() == "index only scan":
-        node_class = index_only_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Scan Direction"], node["Index Name"], node["Relation Name"], node["Schema"], node["Alias"], node["Output"], node["Parent Relationship"])
+        node_class = index_only_scan_node(node_type, node["Scan Direction"], node["Index Name"], node["Relation Name"], node["Alias"], node["Output"])
         if "Filter" in node:
             node_class.add_filter(node['Filter'])
     elif node_type.lower() == "bitmap index scan":
-        node_class = bitmap_index_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Index Name"], node["Parent Relationship"])
+        node_class = bitmap_index_scan_node(node_type, node["Index Name"])
         if "Index Cond" in node:
             node_class.add_index_cond(node['Index Cond'])
     elif node_type.lower() == "bitmap heap scan":
-        node_class = bitmap_heap_scan_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Relation Name"], node["Schema"], node["Alias"], node["Recheck Cond"])
-        if "Parent Relationship" in node:
-            # Add to node_class
-            node_class.add_parent_relationship(node["Parent Relationship"])
+        node_class = bitmap_heap_scan_node(node_type, node["Output"], node["Relation Name"], node["Alias"], node["Recheck Cond"])
     elif node_type.lower() == "unique":
-        node_class = unique_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"])
-        if "Parent Relationship" in node:
-        # Add to node_class
-            node_class.add_parent_relationship(node["Parent Relationship"])
+        node_class = unique_node(node_type, node["Output"])
     elif node_type.lower() == "group":
-        node_class = group_node(node_type, node["Parallel Aware"], node["Async Capable"], node["Output"], node["Group Key"])
+        node_class = group_node(node_type, node["Output"], node["Group Key"])
         if "Filter" in node:
                 node_class.add_filter(node['Filter'])
     
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
+    
+    # Do Parent Relationship
+    if "Parent Relationship" in node:
+        node_class.set_parent_relationship(node["Parent Relationship"])
     
     # Check if this node has a parent
     if parent != None:
@@ -1470,5 +1455,150 @@ def make_tree_from_pg(json, tree, parent=None):
     
     return node_class
 
-def make_tree_from_duck(json, tree, parent=None):
-    pass
+def make_tree_from_duck(json, tree):
+    # Make the Class tree
+    explain_tree = make_class_tree_from_duck(json, tree) 
+    
+    # Iterate through the class tree, fix column references
+    duck_fix_class_tree(explain_tree) 
+    
+    
+    return explain_tree
+    
+def duck_fix_class_tree(tree):
+    # Column reference regex
+    col_ref = r"\#[0-9]*"
+    
+    # Process current
+    # Do we have lower references, that we need to fix
+    need_col_fix = False
+    if hasattr(tree, "output"):
+        for individual_output in tree.output:
+            reg = re.search(col_ref, individual_output)
+            if reg != None:
+                need_col_fix = True
+                break
+            
+    if need_col_fix == True:
+        # Do column fix, first determine child of current node
+        if len(tree.plans) != 1:
+            raise Exception("Unexpected number of children")
+        
+        child = tree.plans[0]
+        
+        # Iterate through current node
+        for i in range(len(tree.output)):
+            reg = re.search(col_ref, individual_output)
+            if reg != None:
+                col_replace = reg.group(0)
+                col_index = int(col_replace.replace("#", ""))
+                tree.output[i] = str(str(tree.output[i]).replace(col_replace, child.output[col_index])).strip()
+    
+    # Check if this node has a child
+    if hasattr(tree, "plans"):
+        if tree.plans != None:
+            for individual_plan in tree.plans:
+                duck_fix_class_tree(individual_plan)
+    
+    
+
+def make_class_tree_from_duck(json, tree, parent=None):
+    # First node check
+    if tree == None:
+        # Assume only 1 child for top node
+        node = json["children"][0]
+    else:
+        node = json
+        
+    node_class = None    
+    node_type = node["name"]
+    node["extra_info"] = list(filter(None, node["extra_info"].split("\n")))
+    
+    if node_type.lower() == "limit":
+        node_class = limit_node("Limit", node["extra_info"])
+    elif node_type.lower() == "simple_aggregate":
+        node_class = aggregate_node("Aggregate", node["extra_info"])
+    elif node_type.lower() == "projection":
+        # Make a projection node an aggregate node
+        node_class = aggregate_node("Aggregate", node["extra_info"])
+    elif node_type.lower() == "filter":
+        # If it's a filter node, check if we have a seq_scan below
+        if len(node["children"]) != 0:
+            raise Exception("Too many children")
+        
+        if node["children"][0]["name"] == "seq_scan":
+            # Get the class
+            node_class = process_seq_scan(node, node["children"][0]["extra_info"])
+            
+            # Change the json
+            node = node["children"][0]
+        else:
+            raise Exception("Child is not a seq_scan")
+        
+    elif node_type.lower() == "seq_scan":
+        node_class = process_seq_scan(node)
+    else:
+        raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
+    
+    # Check if this node has a parent
+    if parent != None:
+        # We have a parent
+        node_class.set_parent(parent)
+        
+    # Check if this node has a child
+    if "children" in node:
+        if node["children"] != []:
+            node_class_plans = []
+            for individual_plan in node['children']:
+                node_class_plans.append(make_class_tree_from_duck(individual_plan, "", node_class))
+            node_class.set_plans(node_class_plans)
+    
+    return node_class
+
+def process_seq_scan(json, external_filters=None):
+    # Set the relation and alias
+    if json["extra_info"][0] != "[INFOSEPARATOR]":
+        relation_name = json["extra_info"][0]
+        alias_name = json["extra_info"][0]
+    
+    # Set the Output
+    output=None
+    start_info = 0
+    
+    for idx, elem in enumerate(json["extra_info"]):
+        if elem == '[INFOSEPARATOR]':
+            start_info = idx
+            break
+    
+    end_info = None
+    # Check if there is a second info_separator, belies the prescent of filters
+    for idx, elem in enumerate(json["extra_info"][start_info+1:]):
+        if elem == '[INFOSEPARATOR]':
+            end_info = idx + start_info + 1
+            break
+        
+    filters = None
+    if end_info == None:
+        # No end, just use the rest
+        output = json["extra_info"][start_info+1:]
+    else:
+        output = json["extra_info"][start_info+1:end_info]
+        
+        filter_pre_string = " ".join(json["extra_info"][end_info+1:])
+        
+        if filter_pre_string[:9] == "Filters: ":
+            filters = str(filter_pre_string[9:]).strip()
+        else:
+            raise Exception("Trying to format a filter string, formatting: " + str(filter_pre_string))
+    
+    node_class = seq_scan_node("Seq Scan", output, relation_name, alias_name)
+    
+    # Set the filters
+    if filters != None:
+        # Check if a filter exists and add it
+        node_class.add_filters(filters)
+    elif external_filters != None:
+        # Check if a external_filters exists and add it
+        node_class.add_filters(external_filters)
+        
+    return node_class
