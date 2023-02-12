@@ -142,7 +142,7 @@ def main():
         os.remove(manifest_json["Results Location"])
         
     # For the results, write the Header
-    results_writer(manifest_json, ["Data Type", "Scaling Factor", "Query Name", "Query Number", "Average", "Correct", "Runs"])
+    results_writer(manifest_json, ["Data Type", "Scaling Factor", "Query Name", "Query Number", "Average", "Correct", "Executed", "Runs"])
     
     first_run = True
     
@@ -263,7 +263,7 @@ def main():
                         print(sql_run_times)
                     avg_3sf = round_sig(sum(sql_run_times)/len(sql_run_times), 3)
                     print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
-                    results_array.append(["SQL", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), sql_run_times])
+                    results_array.append(["SQL", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("Yes"), sql_run_times])
                    
                 
                 elif query_option["Type"] == "Pandas":
@@ -384,8 +384,15 @@ def main():
                             if args.verbose:
                                 print("Doing Pandas Run: " + str(i+1))
                             
+                            bad_exec = False
                             start_time = time.time()
-                            pandas_result = query_function(*query_data)
+                            try:
+                                pandas_result = query_function(*query_data)
+                            except Exception as ex:
+                                print(color.RED + str(query["Query Name"]) + ": Pandas execution error!" + "\n" + color.END)
+                                print(str(type(ex)) + " : " + str(ex))
+                                bad_exec = True
+
                             end_time = time.time()
                             
                             pandas_run_times.append(end_time - start_time)
@@ -399,7 +406,10 @@ def main():
                             print(pandas_run_times)
                         avg_3sf = round_sig(sum(pandas_run_times)/len(pandas_run_times), 3)
                         print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
-                        results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), pandas_run_times])
+                        if bad_exec == True:
+                            results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("No"), pandas_run_times])
+                        else:
+                            results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("Yes"), pandas_run_times])
                         
                         # Append to pandas_results_list, in a tuple
                         pandas_results_list.append((query_option["Results Name"], pandas_result))
@@ -412,14 +422,14 @@ def main():
                             store_queries_function_call += "\n"
                             
                         # Add to results_array
-                        results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), 0, str("Not added yet"), [0]])
+                        results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), 0, str("Not added yet"), str("No"), [0]])
                         
                 else:
                     raise Exception("Unable to Benchmark a query type: " + str(query_option["Type"]) + " that we are unfamiliar with.")
                 
             # Checking correctness
             compare_decisions_list = []
-            compare_decision = None
+            compare_decision = False
             for sql_name, sql_result in sql_results_list:
                 for pandas_name, pandas_result in pandas_results_list:
                     # We should check if pandas_result is the same as sql_result

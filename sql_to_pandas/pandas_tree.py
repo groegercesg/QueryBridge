@@ -1798,7 +1798,7 @@ def do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper):
                 codeCompHelper.add_bracket_replace(col, new_name)
             
             if any([True for agg in tree.agg_funcs if agg in pandas]):
-                code_line = str(this_df) + "['" + str(new_name) + "'] = " + str(pandas)
+                code_line = str(this_df) + "['" + str(new_name) + "'] = [" + str(pandas) + "]"
             else:
                 code_line = str(this_df) + "['" + str(new_name) + "'] = " + str(pandas)
             local_instructions.append(code_line)
@@ -2214,7 +2214,7 @@ class group_aggr_node():
     def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
         # Clean filters
         if hasattr(self, "filter") and self.filter != None:
-            self.filter = clean_filter_params(self, self.filter, codeCompHelper)
+            self.filter = clean_filter_params(self, self.filter, codeCompHelper, prev_df)
         
         # TODO: Sometimes, we have a group_key that is in the output, that gets processed into something different
         group_output_indexes = []

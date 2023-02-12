@@ -50,12 +50,11 @@ class group_node(base_node):
         self.filter = in_filter
 
 class index_only_scan_node(base_node):
-    def __init__(self, node_type, scan_direction, index_name, relation_name, schema, alias, output):
+    def __init__(self, node_type, scan_direction, index_name, relation_name, alias, output):
         super().__init__(node_type, output)
         self.scan_direction = scan_direction
         self.index_name = index_name
         self.relation_name = relation_name
-        self.schema = schema
         self.alias = alias
         
     def add_filter(self, in_filter):
@@ -68,10 +67,9 @@ class gather_node(base_node):
         self.single_copy = single_copy
 
 class bitmap_heap_scan_node(base_node):
-    def __init__(self, node_type, output, relation_name, schema, alias, recheck_cond):
+    def __init__(self, node_type, output, relation_name, alias, recheck_cond):
         super().__init__(node_type, output)
         self.relation_name = relation_name
-        self.schema = schema
         self.alias = alias
         self.recheck_cond = recheck_cond
 

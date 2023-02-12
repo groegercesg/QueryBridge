@@ -9,13 +9,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q1_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -26,13 +28,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q2_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -43,13 +47,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q3_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -60,13 +66,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q4_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -77,13 +85,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q5_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -94,13 +104,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q6_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -111,13 +123,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q7_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -128,13 +142,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q8_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -145,13 +161,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q9_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -162,13 +180,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q10_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -179,13 +199,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q11_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -196,13 +218,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q12_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -213,13 +237,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q13_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -230,13 +256,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q14_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -247,13 +275,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q15_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -264,13 +294,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q16_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -281,13 +313,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q17_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -298,13 +332,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q18_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -315,13 +351,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q19_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -332,13 +370,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q20_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -349,13 +389,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q21_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         },
@@ -366,13 +408,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q22_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
                 }
             ]
         }
@@ -384,7 +428,8 @@
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 1,
     "Results Location": "benchmarking/test_results/all_queries_test_results.csv",
-    "Database Connection Details": "postgres_connection.json",
+    "Postgres Connection Details": "postgres_connection.json",
+    "Duck DB Connection": "duckdb_tpch.duckdb",
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",
     "Data Storage": "data_storage",

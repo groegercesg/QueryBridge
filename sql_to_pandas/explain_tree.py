@@ -1149,7 +1149,7 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
         join_output.append(c_key)
     
     # Create new nodes
-    new_node = hash_join_node("Hash Join", join_output, False, "Inner", after_condition, "Outer")
+    new_node = hash_join_node("Hash Join", join_output, False, "Inner", after_condition)
     
     # First create the left node
     # Create the left node output
