@@ -7,8 +7,10 @@ import shutil
 import time
 import csv
 from math import log10, floor
-from query_database import run_query
+from benchmarking.query_pg_database import run_pg_query
+from benchmarking.query_duck_database import run_duck_query
 from compare_results import compare
+from generate_tpch_data import data_generator 
 import os
 from os import path
 import importlib.util
@@ -115,7 +117,9 @@ def main():
     validateJsonKeys(manifest_json)
     
     with open(manifest_json["Postgres Connection Details"], "r") as f:
-        db_details = json.load(f)
+        pg_db_details = json.load(f)
+        
+    duck_db_details = manifest_json["Duck DB Connection"]
         
     # Store Queries
     store_queries = False
@@ -150,27 +154,38 @@ def main():
     for scaling_factor in manifest_json["Scaling Factors"]:
         print("Doing Scaling Factor: " + str(scaling_factor))
         
-        # TODO: Separate into:
         # Data generator
             # Generates the data and saves it to:
             # "Data Storage"
-        # Prepare Postgres
-            # Loads the data from "Data Storage" and puts it into the database
-        # Prepare DuckDB
-            # Loads the data from "Data Storage" and puts it into the DuckDB file
-        
-        # Prepare the database
-        # Run prepare database
-        print("Preparing Postgres Database")
-        db = prepare_postgres.prep_pg(manifest_json["Postgres Connection Details"], manifest_json["DB Gen Location"])
+        print("Preparing the TPC-H Data")
         if args.verbose:
-            db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
+            data_generator(manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor=int(scaling_factor))
         else:
             with HiddenPrinting():
-                db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
+                data_generator(manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor=int(scaling_factor))
+        print("TPC-H Data Prepared")
+        
+        # Prepare Postgres
+            # Loads the data from "Data Storage" and puts it into the database
+        print("Preparing Postgres Database")
+        pg_db = prepare_postgres.prep_pg(manifest_json["Postgres Connection Details"])
+        if args.verbose:
+            pg_db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"])
+        else:
+            with HiddenPrinting():
+                pg_db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"])
         print("Postgres Database prepared")
         
-        # TODO Write DuckDB Database preparer
+        # Prepare DuckDB
+            # Loads the data from "Data Storage" and puts it into the DuckDB file
+        print("Preparing DuckDB Database")
+        duck_db = prepare_duckdb.prep_duck(manifest_json["Duck DB Connection"])
+        if args.verbose:
+            duck_db.prepare_database(manifest_json["Data Storage"])
+        else:
+            with HiddenPrinting():
+                duck_db.prepare_database(manifest_json["Data Storage"])
+        print("DuckDB Database prepared")
     
         # Import Pandas Data
         print("Importing Pandas Data")
@@ -253,9 +268,12 @@ def main():
                             print("Doing " + str(query_option["DBMS"]) + " SQL Run: " + str(i+1))
                         
                         if query_option["DBMS"] == "Postgres":
-                            sql_result, run_time = run_query(db_details, sql_file_path, args.verbose)
+                            sql_result, run_time = run_pg_query(pg_db_details, sql_file_path, args.verbose)
                         elif query_option["DBMS"] == "Duck DB":
-                            raise Exception("DuckDB Query runner not written yet")
+                            sql_result, run_time = run_duck_query(duck_db_details, sql_file_path, args.verbose)
+                        else:
+                            raise Exception("Unrecognised Query runner option")
+                        
                         sql_run_times.append(run_time)
                         sql_results_list.append((query_option["Results Name"], sql_result))
                         
