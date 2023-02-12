@@ -1769,7 +1769,7 @@ def do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper):
             
             tree = Expression_Solver(str(col[0]), output_name, prev_df, this_df)
             pandas = tree.evaluate()
-            if any([True for agg in tree.agg_funcs if agg in pandas]):
+            if any([True for agg in tree.agg_funcs if agg+"()" in pandas]):
                 code_line = str(this_df) + "['" + str(col[1]) + "'] = [" + str(pandas) + "]"
             else:
                 code_line = str(this_df) + "['" + str(col[1]) + "'] = " + str(pandas)
@@ -1797,7 +1797,7 @@ def do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper):
                 # Replace these
                 codeCompHelper.add_bracket_replace(col, new_name)
             
-            if any([True for agg in tree.agg_funcs if agg in pandas]):
+            if any([True for agg in tree.agg_funcs if agg+"()" in pandas]):
                 code_line = str(this_df) + "['" + str(new_name) + "'] = [" + str(pandas) + "]"
             else:
                 code_line = str(this_df) + "['" + str(new_name) + "'] = " + str(pandas)

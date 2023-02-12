@@ -29,7 +29,7 @@ class MyLoggingConnection(LoggingConnection):
         kwargs.setdefault('cursor_factory', MyLoggingCursor)
         return LoggingConnection.cursor(self, *args, **kwargs)
 
-def run_query(db_details, query_file, verbose):
+def run_pg_query(db_details, query_file, verbose):
     # Read SQL file
     with open(query_file, 'r') as file:
         sql_query = file.read()

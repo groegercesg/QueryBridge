@@ -7,15 +7,14 @@ import shutil
 import time
 import csv
 from math import log10, floor
-from benchmarking.query_pg_database import run_pg_query
-from benchmarking.query_duck_database import run_duck_query
+from query_pg_database import run_pg_query
+from query_duck_database import run_duck_query
 from compare_results import compare
 from generate_tpch_data import data_generator 
 import os
 from os import path
 import importlib.util
 import sys
-from contextlib import contextmanager
 import re
 
 class HiddenPrinting:
