@@ -31,10 +31,15 @@ prepare_postgres = importlib.util.module_from_spec(spec)
 sys.modules["prepare_postgres"] = prepare_postgres
 spec.loader.exec_module(prepare_postgres)
 
+spec = importlib.util.spec_from_file_location("prepare_duckdb", "sql_to_pandas/prepare_duckdb.py")
+prepare_duckdb = importlib.util.module_from_spec(spec)
+sys.modules["prepare_duckdb"] = prepare_duckdb
+spec.loader.exec_module(prepare_duckdb)
+
 import json
 
 def validateJsonKeys(myjson):
-    if set(myjson.keys()) == {"Test Name", "Scaling Factors", "Queries", "Temporary Directory", "SQL Converter Location", "SQL Queries Location", "Stored Queries Location", "Pandas Data Loader", "Number of Query Runs", "Results Location", "Database Connection Details", "DB Gen Location", "Constants Location", "Data Storage", "Results Precision"}:
+    if set(myjson.keys()) == {"Test Name", "Scaling Factors", "Queries", "Temporary Directory", "SQL Converter Location", "SQL Queries Location", "Stored Queries Location", "Pandas Data Loader", "Number of Query Runs", "Results Location", "Postgres Connection Details", "DB Gen Location", "Constants Location", "Data Storage", "Results Precision"}:
         return True
     else:
         return False
@@ -109,7 +114,7 @@ def main():
     # TODO: Could make this validation stronger, using: https://pypi.org/project/jsonschema/
     validateJsonKeys(manifest_json)
     
-    with open(manifest_json["Database Connection Details"], "r") as f:
+    with open(manifest_json["Postgres Connection Details"], "r") as f:
         db_details = json.load(f)
         
     # Store Queries
@@ -145,16 +150,27 @@ def main():
     for scaling_factor in manifest_json["Scaling Factors"]:
         print("Doing Scaling Factor: " + str(scaling_factor))
         
+        # TODO: Separate into:
+        # Data generator
+            # Generates the data and saves it to:
+            # "Data Storage"
+        # Prepare Postgres
+            # Loads the data from "Data Storage" and puts it into the database
+        # Prepare DuckDB
+            # Loads the data from "Data Storage" and puts it into the DuckDB file
+        
         # Prepare the database
         # Run prepare database
-        print("Preparing Database")
-        db = prepare_postgres.prep_db(manifest_json["Database Connection Details"], manifest_json["DB Gen Location"])
+        print("Preparing Postgres Database")
+        db = prepare_postgres.prep_pg(manifest_json["Postgres Connection Details"], manifest_json["DB Gen Location"])
         if args.verbose:
-            db.prepare_postgres(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
+            db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
         else:
             with HiddenPrinting():
-                db.prepare_postgres(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
-        print("Database prepared")
+                db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"], scaling_factor=int(scaling_factor))
+        print("Postgres Database prepared")
+        
+        # TODO Write DuckDB Database preparer
     
         # Import Pandas Data
         print("Importing Pandas Data")
@@ -217,8 +233,9 @@ def main():
             
             print("Doing Query: " + str(query["Query Name"]))
             
-            # Store Pandas results
-            pandas_results_list = []
+            # Store SQL and Pandas results
+            sql_results_list = []
+            pandas_results_list = []            
             
             sql_file_path = make_sql_file_path(manifest_json["SQL Queries Location"], query["SQL Name"])
             
@@ -233,10 +250,14 @@ def main():
                     sql_runs = manifest_json["Number of Query Runs"]
                     for i in range(sql_runs):
                         if args.verbose:
-                            print("Doing SQL Run: " + str(i+1))
+                            print("Doing " + str(query_option["DBMS"]) + " SQL Run: " + str(i+1))
                         
-                        sql_result, run_time = run_query(db_details, sql_file_path, args.verbose)
+                        if query_option["DBMS"] == "Postgres":
+                            sql_result, run_time = run_query(db_details, sql_file_path, args.verbose)
+                        elif query_option["DBMS"] == "Duck DB":
+                            raise Exception("DuckDB Query runner not written yet")
                         sql_run_times.append(run_time)
+                        sql_results_list.append((query_option["Results Name"], sql_result))
                         
                     if args.verbose:   
                         print(sql_run_times)
@@ -249,7 +270,14 @@ def main():
                     if query_option["Converter"] == "True":
                         # We first convert the SQL to a Pandas Query, and then run it!
                         # Run converter
-                        cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--db_file", manifest_json["Database Connection Details"]]    
+                        if query_option["Query Plan"] == "Postgres":
+                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Postgres", "--planner_file", manifest_json["Postgres Connection Details"]]
+                        elif query_option["Query Plan"] == "Duck DB":
+                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Duck_DB", "--planner_file", manifest_json["Duck DB Connection"]]
+                        else:
+                            raise Exception("Unrecognised option")
+                        
+                        
                         if "Conversion Options" in query_option:
                             cmd += query_option["Conversion Options"]
                         
@@ -391,19 +419,21 @@ def main():
                 
             # Checking correctness
             compare_decisions_list = []
-            for pandas_name, pandas_result in pandas_results_list:
-                # We should check if pandas_result is the same as sql_result
-                compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"])
-                compare_decisions_list.append(compare_decision)
-                
-                if not compare_decision:
-                    print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(pandas_name) + " and SQL." + color.END)
-                    print("Pandas Data:")
-                    print(pandas_result)
-                    print("SQL Data:")
-                    print(columns)
-                    for row in sql_result:
-                        print(row)
+            compare_decision = None
+            for sql_name, sql_result in sql_results_list:
+                for pandas_name, pandas_result in pandas_results_list:
+                    # We should check if pandas_result is the same as sql_result
+                    compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"])
+                    compare_decisions_list.append(compare_decision)
+                    
+                    if not compare_decision:
+                        print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(pandas_name) + " and " + str(sql_name) + "." + color.END)
+                        print("Pandas Data:")
+                        print(pandas_result)
+                        print("SQL Data:")
+                        print(columns)
+                        for row in sql_result:
+                            print(row)
                         
             # Write results, use from results_array
             for result_set in results_array:

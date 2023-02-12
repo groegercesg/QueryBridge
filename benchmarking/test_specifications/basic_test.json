@@ -9,13 +9,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "SQL"
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q1_pandas.py",
-                    "Results Name": "Pandas Converter"
+                    "Results Name": "Pandas Converted",
+                    "Query Plan": "Postgres"
                 }
             ]
         }
@@ -27,7 +29,8 @@
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 1,
     "Results Location": "benchmarking/test_results/basic_test_results.csv",
-    "Database Connection Details": "postgres_connection.json",
+    "Postgres Connection Details": "postgres_connection.json",
+    "Duck DB Connection": "duckdb_tpch.duckdb",
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",
     "Data Storage": "data_storage",
