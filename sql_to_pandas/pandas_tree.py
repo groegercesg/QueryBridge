@@ -201,7 +201,7 @@ def process_output(self, output, codecomphelper):
             if "count(*)" in output[i][0].lower():
                 # Pick a column we know is going to exist after the group by
                 # This is therefore one that we want to output, we take the first
-                chosen_column = str(self.output[0])
+                chosen_column = str(self.group_key[0])
 
                 output[i] = ("count(" + str(chosen_column) + ")", output[i][1])
             elif "extract" in output[i][0].lower():
@@ -212,7 +212,7 @@ def process_output(self, output, codecomphelper):
             if "count(*)" in output[i].lower():
                 # Pick a column we know is going to exist after the group by
                 # This is therefore one that we want to output, we take the first
-                chosen_column = str(self.output[0])
+                chosen_column = str(self.group_key[0])
                 
                 output[i] = "count(" + str(chosen_column) + ")"
             elif "extract" in output[i].lower():
@@ -1095,7 +1095,7 @@ class sort_node():
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        if codeCompHelper.column_limiting:
+        if codeCompHelper.column_limiting and (output_cols != []):
             statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
         

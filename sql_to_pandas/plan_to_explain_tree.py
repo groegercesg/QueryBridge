@@ -14,6 +14,9 @@ class base_node():
     def set_parent_relationship(self, in_parent_relationship):
         self.parent_relationship = in_parent_relationship
         
+    def add_remove_later(self, rem):
+        self.remove_later = rem
+        
 class projection_node(base_node):
     def __init__(self, node_type, output):
         super().__init__(node_type, output)

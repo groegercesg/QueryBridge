@@ -3,6 +3,8 @@ import regex
 import re
 from queue import Queue
 
+agg_funcs = {"sum", "avg", "count", "max", "min", "distinct", "mean", "count_star"}
+
 def get_class_id(node):
     return str(id(node))
 
@@ -1462,22 +1464,60 @@ def make_tree_from_duck(json, tree):
     # Iterate through the class tree, fix column references
     duck_fix_class_tree(explain_tree) 
     
+    # Carry out remove laters
+    duck_fix_remove_laters(explain_tree)
     
     return explain_tree
+
+def duck_fix_remove_laters(tree):
+    # Run this function on below nodes
+    if tree.plans != None:
+        for individual_plan in tree.plans:
+            duck_fix_remove_laters(individual_plan)   
+            
+    # Preorder Traversal
     
+    if tree.plans != None:
+        for i in range(len(tree.plans)):
+            current_node = tree.plans[i]
+            if hasattr(current_node, "remove_later"):
+                if current_node.remove_later == True:
+                    # We have found a node with remove_later attr
+                    # Get the Prune's children (child)
+                    if len(current_node.plans) == 1:
+                        prune_children = current_node.plans[0]
+                    else:
+                        raise ValueError("We have assumed a sort node only has one child, not the case in reality!")
+                    
+                    # Set the parent of prune_children to be tree.plans[i]
+                    prune_children.parent = tree
+                    
+                    # Set current_node to be the children
+                    tree.plans[i] = prune_children
+    
+
 def duck_fix_class_tree(tree):
+    # Change to a postorder traversal
+    # Check if this node has a child
+    if hasattr(tree, "plans"):
+        if tree.plans != None:
+            for individual_plan in tree.plans:
+                duck_fix_class_tree(individual_plan)
+    
     # Column reference regex
     col_ref = r"\#[0-9]*"
     
     # Process current
     # Do we have lower references, that we need to fix
     need_col_fix = False
-    if hasattr(tree, "output"):
-        for individual_output in tree.output:
-            reg = re.search(col_ref, individual_output)
-            if reg != None:
-                need_col_fix = True
-                break
+    if tree.node_type in alias_locations:
+        for loc in alias_locations[tree.node_type]:
+            if hasattr(tree, loc):
+                for individual_attr in getattr(tree, loc):
+                    reg = re.search(col_ref, individual_attr)
+                    if reg != None:
+                        need_col_fix = True
+                        break
             
     if need_col_fix == True:
         # Do column fix, first determine child of current node
@@ -1487,21 +1527,16 @@ def duck_fix_class_tree(tree):
         child = tree.plans[0]
         
         # Iterate through current node
-        for i in range(len(tree.output)):
-            reg = re.search(col_ref, individual_output)
-            if reg != None:
-                col_replace = reg.group(0)
-                col_index = int(col_replace.replace("#", ""))
-                tree.output[i] = str(str(tree.output[i]).replace(col_replace, child.output[col_index])).strip()
-    
-    # Check if this node has a child
-    if hasattr(tree, "plans"):
-        if tree.plans != None:
-            for individual_plan in tree.plans:
-                duck_fix_class_tree(individual_plan)
-    
-    
-
+        if tree.node_type in alias_locations:
+            for loc in alias_locations[tree.node_type]:
+                if hasattr(tree, loc):
+                    for i in range(len(getattr(tree, loc))):
+                        reg = re.search(col_ref, getattr(tree, loc)[i])
+                        if reg != None:
+                            col_replace = reg.group(0)
+                            col_index = int(col_replace.replace("#", ""))
+                            getattr(tree, loc)[i] = str(str(getattr(tree, loc)[i]).replace(col_replace, child.output[col_index])).strip()
+                
 def make_class_tree_from_duck(json, tree, parent=None):
     # First node check
     if tree == None:
@@ -1512,15 +1547,71 @@ def make_class_tree_from_duck(json, tree, parent=None):
         
     node_class = None    
     node_type = node["name"]
-    node["extra_info"] = list(filter(None, node["extra_info"].split("\n")))
     
-    if node_type.lower() == "limit":
+    # Construct altered extra_info
+    new_extra_info = list(filter(None, node["extra_info"].split("\n")))
+    # Replace out ".000"
+    for i in range(len(new_extra_info)):
+        new_extra_info[i] = new_extra_info[i].replace(".000", "")
+    
+    node["extra_info"] = new_extra_info
+    
+    top_n_special = False
+    if node_type.lower() == "top_n":
+        # We start with a limit node
+        node_class = limit_node("Limit", [])
+        # Below this we have a sort_node
+        start_info = 0
+    
+        for idx, elem in enumerate(node["extra_info"]):
+            if elem == '[INFOSEPARATOR]':
+                start_info = idx
+                break
+            
+        sort = sort_node("Sort", [], node["extra_info"][start_info+1:])
+        
+        # Set plans
+        node_class.set_plans([sort])
+        # And set special
+        top_n_special = True
+    elif node_type.lower() == "limit":
         node_class = limit_node("Limit", node["extra_info"])
     elif node_type.lower() == "simple_aggregate":
         node_class = aggregate_node("Aggregate", node["extra_info"])
     elif node_type.lower() == "projection":
         # Make a projection node an aggregate node
         node_class = aggregate_node("Aggregate", node["extra_info"])
+        node_class.add_remove_later(True)
+    elif node_type.lower() == "hash_group_by":
+        """
+            "name": "HASH_GROUP_BY",
+            "timing": 0.252813,
+            "cardinality": 4,
+            "extra_info": "#0\n#1\nsum(#2)\nsum(#3)\nsum(#4)\nsum(#5)\navg(#6)\navg(#7)\navg(#8)\ncount_star()",
+            "timings": [],
+            "children": [
+        """
+        # Iterate through extra_info
+        new_output = list(node["extra_info"])
+        
+        removes = []
+        group_keys = []
+        for i in range(len(new_output)):
+            if not any([True for agg in agg_funcs if agg+"(" in new_output[i]]):
+                group_keys.append(new_output[i])
+                removes.append(i)
+            elif new_output[i] == "count_star()":
+                new_output[i] = "count(*)"
+                
+        # Reverse removes
+        removes.reverse()
+        
+        # Carry out removes
+        for rem in removes:
+            del new_output[rem]
+        
+        node_class = group_aggregate_node("Group Aggregate", new_output, group_keys)
+    
     elif node_type.lower() == "filter":
         # If it's a filter node, check if we have a seq_scan below
         if len(node["children"]) != 0:
@@ -1551,7 +1642,13 @@ def make_class_tree_from_duck(json, tree, parent=None):
             node_class_plans = []
             for individual_plan in node['children']:
                 node_class_plans.append(make_class_tree_from_duck(individual_plan, "", node_class))
-            node_class.set_plans(node_class_plans)
+            
+            if top_n_special == True:
+                node_class.plans[0].set_plans(node_class_plans)
+            elif top_n_special == False:
+                node_class.set_plans(node_class_plans)
+            else:
+                raise Exception("Unknown top_n value")
     
     return node_class
 
