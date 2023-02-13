@@ -659,7 +659,7 @@ def clean_filter_params(self, params, codeCompHelper, prev_df):
                     pass
                 else:
                     # Assume add both back in
-                    eq_split[1] = "'" + eq_split[1] + "'"
+                    eq_split[1] = "'" + str(eq_split[1]).strip() + "'"
                     
                     # Then rejoin and set as line_split
                     line_split[i] = " == ".join(eq_split)
@@ -908,7 +908,7 @@ class filter_node():
                 output_cols = choose_aliases(self, codeCompHelper)
                 
                 # Limit to output columns
-                if codeCompHelper.column_limiting:
+                if codeCompHelper.column_limiting and (output_cols != []):
                     statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
                     instructions.append(statement2_string)
             
@@ -923,14 +923,14 @@ class filter_node():
                 output_cols = choose_aliases(self, codeCompHelper)
                 
                 # Limit to output columns
-                if codeCompHelper.column_limiting:
+                if codeCompHelper.column_limiting and (output_cols != []):
                     statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
                     instructions.append(statement2_string)
         else:            
             output_cols = choose_aliases(self, codeCompHelper)
             
             # Limit to output columns
-            if codeCompHelper.column_limiting:
+            if codeCompHelper.column_limiting and (output_cols != []):
                 statement2_string = this_df + " = " + prev_df + "[" + str(output_cols) + "]"
                 instructions.append(statement2_string)
             else:
@@ -2651,12 +2651,19 @@ class merge_node():
         else:
             raise Exception("Unknown equating operator in process_equating of the merge node")
         
-        left_side = str(split_cond[0]).split(".")
-        left_table = str(left_side[0])
-        left_cond = str(left_side[1])
-        right_side = str(split_cond[1]).split(".")
-        right_table = str(right_side[0])
-        right_cond = str(right_side[1])
+        if "." in split_cond[0]:
+            left_side = str(split_cond[0]).split(".")
+            left_table = str(left_side[0])
+            left_cond = str(left_side[1])
+        else:
+            left_cond = str(split_cond[0])
+            
+        if "." in split_cond[1]:
+            right_side = str(split_cond[1]).split(".")
+            right_table = str(right_side[0])
+            right_cond = str(right_side[1])
+        else:
+            right_cond = str(split_cond[1])
         
         # Return left_cond and right_cond
         return left_cond, right_cond
@@ -2981,7 +2988,7 @@ class merge_node():
         
         
         # Limit to output columns
-        if codeCompHelper.column_limiting:
+        if codeCompHelper.column_limiting and (output_cols != []):
             statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
             
@@ -3084,7 +3091,7 @@ class aggr_node():
         output_cols = choose_aliases(self, codeCompHelper)
         
         # Limit to output columns
-        if codeCompHelper.column_limiting:
+        if codeCompHelper.column_limiting and (output_cols != []):
             statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
             

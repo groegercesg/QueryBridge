@@ -1553,6 +1553,8 @@ def make_class_tree_from_duck(json, tree, parent=None):
     # Replace out ".000"
     for i in range(len(new_extra_info)):
         new_extra_info[i] = new_extra_info[i].replace(".000", "")
+        if re.search("\w=\w", new_extra_info[i]) != None:
+            new_extra_info[i] = new_extra_info[i].replace("=", " = ")
     
     node["extra_info"] = new_extra_info
     
@@ -1582,15 +1584,22 @@ def make_class_tree_from_duck(json, tree, parent=None):
         # Make a projection node an aggregate node
         node_class = aggregate_node("Aggregate", node["extra_info"])
         node_class.add_remove_later(True)
+    elif node_type.lower() == "hash_join":
+        """
+            "name": "HASH_JOIN",
+            "timing": 0.118427,
+            "cardinality": 151331,
+            "extra_info": "INNER\nl_orderkey = o_orderkey\n",
+            "timings": []
+        """
+        hash_output = []
+        # TODO: Hardcoded, but we should remove
+        inner_unique = False
+        join_type = node["extra_info"][0]
+        condition = " AND ".join(node["extra_info"][1:])
+        node_class = hash_join_node("Hash Join", hash_output, inner_unique, join_type, condition)
+        
     elif node_type.lower() == "hash_group_by":
-        """
-            "name": "HASH_GROUP_BY",
-            "timing": 0.252813,
-            "cardinality": 4,
-            "extra_info": "#0\n#1\nsum(#2)\nsum(#3)\nsum(#4)\nsum(#5)\navg(#6)\navg(#7)\navg(#8)\ncount_star()",
-            "timings": [],
-            "children": [
-        """
         # Iterate through extra_info
         new_output = list(node["extra_info"])
         
