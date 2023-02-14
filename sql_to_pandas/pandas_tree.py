@@ -590,6 +590,8 @@ def clean_filter_params(self, params, codeCompHelper, prev_df):
             # Clean type information
             line_split[i] = clean_type_information(self, line_split[i])
             
+            line_split[i] = str(line_split[i]).strip()
+            
             # Process inequalities
             if (">=" in line_split[i]) or (">" in line_split[i]) or ("<=" in line_split[i]) or ("<" in line_split[i]):
                 inequals = [">=", ">", "<=", "<"]

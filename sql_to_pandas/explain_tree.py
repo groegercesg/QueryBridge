@@ -1457,9 +1457,45 @@ def make_tree_from_pg(json, tree, parent=None):
     
     return node_class
 
-def make_tree_from_duck(json, tree):
+def make_tree_from_duck(json, tree, sql):
+    # IN Capture
+    # We want to scan the SQL for IN statements, and extract them
+    # Then put them in the form of
+    # [attribute, [values..]]
+    in_capture = []
+    
+    regex = r"\w+\s(IN|in)\s\([^\)]+"
+    matches = re.finditer(regex, sql, re.MULTILINE)
+    for matchNum, match in enumerate(matches, start=1):
+            
+        gp_match = match.group()
+        if " in " in gp_match:
+            attribute = str(gp_match.split(" in ")[0]).strip()
+            vals = str(str(str(gp_match.split(" in ")[1]).strip())[1:]).split(",")
+        elif " IN " in gp_match:
+            attribute = str(gp_match.split(" IN ")[0]).strip()
+            vals = str(str(str(gp_match.split(" IN ")[1]).strip())[1:]).split(",")    
+        else:
+            raise Exception("In structure not recognised")
+        
+        # Remove ' in vals
+        for i in range(len(vals)):
+            vals[i] = str(vals[i]).strip()
+            if (vals[i][0] == "'") and (vals[i][-1] == "'"):
+                vals[i] = vals[i][1:-1]
+        
+        new_attr = attribute not in [i[0] for i in in_capture]
+        new_vals = False
+        for i in range(len(in_capture)):
+            if attribute == in_capture[i][0]:
+                if vals != in_capture[i][1]:
+                    new_vals = True
+                    break 
+        if (new_attr == True) or (new_vals == True):
+            in_capture.append((attribute, vals))       
+            
     # Make the Class tree
-    explain_tree = make_class_tree_from_duck(json, tree) 
+    explain_tree = make_class_tree_from_duck(json, tree, in_capture) 
     
     # Iterate through the class tree, fix column references
     duck_fix_class_tree(explain_tree) 
@@ -1505,7 +1541,7 @@ def duck_fix_class_tree(tree):
                 duck_fix_class_tree(individual_plan)
     
     # Column reference regex
-    col_ref = r"\#[0-9]*"
+    col_ref = r"\#[0-9]*(?!.*')"
     
     # Process current
     # Do we have lower references, that we need to fix
@@ -1513,9 +1549,16 @@ def duck_fix_class_tree(tree):
     if tree.node_type in alias_locations:
         for loc in alias_locations[tree.node_type]:
             if hasattr(tree, loc):
-                for individual_attr in getattr(tree, loc):
-                    reg = re.search(col_ref, individual_attr)
+                if isinstance(getattr(tree, loc), list):
+                    for individual_attr in getattr(tree, loc):
+                        reg = re.search(col_ref, individual_attr)
+                        if reg != None:
+                            need_col_fix = True
+                            break
+                else:
+                    reg = re.search(col_ref, getattr(tree, loc))
                     if reg != None:
+                        print(individual_attr)
                         need_col_fix = True
                         break
             
@@ -1535,9 +1578,42 @@ def duck_fix_class_tree(tree):
                         if reg != None:
                             col_replace = reg.group(0)
                             col_index = int(col_replace.replace("#", ""))
-                            getattr(tree, loc)[i] = str(str(getattr(tree, loc)[i]).replace(col_replace, child.output[col_index])).strip()
+                            if child.output != []:
+                                getattr(tree, loc)[i] = str(str(getattr(tree, loc)[i]).replace(col_replace, child.output[col_index])).strip()
+
+def process_extra_info(extra_info, in_capture):
+    # Before running, construct in_plan_expected from in_capture
+    # Rewrite in_capture to in_plan_expected
+    in_plan_expected = []
+    in_plan_desired = []
+    for attr, vals in in_capture:
+        local_vals = vals.copy()
+        desired_str = str(attr) + " = ANY ([" + str(local_vals)[1:-1] + "])"
+        in_plan_desired.append(desired_str)
+        
+        for i in range(len(local_vals)):
+            local_vals[i] = str(attr) + " = '" + str(local_vals[i]) + "'"
+            
+        in_plan_expected.append(" OR ".join(local_vals))
+    
+    # Construct altered extra_info
+    new_extra_info = list(filter(None, extra_info.split("\n")))
+    # Replace out ".000"
+    for i in range(len(new_extra_info)):
+        new_extra_info[i] = new_extra_info[i].replace(".000", "")
+        new_extra_info[i] = new_extra_info[i].replace("True AND ", "")
+        new_extra_info[i] = str(new_extra_info[i]).strip()
+        if re.search("\w=\w", new_extra_info[i]) != None:
+            new_extra_info[i] = new_extra_info[i].replace("=", " = ")
+            
+        # Search for in_plan_expected
+        for j in range(len(in_plan_expected)):
+            if in_plan_expected[j] in new_extra_info[i]:
+                new_extra_info[i] = str(new_extra_info[i]).replace(in_plan_expected[j], in_plan_desired[j])
+    
+    return new_extra_info
                 
-def make_class_tree_from_duck(json, tree, parent=None):
+def make_class_tree_from_duck(json, tree, in_capture, parent=None):
     # First node check
     if tree == None:
         # Assume only 1 child for top node
@@ -1548,15 +1624,7 @@ def make_class_tree_from_duck(json, tree, parent=None):
     node_class = None    
     node_type = node["name"]
     
-    # Construct altered extra_info
-    new_extra_info = list(filter(None, node["extra_info"].split("\n")))
-    # Replace out ".000"
-    for i in range(len(new_extra_info)):
-        new_extra_info[i] = new_extra_info[i].replace(".000", "")
-        if re.search("\w=\w", new_extra_info[i]) != None:
-            new_extra_info[i] = new_extra_info[i].replace("=", " = ")
-    
-    node["extra_info"] = new_extra_info
+    node["extra_info"] = process_extra_info(node["extra_info"], in_capture)
     
     top_n_special = False
     if node_type.lower() == "top_n":
@@ -1585,20 +1653,7 @@ def make_class_tree_from_duck(json, tree, parent=None):
         node_class = aggregate_node("Aggregate", node["extra_info"])
         node_class.add_remove_later(True)
     elif node_type.lower() == "hash_join":
-        """
-            "name": "HASH_JOIN",
-            "timing": 0.118427,
-            "cardinality": 151331,
-            "extra_info": "INNER\nl_orderkey = o_orderkey\n",
-            "timings": []
-        """
-        hash_output = []
-        # TODO: Hardcoded, but we should remove
-        inner_unique = False
-        join_type = node["extra_info"][0]
-        condition = " AND ".join(node["extra_info"][1:])
-        node_class = hash_join_node("Hash Join", hash_output, inner_unique, join_type, condition)
-        
+        node_class = process_hash_join(node)
     elif node_type.lower() == "hash_group_by":
         # Iterate through extra_info
         new_output = list(node["extra_info"])
@@ -1623,17 +1678,30 @@ def make_class_tree_from_duck(json, tree, parent=None):
     
     elif node_type.lower() == "filter":
         # If it's a filter node, check if we have a seq_scan below
-        if len(node["children"]) != 0:
-            raise Exception("Too many children")
+        if len(node["children"]) != 1:
+            raise Exception("Too many children, the filter node has: " + str(len(node["children"]) + " children."))
         
-        if node["children"][0]["name"] == "seq_scan":
+        child_name = str(node["children"][0]["name"])
+        if child_name.lower() == "seq_scan":
+            # child_copy
+            child_copy = node["children"][0].copy()
+            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture)
             # Get the class
-            node_class = process_seq_scan(node, node["children"][0]["extra_info"])
+            node_class = process_seq_scan(child_copy, node["extra_info"])
+            
+            # Change the json
+            node = node["children"][0]
+        elif child_name.lower() == "hash_join":
+            # child_copy
+            child_copy = node["children"][0].copy()
+            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture)
+            # Get the class
+            node_class = process_hash_join(child_copy, node["extra_info"])
             
             # Change the json
             node = node["children"][0]
         else:
-            raise Exception("Child is not a seq_scan")
+            raise Exception("Child is not a seq_scan or hash_join, it's a: " + str(node["children"][0]["name"]))
         
     elif node_type.lower() == "seq_scan":
         node_class = process_seq_scan(node)
@@ -1650,7 +1718,7 @@ def make_class_tree_from_duck(json, tree, parent=None):
         if node["children"] != []:
             node_class_plans = []
             for individual_plan in node['children']:
-                node_class_plans.append(make_class_tree_from_duck(individual_plan, "", node_class))
+                node_class_plans.append(make_class_tree_from_duck(individual_plan, "", in_capture, node_class))
             
             if top_n_special == True:
                 node_class.plans[0].set_plans(node_class_plans)
@@ -1660,6 +1728,42 @@ def make_class_tree_from_duck(json, tree, parent=None):
                 raise Exception("Unknown top_n value")
     
     return node_class
+
+def process_hash_join(json, external_filters=None):
+    
+    hash_output = []
+    # TODO: Hardcoded, but we should remove
+    inner_unique = False
+    join_type = json["extra_info"][0]
+    condition = " AND ".join(json["extra_info"][1:])
+    node_class = hash_join_node("Hash Join", hash_output, inner_unique, join_type, condition)
+    
+    # TODO: Hardcode for TPC-H
+    if condition[0] == "l":
+        child_relation = "lineitem"
+    else:
+        raise Exception("Unrecognised condition, condition was: " + str(condition))
+    
+    if external_filters != None:
+        node_class.add_filter(process_external_filters(external_filters, child_relation))
+    
+    return node_class
+
+def process_external_filters(external_filters, child_relation):
+    
+    # Split on AND/OR
+    for j in range(len(external_filters)):
+        line_split = list(filter(None, re.split('(AND)|(OR)', external_filters[j])))
+            
+        for i in range(len(line_split)):
+            if (line_split[i] != "AND") and (line_split[i] != "OR"):
+                line_split[i] = str(line_split[i]).strip()
+                line_split[i] = child_relation + "." + line_split[i]
+        
+        external_filters[j] = " ".join(line_split)
+    external_filters = " AND ".join(external_filters)
+    
+    return external_filters
 
 def process_seq_scan(json, external_filters=None):
     # Set the relation and alias
@@ -1718,7 +1822,9 @@ def process_seq_scan(json, external_filters=None):
     node_class = seq_scan_node("Seq Scan", output, relation_name, alias_name)
     
     # Set the filters
-    if filters != None:
+    if (filters != None) and (external_filters != None):
+        node_class.add_filters(filters + " AND " + process_external_filters(external_filters, relation_name))
+    elif filters != None:
         # Check if a filter exists and add it
         node_class.add_filters(filters)
     elif external_filters != None:

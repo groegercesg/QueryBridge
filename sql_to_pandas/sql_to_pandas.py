@@ -315,7 +315,7 @@ def main():
         if args.query_planner == "Postgres":
             explain_tree = make_tree_from_pg(explain_json, explain_tree)
         elif args.query_planner == "Duck_DB":
-            explain_tree = make_tree_from_duck(explain_json, explain_tree)   
+            explain_tree = make_tree_from_duck(explain_json, explain_tree, sub_query)   
         else:
             raise Exception("Unknown database planner specified")
         
