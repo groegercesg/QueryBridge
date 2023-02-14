@@ -1457,8 +1457,7 @@ def make_tree_from_pg(json, tree, parent=None):
     
     return node_class
 
-def make_tree_from_duck(json, tree, sql):
-    # IN Capture
+def create_in_capture(sql):
     # We want to scan the SQL for IN statements, and extract them
     # Then put them in the form of
     # [attribute, [values..]]
@@ -1492,7 +1491,13 @@ def make_tree_from_duck(json, tree, sql):
                     new_vals = True
                     break 
         if (new_attr == True) or (new_vals == True):
-            in_capture.append((attribute, vals))       
+            in_capture.append((attribute, vals)) 
+    
+    return in_capture
+
+def make_tree_from_duck(json, tree, sql):
+    # Make the: IN Capture
+    in_capture = create_in_capture(sql)
             
     # Make the Class tree
     explain_tree = make_class_tree_from_duck(json, tree, in_capture) 
@@ -1558,28 +1563,80 @@ def duck_fix_class_tree(tree):
                 else:
                     reg = re.search(col_ref, getattr(tree, loc))
                     if reg != None:
-                        print(individual_attr)
                         need_col_fix = True
                         break
             
     if need_col_fix == True:
         # Do column fix, first determine child of current node
-        if len(tree.plans) != 1:
-            raise Exception("Unexpected number of children")
-        
-        child = tree.plans[0]
         
         # Iterate through current node
         if tree.node_type in alias_locations:
             for loc in alias_locations[tree.node_type]:
                 if hasattr(tree, loc):
-                    for i in range(len(getattr(tree, loc))):
-                        reg = re.search(col_ref, getattr(tree, loc)[i])
+                    if isinstance(getattr(tree, loc), list):
+                        for i in range(len(getattr(tree, loc))):
+                            reg = re.search(col_ref, getattr(tree, loc)[i])
+                            if reg != None:
+                                col_replace = reg.group(0)
+                                col_index = int(col_replace.replace("#", ""))
+                                
+                                # Set child
+                                local_child = None
+                                if len(tree.plans) == 1:
+                                    local_child = tree.plans[0]
+                                else: 
+                                    local_child = determine_local_child(tree, loc, col_replace)
+                                
+                                if local_child.output != []:
+                                    getattr(tree, loc)[i] = str(str(getattr(tree, loc)[i]).replace(col_replace, local_child.output[col_index])).strip()
+                    else:
+                        reg = re.search(col_ref, getattr(tree, loc))
                         if reg != None:
                             col_replace = reg.group(0)
                             col_index = int(col_replace.replace("#", ""))
-                            if child.output != []:
-                                getattr(tree, loc)[i] = str(str(getattr(tree, loc)[i]).replace(col_replace, child.output[col_index])).strip()
+                            
+                            # Set child
+                            local_child = None
+                            if len(tree.plans) == 1:
+                                local_child = tree.plans[0]
+                            else: 
+                                local_child = determine_local_child(tree, loc, col_replace)
+                            
+                            if local_child.output != []:
+                                setattr(tree, loc, str(str(getattr(tree, loc)).replace(col_replace, local_child.output[col_index])).strip())
+                
+
+def determine_local_child(tree, location, target):
+    if len(tree.plans) != 2:
+        raise Exception("Tree doesn't have two children like we expect, it has: " + str(len(tree.plans)))
+    
+    # Return value
+    child = None
+    
+    related_attr = getattr(tree, location)
+    if " = " in related_attr:
+        if target in related_attr.split(" = ")[0]:
+            # LHS
+            # While not "remove_later"
+            child = tree.plans[0]
+            while hasattr(child, "remove_later") and (getattr(child, "remove_later") == True):
+                if len(child.plans) != 1:
+                    raise Exception("Child has too many children")
+                child = child.plans[0]
+            return 
+        elif target in related_attr.split(" = ")[1]:
+            # RHS
+            child = tree.plans[1]
+            while hasattr(child, "remove_later") and (getattr(child, "remove_later") == True):
+                if len(child.plans) != 1:
+                    raise Exception("Child has too many children")
+                child = child.plans[0]
+        else:
+            raise Exception("Unexpected equal options for tree with two children")
+    else:
+        raise Exception("Unexpected options for tree with two children")
+    
+    return child
 
 def process_extra_info(extra_info, in_capture):
     # Before running, construct in_plan_expected from in_capture
@@ -1655,27 +1712,7 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
     elif node_type.lower() == "hash_join":
         node_class = process_hash_join(node)
     elif node_type.lower() == "hash_group_by":
-        # Iterate through extra_info
-        new_output = list(node["extra_info"])
-        
-        removes = []
-        group_keys = []
-        for i in range(len(new_output)):
-            if not any([True for agg in agg_funcs if agg+"(" in new_output[i]]):
-                group_keys.append(new_output[i])
-                removes.append(i)
-            elif new_output[i] == "count_star()":
-                new_output[i] = "count(*)"
-                
-        # Reverse removes
-        removes.reverse()
-        
-        # Carry out removes
-        for rem in removes:
-            del new_output[rem]
-        
-        node_class = group_aggregate_node("Group Aggregate", new_output, group_keys)
-    
+        node_class = process_hash_group_by(node)
     elif node_type.lower() == "filter":
         # If it's a filter node, check if we have a seq_scan below
         if len(node["children"]) != 1:
@@ -1700,6 +1737,16 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
             
             # Change the json
             node = node["children"][0]
+        elif child_name.lower() == "hash_group_by":
+            # child_copy
+            child_copy = node["children"][0].copy()
+            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture)
+            # Get the class
+            node_class = process_hash_group_by(child_copy, node["extra_info"])
+            
+            # Change the json
+            node = node["children"][0]    
+        
         else:
             raise Exception("Child is not a seq_scan or hash_join, it's a: " + str(node["children"][0]["name"]))
         
@@ -1729,6 +1776,51 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
     
     return node_class
 
+def process_hash_group_by(json, external_filters=None):
+    # Iterate through extra_info
+    new_output = list(json["extra_info"])
+    
+    removes = []
+    group_keys = []
+    for i in range(len(new_output)):
+        if not any([True for agg in agg_funcs if agg+"(" in new_output[i]]):
+            group_keys.append(new_output[i])
+        elif new_output[i] == "count_star()":
+            new_output[i] = "count(*)"
+        
+    # Group aggregate filters should have no child aggregate
+    child_relation = None
+    
+    node_class = group_aggregate_node("Group Aggregate", new_output, group_keys)
+    
+    if external_filters != None:
+        node_class.add_filter(process_external_filters(external_filters, child_relation))
+    
+    return node_class
+
+def determine_child_relation(item):
+    # TODO: Hardcode for TPC-H
+    child_relation = None
+    
+    if item[0] == "l":
+        child_relation = "lineitem"
+    elif item[0] == "o":
+        child_relation = "orders"
+    elif item[0] == "r":
+        child_relation = "region"
+    elif item[0] == "n":
+        child_relation = "nation"
+    elif item[0] == "ps":
+        child_relation = "partsupp"
+    elif item[0] == "p":
+        child_relation = "part"
+    elif item[0] == "c":
+        child_relation = "customer"
+    else:
+        raise Exception("Unrecognised item")
+    
+    return child_relation
+
 def process_hash_join(json, external_filters=None):
     
     hash_output = []
@@ -1738,12 +1830,8 @@ def process_hash_join(json, external_filters=None):
     condition = " AND ".join(json["extra_info"][1:])
     node_class = hash_join_node("Hash Join", hash_output, inner_unique, join_type, condition)
     
-    # TODO: Hardcode for TPC-H
-    if condition[0] == "l":
-        child_relation = "lineitem"
-    else:
-        raise Exception("Unrecognised condition, condition was: " + str(condition))
-    
+    child_relation = determine_child_relation(condition[0])
+
     if external_filters != None:
         node_class.add_filter(process_external_filters(external_filters, child_relation))
     
@@ -1758,7 +1846,15 @@ def process_external_filters(external_filters, child_relation):
         for i in range(len(line_split)):
             if (line_split[i] != "AND") and (line_split[i] != "OR"):
                 line_split[i] = str(line_split[i]).strip()
-                line_split[i] = child_relation + "." + line_split[i]
+                if child_relation != None:
+                    are_there_aggs = [agg+"(" for agg in agg_funcs if agg+"(" in line_split[i]]
+                    if any(are_there_aggs):
+                        # Put relation after agg_func
+                        insert_length = sum(len(s) for s in are_there_aggs)
+                        line_split[i] = line_split[i][:insert_length] + child_relation + "." + line_split[i][insert_length:]
+                    else:
+                        # Stick relation at end
+                        line_split[i] = child_relation + "." + line_split[i]
         
         external_filters[j] = " ".join(line_split)
     external_filters = " AND ".join(external_filters)
