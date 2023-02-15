@@ -1546,7 +1546,7 @@ def duck_fix_class_tree(tree):
                 duck_fix_class_tree(individual_plan)
     
     # Column reference regex
-    col_ref = r"\#[0-9]*(?!.*('|\ ))"
+    col_ref = r"\#[0-9]*(?!.*')"
     
     # Process current
     # Do we have lower references, that we need to fix
@@ -1839,6 +1839,17 @@ def process_hash_join(json, external_filters=None):
     inner_unique = False
     join_type = json["extra_info"][0]
     condition = " AND ".join(json["extra_info"][1:])
+    # If condition is " IS NOT DISTINCT FROM ", Then we need to fix it
+    if " IS NOT DISTINCT FROM " in condition:
+        # Split on AND
+        if " AND " in condition:
+            raise Exception("AND in Duck Plan Hash condition")
+        else:
+            focus = str(condition.split(" IS NOT DISTINCT FROM ")[0])
+            
+            right_focus = str(json["children"][1]["extra_info"]).split("\n")[0]
+            condition = focus + " = " + right_focus
+    
     node_class = hash_join_node("Hash Join", hash_output, inner_unique, join_type, condition)
     
     child_relation = determine_child_relation(condition[0])
@@ -1875,6 +1886,28 @@ def process_external_filters(external_filters, child_relation):
                         # (part.p_name)::text ~~ '%green%'
                         items = str(str(line_split[i]).replace("contains(", ""))[:-1].split(", ")
                         line_split[i] = str(items[0]) + " ~~ '%" + str(items[1]) + "%'" 
+                        
+                    # If is "<" and RHS is alphabetical, we need the relation on both sides
+                    equalities = [" < ", " <= ", " > ", " >= "]
+                    if any([True for item in equalities if item in line_split[i]]):
+                        # We need to maybe do this
+                        for eq_item in equalities:
+                            if eq_item in line_split[i]:
+                                s_ls = line_split[i].split(eq_item)
+                                
+                                # Strip both
+                                for k in range(len(s_ls)):
+                                    s_ls[k] = s_ls[k].strip()
+                                
+                                # Validate length
+                                if len(s_ls) != 2:
+                                    raise Exception("Split of line_split was unexpectedly long, it is: " + str(s_ls))
+
+                                if not any(i.isdigit() for i in s_ls[1]):
+                                    s_ls[1] = child_relation + "." + s_ls[1]
+                                    
+                                line_split[i] = eq_item.join(s_ls)
+                        
         
         external_filters[j] = " ".join(line_split)
     external_filters = " AND ".join(external_filters)
