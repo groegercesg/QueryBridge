@@ -1546,7 +1546,7 @@ def duck_fix_class_tree(tree):
                 duck_fix_class_tree(individual_plan)
     
     # Column reference regex
-    col_ref = r"\#[0-9]*(?!.*')"
+    col_ref = r"\#[0-9]*(?!.*('|\ ))"
     
     # Process current
     # Do we have lower references, that we need to fix
@@ -1659,6 +1659,7 @@ def process_extra_info(extra_info, in_capture):
     for i in range(len(new_extra_info)):
         new_extra_info[i] = new_extra_info[i].replace(".000", "")
         new_extra_info[i] = new_extra_info[i].replace("True AND ", "")
+        new_extra_info[i] = new_extra_info[i].replace("count_star()", "count(*)")
         new_extra_info[i] = str(new_extra_info[i]).strip()
         if re.search("\w=\w", new_extra_info[i]) != None:
             new_extra_info[i] = new_extra_info[i].replace("=", " = ")
@@ -1694,8 +1695,18 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
             if elem == '[INFOSEPARATOR]':
                 start_info = idx
                 break
+        
+        sort_keys = list(node["extra_info"][start_info+1:])
+        # TODO: Hardcoded replace, in future, if theres a "."
+        # Audit the LHS for relations that we are tracking up,
+        # If it's not in there, then replace it
+        for i in range(len(sort_keys)):
+            if "c_orders" in sort_keys[i]:
+                sort_keys[i] = sort_keys[i].replace("c_orders", "orders")
+            elif "profit" in sort_keys[i]:
+                sort_keys[i] = sort_keys[i].replace("profit", "nation")
             
-        sort = sort_node("Sort", [], node["extra_info"][start_info+1:])
+        sort = sort_node("Sort", [], sort_keys)
         
         # Set plans
         node_class.set_plans([sort])
@@ -1785,8 +1796,6 @@ def process_hash_group_by(json, external_filters=None):
     for i in range(len(new_output)):
         if not any([True for agg in agg_funcs if agg+"(" in new_output[i]]):
             group_keys.append(new_output[i])
-        elif new_output[i] == "count_star()":
-            new_output[i] = "count(*)"
         
     # Group aggregate filters should have no child aggregate
     child_relation = None
@@ -1846,6 +1855,9 @@ def process_external_filters(external_filters, child_relation):
         line_split = list(filter(None, re.split('(AND)|(OR)', external_filters[j])))
             
         for i in range(len(line_split)):
+            if (line_split[i][0] == "(") and (line_split[i][-1] == ")"):
+                line_split[i] = line_split[i][1:-1]
+            
             if (line_split[i] != "AND") and (line_split[i] != "OR"):
                 line_split[i] = str(line_split[i]).strip()
                 if child_relation != None:
@@ -1857,6 +1869,12 @@ def process_external_filters(external_filters, child_relation):
                     else:
                         # Stick relation at end
                         line_split[i] = child_relation + "." + line_split[i]
+                        
+                    # Contains
+                    if "contains" in line_split[i]:
+                        # (part.p_name)::text ~~ '%green%'
+                        items = str(str(line_split[i]).replace("contains(", ""))[:-1].split(", ")
+                        line_split[i] = str(items[0]) + " ~~ '%" + str(items[1]) + "%'" 
         
         external_filters[j] = " ".join(line_split)
     external_filters = " AND ".join(external_filters)
@@ -1927,6 +1945,6 @@ def process_seq_scan(json, external_filters=None):
         node_class.add_filters(filters)
     elif external_filters != None:
         # Check if a external_filters exists and add it
-        node_class.add_filters(external_filters)
+        node_class.add_filters(process_external_filters(external_filters, relation_name))
         
     return node_class

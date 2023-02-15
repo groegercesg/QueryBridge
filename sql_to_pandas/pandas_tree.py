@@ -212,7 +212,17 @@ def process_output(self, output, codecomphelper):
                     chosen_column = str(this_group_key)
                 else:
                 """
-                chosen_column = str(self.output[0])
+                if self.output == []:
+                    # Hasattr sort_key
+                    if hasattr(self, "sort_key"):
+                        k = 0
+                        while self.sort_key[k].split(" ")[0] == "count(*)":
+                            k = k + 1
+                        chosen_column = str(self.sort_key[k].split(" ")[0]).strip()
+                    else:
+                        raise Exception("Node has no output columns and no sort_key, what should we use to count on?")
+                else:
+                    chosen_column = str(self.output[0])
 
                 output[i] = ("count(" + str(chosen_column) + ")", output[i][1])
             elif "extract" in output[i][0].lower():
