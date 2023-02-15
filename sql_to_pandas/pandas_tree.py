@@ -201,10 +201,18 @@ def process_output(self, output, codecomphelper):
             if "count(*)" in output[i][0].lower():
                 # Pick a column we know is going to exist after the group by
                 # This is therefore one that we want to output, we take the first
+                """
                 if hasattr(self, "group_key"):
-                    chosen_column = str(self.group_key[0])
+                    this_group_key = str(self.group_key[0])
+                    # Clean it of relations
+                    for rel in codecomphelper.relations:
+                        if rel + "." in this_group_key:
+                            this_group_key = this_group_key.replace(rel+".", "")
+                    
+                    chosen_column = str(this_group_key)
                 else:
-                    chosen_column = str(self.output[0])
+                """
+                chosen_column = str(self.output[0])
 
                 output[i] = ("count(" + str(chosen_column) + ")", output[i][1])
             elif "extract" in output[i][0].lower():

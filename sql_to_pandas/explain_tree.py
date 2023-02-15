@@ -1816,6 +1816,8 @@ def determine_child_relation(item):
         child_relation = "part"
     elif item[0] == "c":
         child_relation = "customer"
+    elif item[0] == "s":
+        child_relation = "supplier"
     else:
         raise Exception("Unrecognised item")
     
