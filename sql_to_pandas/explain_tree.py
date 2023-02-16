@@ -1668,6 +1668,69 @@ def process_extra_info(extra_info, in_capture):
         for j in range(len(in_plan_expected)):
             if in_plan_expected[j] in new_extra_info[i]:
                 new_extra_info[i] = str(new_extra_info[i]).replace(in_plan_expected[j], in_plan_desired[j])
+                
+        # Search for CASE
+        if "CASE  WHEN" in new_extra_info[i]:
+            new_extra_info[i] = new_extra_info[i].replace("CASE  WHEN", "CASE WHEN")
+            
+            # Check WHEN, THEN, ELSE for columns, replace if we have to
+            if ("WHEN" in new_extra_info[i]) and ("THEN" in new_extra_info[i]) and ("ELSE" in new_extra_info[i]):
+                when_orig = str(new_extra_info[i].split("WHEN ")[1].split(" THEN")[0]).strip()
+                then_orig = str(new_extra_info[i].split("THEN ")[1].split(" ELSE")[0]).strip()
+                else_orig = str(new_extra_info[i].split("ELSE ")[1].split(" END")[0]).strip()
+                
+                check_places = [when_orig, then_orig, else_orig]
+                for original in check_places:
+                    local = str(original)
+                    brack_remove = False
+                    if (local[0] == "(") and (local[-1] == ")"):
+                        local = local[1:-1]
+                        brack_remove = True
+                    
+                    local_split = list(filter(None, re.split('(AND)|(OR)', local)))
+                    
+                    for j in range(len(local_split)):
+                        if (local_split[j] != "AND") and (local_split[j] != "OR"):
+                            
+                            equalities = [" < ", " <= ", " > ", " >= ", " = ", " != "]
+                            if any([True for eq_item in equalities if eq_item in local_split[j]]):
+                                # We need to maybe do this
+                                for eq_item in equalities:
+                                    if eq_item in local_split[j]:                                        
+                                        s_i = local_split[j].split(eq_item)
+                                        
+                                        # Strip both
+                                        for k in range(len(s_i)):
+                                            s_i[k] = s_i[k].strip()
+                                        
+                                        # Validate length
+                                        if len(s_i) != 2:
+                                            raise Exception("Split of item was unexpectedly long, it is: " + str(s_ls))
+
+                                        child_relation = determine_child_relation(s_i[0])
+
+                                        if not any(i.isdigit() for i in s_i[0]):
+                                            s_i[0] = child_relation + "." + s_i[0]
+                                            
+                                        local_split[j] = eq_item.join(s_i)
+                                        
+                                        # Replace for SQL Column Comparison purposes
+                                        if eq_item == " != ":
+                                            local_split[j] = local_split[j].replace(" != ", " <> ")
+                                        
+                        
+                    # Join local_split back together
+                    local = " ".join(local_split)
+                    
+                    # Do replacement
+                    if brack_remove == True:
+                        local = "(" + str(local) + ")"
+                        
+                    if local != original:
+                        new_extra_info[i] = new_extra_info[i].replace(original, local)           
+                            
+            else:
+                raise Exception("Unexpectedly formatted CASE statement: " + str(new_extra_info[i]))
     
     return new_extra_info
                 

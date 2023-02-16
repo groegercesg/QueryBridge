@@ -2191,11 +2191,17 @@ def pandas_aggregate_case(inner_string, prev_df):
                 if (split_on[j][0] == "(") and (split_on[j][-1] == ")"):
                     split_on[j] = split_on[j][1:-1]
                 
-                if " == " in split_on[j]:
+                if " = " in split_on[j]:
+                    split_on_eq = split_on[j].split(" = ")
+                    re_assemble = " == "
+                elif " == " in split_on[j]:
                     split_on_eq = split_on[j].split(" == ")
                     re_assemble = " == "
                 elif " <> " in split_on[j]:
                     split_on_eq = split_on[j].split(" <> ")
+                    re_assemble = " != "
+                elif " != " in split_on[j]:
+                    split_on_eq = split_on[j].split(" != ")
                     re_assemble = " != "
                 else:
                     raise ValueError("Unknown parameter we're trying to split on")
@@ -2941,6 +2947,7 @@ class merge_node():
         
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
+        
         # Set prefixes
         if not isinstance(prev_dfs, list):
             raise ValueError("Inputted prev_df is not a list!")
