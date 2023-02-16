@@ -1657,6 +1657,7 @@ def process_extra_info(extra_info, in_capture):
     new_extra_info = list(filter(None, extra_info.split("\n")))
     # Replace out ".000"
     for i in range(len(new_extra_info)):
+        new_extra_info[i] = new_extra_info[i].replace("0.000000", "0")
         new_extra_info[i] = new_extra_info[i].replace(".000", "")
         new_extra_info[i] = new_extra_info[i].replace("True AND ", "")
         new_extra_info[i] = new_extra_info[i].replace("count_star()", "count(*)")
@@ -1668,6 +1669,31 @@ def process_extra_info(extra_info, in_capture):
         for j in range(len(in_plan_expected)):
             if in_plan_expected[j] in new_extra_info[i]:
                 new_extra_info[i] = str(new_extra_info[i]).replace(in_plan_expected[j], in_plan_desired[j])
+        
+        # Contains
+        if "contains(" in new_extra_info[i]:
+            # (part.p_name)::text ~~ '%green%'
+            
+            original_contains = "contains(" + new_extra_info[i].split("contains(")[1].split(")")[0] + ")"
+            items = str(str(original_contains).replace("contains(", ""))[:-1].split(", ")
+            new_contains = str(items[0]) + " ~~ '%" + str(items[1]) + "%'" 
+            
+            new_extra_info[i] = new_extra_info[i].replace(original_contains, new_contains)
+            
+        # Prefix
+        if "prefix(" in new_extra_info[i]:
+            # (part.p_name)::text ~~ 'promo%'
+            # Get prefix_part = 
+            original_prefix = "prefix(" + new_extra_info[i].split("prefix(")[1].split(")")[0] + ")"
+            items = str(str(original_prefix).replace("prefix(", ""))[:-1].split(", ")
+            
+            # Trim quotes
+            if (items[1][0] == "'") and (items[1][-1] == "'"):
+                items[1] = items[1][1:-1]
+            
+            new_prefix = str(items[0]) + " ~~ '" + str(items[1]) + "%'" 
+            
+            new_extra_info[i] = new_extra_info[i].replace(original_prefix, new_prefix)
                 
         # Search for CASE
         if "CASE  WHEN" in new_extra_info[i]:
