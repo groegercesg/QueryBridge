@@ -1508,7 +1508,64 @@ def make_tree_from_duck(json, tree, sql):
     # Carry out remove laters
     duck_fix_remove_laters(explain_tree)
     
+    # Solve the "SUBQUERY"
+    duck_solve_subquery(explain_tree)
+    
     return explain_tree
+
+def duck_solve_subquery(tree):
+    # Postorder Traversal
+    if tree.plans != None:
+        for i in range(len(tree.plans)):
+            current_node = tree.plans[i]
+            # For the moment, only fix "SUBQUERY" in Hash Join
+            if current_node.node_type == "Hash Join":
+                if "SUBQUERY" in current_node.hash_cond:
+                    # We have a subquery to solve
+                    cond_split = list(filter(None, re.split('(AND)|(OR)', current_node.hash_cond)))
+                    
+                    for k in range(len(cond_split)):
+                        if " = " in cond_split[k]:
+                            eq_split = cond_split[k].split(" = ")
+                            
+                            # Strip out spaces
+                            for j in range(len(eq_split)):
+                                eq_split[j] = eq_split[j].strip()
+                                
+                            if len(eq_split) != 2:
+                                raise Exception("Unexpectedly sized eq_split, it was not 2, and looks like: " + str(eq_split))
+                            
+                            if "SUBQUERY" in eq_split[0]:
+                                # Do on LHS
+                                child = current_node.plans[0]
+                                while child.output == []:
+                                    child = child.plans[0]
+                                    
+                                child_value = str(child.output[0]).replace("(", "").replace(")", "")
+                                eq_split[0] = eq_split[0].replace("SUBQUERY", child_value)
+                            elif "SUBQUERY" in eq_split[1]:
+                                # Do on RHS
+                                child = current_node.plans[1]
+                                while child.output == []:
+                                    child = child.plans[0]
+                                    
+                                child_value = str(child.output[0]).replace("(", "").replace(")", "")
+                                eq_split[1] = eq_split[1].replace("SUBQUERY", child_value)
+                            else:
+                                raise Exception("Couldn't find subquery anywhere")
+                            
+                            cond_split[k] = " = ".join(eq_split)
+                                
+                        else:
+                            raise Exception("Unexpectedly, cond in Hash Join doesn't have an equals in it")
+                    
+                    # Join local_split back together
+                    current_node.hash_cond = " ".join(cond_split)
+    
+    # Run this function on below nodes
+    if tree.plans != None:
+        for individual_plan in tree.plans:
+            duck_solve_subquery(individual_plan)   
 
 def duck_fix_remove_laters(tree):
     # Run this function on below nodes
@@ -1794,6 +1851,27 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
                 sort_keys[i] = sort_keys[i].replace("c_orders", "orders")
             elif "profit" in sort_keys[i]:
                 sort_keys[i] = sort_keys[i].replace("profit", "nation")
+                
+            # Remove CAST
+            if "CAST(" in sort_keys[i]:
+                # Extract ASC or DESC
+                
+                sort_by = None
+                if "ASC" == sort_keys[i][-3:]:
+                    sort_by = "ASC"
+                elif "DESC" == sort_keys[i][-4:]:
+                    sort_by = "DESC"
+                else:
+                    raise Exception("Couldn't detect a parameter to sort by!")
+                
+                sort_keys[i] = str(sort_keys[i].split("CAST(")[1].split(" AS ")[0]).strip()
+                if (sort_keys[i][0] == "(") and (sort_keys[i][-1] == ")"):
+                    sort_keys[i] = sort_keys[i][1:-1]
+                    
+                if " - " in sort_keys[i]:
+                    sort_keys[i] = str(sort_keys[i].split(" - ")[0]).strip()
+                    
+                sort_keys[i] = sort_keys[i] + " " + sort_by
             
         sort = sort_node("Sort", [], sort_keys)
         
@@ -1805,6 +1883,10 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
         node_class = limit_node("Limit", node["extra_info"])
     elif node_type.lower() == "simple_aggregate":
         node_class = aggregate_node("Aggregate", node["extra_info"])
+        
+        if any([True for item in node["extra_info"] if "first(" in item]):
+            # This node has a first in it, so we set it to be removed later
+            node_class.add_remove_later(True)
     elif node_type.lower() == "projection":
         # Make a projection node an aggregate node
         node_class = aggregate_node("Aggregate", node["extra_info"])
@@ -1917,7 +1999,7 @@ def determine_child_relation(item):
     elif item[0] == "s":
         child_relation = "supplier"
     else:
-        raise Exception("Unrecognised item")
+        return None
     
     return child_relation
 

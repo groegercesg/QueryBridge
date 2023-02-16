@@ -111,4 +111,3 @@ class prep_duck():
         
         
         print("DuckDB Database creation completed")
-        

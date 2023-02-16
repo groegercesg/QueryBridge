@@ -248,7 +248,8 @@ def main():
         elif cleaned_sub_q[:4] == "drop":
 
             # Drop command with the DB connection object
-            db.execute_query(cleaned_sub_q + ";")
+            if args.query_planner == "Postgres":
+                db.execute_query(cleaned_sub_q + ";")
 
             # Don't iterate after dropping
             continue
