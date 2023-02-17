@@ -262,8 +262,15 @@ def process_output(self, output, codecomphelper):
 def handle_extract(string):
     # String: EXTRACT(year FROM o_orderdate)
     # Split into param and source
-    param = str(string.split("EXTRACT(")[1].split(" FROM")[0]).strip().lower()
-    source = str(string.split("FROM ")[1].split(")")[0]).strip().lower()
+    if "EXTRACT" in string:
+        param = str(string.split("EXTRACT(")[1].split(" FROM")[0]).strip().lower()
+        source = str(string.split("FROM ")[1].split(")")[0]).strip().lower()
+    elif "extract" in string:
+        param = str(string.split("extract(")[1].split(" from")[0]).strip().lower()
+        source = str(string.split("from ")[1].split(")")[0]).strip().lower()
+    else:
+        raise Exception("Couldn't determine EXTRACT/extract in an allegedly extract string")    
+    
     return str(source) + ".dt." + str(param)
 
 def handle_substring(string):
@@ -1822,6 +1829,10 @@ def do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper):
             if is_complex == True:
                 # Replace these
                 codeCompHelper.add_bracket_replace(col, new_name)
+                
+            # Patch for just copying
+            if new_name == None:
+                new_name = col
             
             if any([True for agg in tree.agg_funcs if agg+"()" in pandas]):
                 code_line = str(this_df) + "['" + str(new_name) + "'] = [" + str(pandas) + "]"
@@ -1989,6 +2000,13 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
                 # Don't add any before
                 during_aggrs.append([str(col[1]), col[0].lower().split("distinct ")[1].replace("(", "").replace(")", "").strip(), "count_distinct"])
                             
+                # Don't run rest of this iteration
+                continue
+        
+            # rename
+            if ".dt." in str(col[0]).lower():
+                before_aggrs.append([col[1], prev_df + "." + col[0]])
+                
                 # Don't run rest of this iteration
                 continue
             
@@ -2273,7 +2291,11 @@ class group_aggr_node():
                 self.group_key[group] = self.output[output]
                 # Is it a tuple, set to [0]
                 if isinstance(self.group_key[group], tuple):
-                    self.group_key[group] = self.group_key[group][0]
+                    # If it's a column rename, set to renamed value
+                    if ".dt." in self.group_key[group][0]:
+                        self.group_key[group] = self.group_key[group][1]
+                    else:
+                        self.group_key[group] = self.group_key[group][0]
         
         # Process group key
         self.group_key = self.process_group_key(self.group_key)
@@ -3035,13 +3057,30 @@ class aggr_node():
         self.nodes = nodes
 
     def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
+        
+        instructions = []
+        
+        for i in range(len(self.nodes)):
+            if self.nodes[i].__class__.__name__ == "group_aggr_node":
+                # df_group_1 = df_group_1.reset_index(level=0)
+                using_df = None
+                if i == 0:
+                    # Create for left_node
+                    using_df = prev_df
+                else:
+                    raise Exception("Unexpected number of iterations")
+                    
+                instructions.append(using_df + " = " + using_df + ".reset_index(level=0)")
+                
+                # Reset indexes
+                codeCompHelper.indexes = []
+        
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         
         # Set prefixes
         if not isinstance(prev_df, str):
             raise ValueError("Inputted prev_df is not a string!")
-        instructions = []
         
         # TODO: We need to add in CASE handling
         # Track the replaces of cases
@@ -3063,14 +3102,11 @@ class aggr_node():
                 original_look = current_output
                 # Find position of CASE
                 case_position = current_output.find("CASE")
-                # Check that character before is open bracket
-                if current_output[case_position - 1] != "(":
-                    raise ValueError("Unexpectedly formatted CASE")
                 else_position = current_output.find("ELSE", case_position)
-                next_bracket = current_output.find(")", else_position)
+                end_position = current_output.find(" END", else_position) + len(str(" END"))
                 
                 # Extract the entire case statement
-                extract_case = current_output[case_position : next_bracket]
+                extract_case = current_output[case_position : end_position]
                 # Do case aggregation
                 if treeHelper.use_numpy == True:
                     # Numpy case

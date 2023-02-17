@@ -1514,9 +1514,15 @@ def create_col_refs(sql):
                 # Only add if we have agg_func
                 if any([True for item in agg_funcs if item in str(projection_original)]):
                     column_references[str(projection.alias_or_name)] = projection_original
-                elif any([True for item in [" * ", " - ", " + ", " / "] if item in str(projection_original)]):
+                elif any([True for item in [" * ", " - ", " + ", " / ", "extract"] if item in str(projection_original)]):
                     column_references[str(projection.alias_or_name)] = projection_original
-    
+                """
+                if projection_original.find(".") == 2:
+                    column_references[str(projection.alias_or_name)] = str(projection_original.split(".")[1]).strip()
+                else:
+                    column_references[str(projection.alias_or_name)] = projection_original
+                """
+                
     # We need to add in relations
     relation_changes = {}
     # Use child_relation, any thing that is "alpha+_+alpha"
@@ -1552,7 +1558,7 @@ def create_col_refs(sql):
         new_dict_values = []
         for j in range(len(list(column_references.values()))):
             # If the key is inside this value
-            if orig_dict_keys[i] in list(column_references.values())[j]:
+            if (orig_dict_keys[i] in list(column_references.values())[j]) and (i != j):
                 get_val = list(column_references.values())[j]
                 # Replace the value with the key for that value
                 replace_val = get_val.replace(orig_dict_keys[i], orig_dict_values[i])
@@ -1574,7 +1580,7 @@ def make_tree_from_duck(json, tree, sql):
     col_ref = create_col_refs(sql)
             
     # Make the Class tree
-    explain_tree = make_class_tree_from_duck(json, tree, in_capture) 
+    explain_tree = make_class_tree_from_duck(json, tree, in_capture, col_ref) 
     
     # Iterate through the class tree, fix column references
     duck_fix_class_tree(explain_tree) 
@@ -1584,12 +1590,12 @@ def make_tree_from_duck(json, tree, sql):
     duck_keep_top_proj(explain_tree)
     duck_fix_remove_laters(explain_tree)
     
-    # Solve the "SUBQUERY"
-    duck_solve_subquery(explain_tree)
-    
     # Replace for the column references
     # TODO: Maybe, we should keep all projections where we have made col ref insertions?!?
     duck_col_ref_insert(explain_tree, col_ref)
+    
+    # Solve the "SUBQUERY"
+    duck_solve_subquery(explain_tree)
     
     return explain_tree
 
@@ -1619,10 +1625,16 @@ def duck_col_ref_insert(tree, cols):
                                 for col_key in cols.keys():
                                     if col_key in getattr(current_node, loc)[i]:
                                         getattr(current_node, loc)[i] = str(getattr(current_node, loc)[i]).replace(col_key, cols[col_key])
+                                        # Keep nodes where have made insertions
+                                        if hasattr(current_node, "remove_later"):
+                                            current_node.remove_later = False
                         else:
                             for col_key in cols.keys():
                                 if col_key in getattr(current_node, loc):
                                     setattr(current_node, loc, str(getattr(current_node, loc)).replace(col_key, cols[col_key]))
+                                    # Keep nodes where have made insertions
+                                    if hasattr(current_node, "remove_later"):
+                                        current_node.remove_later = False
 
     # Run this function on below nodes
     if tree.plans != None:
@@ -1811,7 +1823,7 @@ def determine_local_child(tree, location, target):
     
     return child
 
-def process_extra_info(extra_info, in_capture):
+def process_extra_info(extra_info, in_capture, col_ref):
     # Before running, construct in_plan_expected from in_capture
     # Rewrite in_capture to in_plan_expected
     in_plan_expected = []
@@ -1843,6 +1855,16 @@ def process_extra_info(extra_info, in_capture):
             if in_plan_expected[j] in new_extra_info[i]:
                 new_extra_info[i] = str(new_extra_info[i]).replace(in_plan_expected[j], in_plan_desired[j])
         
+        # Year
+        if "year(" in new_extra_info[i]:
+            # year(o_orderdate)
+            # EXTRACT(year FROM orders.o_orderdate)
+            original_year = "year(" + new_extra_info[i].split("year(")[1].split(")")[0] + ")"
+            item = str(str(original_year).replace("year(", ""))[:-1]
+            new_year = "EXTRACT(year FROM " + determine_child_relation(item) + "." + str(item) + ")" 
+            
+            new_extra_info[i] = new_extra_info[i].replace(original_year, new_year)
+    
         # Contains
         if "contains(" in new_extra_info[i]:
             # (part.p_name)::text ~~ '%green%'
@@ -1852,7 +1874,7 @@ def process_extra_info(extra_info, in_capture):
             new_contains = str(items[0]) + " ~~ '%" + str(items[1]) + "%'" 
             
             new_extra_info[i] = new_extra_info[i].replace(original_contains, new_contains)
-            
+        
         # Prefix
         if "prefix(" in new_extra_info[i]:
             # (part.p_name)::text ~~ 'promo%'
@@ -1904,13 +1926,13 @@ def process_extra_info(extra_info, in_capture):
                                         
                                         # Validate length
                                         if len(s_i) != 2:
-                                            raise Exception("Split of item was unexpectedly long, it is: " + str(s_ls))
+                                            raise Exception("Split of item was unexpectedly long, it is: " + str(s_i))
 
                                         child_relation = determine_child_relation(s_i[0])
 
-                                        if not any(i.isdigit() for i in s_i[0]):
+                                        if not any(i.isdigit() for i in s_i[0]) and (s_i[0][0].isalpha()) and (s_i[0][1] == "_") and (s_i[0][2].isalpha()):
                                             s_i[0] = child_relation + "." + s_i[0]
-                                            
+                                        
                                         local_split[j] = eq_item.join(s_i)
                                         
                                         # Replace for SQL Column Comparison purposes
@@ -1927,13 +1949,13 @@ def process_extra_info(extra_info, in_capture):
                         
                     if local != original:
                         new_extra_info[i] = new_extra_info[i].replace(original, local)           
-                            
+                       
             else:
                 raise Exception("Unexpectedly formatted CASE statement: " + str(new_extra_info[i]))
     
     return new_extra_info
                 
-def make_class_tree_from_duck(json, tree, in_capture, parent=None):
+def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
     # First node check
     if tree == None:
         # Assume only 1 child for top node
@@ -1944,7 +1966,7 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
     node_class = None    
     node_type = node["name"]
     
-    node["extra_info"] = process_extra_info(node["extra_info"], in_capture)
+    node["extra_info"] = process_extra_info(node["extra_info"], in_capture, col_ref)
     
     top_n_special = False
     if node_type.lower() == "top_n":
@@ -2024,7 +2046,7 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
         if child_name.lower() == "seq_scan":
             # child_copy
             child_copy = node["children"][0].copy()
-            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture)
+            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture, col_ref)
             # Get the class
             node_class = process_seq_scan(child_copy, node["extra_info"])
             
@@ -2033,7 +2055,7 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
         elif child_name.lower() == "hash_join":
             # child_copy
             child_copy = node["children"][0].copy()
-            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture)
+            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture, col_ref)
             # Get the class
             node_class = process_hash_join(child_copy, node["extra_info"])
             
@@ -2043,7 +2065,7 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
         elif child_name.lower() == "hash_group_by":
             # child_copy
             child_copy = node["children"][0].copy()
-            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture)
+            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture, col_ref)
             # Get the class
             node_class = process_hash_group_by(child_copy, node["extra_info"])
             
@@ -2068,7 +2090,7 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
         if node["children"] != []:
             node_class_plans = []
             for individual_plan in node['children']:
-                node_class_plans.append(make_class_tree_from_duck(individual_plan, "", in_capture, node_class))
+                node_class_plans.append(make_class_tree_from_duck(individual_plan, "", in_capture, col_ref, node_class))
             
             if top_n_special == True:
                 node_class.plans[0].set_plans(node_class_plans)

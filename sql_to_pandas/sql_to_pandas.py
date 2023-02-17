@@ -283,7 +283,7 @@ def main():
             explain_content = explain_opts.rstrip('\r\n') + '\n' + explain_content
             
         # Check if no views then do line_prepender
-        if len(split_query) == 2 and split_query[1] == "":
+        if len(split_query) == 2 and ((split_query[1] == "") or (split_query[1] == '\n')):
             # We have no view, so have to prepend the explain options
             explain_content = explain_opts.rstrip('\r\n') + '\n' + explain_content
         elif len(split_query) == 1:
