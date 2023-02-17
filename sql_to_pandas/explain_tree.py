@@ -1587,12 +1587,12 @@ def make_tree_from_duck(json, tree, sql):
     
     # Carry out remove laters
     # TODO: We patch to keep the "top" projection
-    duck_keep_top_proj(explain_tree)
+    #duck_keep_top_proj(explain_tree)
     duck_fix_remove_laters(explain_tree)
     
     # Replace for the column references
     # TODO: Maybe, we should keep all projections where we have made col ref insertions?!?
-    duck_col_ref_insert(explain_tree, col_ref)
+    #duck_col_ref_insert(explain_tree, col_ref)
     
     # Solve the "SUBQUERY"
     duck_solve_subquery(explain_tree)

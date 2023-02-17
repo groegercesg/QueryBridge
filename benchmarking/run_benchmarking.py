@@ -376,43 +376,50 @@ def main():
                         else:
                             package_location = str(located_directory) + ".%s" % package_name
                         
-                        query_function = getattr(__import__(package_location, fromlist=[function_default]), function_default)
+                        bad_exec = False
                         
-                        # Order of data imports
-                        data_order = list(query_function.__code__.co_varnames[:query_function.__code__.co_argcount])
+                        try:
+                            query_function = getattr(__import__(package_location, fromlist=[function_default]), function_default)
+                        except Exception as ex:
+                            print(color.RED + str(query["Query Name"]) + ": Pandas execution error!" + "\n" + color.END)
+                            print(str(type(ex)) + " : " + str(ex))
+                            bad_exec = True
                         
-                        # Get Query Data
-                        query_data = [0] * len(data_order)
-                        table_names = [0] * len(data_order)
-                        for relation in query["Required Data"]:
-                            # Get position of relation in data_order, use as position in query data
-                            insert_pos = data_order.index(relation)
-                            query_data[insert_pos] = getattr(data_loaded, relation)
-                            table_names[insert_pos] = relation
-                        
-                        # Store Queries
-                        if "Store Queries" in manifest_json:
-                            store_queries_function_call += str(query_function.__name__) + "(" + ")"
-                            store_queries_function_call += "\n"
-                        
-                        pandas_run_times = []
-                        # Run the query and get an execution time for it
-                        for i in range(manifest_json["Number of Query Runs"]):
-                            if args.verbose:
-                                print("Doing Pandas Run: " + str(i+1))
+                        if bad_exec == False:
+                            # Order of data imports
+                            data_order = list(query_function.__code__.co_varnames[:query_function.__code__.co_argcount])
                             
-                            bad_exec = False
-                            start_time = time.time()
-                            try:
-                                pandas_result = query_function(*query_data)
-                            except Exception as ex:
-                                print(color.RED + str(query["Query Name"]) + ": Pandas execution error!" + "\n" + color.END)
-                                print(str(type(ex)) + " : " + str(ex))
-                                bad_exec = True
+                            # Get Query Data
+                            query_data = [0] * len(data_order)
+                            table_names = [0] * len(data_order)
+                            for relation in query["Required Data"]:
+                                # Get position of relation in data_order, use as position in query data
+                                insert_pos = data_order.index(relation)
+                                query_data[insert_pos] = getattr(data_loaded, relation)
+                                table_names[insert_pos] = relation
+                            
+                            # Store Queries
+                            if "Store Queries" in manifest_json:
+                                store_queries_function_call += str(query_function.__name__) + "(" + ")"
+                                store_queries_function_call += "\n"
+                            
+                            pandas_run_times = []
+                            # Run the query and get an execution time for it
+                            for i in range(manifest_json["Number of Query Runs"]):
+                                if args.verbose:
+                                    print("Doing Pandas Run: " + str(i+1))
+                                
+                                start_time = time.time()
+                                try:
+                                    pandas_result = query_function(*query_data)
+                                except Exception as ex:
+                                    print(color.RED + str(query["Query Name"]) + ": Pandas execution error!" + "\n" + color.END)
+                                    print(str(type(ex)) + " : " + str(ex))
+                                    bad_exec = True
 
-                            end_time = time.time()
-                            
-                            pandas_run_times.append(end_time - start_time)
+                                end_time = time.time()
+                                
+                                pandas_run_times.append(end_time - start_time)
                             
                         # Change back if we've moved
                         if changed_dirs == True:
