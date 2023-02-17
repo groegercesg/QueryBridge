@@ -74,7 +74,10 @@ def process_output(self, output, codecomphelper):
                         if new_key != relation_cleaned_output:
                             raise ValueError("Something went wrong: " + str(new_key) + " versus " + str(relation_cleaned_output))
                         
-                        new_value = solved_parts[0] + codecomphelper.bracket_replace[x] + solved_parts[1]
+                        if solved_parts[1] == None:
+                            new_value = solved_parts[0] + codecomphelper.bracket_replace[x]
+                        else:
+                            new_value = solved_parts[0] + codecomphelper.bracket_replace[x] + solved_parts[1]
                         
                         # Add to dictionary
                         codecomphelper.bracket_replace[new_key] = new_value
@@ -3034,6 +3037,7 @@ class aggr_node():
     def to_pandas(self, prev_df, this_df, codeCompHelper, treeHelper):
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
+        
         # Set prefixes
         if not isinstance(prev_df, str):
             raise ValueError("Inputted prev_df is not a string!")
@@ -3104,10 +3108,10 @@ class aggr_node():
             if isinstance(self.output[i], tuple):
                 # Iterate through keys in bracket_replace
                 for j in range(len(list(codeCompHelper.bracket_replace.keys()))):
-                    if (list(codeCompHelper.bracket_replace.keys())[j] in self.output[i][0]) and (list(codeCompHelper.bracket_replace.keys())[j] != self.output[i][0]):
+                    if (list(codeCompHelper.bracket_replace.keys())[j].lower() in self.output[i][0]) and (list(codeCompHelper.bracket_replace.keys())[j] != self.output[i][0]):
                         # We have a bracket replace that's inside a columnar output and not identical to it,
                         # So we do a replace on the self.output - form a new tuple
-                        self.output[i] = (self.output[i][0].replace(list(codeCompHelper.bracket_replace.keys())[j], list(codeCompHelper.bracket_replace.values())[j]), self.output[i][1])
+                        self.output[i] = (self.output[i][0].replace(list(codeCompHelper.bracket_replace.keys())[j].lower(), list(codeCompHelper.bracket_replace.values())[j]), self.output[i][1])
             else:
                 # Iterate through keys in bracket_replace
                 for j in range(len(list(codeCompHelper.bracket_replace.keys()))):

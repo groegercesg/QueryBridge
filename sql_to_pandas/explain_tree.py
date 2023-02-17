@@ -1495,9 +1495,83 @@ def create_in_capture(sql):
     
     return in_capture
 
+# SQL Parsing
+from sqlglot import parse_one, exp
+
+def create_col_refs(sql):
+    column_references = dict()
+    for select in parse_one(sql).find_all(exp.Select):
+        for projection in select.expressions:
+            if str(projection) != str(projection.alias_or_name):
+                # Do we have an alias, remove if we do
+                if "as" in str(projection).lower():
+                    # Remove as
+                    projection_original = str(" ".join(str(projection).split()[:-2]).lower()).strip()
+                else:
+                    # Keep as the same
+                    projection_original = str(projection).strip()
+                
+                # Only add if we have agg_func
+                if any([True for item in agg_funcs if item in str(projection_original)]):
+                    column_references[str(projection.alias_or_name)] = projection_original
+                elif any([True for item in [" * ", " - ", " + ", " / "] if item in str(projection_original)]):
+                    column_references[str(projection.alias_or_name)] = projection_original
+    
+    # We need to add in relations
+    relation_changes = {}
+    # Use child_relation, any thing that is "alpha+_+alpha"
+    for key in column_references:
+        alter_val = str(column_references[key])
+        proc_val = str(column_references[key])
+        proc_val = proc_val.replace("(", "").replace(")", "")
+        s_pv = proc_val.split(" ")
+        
+        replaces = []
+        for i in range(len(s_pv)):
+            # is is letter_letter
+            if (s_pv[i][0].isalpha()) and (s_pv[i][1] == "_") and (s_pv[i][2].isalpha()):
+                replaces.append((s_pv[i], determine_child_relation(s_pv[i])+"."+s_pv[i]))
+        
+        # Carry out replace on alter_val
+        for orig, repl in replaces:
+            alter_val = alter_val.replace(orig, repl)
+                
+        # Add to relation_changes
+        relation_changes[key] = alter_val
+        
+    # Update dictionary using changes
+    column_references.update(relation_changes)
+    
+    # Iterate through column_references
+    # Unnest them
+    # Iterate through values and keys
+    orig_dict_values = list(column_references.values())
+    orig_dict_keys = list(column_references.keys())
+    for i in range(len(orig_dict_keys)):
+        # New dictionary values
+        new_dict_values = []
+        for j in range(len(list(column_references.values()))):
+            # If the key is inside this value
+            if orig_dict_keys[i] in list(column_references.values())[j]:
+                get_val = list(column_references.values())[j]
+                # Replace the value with the key for that value
+                replace_val = get_val.replace(orig_dict_keys[i], orig_dict_values[i])
+                # Get the value for this new replace_key
+                replace_key = list(column_references.keys())[j]
+                
+                # Add to new_dict_values
+                new_dict_values.append((replace_key, replace_val))
+        
+        # Add in new dictionary values
+        for key, value in new_dict_values:
+            column_references[key] = value
+            
+    return column_references
+
 def make_tree_from_duck(json, tree, sql):
     # Make the: IN Capture
     in_capture = create_in_capture(sql)
+    col_ref = create_col_refs(sql)
             
     # Make the Class tree
     explain_tree = make_class_tree_from_duck(json, tree, in_capture) 
@@ -1506,12 +1580,54 @@ def make_tree_from_duck(json, tree, sql):
     duck_fix_class_tree(explain_tree) 
     
     # Carry out remove laters
+    # TODO: We patch to keep the "top" projection
+    duck_keep_top_proj(explain_tree)
     duck_fix_remove_laters(explain_tree)
     
     # Solve the "SUBQUERY"
     duck_solve_subquery(explain_tree)
     
+    # Replace for the column references
+    # TODO: Maybe, we should keep all projections where we have made col ref insertions?!?
+    duck_col_ref_insert(explain_tree, col_ref)
+    
     return explain_tree
+
+def duck_keep_top_proj(tree):
+    skip_save = False
+    while not hasattr(tree, "remove_later"):
+        if len(tree.plans) != 1:
+            skip_save = True
+            break
+        else:
+            tree = tree.plans[0]
+            
+    if skip_save == False:
+        tree.remove_later = False
+
+def duck_col_ref_insert(tree, cols):
+    # Postorder traversal
+    if tree.plans != None:
+        for i in range(len(tree.plans)):
+            current_node = tree.plans[i]
+            
+            if current_node.node_type in alias_locations:
+                for loc in alias_locations[current_node.node_type]:
+                    if hasattr(current_node, loc):
+                        if isinstance(getattr(current_node, loc), list):
+                            for i in range(len(getattr(current_node, loc))):
+                                for col_key in cols.keys():
+                                    if col_key in getattr(current_node, loc)[i]:
+                                        getattr(current_node, loc)[i] = str(getattr(current_node, loc)[i]).replace(col_key, cols[col_key])
+                        else:
+                            for col_key in cols.keys():
+                                if col_key in getattr(current_node, loc):
+                                    setattr(current_node, loc, str(getattr(current_node, loc)).replace(col_key, cols[col_key]))
+
+    # Run this function on below nodes
+    if tree.plans != None:
+        for individual_plan in tree.plans:
+            duck_col_ref_insert(individual_plan, cols)
 
 def duck_solve_subquery(tree):
     # Postorder Traversal
@@ -1851,6 +1967,8 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
                 sort_keys[i] = sort_keys[i].replace("c_orders", "orders")
             elif "profit" in sort_keys[i]:
                 sort_keys[i] = sort_keys[i].replace("profit", "nation")
+            elif "all_nations" in sort_keys[i]:
+                sort_keys[i] = sort_keys[i].replace("all_nations", "nation")
                 
             # Remove CAST
             if "CAST(" in sort_keys[i]:
@@ -1893,6 +2011,8 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
         node_class.add_remove_later(True)
     elif node_type.lower() == "hash_join":
         node_class = process_hash_join(node)
+    elif node_type.lower() == "perfect_hash_group_by":
+        node_class = process_hash_group_by(node)
     elif node_type.lower() == "hash_group_by":
         node_class = process_hash_group_by(node)
     elif node_type.lower() == "filter":
@@ -1919,6 +2039,7 @@ def make_class_tree_from_duck(json, tree, in_capture, parent=None):
             
             # Change the json
             node = node["children"][0]
+            
         elif child_name.lower() == "hash_group_by":
             # child_copy
             child_copy = node["children"][0].copy()

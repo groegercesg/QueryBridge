@@ -45,6 +45,7 @@ class prep_duck():
         explain_commands = ["PRAGMA enable_profiling='json';",
                             "PRAGMA profile_output='" + str(output_explain_name) + "';",
                             "PRAGMA explain_output='ALL';",
+                            "SET explain_output='all';",
                             "SET threads TO 1;"]
             
         for command in explain_commands:

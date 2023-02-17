@@ -236,13 +236,13 @@ def main():
             raise Exception("No duck db preparation file specified")
         
         db = prep_duck(args.planner_file)
-        
+    
     # Iterate through every subquery
     for i, sub_query in enumerate(split_query):
         
         # Skip iterations
         cleaned_sub_q = sub_query.strip()
-        if sub_query == "":
+        if (sub_query == "") or (sub_query == "\n"):
             # Skip iteration if empty
             continue
         elif cleaned_sub_q[:4] == "drop":
