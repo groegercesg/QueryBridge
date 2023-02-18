@@ -87,6 +87,7 @@ def process_output(self, output, codecomphelper):
         brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "")
         brack_cleaned_equal_quote_lower_output_no_end = rreplace(rreplace(brack_cleaned_equal_quote_lower_output, "end", " ", 1).strip(), " else", "", 1).strip()
         brack_cleaned_equal_quote_lower_output_no_end_spaced = rreplace(rreplace(brack_cleaned_equal_quote_lower_output, " end ", "  ", 1).strip(), " else", "", 1).strip()
+        brack_cleaned_equal_quote_lower_output_no_end_spaced_like = brack_cleaned_equal_quote_lower_output_no_end_spaced.replace(" like ", " ~~ ")
         brack_cleaned_equal_quote_lower_output_dots = brack_cleaned_equal_quote_lower_output.replace("." , "")
         brack_cleaned_equal_quote_lower_output_dots_no_end = rreplace(rreplace(brack_cleaned_equal_quote_lower_output_dots, "end", " ", 1).strip(), " else", "", 1).strip()
         dot_cleaned_output = cleaned_output.replace(".", "").strip()
@@ -135,6 +136,10 @@ def process_output(self, output, codecomphelper):
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, col_ref_complete[brack_cleaned_equal_quote_lower_output_dots_no_end])
+        elif brack_cleaned_equal_quote_lower_output_no_end_spaced_like in col_ref_complete:
+            # We have an item in output that needs to be changed
+            output_original_value = cleaned_output
+            output[i] = (output_original_value, col_ref_complete[brack_cleaned_equal_quote_lower_output_no_end_spaced_like])
         elif brack_cleaned_equal_quote_lower_output_no_end in col_ref_complete:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
@@ -2369,6 +2374,7 @@ class group_aggr_node():
         case_replaces = {}
         case_tracker = "a"
         distinct_replaces = {}
+        case_locations = {}
         distinct_tracker = "a"
         # Check for cases and distincts!
         for i in range(len(self.output)):
@@ -2446,6 +2452,7 @@ class group_aggr_node():
                 statement = str(prev_df) + "['" + case_name + "'] = " + case_string
                 instructions.append(statement)
                 
+                case_locations[extract_case] = case_name
                 # Replace in self.output the extract_case with the new case_string
                 if is_tuple == True:
                     self.output[i] = (self.output[i][0].replace(extract_case, case_name), self.output[i][1])
@@ -2461,7 +2468,6 @@ class group_aggr_node():
                 # Increment case_tracker
                 case_tracker = chr(ord(case_tracker) + 1)
                 
-        
         # Out of self.output determine which of these are complex aggregations
         # I.e. ones like: 'sum(l_extendedprice * (1 - l_discount))'
         # This is complex because it uses more than one column
@@ -2658,6 +2664,9 @@ class group_aggr_node():
                 else:
                     # Already in useAlias
                     raise ValueError("We are trying to add an Alias to useAlias, that is already in there!")
+        
+        # Add case_replaces into codeCompHelper bracket replace
+        codeCompHelper.bracket_replace.update(case_locations)
         
         return instructions   
     
@@ -3100,6 +3109,7 @@ class aggr_node():
         # DICT: [[original_look, new_look], ...]
         case_replaces = {}
         case_tracker = "a"
+        case_locations = {}
         # Check for cases
         # TODO: Change to output_cols
         for i in range(len(self.output)):
@@ -3134,6 +3144,7 @@ class aggr_node():
                 statement = str(prev_df) + "['" + case_name + "'] = " + case_string
                 instructions.append(statement)
                 
+                case_locations[extract_case] = case_name
                 # Replace in self.output the extract_case with the new case_string
                 if is_tuple == True:
                     self.output[i] = (self.output[i][0].replace(extract_case, case_name), self.output[i][1])
@@ -3153,21 +3164,25 @@ class aggr_node():
         instructions.append(this_df + " = pd.DataFrame()")
         
         # Check for intermediate results
-        for i in range(len(self.output)):
-            if isinstance(self.output[i], tuple):
-                # Iterate through keys in bracket_replace
-                for j in range(len(list(codeCompHelper.bracket_replace.keys()))):
-                    if (list(codeCompHelper.bracket_replace.keys())[j].lower() in self.output[i][0]) and (list(codeCompHelper.bracket_replace.keys())[j] != self.output[i][0]):
-                        # We have a bracket replace that's inside a columnar output and not identical to it,
-                        # So we do a replace on the self.output - form a new tuple
-                        self.output[i] = (self.output[i][0].replace(list(codeCompHelper.bracket_replace.keys())[j].lower(), list(codeCompHelper.bracket_replace.values())[j]), self.output[i][1])
-            else:
-                # Iterate through keys in bracket_replace
-                for j in range(len(list(codeCompHelper.bracket_replace.keys()))):
-                    if (list(codeCompHelper.bracket_replace.keys())[j] in self.output[i]) and (list(codeCompHelper.bracket_replace.keys())[j] != self.output[i]):
-                        # We have a bracket replace that's inside a columnar output and not identical to it,
-                        # So we do a replace on the self.output - form a new tuple
-                        self.output[i] = self.output[i].replace(list(codeCompHelper.bracket_replace.keys())[j], list(codeCompHelper.bracket_replace.values())[j])   
+        # Iterate multiple times
+        iter_count = 0
+        while iter_count < 3:
+            for i in range(len(self.output)):
+                if isinstance(self.output[i], tuple):
+                    # Iterate through keys in bracket_replace
+                    for j in range(len(list(codeCompHelper.bracket_replace.keys()))):
+                        if (list(codeCompHelper.bracket_replace.keys())[j].lower() in self.output[i][0]) and (list(codeCompHelper.bracket_replace.keys())[j] != self.output[i][0]):
+                            # We have a bracket replace that's inside a columnar output and not identical to it,
+                            # So we do a replace on the self.output - form a new tuple
+                            self.output[i] = (self.output[i][0].replace(list(codeCompHelper.bracket_replace.keys())[j].lower(), list(codeCompHelper.bracket_replace.values())[j]), self.output[i][1])
+                else:
+                    # Iterate through keys in bracket_replace
+                    for j in range(len(list(codeCompHelper.bracket_replace.keys()))):
+                        if (list(codeCompHelper.bracket_replace.keys())[j] in self.output[i]) and (list(codeCompHelper.bracket_replace.keys())[j] != self.output[i]):
+                            # We have a bracket replace that's inside a columnar output and not identical to it,
+                            # So we do a replace on the self.output - form a new tuple
+                            self.output[i] = self.output[i].replace(list(codeCompHelper.bracket_replace.keys())[j], list(codeCompHelper.bracket_replace.values())[j])   
+            iter_count += 1
         
         instructions += do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper)
         
@@ -3177,6 +3192,9 @@ class aggr_node():
         if codeCompHelper.column_limiting and (output_cols != []):
             statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
+                
+        # Add case_replaces into codeCompHelper bracket replace
+        codeCompHelper.bracket_replace.update(case_locations)
             
         return instructions
     

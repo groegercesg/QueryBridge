@@ -1519,6 +1519,9 @@ def create_col_refs(sql):
                     column_references[str(projection.alias_or_name)] = projection_original
                 """
                 
+                if " like " in projection_original:
+                    projection_original = projection_original.replace(" like ", " ~~ ")
+                
                 # Special to remove tiny alias relation "n2.n_name"
                 if str(projection.alias_or_name) != "":
                     if projection_original.find(".") == 2:
