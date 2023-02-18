@@ -1604,7 +1604,7 @@ def make_tree_from_duck(json, tree, sql):
 def duck_keep_top_proj(tree):
     skip_save = False
     while not hasattr(tree, "remove_later"):
-        if len(tree.plans) != 1:
+        if len(tree.plans) != 1 or tree.node_type == "Group Aggregate":
             skip_save = True
             break
         else:

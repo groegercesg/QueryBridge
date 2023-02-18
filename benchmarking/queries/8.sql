@@ -1,7 +1,7 @@
 select
         o_year,
         sum(case
-                when nation = 'BRAZIL' then volume
+                when (nation = 'BRAZIL') then (volume)
                 else 0
         end) / sum(volume) as mkt_share
 from
@@ -35,5 +35,4 @@ group by
         o_year
 order by
         o_year
-
 LIMIT 1;

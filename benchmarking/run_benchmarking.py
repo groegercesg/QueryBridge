@@ -307,7 +307,14 @@ def main():
                             else:
                                 raise Exception("Unrecognised option in Test specification, 'Use Numpy': " + str(manifest_json["Use Numpy"]))
                         
-                        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+                        try:
+                            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=10)
+                        except Exception as ex:
+                            bad_query = True
+                            # We print the error
+                            # But still output to CSV and to the query file
+                            print(color.RED + str(query["Query Name"]) + ": Pandas conversion error!" + "\n" + color.END)
+                            print(ex)
                         
                         bad_query = False
                         if result.returncode != 0:

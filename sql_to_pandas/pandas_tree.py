@@ -2234,7 +2234,11 @@ def pandas_aggregate_case(inner_string, prev_df):
             values[i] = str(join_on.join(split_on)).strip()     
             
         elif (len(values[i]) > 1):
-            values[i] = aggregate_sum(values[i], s_group = "x")           
+            values[i] = aggregate_sum(values[i], s_group = "x")      
+            
+        # Catch equals and replace
+        if " = " in values[i]:
+            values[i] = values[i].replace(" = ", " == ")    
     
     # li_pa_join.apply(lambda x: x["l_extendedprice"] * (1 - x["l_discount"]) if x["p_type"].startswith("PROMO") else 0, axis=1)
     inner_string = prev_df + '.apply(lambda x: ' + str(values[0]) + ' if ' + str(values[1]) + ' else ' + str(values[2]) + ', axis=1)'        
