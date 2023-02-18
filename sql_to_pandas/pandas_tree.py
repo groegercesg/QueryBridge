@@ -3074,7 +3074,7 @@ class aggr_node():
                 else:
                     raise Exception("Unexpected number of iterations")
                     
-                instructions.append(using_df + " = " + using_df + ".reset_index(level=0)")
+                instructions.append(using_df + " = " + using_df + ".reset_index()")
                 
                 # Reset indexes
                 codeCompHelper.indexes = []
