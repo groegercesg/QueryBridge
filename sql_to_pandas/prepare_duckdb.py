@@ -51,7 +51,19 @@ class prep_duck():
         for command in explain_commands:
             self.connection.execute(command)
         
-        self.connection.execute(query).fetchall()
+        try:
+            self.connection.execute(query).fetchall()
+        except RuntimeError as ex:
+            if "Catalog Error:" == str(ex)[:14]:
+                name = str(str(ex).split('name "')[1].split('"')[0]).strip()
+                self.execute_query("drop view " + name + ";")
+                self.connection.execute(query).fetchall()
+            else:
+                print(ex)
+                exit(0)
+        except Exception as ex_main:
+            print(ex_main)
+            exit(0)
         
         # Read json and return it
         f = open(output_explain_name)

@@ -3300,7 +3300,7 @@ class sql_class():
         column_references = dict()
         for select in parse_one(self.file_content).find_all(exp.Select):
             for projection in select.expressions:
-                if str(projection) != str(projection.alias_or_name):
+                if (str(projection) != str(projection.alias_or_name)) and (str(projection.alias_or_name) != ""):
                     # Do we have an alias, remove if we do
                     if "as" in str(projection).lower():
                         # Remove as
@@ -3356,7 +3356,6 @@ class sql_class():
                                         # column_references[projection_original.split(".")[1].strip()] = str(projection.alias_or_name)
                                     #    pass
                                     
-                                    
                                     # This doesn't work, instead we need to keep the "n1" part to differentiate it
                                     projection_original = projection_original.replace(".", "")
                          
@@ -3366,6 +3365,16 @@ class sql_class():
                             
                         column_references[projection_original] = str(projection.alias_or_name)
 
+        # Manual mode for create views
+        # Assume at the top
+        if self.file_content[:11] == "create view":
+            view_string = self.file_content.split(";")[0]
+            references = view_string.split("(")[1].split(")")[0].split(",")
+            for j in range(len(references)):
+                references[j] = references[j].strip()
+            
+            print("a")
+        
         return column_references
         
     def read_sql_file_for_information(self, sql_file):

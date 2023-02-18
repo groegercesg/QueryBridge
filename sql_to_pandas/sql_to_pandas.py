@@ -248,8 +248,7 @@ def main():
         elif cleaned_sub_q[:4] == "drop":
 
             # Drop command with the DB connection object
-            if args.query_planner == "Postgres":
-                db.execute_query(cleaned_sub_q + ";")
+            db.execute_query(cleaned_sub_q + ";")
 
             # Don't iterate after dropping
             continue
@@ -263,7 +262,8 @@ def main():
             view_names.append(view_name)
             
             # Execute dropping this view
-            db.execute_query("drop view " + view_name + ";")
+            if args.query_planner == "Postgres":
+                db.execute_query("drop view " + view_name + ";")
             
             continue
         else:
