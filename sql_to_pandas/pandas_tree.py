@@ -3317,6 +3317,7 @@ class sql_class():
                                         # n2.n_name
                                         # And turn it into: n_name
                                     # projection_original = str(split_proj[1]).strip()
+                                    column_references[projection_original.split(".")[1]] = str(projection.alias_or_name)
                                     
                                     # Add also the split after the dot of it
                                     #if projection.alias_or_name != "":

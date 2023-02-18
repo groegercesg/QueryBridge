@@ -1512,16 +1512,18 @@ def create_col_refs(sql):
                     projection_original = str(projection).strip()
                 
                 # Only add if we have agg_func
+                """
                 if any([True for item in agg_funcs if item in str(projection_original)]):
                     column_references[str(projection.alias_or_name)] = projection_original
                 elif any([True for item in [" * ", " - ", " + ", " / ", "extract"] if item in str(projection_original)]):
                     column_references[str(projection.alias_or_name)] = projection_original
                 """
+                
+                # Special to remove tiny alias relation "n2.n_name"
                 if projection_original.find(".") == 2:
                     column_references[str(projection.alias_or_name)] = str(projection_original.split(".")[1]).strip()
                 else:
                     column_references[str(projection.alias_or_name)] = projection_original
-                """
                 
     # We need to add in relations
     relation_changes = {}
@@ -1587,13 +1589,13 @@ def make_tree_from_duck(json, tree, sql):
     
     # Carry out remove laters
     # TODO: We patch to keep the "top" projection
-    #duck_keep_top_proj(explain_tree)
+    duck_keep_top_proj(explain_tree)
     duck_fix_remove_laters(explain_tree)
     
     # Replace for the column references
     # TODO: Maybe, we should keep all projections where we have made col ref insertions?!?
-    #duck_col_ref_insert(explain_tree, col_ref)
-    
+    duck_col_ref_insert(explain_tree, col_ref)
+
     # Solve the "SUBQUERY"
     duck_solve_subquery(explain_tree)
     
@@ -1623,18 +1625,35 @@ def duck_col_ref_insert(tree, cols):
                         if isinstance(getattr(current_node, loc), list):
                             for i in range(len(getattr(current_node, loc))):
                                 for col_key in cols.keys():
-                                    if col_key in getattr(current_node, loc)[i]:
-                                        getattr(current_node, loc)[i] = str(getattr(current_node, loc)[i]).replace(col_key, cols[col_key])
+                                    regex_col = r"(\(|\s)" + str(col_key) + r"(\)|\s)"
+                                    if re.search(regex_col, getattr(current_node, loc)[i]):
+                                        getattr(current_node, loc)[i] = re.sub(regex_col, r"\1" + str(cols[col_key]) + r"\2", str(getattr(current_node, loc)[i]))
+                                        # Keep nodes where have made insertions
+                                        if hasattr(current_node, "remove_later"):
+                                            current_node.remove_later = False
+                                    
+                                    # Or is the col_key equal to the loc
+                                    if col_key == getattr(current_node, loc)[i]:
+                                        getattr(current_node, loc)[i] = str(cols[col_key])
                                         # Keep nodes where have made insertions
                                         if hasattr(current_node, "remove_later"):
                                             current_node.remove_later = False
                         else:
                             for col_key in cols.keys():
-                                if col_key in getattr(current_node, loc):
-                                    setattr(current_node, loc, str(getattr(current_node, loc)).replace(col_key, cols[col_key]))
+                                regex_col = r"(\(|\s)" + str(col_key) + r"(\)|\s)"
+                                # Can we find it inside
+                                if re.search(regex_col, getattr(current_node, loc)):
+                                    setattr(current_node, loc, re.sub(regex_col, r"\1" + str(cols[col_key]) + r"\2", str(getattr(current_node, loc))))
                                     # Keep nodes where have made insertions
                                     if hasattr(current_node, "remove_later"):
                                         current_node.remove_later = False
+                                # Or is the col_key equal to the loc
+                                if col_key == getattr(current_node, loc):
+                                    setattr(current_node, loc, str(cols[col_key]))
+                                    # Keep nodes where have made insertions
+                                    if hasattr(current_node, "remove_later"):
+                                        current_node.remove_later = False
+                                
 
     # Run this function on below nodes
     if tree.plans != None:
