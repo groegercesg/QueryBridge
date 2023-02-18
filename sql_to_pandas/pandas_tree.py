@@ -2022,6 +2022,13 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
             # Increment treeHelper
             treeHelper.expr_tree_tracker += 1
             
+            if not any([True for agg in tree.agg_funcs if agg in str(col[0])]):
+                if not any([True for agg in [" + ", " - ", " / ", " * "] if agg in str(col[0])]):
+                    before_aggrs.append([col[1], prev_df + "." + col[0]])
+                
+                    # Don't run rest of this iteration
+                    continue        
+            
             before, during, after = tree.group_aggregate()
             # Edit after array
             new_after = []
@@ -2296,10 +2303,12 @@ class group_aggr_node():
                 # Is it a tuple, set to [0]
                 if isinstance(self.group_key[group], tuple):
                     # If it's a column rename, set to renamed value
-                    if ".dt." in self.group_key[group][0]:
-                        self.group_key[group] = self.group_key[group][1]
-                    else:
-                        self.group_key[group] = self.group_key[group][0]
+                    #if ".dt." in self.group_key[group][0]:
+                    #    self.group_key[group] = self.group_key[group][1]
+                    #else:
+                    
+                    # Patch: Always set as index [1], is this correct?
+                    self.group_key[group] = self.group_key[group][1]
         
         # Process group key
         self.group_key = self.process_group_key(self.group_key)

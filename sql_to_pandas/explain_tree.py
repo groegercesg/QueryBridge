@@ -1890,6 +1890,10 @@ def process_extra_info(extra_info, in_capture, col_ref):
             
             original_contains = "contains(" + new_extra_info[i].split("contains(")[1].split(")")[0] + ")"
             items = str(str(original_contains).replace("contains(", ""))[:-1].split(", ")
+            # Strip quotes from items
+            for j in range(len(items)):
+                if (items[j][0] == "'") and (items[j][-1] == "'"):
+                    items[j] = items[j][1:-1]
             new_contains = str(items[0]) + " ~~ '%" + str(items[1]) + "%'" 
             
             new_extra_info[i] = new_extra_info[i].replace(original_contains, new_contains)
