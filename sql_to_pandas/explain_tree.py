@@ -1520,11 +1520,12 @@ def create_col_refs(sql):
                 """
                 
                 # Special to remove tiny alias relation "n2.n_name"
-                if projection_original.find(".") == 2:
-                    column_references[str(projection.alias_or_name)] = str(projection_original.split(".")[1]).strip()
-                else:
-                    column_references[str(projection.alias_or_name)] = projection_original
-                
+                if str(projection.alias_or_name) != "":
+                    if projection_original.find(".") == 2:
+                        column_references[str(projection.alias_or_name)] = str(projection_original.split(".")[1]).strip()
+                    else:
+                        column_references[str(projection.alias_or_name)] = projection_original
+                    
     # We need to add in relations
     relation_changes = {}
     # Use child_relation, any thing that is "alpha+_+alpha"
@@ -1874,6 +1875,29 @@ def process_extra_info(extra_info, in_capture, col_ref):
             if in_plan_expected[j] in new_extra_info[i]:
                 new_extra_info[i] = str(new_extra_info[i]).replace(in_plan_expected[j], in_plan_desired[j])
         
+        # Remove CAST
+        """
+            if "CAST(" in sort_keys[i]:
+                # Extract ASC or DESC
+                
+                sort_by = None
+                if "ASC" == sort_keys[i][-3:]:
+                    sort_by = "ASC"
+                elif "DESC" == sort_keys[i][-4:]:
+                    sort_by = "DESC"
+                else:
+                    raise Exception("Couldn't detect a parameter to sort by!")
+                
+                sort_keys[i] = str(sort_keys[i].split("CAST(")[1].split(" AS ")[0]).strip()
+                if (sort_keys[i][0] == "(") and (sort_keys[i][-1] == ")"):
+                    sort_keys[i] = sort_keys[i][1:-1]
+                    
+                if " - " in sort_keys[i]:
+                    sort_keys[i] = str(sort_keys[i].split(" - ")[0]).strip()
+                    
+                sort_keys[i] = sort_keys[i] + " " + sort_by
+        """
+        
         # Year
         if "year(" in new_extra_info[i]:
             # year(o_orderdate)
@@ -2054,6 +2078,8 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         # Make a projection node an aggregate node
         node_class = aggregate_node("Aggregate", node["extra_info"])
         node_class.add_remove_later(True)
+    elif node_type.lower() == "piecewise_merge_join":
+        node_class = process_merge_join(node)
     elif node_type.lower() == "hash_join":
         node_class = process_hash_join(node)
     elif node_type.lower() == "perfect_hash_group_by":
@@ -2168,6 +2194,33 @@ def determine_child_relation(item):
         return None
     
     return child_relation
+
+def process_merge_join(json, external_filters=None):
+    
+    merge_output = []
+    # TODO: Hardcoded, but we should remove
+    inner_unique = False
+    join_type = json["extra_info"][0]
+    condition = " AND ".join(json["extra_info"][1:])
+    # If condition is " IS NOT DISTINCT FROM ", Then we need to fix it
+    if " IS NOT DISTINCT FROM " in condition:
+        # Split on AND
+        if " AND " in condition:
+            raise Exception("AND in Duck Plan Hash condition")
+        else:
+            focus = str(condition.split(" IS NOT DISTINCT FROM ")[0])
+            
+            right_focus = str(json["children"][1]["extra_info"]).split("\n")[0]
+            condition = focus + " = " + right_focus
+    
+    node_class = merge_join_node("Merge Join", merge_output, inner_unique, join_type, condition)
+    
+    child_relation = determine_child_relation(condition[0])
+
+    if external_filters != None:
+        node_class.add_filter(process_external_filters(external_filters, child_relation))
+    
+    return node_class
 
 def process_hash_join(json, external_filters=None):
     
