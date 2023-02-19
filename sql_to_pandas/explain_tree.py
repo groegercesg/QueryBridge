@@ -1500,6 +1500,9 @@ def create_in_capture(sql):
 from sqlglot import parse_one, exp
 
 def create_col_refs(sql):
+    # Track suspicious aliases
+    suspicious_aliases = []
+    
     column_references = dict()
     for select in parse_one(sql).find_all(exp.Select):
         for projection in select.expressions:
@@ -1526,7 +1529,7 @@ def create_col_refs(sql):
                 # Special to remove tiny alias relation "n2.n_name"
                 if str(projection.alias_or_name) != "":
                     if projection_original.find(".") == 2:
-                        column_references[str(projection.alias_or_name)] = str(str(projection_original).split(".")[1]).strip()
+                        suspicious_aliases.append(str(projection_original)[:2])
                         column_references[str(projection.alias_or_name)] = str(projection_original)[:2] + str(projection_original)[2+1:]
                     else:
                         column_references[str(projection.alias_or_name)] = projection_original
@@ -1555,6 +1558,20 @@ def create_col_refs(sql):
         
     # Update dictionary using changes
     column_references.update(relation_changes)
+    
+    # Check for suspcious aliases
+    if len(suspicious_aliases) == 1:
+        for alias in suspicious_aliases:
+            update = {}
+            count = 0
+            # Count number of col_refs it appears in
+            for key in column_references:
+                if alias in column_references[key]:
+                    update[key] = str(column_references[key]).replace(alias, "")
+                    count += 1
+            # If it's equal to 1, we remove
+            if count == 1:
+                column_references.update(update)
     
     # Iterate through column_references
     # Unnest them
@@ -2326,7 +2343,7 @@ def process_external_filters(external_filters, child_relation, col_ref=None):
     fixed_attribute_collect = defaultdict(int)
     for key in attributes_collect.keys():
         original_key = str(key)
-        if " = " in key:
+        if (" = " in key) and (int(attributes_collect[key]) != 1):
             fixed_attribute_collect[str(key.split(" = ")[0]).strip()] += attributes_collect[original_key]
     
     if fixed_attribute_collect != {}:
@@ -2433,7 +2450,7 @@ def process_seq_scan(json, col_ref, external_filters=None):
         node_class.add_filters(filters)
     elif external_filters != None:
         filters, renames = process_external_filters(external_filters, relation_name, col_ref)
-        node_class.add_filter(filters)
+        node_class.add_filters(filters)
         node_class.add_renames(renames)
         
     return node_class
