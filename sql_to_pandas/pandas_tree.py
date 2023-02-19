@@ -3069,6 +3069,13 @@ class merge_node():
             statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
             
+        # Do renames
+        if hasattr(self, "renames"):
+            if (self.renames != []) and (self.renames != None):
+                for original, new in self.renames:
+                    rename_string = this_df + "['" + str(new) + "'] = " + this_df + "['" + str(original) + "']"
+                    instructions.append(rename_string)
+            
         return instructions
 
 class aggr_node():
@@ -3485,6 +3492,11 @@ def create_tree(class_tree, sql_class):
             node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type, filters=current_node.filter, sort=False)
         else:
             node_class = merge_node(current_node.hash_cond, current_node.output, join=current_node.join_type, sort=False)
+        
+        # Handle renames
+        if hasattr(current_node, "renames"):
+            if (current_node.renames != []) and (current_node.renames != None):
+                node_class.renames = current_node.renames
     elif node_type == "Merge Join":
         # It's a Merge Join, we have Sort = True
         if hasattr(current_node, "filter"):

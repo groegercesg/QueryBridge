@@ -2,6 +2,7 @@ from plan_to_explain_tree import *
 import regex
 import re
 from queue import Queue
+from collections import defaultdict
 
 agg_funcs = {"sum", "avg", "count", "max", "min", "distinct", "mean", "count_star"}
 
@@ -1525,7 +1526,8 @@ def create_col_refs(sql):
                 # Special to remove tiny alias relation "n2.n_name"
                 if str(projection.alias_or_name) != "":
                     if projection_original.find(".") == 2:
-                        column_references[str(projection.alias_or_name)] = str(projection_original.split(".")[1]).strip()
+                        column_references[str(projection.alias_or_name)] = str(str(projection_original).split(".")[1]).strip()
+                        column_references[str(projection.alias_or_name)] = str(projection_original)[:2] + str(projection_original)[2+1:]
                     else:
                         column_references[str(projection.alias_or_name)] = projection_original
                     
@@ -2041,6 +2043,8 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
                 sort_keys[i] = sort_keys[i].replace("profit", "nation")
             elif "all_nations" in sort_keys[i]:
                 sort_keys[i] = sort_keys[i].replace("all_nations", "nation")
+            elif "shipping" in sort_keys[i]:
+                sort_keys[i] = sort_keys[i].replace("shipping", "nation")
                 
             # Remove CAST
             if "CAST(" in sort_keys[i]:
@@ -2082,13 +2086,13 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         node_class = aggregate_node("Aggregate", node["extra_info"])
         node_class.add_remove_later(True)
     elif node_type.lower() == "piecewise_merge_join":
-        node_class = process_merge_join(node)
+        node_class = process_merge_join(node, col_ref)
     elif node_type.lower() == "hash_join":
-        node_class = process_hash_join(node)
+        node_class = process_hash_join(node, col_ref)
     elif node_type.lower() == "perfect_hash_group_by":
-        node_class = process_hash_group_by(node)
+        node_class = process_hash_group_by(node, col_ref)
     elif node_type.lower() == "hash_group_by":
-        node_class = process_hash_group_by(node)
+        node_class = process_hash_group_by(node, col_ref)
     elif node_type.lower() == "filter":
         # If it's a filter node, check if we have a seq_scan below
         if len(node["children"]) != 1:
@@ -2100,7 +2104,7 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
             child_copy = node["children"][0].copy()
             child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture, col_ref)
             # Get the class
-            node_class = process_seq_scan(child_copy, node["extra_info"])
+            node_class = process_seq_scan(child_copy, col_ref, node["extra_info"])
             
             # Change the json
             node = node["children"][0]
@@ -2109,7 +2113,7 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
             child_copy = node["children"][0].copy()
             child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture, col_ref)
             # Get the class
-            node_class = process_hash_join(child_copy, node["extra_info"])
+            node_class = process_hash_join(child_copy, col_ref, node["extra_info"])
             
             # Change the json
             node = node["children"][0]
@@ -2119,7 +2123,7 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
             child_copy = node["children"][0].copy()
             child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture, col_ref)
             # Get the class
-            node_class = process_hash_group_by(child_copy, node["extra_info"])
+            node_class = process_hash_group_by(child_copy, col_ref, node["extra_info"])
             
             # Change the json
             node = node["children"][0]    
@@ -2128,7 +2132,7 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
             raise Exception("Child is not a seq_scan or hash_join, it's a: " + str(node["children"][0]["name"]))
         
     elif node_type.lower() == "seq_scan":
-        node_class = process_seq_scan(node)
+        node_class = process_seq_scan(node, col_ref)
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
     
@@ -2153,7 +2157,7 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
     
     return node_class
 
-def process_hash_group_by(json, external_filters=None):
+def process_hash_group_by(json, col_ref, external_filters=None):
     # Iterate through extra_info
     new_output = list(json["extra_info"])
     
@@ -2169,8 +2173,10 @@ def process_hash_group_by(json, external_filters=None):
     node_class = group_aggregate_node("Group Aggregate", new_output, group_keys)
     
     if external_filters != None:
-        node_class.add_filter(process_external_filters(external_filters, child_relation))
-    
+        filters, renames = process_external_filters(external_filters, child_relation, col_ref)
+        node_class.add_filter(filters)
+        node_class.add_renames(renames)
+        
     return node_class
 
 def determine_child_relation(item):
@@ -2198,7 +2204,7 @@ def determine_child_relation(item):
     
     return child_relation
 
-def process_merge_join(json, external_filters=None):
+def process_merge_join(json, col_ref, external_filters=None):
     
     merge_output = []
     # TODO: Hardcoded, but we should remove
@@ -2221,11 +2227,13 @@ def process_merge_join(json, external_filters=None):
     child_relation = determine_child_relation(condition[0])
 
     if external_filters != None:
-        node_class.add_filter(process_external_filters(external_filters, child_relation))
+        filters, renames = process_external_filters(external_filters, child_relation, col_ref)
+        node_class.add_filter(filters)
+        node_class.add_renames(renames)
     
     return node_class
 
-def process_hash_join(json, external_filters=None):
+def process_hash_join(json, col_ref, external_filters=None):
     
     hash_output = []
     # TODO: Hardcoded, but we should remove
@@ -2248,11 +2256,16 @@ def process_hash_join(json, external_filters=None):
     child_relation = determine_child_relation(condition[0])
 
     if external_filters != None:
-        node_class.add_filter(process_external_filters(external_filters, child_relation))
+        filters, renames = process_external_filters(external_filters, child_relation, col_ref)
+        node_class.add_filter(filters)
+        node_class.add_renames(renames)
     
     return node_class
 
-def process_external_filters(external_filters, child_relation):
+def process_external_filters(external_filters, child_relation, col_ref=None):
+    
+    # Collect attributes into a dictionary
+    attributes_collect = defaultdict(int)
     
     # Split on AND/OR
     for j in range(len(external_filters)):
@@ -2269,9 +2282,11 @@ def process_external_filters(external_filters, child_relation):
                     if any(are_there_aggs):
                         # Put relation after agg_func
                         insert_length = sum(len(s) for s in are_there_aggs)
+                        attributes_collect[line_split[i][insert_length:]] += 1
                         line_split[i] = line_split[i][:insert_length] + child_relation + "." + line_split[i][insert_length:]
                     else:
                         # Stick relation at end
+                        attributes_collect[line_split[i]] += 1
                         line_split[i] = child_relation + "." + line_split[i]
                         
                     # Contains
@@ -2305,9 +2320,52 @@ def process_external_filters(external_filters, child_relation):
         external_filters[j] = " ".join(line_split)
     external_filters = " AND ".join(external_filters)
     
-    return external_filters
+    # Use attributes collect
+    # Format attributes collect, split on equals
+    renames = []
+    fixed_attribute_collect = defaultdict(int)
+    for key in attributes_collect.keys():
+        original_key = str(key)
+        if " = " in key:
+            fixed_attribute_collect[str(key.split(" = ")[0]).strip()] += attributes_collect[original_key]
+    
+    if fixed_attribute_collect != {}:
+        # Replace for n_name_x and 
+        for key in fixed_attribute_collect.keys():
+            replaces = []
+            replace_count = int(fixed_attribute_collect[key])
+            for i in range(replace_count):
+                if i % 2 == 0:
+                    # _x
+                    replaces.append(key + "_x")
+                else:
+                    # _y
+                    replaces.append(key + "_y")
+                    
+            # Actually do the replaces
+            for repl_new in replaces:
+                external_filters = external_filters.replace(key + " ", repl_new + " ", 1)
+    
+        # Make unique replaces
+        uniq_replaces =  list(dict.fromkeys(replaces))
+        uniq_replaces.reverse()
+        
+        col_ref_discovered = []
+        # Look through col_ref.values for the original key
+        for col_ref_val in col_ref.values():
+            if key in col_ref_val:
+                col_ref_discovered.append(col_ref_val)
+                
+        if len(uniq_replaces) == len(col_ref_discovered):
+            for i in range(len(uniq_replaces)):
+                renames.append((uniq_replaces[i], col_ref_discovered[i]))
+    
+    if renames == []:
+        return external_filters, None
+    else:
+        return external_filters, renames
 
-def process_seq_scan(json, external_filters=None):
+def process_seq_scan(json, col_ref, external_filters=None):
     # Set the relation and alias
     if json["extra_info"][0] != "[INFOSEPARATOR]":
         relation_name = json["extra_info"][0]
@@ -2365,12 +2423,17 @@ def process_seq_scan(json, external_filters=None):
     
     # Set the filters
     if (filters != None) and (external_filters != None):
-        node_class.add_filters(filters + " AND " + process_external_filters(external_filters, relation_name))
+        
+        ext_filters, renames = process_external_filters(external_filters, relation_name, col_ref)    
+        node_class.add_filters(filters + " AND " + ext_filters)
+        node_class.add_renames(renames)
+        
     elif filters != None:
         # Check if a filter exists and add it
         node_class.add_filters(filters)
     elif external_filters != None:
-        # Check if a external_filters exists and add it
-        node_class.add_filters(process_external_filters(external_filters, relation_name))
+        filters, renames = process_external_filters(external_filters, relation_name, col_ref)
+        node_class.add_filter(filters)
+        node_class.add_renames(renames)
         
     return node_class
