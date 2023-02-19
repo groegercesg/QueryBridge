@@ -3175,6 +3175,13 @@ class aggr_node():
                             # We have a bracket replace that's inside a columnar output and not identical to it,
                             # So we do a replace on the self.output - form a new tuple
                             self.output[i] = (self.output[i][0].replace(list(codeCompHelper.bracket_replace.keys())[j].lower(), list(codeCompHelper.bracket_replace.values())[j]), self.output[i][1])
+                    # Iterate through keys in useAlias
+                    for j in range(len(list(codeCompHelper.useAlias.keys()))):
+                        if (list(codeCompHelper.useAlias.keys())[j].lower() in self.output[i][0]) and (list(codeCompHelper.useAlias.keys())[j] != self.output[i][0]):
+                            # We have a bracket replace that's inside a columnar output and not identical to it,
+                            # So we do a replace on the self.output - form a new tuple
+                            self.output[i] = (self.output[i][0].replace(list(codeCompHelper.useAlias.keys())[j].lower(), list(codeCompHelper.useAlias.values())[j]), self.output[i][1])
+                    
                 else:
                     # Iterate through keys in bracket_replace
                     for j in range(len(list(codeCompHelper.bracket_replace.keys()))):
@@ -3182,6 +3189,14 @@ class aggr_node():
                             # We have a bracket replace that's inside a columnar output and not identical to it,
                             # So we do a replace on the self.output - form a new tuple
                             self.output[i] = self.output[i].replace(list(codeCompHelper.bracket_replace.keys())[j], list(codeCompHelper.bracket_replace.values())[j])   
+                    # Iterate through keys in useAlias
+                    for j in range(len(list(codeCompHelper.useAlias.keys()))):
+                        if (list(codeCompHelper.useAlias.keys())[j] in self.output[i]) and (list(codeCompHelper.useAlias.keys())[j] != self.output[i]):
+                            # We have a bracket replace that's inside a columnar output and not identical to it,
+                            # So we do a replace on the self.output - form a new tuple
+                            self.output[i] = self.output[i].replace(list(codeCompHelper.useAlias.keys())[j], list(codeCompHelper.useAlias.values())[j])   
+                    
+                    
             iter_count += 1
         
         instructions += do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper)
@@ -3224,6 +3239,9 @@ class rename_node():
         # Create the current dataframe
         instructions.append(this_df + " = pd.DataFrame()")
         
+        # Clear codeCompHelper indexes
+        codeCompHelper.indexes = []
+        
         # Choose output columns        
         output_cols = choose_aliases(self, codeCompHelper)
         
@@ -3236,6 +3254,11 @@ class rename_node():
                 prev_output[i] = codeCompHelper.bracket_replace[prev_output[i]]
         # Reverse these
         prev_output.reverse()
+        
+        # If prev_output are tuples, take the 1st index
+        for i in range(len(prev_output)):
+            if isinstance(prev_output[i], tuple):
+                prev_output[i] = prev_output[i][1]
         
         # Check that we have the correct number of columns for a 1-to-1 mapping between output_cols and prev_output
         if len(output_cols) != len(prev_output):
@@ -3298,9 +3321,39 @@ class sql_class():
         
     def get_col_refs(self):
         column_references = dict()
-        for select in parse_one(self.file_content).find_all(exp.Select):
+        # Get column references for whole file
+        self.read_sql_for_col_refs(self.file_content, column_references)
+
+        # Manual mode for create views
+        # Assume at the top
+        if self.file_content[:11] == "create view":
+            view_string = self.file_content.split(";")[0]
+            references = view_string.split("(")[1].split(")")[0].split(",")
+            for j in range(len(references)):
+                references[j] = references[j].strip()
+            
+            self.read_sql_for_col_refs(view_string, column_references, references)
+        
+        return column_references
+        
+    def read_sql_file_for_information(self, sql_file):
+        f = open(sql_file, "r")
+        file = f.read()
+        file = ' '.join(file.split())
+        return file
+
+    def read_sql_for_col_refs(self, sql_content, col_dict, references=None):
+        current_from_references = 0
+        for select in parse_one(sql_content).find_all(exp.Select):
             for projection in select.expressions:
-                if (str(projection) != str(projection.alias_or_name)) and (str(projection.alias_or_name) != ""):
+                # If alias == "", substitute in for references
+                projection_alias = str(projection.alias_or_name)
+                
+                if ((str(projection) == projection_alias) or (projection_alias == "")) and (references != None) and (current_from_references < len(references)):
+                    projection_alias = references[current_from_references]
+                    current_from_references += 1
+                
+                if (str(projection) != projection_alias) and (projection_alias != ""):
                     # Do we have an alias, remove if we do
                     if "as" in str(projection).lower():
                         # Remove as
@@ -3311,7 +3364,7 @@ class sql_class():
                     
                     # Remove all brackets for comparison purposes
                     projection_original = projection_original.replace("(", "").replace(")", "")
-                    if projection_original in column_references:
+                    if projection_original in col_dict:
                         # Check the existing key is the same as 
                         raise ValueError("We are trying to process a SQL but finding multiple identical projections")
                     else:
@@ -3348,7 +3401,7 @@ class sql_class():
                                         # n2.n_name
                                         # And turn it into: n_name
                                     # projection_original = str(split_proj[1]).strip()
-                                    column_references[projection_original.split(".")[1]] = str(projection.alias_or_name)
+                                    col_dict[projection_original.split(".")[1]] = projection_alias
                                     
                                     # Add also the split after the dot of it
                                     #if projection.alias_or_name != "":
@@ -3362,26 +3415,12 @@ class sql_class():
                         # If comma in, get rid of comma
                         if ("," in projection_original):
                             projection_original = projection_original.replace(",", "")
-                            
-                        column_references[projection_original] = str(projection.alias_or_name)
-
-        # Manual mode for create views
-        # Assume at the top
-        if self.file_content[:11] == "create view":
-            view_string = self.file_content.split(";")[0]
-            references = view_string.split("(")[1].split(")")[0].split(",")
-            for j in range(len(references)):
-                references[j] = references[j].strip()
-            
-            print("a")
+                        
+                        if "SUM" in projection_original:
+                            projection_original = projection_original.replace("SUM", "sum")
+                           
+                        col_dict[projection_original] = projection_alias
         
-        return column_references
-        
-    def read_sql_file_for_information(self, sql_file):
-        f = open(sql_file, "r")
-        file = f.read()
-        file = ' '.join(file.split())
-        return file
 
 # Functions to make pandas tree of classes
 def make_pandas_tree(class_tree, sql_file):
