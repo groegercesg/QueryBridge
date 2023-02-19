@@ -3418,6 +3418,11 @@ class sql_class():
                         
                         if "SUM" in projection_original:
                             projection_original = projection_original.replace("SUM", "sum")
+                            
+                        if "." in projection_alias:
+                            local_proj_al = str(projection_alias).replace(".", "")
+                            if all([True for char in local_proj_al if char.isdigit()]):
+                                continue
                            
                         col_dict[projection_original] = projection_alias
         
