@@ -532,18 +532,19 @@ def sql_like_fragment_to_regex_string(fragment):
 
 def clean_filter_params(self, params, codeCompHelper, prev_df):  
     
-    # Clean params with codeCompHelper
-    # Iterate through all relations
-    for key in codeCompHelper.aliasRelationPairs:
-        targetRelation = str(key + ".")
-        if targetRelation in params:
-            params = params.replace(targetRelation, str(codeCompHelper.aliasRelationPairs[key] + "."))
-    
+
     # We try and squeeze in any bracket replaces we might have
     # Check if we have any bracket replaces
     # Create a relation removed version
     # If bracket replace is not empty
     if codeCompHelper.bracket_replace != {}:
+        # Clean params with codeCompHelper
+        # Iterate through all relations
+        for key in codeCompHelper.aliasRelationPairs:
+            targetRelation = str(key + ".")
+            if targetRelation in params:
+                params = params.replace(targetRelation, str(codeCompHelper.aliasRelationPairs[key] + "."))
+
         # Strip outer brackets if exist 
         bracket_replace_params = params
         if (bracket_replace_params[0] == "(") and (bracket_replace_params[-1] == ")"):
@@ -634,6 +635,13 @@ def clean_filter_params(self, params, codeCompHelper, prev_df):
             for replacement in replaces:
                 # We want whole relations so match the replace on a string after it
                 params = params.replace(replacement[0] + " ", replacement[1] + " ", 1)
+
+    # Clean params with codeCompHelper
+    # Iterate through all relations
+    for key in codeCompHelper.aliasRelationPairs:
+        targetRelation = str(key + ".")
+        if targetRelation in params:
+            params = params.replace(targetRelation, str(codeCompHelper.aliasRelationPairs[key] + "."))
 
     # Replace AND with & and convert to string
     filters = str(params.replace(" AND ", " & "))

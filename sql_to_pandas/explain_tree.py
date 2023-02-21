@@ -1958,7 +1958,7 @@ def process_extra_info(extra_info, in_capture, col_ref):
         new_extra_info[i] = new_extra_info[i].replace("0.000000", "0")
         precision_regex = r"\.000(\D)"
         if re.search(precision_regex, new_extra_info[i]):
-            new_extra_info[i] = re.sub(precision_regex, "\1", new_extra_info[i])
+            new_extra_info[i] = re.sub(precision_regex, r"\1", new_extra_info[i])
         new_extra_info[i] = new_extra_info[i].replace("True AND ", "")
         new_extra_info[i] = new_extra_info[i].replace("count_star()", "count(*)")
         new_extra_info[i] = str(new_extra_info[i]).strip()
@@ -1977,9 +1977,14 @@ def process_extra_info(extra_info, in_capture, col_ref):
                 new_extra_info[i] = new_extra_info[i].replace("CAST(", "", 1)
                 # Remove AS bit
                 as_right = new_extra_info[i].rfind(" AS ")
-                two_brackets_right = new_extra_info[i].find("))", as_right) + len("))")
+                brackets_right = new_extra_info[i].find("))", as_right) + len("))")
+                if brackets_right == 1:
+                    # Not found
+                    # Try one bracket right
+                    brackets_right = new_extra_info[i].find(")", as_right) + len(")")
+                    
                 # Remove this AS section
-                new_extra_info[i] = new_extra_info[i][:as_right] + new_extra_info[i][two_brackets_right:]
+                new_extra_info[i] = new_extra_info[i][:as_right] + new_extra_info[i][brackets_right:]
                 
             # Simplfy too many brackets
             if "((" in new_extra_info[i]:
@@ -2127,6 +2132,26 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
                 sort_keys[i] = sort_keys[i].replace("all_nations", "nation")
             elif "shipping" in sort_keys[i]:
                 sort_keys[i] = sort_keys[i].replace("shipping", "nation")
+            
+            
+            if " - " in sort_keys[i] and not any([True for agg in ["sum", "max", "min", "avg"] if agg == sort_keys[i][:3]]):
+                sort_by = None
+                if "ASC" == sort_keys[i][-3:]:
+                    sort_by = "ASC"
+                elif "DESC" == sort_keys[i][-4:]:
+                    sort_by = "DESC"
+                else:
+                    raise Exception("Couldn't detect a parameter to sort by!")
+                
+                sort_keys[i] = sort_keys[i].replace(sort_by, "").strip()
+                
+                if (sort_keys[i][0] == "(") and (sort_keys[i][-1] == ")"):
+                    sort_keys[i] = sort_keys[i][1:-1]
+                
+                sort_keys[i] = str(sort_keys[i].split(" - ")[0]).strip()
+                
+                sort_keys[i] = sort_keys[i] + " " + sort_by
+            
                 
             # Remove CAST
             if "CAST(" in sort_keys[i]:
