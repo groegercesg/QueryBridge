@@ -1613,15 +1613,20 @@ def make_tree_from_duck(json, tree, sql):
     # Carry out remove laters
     # TODO: We patch to keep the "top" projection
     duck_keep_top_proj(explain_tree)
-    duck_fix_remove_laters(explain_tree)
+    
+    # Iterate 3 times
+    iter_count = 0
+    while iter_count < 3:
+        duck_fix_remove_laters(explain_tree)
+        iter_count += 1
+    
+    # Solve the "SUBQUERY"
+    duck_solve_subquery(explain_tree)
     
     # Replace for the column references
     # TODO: Maybe, we should keep all projections where we have made col ref insertions?!?
     duck_col_ref_insert(explain_tree, col_ref)
 
-    # Solve the "SUBQUERY"
-    duck_solve_subquery(explain_tree)
-    
     return explain_tree
 
 def duck_keep_top_proj(tree):
@@ -1689,14 +1694,35 @@ def duck_solve_subquery(tree):
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             # For the moment, only fix "SUBQUERY" in Hash Join
-            if current_node.node_type == "Hash Join":
-                if "SUBQUERY" in current_node.hash_cond:
+            if (current_node.node_type == "Hash Join") or (current_node.node_type == "Merge Join"):
+                if ((hasattr(current_node, "hash_cond")) and ("SUBQUERY" in current_node.hash_cond)) or ((hasattr(current_node, "merge_cond")) and ("SUBQUERY" in current_node.merge_cond)) or ((hasattr(current_node, "filter")) and ("SUBQUERY" in current_node.filter)):
                     # We have a subquery to solve
-                    cond_split = list(filter(None, re.split('(AND)|(OR)', current_node.hash_cond)))
+                    if (current_node.node_type == "Hash Join") and ("SUBQUERY" in current_node.hash_cond):
+                        source_loc = "hash_cond"
+                        cond_split = list(filter(None, re.split('(AND)|(OR)', current_node.hash_cond)))
+                    elif (current_node.node_type == "Hash Join") and ("SUBQUERY" in current_node.filter):
+                        source_loc = "filter"
+                        cond_split = list(filter(None, re.split('(AND)|(OR)', current_node.filter)))
+                    elif (current_node.node_type == "Merge Join") and ("SUBQUERY" in current_node.merge_cond):
+                        source_loc = "merge_cond"
+                        cond_split = list(filter(None, re.split('(AND)|(OR)', current_node.merge_cond)))
+                        
+                    elif (current_node.node_type == "Merge Join") and ("SUBQUERY" in current_node.filter):
+                        source_loc = "filter"
+                        cond_split = list(filter(None, re.split('(AND)|(OR)', current_node.filter)))
                     
                     for k in range(len(cond_split)):
-                        if " = " in cond_split[k]:
-                            eq_split = cond_split[k].split(" = ")
+                        if "SUBQUERY" in cond_split[k]:
+                            # Determine eq_split
+                            split_type = None
+                            if " = " in cond_split[k]:
+                                split_type = " = "
+                                eq_split = cond_split[k].split(split_type)
+                            elif " > " in cond_split[k]:
+                                split_type = " > "
+                                eq_split = cond_split[k].split(split_type)
+                            else:
+                                raise Exception("Unknown split type")
                             
                             # Strip out spaces
                             for j in range(len(eq_split)):
@@ -1718,19 +1744,22 @@ def duck_solve_subquery(tree):
                                 child = current_node.plans[1]
                                 while child.output == []:
                                     child = child.plans[0]
-                                    
-                                child_value = str(child.output[0]).replace("(", "").replace(")", "")
+                                
+                                if source_loc != "filter":
+                                    child_value = str(child.output[0]).replace("(", "").replace(")", "")
+                                else:
+                                    child_value = str(child.output[0])
                                 eq_split[1] = eq_split[1].replace("SUBQUERY", child_value)
                             else:
                                 raise Exception("Couldn't find subquery anywhere")
                             
-                            cond_split[k] = " = ".join(eq_split)
+                            cond_split[k] = split_type.join(eq_split)
                                 
                         else:
                             raise Exception("Unexpectedly, cond in Hash Join doesn't have an equals in it")
                     
                     # Join local_split back together
-                    current_node.hash_cond = " ".join(cond_split)
+                    setattr(current_node, source_loc, " ".join(cond_split))
     
     # Run this function on below nodes
     if tree.plans != None:
@@ -1752,16 +1781,41 @@ def duck_fix_remove_laters(tree):
                 if current_node.remove_later == True:
                     # We have found a node with remove_later attr
                     # Get the Prune's children (child)
-                    if len(current_node.plans) == 1:
-                        prune_children = current_node.plans[0]
+                    
+                    do_remove = False
+                    # Determine whether we should keep this or remove it
+                    if len(current_node.output) != len(current_node.plans[0].output):
+                        # Remove
+                        do_remove = True
                     else:
-                        raise ValueError("We have assumed a sort node only has one child, not the case in reality!")
-                    
-                    # Set the parent of prune_children to be tree.plans[i]
-                    prune_children.parent = tree
-                    
-                    # Set current_node to be the children
-                    tree.plans[i] = prune_children
+                        for j in range(len(current_node.output)):
+                            difference = None
+                            if current_node.plans[0].output[j] in current_node.output[j]:
+                                difference = current_node.output[j].replace(current_node.plans[0].output[j], "")
+                            
+                            if difference == None:
+                                do_remove = True
+                                break
+                            elif not any([True for agg in [" * ", " + "] if agg in difference]):
+                                do_remove = True
+                                break
+                            else:
+                                # Do not remove
+                                # Set current_node.plans[0] remove later
+                                setattr(current_node.plans[0], "remove_later", True)
+                                setattr(current_node, "remove_later", False)
+                            
+                    if do_remove == True:
+                        if len(current_node.plans) == 1:
+                            prune_children = current_node.plans[0]
+                        else:
+                            raise ValueError("We have assumed a sort node only has one child, not the case in reality!")
+                        
+                        # Set the parent of prune_children to be tree.plans[i]
+                        prune_children.parent = tree
+                        
+                        # Set current_node to be the children
+                        tree.plans[i] = prune_children
     
 
 def duck_fix_class_tree(tree):
@@ -1814,8 +1868,25 @@ def duck_fix_class_tree(tree):
                                 else: 
                                     local_child = determine_local_child(tree, loc, col_replace)
                                 
+                                # Only run if we have something to replace for
                                 if local_child.output != []:
-                                    getattr(tree, loc)[i] = str(str(getattr(tree, loc)[i]).replace(col_replace, local_child.output[col_index])).strip()
+                                    # If there are brackets around both the origin and the replace, then remove one of theirs, so we don't have two nested brackets
+                                    before_origin = getattr(tree, loc)[i][getattr(tree, loc)[i].find(col_replace) - 1]
+                                    if len(getattr(tree, loc)[i]) > int(getattr(tree, loc)[i].find(col_replace) + len(col_replace)):
+                                        after_origin = getattr(tree, loc)[i][getattr(tree, loc)[i].find(col_replace) + len(col_replace)]
+                                    else:
+                                        after_origin = None
+                                    
+                                    replace_value = local_child.output[col_index]
+                                    before_replace = replace_value[0]
+                                    after_replace = replace_value[-1]
+                                    
+                                    if (before_origin == "(") and (after_origin == ")") and (before_replace == "(") and (after_replace == ")"):
+                                        # Trim leading and closing brackets from string
+                                        replace_value = replace_value[1:-1]
+                                    
+                                    getattr(tree, loc)[i] = str(str(getattr(tree, loc)[i]).replace(col_replace, replace_value)).strip()
+                                    
                     else:
                         reg = re.search(col_ref, getattr(tree, loc))
                         if reg != None:
@@ -1885,7 +1956,9 @@ def process_extra_info(extra_info, in_capture, col_ref):
     # Replace out ".000"
     for i in range(len(new_extra_info)):
         new_extra_info[i] = new_extra_info[i].replace("0.000000", "0")
-        new_extra_info[i] = new_extra_info[i].replace(".000", "")
+        precision_regex = r"\.000(\D)"
+        if re.search(precision_regex, new_extra_info[i]):
+            new_extra_info[i] = re.sub(precision_regex, "\1", new_extra_info[i])
         new_extra_info[i] = new_extra_info[i].replace("True AND ", "")
         new_extra_info[i] = new_extra_info[i].replace("count_star()", "count(*)")
         new_extra_info[i] = str(new_extra_info[i]).strip()
@@ -1898,27 +1971,19 @@ def process_extra_info(extra_info, in_capture, col_ref):
                 new_extra_info[i] = str(new_extra_info[i]).replace(in_plan_expected[j], in_plan_desired[j])
         
         # Remove CAST
-        """
-            if "CAST(" in sort_keys[i]:
-                # Extract ASC or DESC
+        if "CAST(" in new_extra_info[i]:
+            while "CAST(" in new_extra_info[i]:
+                # Replace CAST, only first
+                new_extra_info[i] = new_extra_info[i].replace("CAST(", "", 1)
+                # Remove AS bit
+                as_right = new_extra_info[i].rfind(" AS ")
+                two_brackets_right = new_extra_info[i].find("))", as_right) + len("))")
+                # Remove this AS section
+                new_extra_info[i] = new_extra_info[i][:as_right] + new_extra_info[i][two_brackets_right:]
                 
-                sort_by = None
-                if "ASC" == sort_keys[i][-3:]:
-                    sort_by = "ASC"
-                elif "DESC" == sort_keys[i][-4:]:
-                    sort_by = "DESC"
-                else:
-                    raise Exception("Couldn't detect a parameter to sort by!")
-                
-                sort_keys[i] = str(sort_keys[i].split("CAST(")[1].split(" AS ")[0]).strip()
-                if (sort_keys[i][0] == "(") and (sort_keys[i][-1] == ")"):
-                    sort_keys[i] = sort_keys[i][1:-1]
-                    
-                if " - " in sort_keys[i]:
-                    sort_keys[i] = str(sort_keys[i].split(" - ")[0]).strip()
-                    
-                sort_keys[i] = sort_keys[i] + " " + sort_by
-        """
+            # Simplfy too many brackets
+            if "((" in new_extra_info[i]:
+                new_extra_info[i] = new_extra_info[i].replace("((", "(").replace("))", ")")
         
         # Year
         if "year(" in new_extra_info[i]:
@@ -2083,7 +2148,12 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
                     sort_keys[i] = str(sort_keys[i].split(" - ")[0]).strip()
                     
                 sort_keys[i] = sort_keys[i] + " " + sort_by
+                
+                # Simplfy too many brackets
+                if "((" in sort_keys[i]:
+                    sort_keys[i] = sort_keys[i].replace("((", "(").replace("))", ")")
             
+                
         sort = sort_node("Sort", [], sort_keys)
         
         # Set plans
@@ -2228,6 +2298,7 @@ def process_merge_join(json, col_ref, external_filters=None):
     inner_unique = False
     join_type = json["extra_info"][0]
     condition = " AND ".join(json["extra_info"][1:])
+    child_relation = determine_child_relation(condition[0])
     # If condition is " IS NOT DISTINCT FROM ", Then we need to fix it
     if " IS NOT DISTINCT FROM " in condition:
         # Split on AND
@@ -2238,12 +2309,25 @@ def process_merge_join(json, col_ref, external_filters=None):
             
             right_focus = str(json["children"][1]["extra_info"]).split("\n")[0]
             condition = focus + " = " + right_focus
+        
+        child_relation = determine_child_relation(condition[0])
+        
+    elif any([True for eq in [" > ", " >= ", " < ", " <= "] if eq in condition]):
+        # Make join_type = cross
+        join_type = "cross"
+        cross_filter = condition
+        child_relation = determine_child_relation(condition[0])
+        condition = ""
     
     node_class = merge_join_node("Merge Join", merge_output, inner_unique, join_type, condition)
     
-    child_relation = determine_child_relation(condition[0])
-
-    if external_filters != None:
+    if (cross_filter != None) and (external_filters != None):
+        ext_filters, renames = process_external_filters(external_filters, child_relation, col_ref)
+        node_class.add_filter(cross_filter + " AND " + ext_filters)
+        node_class.add_renames(renames)
+    elif cross_filter != None:
+        node_class.add_filter(cross_filter)
+    elif external_filters != None:
         filters, renames = process_external_filters(external_filters, child_relation, col_ref)
         node_class.add_filter(filters)
         node_class.add_renames(renames)

@@ -531,31 +531,6 @@ def sql_like_fragment_to_regex_string(fragment):
     
 
 def clean_filter_params(self, params, codeCompHelper, prev_df):  
-    # Discover columns that are in useAlias and replace them
-    # Iterate through relations
-    if codeCompHelper.useAlias != {}:
-        # Gather replaces into array
-        replaces = []
-        for relation in codeCompHelper.relations:
-            if relation in params:
-                relation_positions = [m.start() for m in re.finditer(relation, params)]
-                
-                # Iterate through relation positions
-                for i in range(len(relation_positions)):
-                    # From the position to the next space, extract this all
-                    space_split = str(params[relation_positions[i]:].split(" ")[0]).strip()
-                    remove_dot = space_split.replace(".", "")
-                    # Remove dot is our lookup value in useAlias
-                    if codeCompHelper.useAlias.get(remove_dot, None) != None:
-                        # This is in useAlias
-                        new_column_value = str(space_split.split(".")[0]).strip() + "." + codeCompHelper.useAlias.get(remove_dot, None)
-                        replaces.append([space_split, new_column_value])
-                 
-        # Carry out our Replaces
-        if replaces != []:
-            for replacement in replaces:
-                # We want whole relations so match the replace on a string after it
-                params = params.replace(replacement[0] + " ", replacement[1] + " ", 1)
     
     # Clean params with codeCompHelper
     # Iterate through all relations
@@ -610,6 +585,55 @@ def clean_filter_params(self, params, codeCompHelper, prev_df):
         # At end, carry out replace dict on params
         for key in replace_dict.keys():
             params = params.replace(key, replace_dict[key])
+            
+    
+    # Discover columns that are in useAlias and replace them
+    # Iterate through relations
+    if codeCompHelper.useAlias != {}:
+        # Gather replaces into array
+        replaces = []
+        for relation in codeCompHelper.relations:
+            if relation in params:
+                relation_positions = [m.start() for m in re.finditer(relation, params)]
+                
+                # Iterate through relation positions
+                for i in range(len(relation_positions)):
+                    # From the position to the next space, extract this all
+                    space_split = str(params[relation_positions[i]:].split(" ")[0]).strip()
+                    remove_dot = space_split.replace(".", "")
+                    # Remove dot is our lookup value in useAlias
+                    if codeCompHelper.useAlias.get(remove_dot, None) != None:
+                        # This is in useAlias
+                        new_column_value = str(space_split.split(".")[0]).strip() + "." + codeCompHelper.useAlias.get(remove_dot, None)
+                        replaces.append([space_split, new_column_value])
+                        
+        # Iterate through useAlias, substitute in if exists
+        for key in codeCompHelper.useAlias:
+            if key in params:
+                if params.count(key) > 1:
+                    # We have multiple, do "_x and _y"
+                    original_count = params.count(key)
+                    for i in range(original_count):
+                        if i % 2 == 0:
+                            params = params.replace(key, prev_df + "." + codeCompHelper.useAlias[key]+"_x", 1)
+                        else:
+                            params = params.replace(key, prev_df + "." + codeCompHelper.useAlias[key]+"_y", 1)
+                            
+                    # Add to self.renames, only the first
+                    if original_count == 2:
+                        if hasattr(self, "renames"):
+                            self.renames.append((codeCompHelper.useAlias[key] + "_x", codeCompHelper.useAlias[key]))
+                        else:
+                            self.renames = [(codeCompHelper.useAlias[key] + "_x", codeCompHelper.useAlias[key], )]
+                        
+                else:
+                    params = params.replace(key, prev_df + "." + codeCompHelper.useAlias[key])
+                 
+        # Carry out our Replaces
+        if replaces != []:
+            for replacement in replaces:
+                # We want whole relations so match the replace on a string after it
+                params = params.replace(replacement[0] + " ", replacement[1] + " ", 1)
 
     # Replace AND with & and convert to string
     filters = str(params.replace(" AND ", " & "))
@@ -2794,7 +2818,7 @@ class merge_node():
         # We try and squeeze in any bracket replaces we might have
         
         # Check if we have any bracket replaces
-        if codeCompHelper.bracket_replace != {}:
+        if (codeCompHelper.bracket_replace != {}) and (self.condition != ['']):
             for i in range(len(self.condition)):
             # Create a relation removed version
             # If bracket replace is not empty
@@ -2842,11 +2866,12 @@ class merge_node():
                     self.condition[i] = self.condition[i].replace(key, replace_dict[key])
             
         # Iterate through the list of conditions, adding them to this list
-        left_labels, right_labels = [], []
-        for individual_cond in self.condition:
-            left, right = self.process_equating(individual_cond)
-            left_labels.append(left)
-            right_labels.append(right)
+        if self.join_type.lower() != "cross":
+            left_labels, right_labels = [], []
+            for individual_cond in self.condition:
+                left, right = self.process_equating(individual_cond)
+                left_labels.append(left)
+                right_labels.append(right)
             
         # Create statement
         statements = []
@@ -2968,6 +2993,11 @@ class merge_node():
             #df_merge_1 = df_merge_1[df_merge_1._merge == "left_only"]
             local_statement_2 = this_df + " = " + this_df + '[' + this_df + '._merge == "left_only"]' 
             statements.append(local_statement_2)
+        elif self.join_type.lower() == "cross":
+            # Do a cross_join
+            local_statement = this_df + " = " + left_prev_df+'.merge(' + right_prev_df+', how="' + str('cross') + '", sort=' + str(self.sort) + ')'
+            statements.append(local_statement)
+        
         else:
             raise Exception("Unexpected type of Join given: " + str(self.join_type))
         
