@@ -1881,8 +1881,9 @@ def duck_fix_class_tree(tree):
                     if hasattr(tree, loc):
                         if isinstance(getattr(tree, loc), list):
                             for i in range(len(getattr(tree, loc))):
-                                reg = re.search(col_ref, getattr(tree, loc)[i])
-                                if reg != None:
+                                
+                                while re.search(col_ref, getattr(tree, loc)[i]) != None:
+                                    reg = re.search(col_ref, getattr(tree, loc)[i])
                                     col_replace = reg.group(0)
                                     col_index = int(col_replace.replace("#", ""))
                                     
@@ -1894,6 +1895,14 @@ def duck_fix_class_tree(tree):
                                         local_child = determine_local_child(tree, loc, col_replace)
                                     
                                     # Only run if we have something to replace for
+                                    if local_child.output == []:
+                                        # Look below
+                                        while local_child.output == []:
+                                            if local_child.plans == 2:
+                                                local_child = local_child.plans[1]
+                                            else:
+                                                local_child = local_child.plans[0]
+                                    
                                     if local_child.output != []:
                                         # If there are brackets around both the origin and the replace, then remove one of theirs, so we don't have two nested brackets
                                         before_origin = getattr(tree, loc)[i][getattr(tree, loc)[i].find(col_replace) - 1]
@@ -1913,8 +1922,9 @@ def duck_fix_class_tree(tree):
                                         getattr(tree, loc)[i] = str(str(getattr(tree, loc)[i]).replace(col_replace, replace_value)).strip()
                                         
                         else:
-                            reg = re.search(col_ref, getattr(tree, loc))
-                            if reg != None:
+                            
+                            while re.search(col_ref, getattr(tree, loc)) != None:
+                                reg = re.search(col_ref, getattr(tree, loc))
                                 col_replace = reg.group(0)
                                 col_index = int(col_replace.replace("#", ""))
                                 
@@ -1926,6 +1936,14 @@ def duck_fix_class_tree(tree):
                                     local_child = determine_local_child(tree, loc, col_replace)
                                 
                                 # TODO: The col_index might be wrong, choose the local_child output that the LHS has the most similarity with
+                                
+                                if local_child.output == []:
+                                    # Look below
+                                    while local_child.output == []:
+                                        if local_child.plans == 2:
+                                            local_child = local_child.plans[1]
+                                        else:
+                                            local_child = local_child.plans[0]
                                 
                                 if local_child.output != []:
                                     setattr(tree, loc, str(str(getattr(tree, loc)).replace(col_replace, local_child.output[col_index])).strip())
@@ -1982,18 +2000,18 @@ def determine_local_child(tree, location, target):
             # LHS
             # While not "remove_later"
             child = tree.plans[0]
-            while hasattr(child, "remove_later") and (getattr(child, "remove_later") == True):
-                if len(child.plans) != 1:
-                    raise Exception("Child has too many children")
-                child = child.plans[0]
+            #while hasattr(child, "remove_later") and (getattr(child, "remove_later") == True):
+            #    if len(child.plans) != 1:
+            #        raise Exception("Child has too many children")
+            #    child = child.plans[0]
             
         elif position % 2 != 0:
             # RHS
             child = tree.plans[1]
-            while hasattr(child, "remove_later") and (getattr(child, "remove_later") == True):
-                if len(child.plans) != 1:
-                    raise Exception("Child has too many children")
-                child = child.plans[0]
+            #while hasattr(child, "remove_later") and (getattr(child, "remove_later") == True):
+            #    if len(child.plans) != 1:
+            #        raise Exception("Child has too many children")
+            #    child = child.plans[0]
         else:
             raise Exception("Unknown position (" + str(position) + ") and ra_split: " + str(ra_split))
     else:
@@ -2483,8 +2501,8 @@ def process_hash_join(json, col_ref, external_filters=None):
                 right_child_opts = list(filter(None, str(json["children"][1]["extra_info"]).split("\n")))
                 right_focus = None
                 for i in range(len(right_child_opts)):
-                    if (not any([True for agg in [" * ", "min"] if agg in right_child_opts[i]])) and (right_child_opts[i] not in used_right_focuses):
-                        right_focus = right_child_opts[i]
+                    if (not any([True for agg in [" * ", "min"] if agg in right_child_opts[i]])) and (str("#"+str(i)) not in used_right_focuses):
+                        right_focus = "#" + str(i)
                         break
                 
                 if right_focus == None:
