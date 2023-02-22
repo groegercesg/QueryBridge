@@ -76,6 +76,8 @@ def process_output(self, output, codecomphelper):
                         
                         if solved_parts[1] == None:
                             new_value = solved_parts[0] + codecomphelper.bracket_replace[x]
+                        elif solved_parts[0] == None and solved_parts[1] == "":
+                            new_value = codecomphelper.bracket_replace[x] + left_over_parts[1]
                         else:
                             new_value = solved_parts[0] + codecomphelper.bracket_replace[x] + solved_parts[1]
                         
@@ -571,8 +573,8 @@ def clean_filter_params(self, params, codeCompHelper, prev_df):
             replaced = False
             # See is is in bracket replace
             for br_key in codeCompHelper.bracket_replace:
-                if br_key == process_key:
-                    process_key = codeCompHelper.bracket_replace[br_key]
+                if br_key in process_key:
+                    process_key = process_key.replace(br_key, codeCompHelper.bracket_replace[br_key])
                     replaced = True
                 
             # If is add to replace dict    
@@ -2729,7 +2731,9 @@ def complex_name_solve(in_name):
     
         # Catch bad changes made to new_name
         if (new_name == "") or (new_name == None):
-            raise Exception("Name created by complex_name_solve is empty or None. This could be because it contained only digits and we removed these.")
+            # Return it out anyway, we handle this
+            # raise Exception("Name created by complex_name_solve is empty or None. This could be because it contained only digits and we removed these.")
+            pass
         
         if "strslice" in new_name:
             new_name = str("slice_" + str(new_name.split("strslice")[0]).strip()).strip()

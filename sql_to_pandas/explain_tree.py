@@ -1610,6 +1610,10 @@ def make_tree_from_duck(json, tree, sql):
     # Iterate through the class tree, fix column references
     duck_fix_class_tree(explain_tree) 
     
+    # Solve the "SUBQUERY"
+    # I think we should be this before removing projections, to capture all possible information.
+    duck_solve_subquery(explain_tree)
+    
     # Carry out remove laters
     # TODO: We patch to keep the "top" projection
     duck_keep_top_proj(explain_tree)
@@ -1619,9 +1623,6 @@ def make_tree_from_duck(json, tree, sql):
     while iter_count < 3:
         duck_fix_remove_laters(explain_tree)
         iter_count += 1
-    
-    # Solve the "SUBQUERY"
-    duck_solve_subquery(explain_tree)
     
     # Replace for the column references
     # TODO: Maybe, we should keep all projections where we have made col ref insertions?!?
@@ -1721,6 +1722,9 @@ def duck_solve_subquery(tree):
                             elif " > " in cond_split[k]:
                                 split_type = " > "
                                 eq_split = cond_split[k].split(split_type)
+                            elif " < " in cond_split[k]:
+                                split_type = " < "
+                                eq_split = cond_split[k].split(split_type)
                             else:
                                 raise Exception("Unknown split type")
                             
@@ -1749,7 +1753,22 @@ def duck_solve_subquery(tree):
                                     child_value = str(child.output[0]).replace("(", "").replace(")", "")
                                 else:
                                     child_value = str(child.output[0])
-                                eq_split[1] = eq_split[1].replace("SUBQUERY", child_value)
+                                    
+                                # Special replace for child_value with brackets
+                                if (child_value[0] == "(") and (child_value[-1] == ")"):
+                                    # Child has brackets
+                                    local_cv = child_value[1:-1]
+                                    # Assume eq_split[1] is just a relation and a dot
+                                    rel_dot = str(eq_split[1]).replace("SUBQUERY", "")
+                                    # Therefore split local_cv on spaces, and to every bit thats not just numbers or an aggr, add the relation
+                                    s_lcv = local_cv.split(" ")
+                                    for l in range(len(s_lcv)):
+                                        if any(c.isalpha() for c in s_lcv[l]):
+                                            s_lcv[l] = str(rel_dot) + str(s_lcv[l])
+                                    # Then set it back into eq_split[1]
+                                    eq_split[1] = " ".join(s_lcv)
+                                else:
+                                    eq_split[1] = eq_split[1].replace("SUBQUERY", child_value)
                             else:
                                 raise Exception("Couldn't find subquery anywhere")
                             
@@ -1831,32 +1850,65 @@ def duck_fix_class_tree(tree):
     
     # Process current
     # Do we have lower references, that we need to fix
-    need_col_fix = False
-    if tree.node_type in alias_locations:
-        for loc in alias_locations[tree.node_type]:
-            if hasattr(tree, loc):
-                if isinstance(getattr(tree, loc), list):
-                    for individual_attr in getattr(tree, loc):
-                        reg = re.search(col_ref, individual_attr)
-                        if reg != None:
-                            need_col_fix = True
-                            break
-                else:
-                    reg = re.search(col_ref, getattr(tree, loc))
-                    if reg != None:
-                        need_col_fix = True
-                        break
-            
-    if need_col_fix == True:
-        # Do column fix, first determine child of current node
-        
-        # Iterate through current node
+    if (hasattr(tree, "plans")) and (tree.plans != None):
+        need_col_fix = False
         if tree.node_type in alias_locations:
             for loc in alias_locations[tree.node_type]:
                 if hasattr(tree, loc):
                     if isinstance(getattr(tree, loc), list):
-                        for i in range(len(getattr(tree, loc))):
-                            reg = re.search(col_ref, getattr(tree, loc)[i])
+                        for individual_attr in getattr(tree, loc):
+                            reg = re.search(col_ref, individual_attr)
+                            if reg != None:
+                                need_col_fix = True
+                                break
+                    else:
+                        reg = re.search(col_ref, getattr(tree, loc))
+                        if reg != None:
+                            need_col_fix = True
+                            break
+                
+        if need_col_fix == True:
+            # Do column fix, first determine child of current node
+            
+            # Iterate through current node
+            if tree.node_type in alias_locations:
+                for loc in alias_locations[tree.node_type]:
+                    if hasattr(tree, loc):
+                        if isinstance(getattr(tree, loc), list):
+                            for i in range(len(getattr(tree, loc))):
+                                reg = re.search(col_ref, getattr(tree, loc)[i])
+                                if reg != None:
+                                    col_replace = reg.group(0)
+                                    col_index = int(col_replace.replace("#", ""))
+                                    
+                                    # Set child
+                                    local_child = None
+                                    if len(tree.plans) == 1:
+                                        local_child = tree.plans[0]
+                                    else: 
+                                        local_child = determine_local_child(tree, loc, col_replace)
+                                    
+                                    # Only run if we have something to replace for
+                                    if local_child.output != []:
+                                        # If there are brackets around both the origin and the replace, then remove one of theirs, so we don't have two nested brackets
+                                        before_origin = getattr(tree, loc)[i][getattr(tree, loc)[i].find(col_replace) - 1]
+                                        if len(getattr(tree, loc)[i]) > int(getattr(tree, loc)[i].find(col_replace) + len(col_replace)):
+                                            after_origin = getattr(tree, loc)[i][getattr(tree, loc)[i].find(col_replace) + len(col_replace)]
+                                        else:
+                                            after_origin = None
+                                        
+                                        replace_value = local_child.output[col_index]
+                                        before_replace = replace_value[0]
+                                        after_replace = replace_value[-1]
+                                        
+                                        if (before_origin == "(") and (after_origin == ")") and (before_replace == "(") and (after_replace == ")"):
+                                            # Trim leading and closing brackets from string
+                                            replace_value = replace_value[1:-1]
+                                        
+                                        getattr(tree, loc)[i] = str(str(getattr(tree, loc)[i]).replace(col_replace, replace_value)).strip()
+                                        
+                        else:
+                            reg = re.search(col_ref, getattr(tree, loc))
                             if reg != None:
                                 col_replace = reg.group(0)
                                 col_index = int(col_replace.replace("#", ""))
@@ -1868,41 +1920,9 @@ def duck_fix_class_tree(tree):
                                 else: 
                                     local_child = determine_local_child(tree, loc, col_replace)
                                 
-                                # Only run if we have something to replace for
                                 if local_child.output != []:
-                                    # If there are brackets around both the origin and the replace, then remove one of theirs, so we don't have two nested brackets
-                                    before_origin = getattr(tree, loc)[i][getattr(tree, loc)[i].find(col_replace) - 1]
-                                    if len(getattr(tree, loc)[i]) > int(getattr(tree, loc)[i].find(col_replace) + len(col_replace)):
-                                        after_origin = getattr(tree, loc)[i][getattr(tree, loc)[i].find(col_replace) + len(col_replace)]
-                                    else:
-                                        after_origin = None
-                                    
-                                    replace_value = local_child.output[col_index]
-                                    before_replace = replace_value[0]
-                                    after_replace = replace_value[-1]
-                                    
-                                    if (before_origin == "(") and (after_origin == ")") and (before_replace == "(") and (after_replace == ")"):
-                                        # Trim leading and closing brackets from string
-                                        replace_value = replace_value[1:-1]
-                                    
-                                    getattr(tree, loc)[i] = str(str(getattr(tree, loc)[i]).replace(col_replace, replace_value)).strip()
-                                    
-                    else:
-                        reg = re.search(col_ref, getattr(tree, loc))
-                        if reg != None:
-                            col_replace = reg.group(0)
-                            col_index = int(col_replace.replace("#", ""))
-                            
-                            # Set child
-                            local_child = None
-                            if len(tree.plans) == 1:
-                                local_child = tree.plans[0]
-                            else: 
-                                local_child = determine_local_child(tree, loc, col_replace)
-                            
-                            if local_child.output != []:
-                                setattr(tree, loc, str(str(getattr(tree, loc)).replace(col_replace, local_child.output[col_index])).strip())
-                
+                                    setattr(tree, loc, str(str(getattr(tree, loc)).replace(col_replace, local_child.output[col_index])).strip())
+                    
 
 def determine_local_child(tree, location, target):
     if len(tree.plans) != 2:
@@ -2374,8 +2394,22 @@ def process_hash_join(json, col_ref, external_filters=None):
         else:
             focus = str(condition.split(" IS NOT DISTINCT FROM ")[0])
             
-            right_focus = str(json["children"][1]["extra_info"]).split("\n")[0]
+            # Iterate through right child
+            right_child_opts = str(json["children"][1]["extra_info"]).split("\n")
+            right_focus = None
+            for i in range(len(right_child_opts)):
+                if not any([True for agg in [" * "] if agg in right_child_opts[i]]):
+                    right_focus = right_child_opts[i]
+                    break
+            
+            if right_focus == None:
+                raise Exception("Didn't detect any suitable relations to use")
+            
             condition = focus + " = " + right_focus
+            
+    # Temporary: Remap join_type
+    if join_type.lower() == "single":
+        join_type = "inner"
     
     node_class = hash_join_node("Hash Join", hash_output, inner_unique, join_type, condition)
     
