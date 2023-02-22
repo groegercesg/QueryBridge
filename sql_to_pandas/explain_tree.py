@@ -1746,7 +1746,7 @@ def duck_solve_subquery(tree):
                             elif "SUBQUERY" in eq_split[1]:
                                 # Do on RHS
                                 child = current_node.plans[1]
-                                while child.output == []:
+                                while (child.output == []) or any([True for outp in child.output if "#" in outp]):
                                     child = child.plans[0]
                                 
                                 if source_loc != "filter":
