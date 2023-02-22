@@ -2048,6 +2048,21 @@ def process_extra_info(extra_info, in_capture, col_ref):
             new_prefix = str(items[0]) + " ~~ '" + str(items[1]) + "%'" 
             
             new_extra_info[i] = new_extra_info[i].replace(original_prefix, new_prefix)
+            
+        # Suffix
+        if "suffix(" in new_extra_info[i]:
+            # suffix(p_type, 'BRASS')
+            original_suffix = "suffix(" + new_extra_info[i].split("suffix(")[1].split(")")[0] + ")"
+            items = str(str(original_suffix).replace("suffix(", ""))[:-1].split(", ")
+            
+            # Trim quotes
+            if (items[1][0] == "'") and (items[1][-1] == "'"):
+                items[1] = items[1][1:-1]
+            
+            new_suffix = str(items[0]) + " ~~ '%" + str(items[1]) + "'" 
+            
+            new_extra_info[i] = new_extra_info[i].replace(original_suffix, new_suffix)
+            
                 
         # Search for CASE
         if "CASE  WHEN" in new_extra_info[i]:
@@ -2395,10 +2410,10 @@ def process_hash_join(json, col_ref, external_filters=None):
             focus = str(condition.split(" IS NOT DISTINCT FROM ")[0])
             
             # Iterate through right child
-            right_child_opts = str(json["children"][1]["extra_info"]).split("\n")
+            right_child_opts = list(filter(None, str(json["children"][1]["extra_info"]).split("\n")))
             right_focus = None
             for i in range(len(right_child_opts)):
-                if not any([True for agg in [" * "] if agg in right_child_opts[i]]):
+                if not any([True for agg in [" * ", "min"] if agg in right_child_opts[i]]):
                     right_focus = right_child_opts[i]
                     break
             
