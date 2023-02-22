@@ -1609,7 +1609,7 @@ def make_tree_from_duck(json, tree, sql):
     explain_tree = make_class_tree_from_duck(json, tree, in_capture, col_ref) 
     
     # Iterate through the class tree, fix column references
-    duck_fix_class_tree(explain_tree) 
+    explain_tree = duck_fix_class_tree(explain_tree) 
     
     # Solve the "SUBQUERY"
     # I think we should be this before removing projections, to capture all possible information.
@@ -1617,7 +1617,7 @@ def make_tree_from_duck(json, tree, sql):
     
     # Fix column references, a second time, after solving SUBQUERIES
     # Iterate through the class tree, fix column references
-    duck_fix_class_tree(explain_tree) 
+    explain_tree = duck_fix_class_tree(explain_tree)
     
     # Carry out remove laters
     # TODO: We patch to keep the "top" projection
@@ -1843,12 +1843,12 @@ def duck_fix_remove_laters(tree):
     
 
 def duck_fix_class_tree(tree):
-    # Change to a postorder traversal
+    # Perform a preorder traversal
     # Check if this node has a child
     if hasattr(tree, "plans"):
         if tree.plans != None:
-            for individual_plan in tree.plans:
-                duck_fix_class_tree(individual_plan)
+            for i in range(len(tree.plans)):
+                tree.plans[i] = duck_fix_class_tree(tree.plans[i])
     
     # Column reference regex
     col_ref = r"\#[0-9]*(?!.*')"
@@ -1929,6 +1929,8 @@ def duck_fix_class_tree(tree):
                                 
                                 if local_child.output != []:
                                     setattr(tree, loc, str(str(getattr(tree, loc)).replace(col_replace, local_child.output[col_index])).strip())
+                                    
+    return tree
 
 def nFilter(filters, in_list):
     for f in filters:

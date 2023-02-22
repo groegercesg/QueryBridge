@@ -553,7 +553,10 @@ def clean_filter_params(self, params, codeCompHelper, prev_df):
             bracket_replace_params = bracket_replace_params[1:-1]
         
         # Split into keys, on Top level brackets
-        keys = [match.group() for match in regex.finditer(r"(?:(\((?>[^()]+|(?1))*\))|\S)+", bracket_replace_params)]
+        #keys = [match.group() for match in regex.finditer(r"(?:(\((?>[^()]+|(?1))*\))|\S)+", )]
+        keys = list(filter(None, re.split(r">|>=|<|<=|=", bracket_replace_params)))
+        for i in range(len(keys)):
+            keys[i] = keys[i].strip()
         
         # Populate replace_dict
         replace_dict = {}
@@ -582,7 +585,19 @@ def clean_filter_params(self, params, codeCompHelper, prev_df):
                 # Add in relation
                 if capture_relation == None:
                     raise Exception("No relation has been captured at this point, unexpected!")
-                replace_dict[key] = str(capture_relation) + str(process_key)
+                is_aggrs = [agg for agg in [" * ", " + ", " - ", " / "] if agg in process_key]
+                if any(is_aggrs):
+                    # Assume only 1 for now
+                    pk_split = process_key.split(is_aggrs[0])
+                    for i in range(len(pk_split)):
+                        if any(c.isalpha() for c in pk_split[i]):
+                            pk_split[i] = str(capture_relation) + pk_split[i]
+                     
+                    # Join back together
+                    process_key = is_aggrs[0].join(pk_split)
+                    replace_dict[key] = process_key
+                else:
+                    replace_dict[key] = str(capture_relation) + str(process_key)
                 
         
         # At end, carry out replace dict on params
