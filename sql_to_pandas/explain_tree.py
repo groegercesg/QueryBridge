@@ -2482,7 +2482,7 @@ def do_not_distinct_from(cond, json, child_relation):
     right_focus = None
     for i in range(len(right_child_opts)):
         if not any([True for agg in [" * ", "min"] if agg in right_child_opts[i]]):
-            right_focus = right_child_opts[i]
+            right_focus = "#" + str(i)
             break
     
     if right_focus == None:
