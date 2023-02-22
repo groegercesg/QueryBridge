@@ -1903,7 +1903,10 @@ def duck_fix_class_tree(tree):
                                             else:
                                                 local_child = local_child.plans[0]
                                     
-                                    if local_child.output != []:
+                                    if col_index >= len(local_child.output):
+                                        # Can't do replace, break
+                                        break
+                                    elif local_child.output != []:
                                         # If there are brackets around both the origin and the replace, then remove one of theirs, so we don't have two nested brackets
                                         before_origin = getattr(tree, loc)[i][getattr(tree, loc)[i].find(col_replace) - 1]
                                         if len(getattr(tree, loc)[i]) > int(getattr(tree, loc)[i].find(col_replace) + len(col_replace)):
@@ -1945,7 +1948,10 @@ def duck_fix_class_tree(tree):
                                         else:
                                             local_child = local_child.plans[0]
                                 
-                                if local_child.output != []:
+                                if col_index >= len(local_child.output):
+                                    # Can't do replace, break
+                                    break
+                                elif local_child.output != []:
                                     setattr(tree, loc, str(str(getattr(tree, loc)).replace(col_replace, local_child.output[col_index])).strip())
                                     
     return tree
@@ -2052,7 +2058,7 @@ def process_extra_info(extra_info, in_capture, col_ref):
         for j in range(len(in_plan_expected)):
             if in_plan_expected[j] in new_extra_info[i]:
                 new_extra_info[i] = str(new_extra_info[i]).replace(in_plan_expected[j], in_plan_desired[j])
-        
+
         # Remove CAST
         if "CAST(" in new_extra_info[i]:
             while "CAST(" in new_extra_info[i]:
@@ -2288,9 +2294,20 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
     elif node_type.lower() == "simple_aggregate":
         node_class = aggregate_node("Aggregate", node["extra_info"])
         
+        # Set first, first
         if any([True for item in node["extra_info"] if "first(" in item]):
             # This node has a first in it, so we set it to be removed later
             node_class.add_remove_later(True)
+            
+        # Then remove it 
+        for i in range(len(node_class.output)):
+            if "first(" in node_class.output[i]:
+                f_pos = node_class.output[i].find("first(")
+                f_brack_pos = node_class.output[i].find(")", f_pos)
+                # Get rid of bracket, after first in sequence so do before
+                node_class.output[i] = node_class.output[i][:f_brack_pos] + node_class.output[i][f_brack_pos+1:]
+                node_class.output[i] = node_class.output[i].replace("first(", "", 1)
+        
     elif node_type.lower() == "projection":
         # Make a projection node an aggregate node
         node_class = aggregate_node("Aggregate", node["extra_info"])
@@ -2457,7 +2474,7 @@ def process_merge_join(json, col_ref, external_filters=None):
     
     return node_class
 
-def do_not_distinct_from(cond, json):
+def do_not_distinct_from(cond, json, child_relation):
     focus = str(cond.split(" IS NOT DISTINCT FROM ")[0])
             
     # Iterate through right child
@@ -2471,7 +2488,7 @@ def do_not_distinct_from(cond, json):
     if right_focus == None:
         raise Exception("Didn't detect any suitable relations to use")
     
-    cond = focus + " = " + right_focus
+    cond = child_relation + "." + focus + " = " + child_relation + "." + right_focus
     
     return cond
 
@@ -2482,6 +2499,9 @@ def process_hash_join(json, col_ref, external_filters=None):
     inner_unique = False
     join_type = json["extra_info"][0]
     condition = " AND ".join(json["extra_info"][1:])
+    
+    child_relation = determine_child_relation(condition[0])
+    
     # If condition is " IS NOT DISTINCT FROM ", Then we need to fix it
     if " IS NOT DISTINCT FROM " in condition:
         # Split on AND
@@ -2510,19 +2530,17 @@ def process_hash_join(json, col_ref, external_filters=None):
                 
                 used_right_focuses.append(right_focus)
                 
-                s_cond[j] = focus + " = " + right_focus
+                s_cond[j] = child_relation + "." + focus + " = " + child_relation + "." + right_focus
                 
             condition = " AND ".join(s_cond)
         else:
-            condition = do_not_distinct_from(condition, json)
+            condition = do_not_distinct_from(condition, json, child_relation)
             
     # Temporary: Remap join_type
     if join_type.lower() == "single":
         join_type = "inner"
     
     node_class = hash_join_node("Hash Join", hash_output, inner_unique, join_type, condition)
-    
-    child_relation = determine_child_relation(condition[0])
 
     if external_filters != None:
         filters, renames = process_external_filters(external_filters, child_relation, col_ref)
