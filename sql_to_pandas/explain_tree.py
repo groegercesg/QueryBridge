@@ -1527,7 +1527,8 @@ def create_col_refs(sql):
                     projection_original = projection_original.replace(" like ", " ~~ ")
                 
                 # Special to remove tiny alias relation "n2.n_name"
-                if str(projection.alias_or_name) != "":
+                # Must not be an empty string or something entirely devoid of letters
+                if (str(projection.alias_or_name) != "") and any(c.isalpha() for c in str(projection.alias_or_name)):
                     if projection_original.find(".") == 2:
                         suspicious_aliases.append(str(projection_original)[:2])
                         column_references[str(projection.alias_or_name)] = str(projection_original)[:2] + str(projection_original)[2+1:]
@@ -1613,6 +1614,10 @@ def make_tree_from_duck(json, tree, sql):
     # Solve the "SUBQUERY"
     # I think we should be this before removing projections, to capture all possible information.
     duck_solve_subquery(explain_tree)
+    
+    # Fix column references, a second time, after solving SUBQUERIES
+    # Iterate through the class tree, fix column references
+    duck_fix_class_tree(explain_tree) 
     
     # Carry out remove laters
     # TODO: We patch to keep the "top" projection
@@ -1920,9 +1925,32 @@ def duck_fix_class_tree(tree):
                                 else: 
                                     local_child = determine_local_child(tree, loc, col_replace)
                                 
+                                # TODO: The col_index might be wrong, choose the local_child output that the LHS has the most similarity with
+                                
                                 if local_child.output != []:
                                     setattr(tree, loc, str(str(getattr(tree, loc)).replace(col_replace, local_child.output[col_index])).strip())
-                    
+
+def nFilter(filters, in_list):
+    for f in filters:
+        in_list = list(filter(f, in_list))
+    return in_list
+
+def nRemoves(removes, in_list):
+    for i in range(len(removes)):
+        # Local removes
+        l_rem = []
+        for j in range(len(in_list)):
+            if in_list[j] == removes[i]:
+                l_rem.append(j)
+        
+        # Reverse   
+        l_rem.reverse()
+        # Carry out
+        for num in l_rem:
+            del in_list[num]
+            
+    return in_list
+        
 
 def determine_local_child(tree, location, target):
     if len(tree.plans) != 2:
@@ -1933,7 +1961,22 @@ def determine_local_child(tree, location, target):
     
     related_attr = getattr(tree, location)
     if " = " in related_attr:
-        if target in related_attr.split(" = ")[0]:
+        # Split
+        filters = [None]
+        removes = ["AND", "OR", "="]
+        split_and_or_eq = list(re.split('(AND)|(OR)|(=)', related_attr))
+        ra_split = nFilter(filters, split_and_or_eq)
+        ra_split = nRemoves(removes, ra_split)
+        # Detect which index it's in
+        position = None
+        for i in range(len(ra_split)):
+            if target in ra_split[i]:
+                position = i
+                break
+        
+        if position == None:
+            raise Exception("Didn't find target anywhere")
+        elif position % 2 == 0:
             # LHS
             # While not "remove_later"
             child = tree.plans[0]
@@ -1941,8 +1984,8 @@ def determine_local_child(tree, location, target):
                 if len(child.plans) != 1:
                     raise Exception("Child has too many children")
                 child = child.plans[0]
-            return 
-        elif target in related_attr.split(" = ")[1]:
+            
+        elif position % 2 != 0:
             # RHS
             child = tree.plans[1]
             while hasattr(child, "remove_later") and (getattr(child, "remove_later") == True):
@@ -1950,7 +1993,7 @@ def determine_local_child(tree, location, target):
                     raise Exception("Child has too many children")
                 child = child.plans[0]
         else:
-            raise Exception("Unexpected equal options for tree with two children")
+            raise Exception("Unknown position (" + str(position) + ") and ra_split: " + str(ra_split))
     else:
         raise Exception("Unexpected options for tree with two children")
     
@@ -2394,6 +2437,24 @@ def process_merge_join(json, col_ref, external_filters=None):
     
     return node_class
 
+def do_not_distinct_from(cond, json):
+    focus = str(cond.split(" IS NOT DISTINCT FROM ")[0])
+            
+    # Iterate through right child
+    right_child_opts = list(filter(None, str(json["children"][1]["extra_info"]).split("\n")))
+    right_focus = None
+    for i in range(len(right_child_opts)):
+        if not any([True for agg in [" * ", "min"] if agg in right_child_opts[i]]):
+            right_focus = right_child_opts[i]
+            break
+    
+    if right_focus == None:
+        raise Exception("Didn't detect any suitable relations to use")
+    
+    cond = focus + " = " + right_focus
+    
+    return cond
+
 def process_hash_join(json, col_ref, external_filters=None):
     
     hash_output = []
@@ -2405,22 +2466,35 @@ def process_hash_join(json, col_ref, external_filters=None):
     if " IS NOT DISTINCT FROM " in condition:
         # Split on AND
         if " AND " in condition:
-            raise Exception("AND in Duck Plan Hash condition")
+            s_cond = condition.split(" AND ")
+            # Iterate through and strip
+            for i in range(len(s_cond)):
+                s_cond[i] = s_cond[i].strip()
+                
+            # Store used right_focuses
+            used_right_focuses = []
+                
+            for j in range(len(s_cond)):
+                focus = str(s_cond[j].split(" IS NOT DISTINCT FROM ")[0])
+            
+                # Iterate through right child
+                right_child_opts = list(filter(None, str(json["children"][1]["extra_info"]).split("\n")))
+                right_focus = None
+                for i in range(len(right_child_opts)):
+                    if (not any([True for agg in [" * ", "min"] if agg in right_child_opts[i]])) and (right_child_opts[i] not in used_right_focuses):
+                        right_focus = right_child_opts[i]
+                        break
+                
+                if right_focus == None:
+                    raise Exception("Didn't detect any suitable relations to use")
+                
+                used_right_focuses.append(right_focus)
+                
+                s_cond[j] = focus + " = " + right_focus
+                
+            condition = " AND ".join(s_cond)
         else:
-            focus = str(condition.split(" IS NOT DISTINCT FROM ")[0])
-            
-            # Iterate through right child
-            right_child_opts = list(filter(None, str(json["children"][1]["extra_info"]).split("\n")))
-            right_focus = None
-            for i in range(len(right_child_opts)):
-                if not any([True for agg in [" * ", "min"] if agg in right_child_opts[i]]):
-                    right_focus = right_child_opts[i]
-                    break
-            
-            if right_focus == None:
-                raise Exception("Didn't detect any suitable relations to use")
-            
-            condition = focus + " = " + right_focus
+            condition = do_not_distinct_from(condition, json)
             
     # Temporary: Remap join_type
     if join_type.lower() == "single":
@@ -2582,10 +2656,28 @@ def process_seq_scan(json, col_ref, external_filters=None):
                 else:
                     line_split = [pre_filters[j]]
                     
+                removes = []
+                    
                 for i in range(len(line_split)):
                     if (line_split[i] != "AND") and (line_split[i] != "OR"):
                         line_split[i] = str(line_split[i]).strip()
                         line_split[i] = relation_name + "." + line_split[i]
+                        
+                        is_aggrs = [agg for agg in [">=", "<=", "<", ">"] if agg in line_split[i]]
+                        if any(is_aggrs):
+                            # Split on agg, assume only 1
+                            local_ls = line_split[i].split(is_aggrs[0])
+                            # if RHS local_ls is not numbers
+                            if any(c.isalpha() for c in local_ls[1]):
+                                # Add removes
+                                removes.append(i)
+                                if len(line_split) - 1 != (i + 1):
+                                    removes.append(i + 1)
+                     
+                # carry out removes
+                removes.reverse()
+                for num in removes:
+                    del line_split[num]      
                 
                 pre_filters[j] = " ".join(line_split)
                 
