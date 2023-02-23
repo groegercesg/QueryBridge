@@ -2971,21 +2971,29 @@ class merge_node():
             
         if self.join_type.lower() == "semi":
             if (len(left_labels) > 1) or (len(right_labels) > 1):
-                raise ValueError("Unexpected size of labels in Semi Join merge")
-            # Add support for a semi join
+                # Semi Join with multiple key columns
+                # An inner join will behave just like a semi join, if the right DataFrame consists only of the key columns:
+                # df1.merge(df2[['grp', 'x']], how="inner", on=['grp', 'x'])    
+                
+                local_statement = this_df + " = " + left_prev_df + '.merge(' + right_prev_df + '[' + str(right_labels) + '], how="inner", left_on='+str(left_labels)+', right_on='+str(right_labels)+ ', sort=' + str(self.sort) + ')'
+                statements.append(local_statement)
+                
+                #raise ValueError("Unexpected size of labels in Semi Join merge")
             
-            if using_join_filter == True:
-                # df_merge_5 = df_merge_4[df_merge_4.o_orderkey.isin(inner_cond)]
-                
-                # Overwrite right_prev_df
-                right_prev_df = "inner_cond"
-                
-                local_statement = this_df + " = " + left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + ')]'
-                statements.append(local_statement)
             else:
-                # df_merge_1 =  df_filter_1[df_filter_1.o_orderkey.isin(df_filter_2["l_orderkey"])]
-                local_statement = this_df + " = " + left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + '["' + str(right_labels[0]) + '"])]'
-                statements.append(local_statement)
+                # Add support for a semi join
+                if using_join_filter == True:
+                    # df_merge_5 = df_merge_4[df_merge_4.o_orderkey.isin(inner_cond)]
+                    
+                    # Overwrite right_prev_df
+                    right_prev_df = "inner_cond"
+                    
+                    local_statement = this_df + " = " + left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + ')]'
+                    statements.append(local_statement)
+                else:
+                    # df_merge_1 =  df_filter_1[df_filter_1.o_orderkey.isin(df_filter_2["l_orderkey"])]
+                    local_statement = this_df + " = " + left_prev_df + '[' + left_prev_df + '.' + str(left_labels[0]) + '.isin(' + right_prev_df + '["' + str(right_labels[0]) + '"])]'
+                    statements.append(local_statement)
         elif self.join_type.lower() == "left":
             # Handle join_filter
             if using_join_filter == True:
