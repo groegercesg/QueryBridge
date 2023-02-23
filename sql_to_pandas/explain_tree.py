@@ -1936,6 +1936,64 @@ def duck_fix_delim_join(tree):
                         tree.plans[i].plans = new_children
                     else:
                         raise Exception("We have a Delim Join, now a Hash Join, that has not 2 children. But none of them are Group Aggregate Nodes.")
+                    
+                    # Search for a DELIM_SCAN below, get the conditions from the node above it
+                    above_delim_scan_node = duck_search_for_delim_scan(tree.plans[i])
+                    
+                    if above_delim_scan_node != None and hasattr(above_delim_scan_node, "hash_cond"):
+                        # Use this node's hash_cond
+                        cond_split = filter(None, list(re.split('(AND)|(OR)', above_delim_scan_node.hash_cond)))
+                        
+                        eqs = []
+                        neqs = []
+                        for elem in cond_split:
+                            if (elem == "AND") or (elem == "OR"):
+                                pass
+                            elif " = " in elem:
+                                eqs.append(elem)
+                            elif " != " in elem:
+                                new_elem_s = elem.replace("!=", "<>").split(" <> ")
+                                for j in range(len(new_elem_s)):
+                                    new_elem_s[j] = new_elem_s[j].strip()
+                                
+                                # Check for labels needed
+                                lbl_needed = False
+                                if new_elem_s[0] == new_elem_s[1]:
+                                    lbl_needed = True
+                                
+                                for j in range(len(new_elem_s)):
+                                    if j % 2 == 0:
+                                        if lbl_needed == True:
+                                            new_elem_s[j] = "left_table." + new_elem_s[j] + "_x"
+                                        else:
+                                            new_elem_s[j] = "left_table." + new_elem_s[j]
+                                    else:
+                                        if lbl_needed == True:
+                                            new_elem_s[j] = "right_table." + new_elem_s[j] + "_y"
+                                        else:
+                                            new_elem_s[j] = "right_table." + new_elem_s[j]
+                                        
+                                
+                                neqs.append(" <> ".join(new_elem_s))
+                            else:
+                                raise Exception("Unknown, no attribute to split upon")
+                            
+                        # Join eqs and neqs back up into a string
+                        join_eq = str(" AND ".join(eqs)).strip()
+                        join_neq = str(" AND ".join(neqs)).strip()
+                        
+                        # TODO: Do we need to add "_x" and "_y" to join_neq
+                        
+                        if join_neq != "":
+                            if hasattr(tree.plans[i], "filter"):
+                                tree.plans[i].filter = tree.plans[i].filter + " AND " + join_neq
+                            else:
+                                tree.plans[i].add_filter(join_neq)
+                                
+                        # Add join_eq as condition
+                        tree.plans[i].hash_cond = join_eq
+                        
+                                            
 
     # Perform a Postorder traversal
     # Check if this node has a child
@@ -1943,6 +2001,39 @@ def duck_fix_delim_join(tree):
         if tree.plans != None:
             for i in range(len(tree.plans)):
                 duck_fix_delim_join(tree.plans[i])   
+                
+def duck_search_for_delim_scan(tree):
+    # Postorder traversal
+    if tree.plans != None:
+        for i in range(len(tree.plans)):
+            current_node = tree.plans[i]
+            # Fix a Hash Join
+            if (current_node.node_type == "Hash Join"):
+                
+                # Iterate through below nodes, create a dictionary of their type
+                below_nodes = defaultdict(int)
+                if hasattr(current_node, "plans"):
+                    if current_node.plans != None:
+                        for j in range(len(current_node.plans)):
+                            below_nodes[current_node.plans[j].node_type] += 1
+                            
+                # How many chunk scans do we have below, if it's eaxtly 1, then we skip this current node
+                if below_nodes["Delim Scan"] == 1:
+                    return current_node
+                            
+    # Perform a Postorder traversal
+    # Check if this node has a child
+    output = None
+    if hasattr(tree, "plans"):
+        if tree.plans != None:
+            for i in range(len(tree.plans)):
+                new_output = duck_search_for_delim_scan(tree.plans[i])   
+                if new_output != None:
+                    output = new_output
+    
+    return output
+
+                
 
 
 def duck_fix_chunk_scan_hash_join(tree):
