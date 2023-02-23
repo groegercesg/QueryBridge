@@ -20,6 +20,10 @@ class base_node():
     def add_renames(self, renames):
         self.renames = renames
         
+class chunk_scan_node(base_node):
+    def __init__(self, node_type, output):
+        super().__init__(node_type, output)
+        
 class projection_node(base_node):
     def __init__(self, node_type, output):
         super().__init__(node_type, output)

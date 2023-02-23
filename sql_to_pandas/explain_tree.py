@@ -1608,6 +1608,9 @@ def make_tree_from_duck(json, tree, sql):
     # Make the Class tree
     explain_tree = make_class_tree_from_duck(json, tree, in_capture, col_ref) 
     
+    # Fix MARK Hash Join
+    duck_fix_mark_hash_join(explain_tree)    
+    
     # Iterate through the class tree, fix column references
     explain_tree = duck_fix_class_tree(explain_tree) 
     
@@ -1841,6 +1844,70 @@ def duck_fix_remove_laters(tree):
                         # Set current_node to be the children
                         tree.plans[i] = prune_children
     
+def duck_fix_mark_hash_join(tree):
+    # Postorder Traversal
+    if tree.plans != None:
+        for i in range(len(tree.plans)):
+            current_node = tree.plans[i]
+            # Fix a Hash Join with Join_type: mark
+            if (current_node.node_type == "Hash Join") and (current_node.join_type.lower() == "mark"):
+                # Catch unusual number of children, expecting 2
+                if hasattr(current_node, "plans"):
+                    if current_node.plans != None:
+                        if len(current_node.plans) != 2:
+                            raise Exception("The Hash Join with a Join Type of Mark, has " + str(len(current_node.plans)) + " node below it.")
+                    else:
+                        raise Exception("Hash join with no plans")
+                else:
+                    raise Exception("Hash join with no plans")
+                
+                # Iterate through below nodes, create a dictionary of their type
+                below_nodes = defaultdict(int)
+                if hasattr(current_node, "plans"):
+                    if current_node.plans != None:
+                        for j in range(len(current_node.plans)):
+                            below_nodes[current_node.plans[j].node_type] += 1
+                
+                # How many chunk scans do we have below, if it's eaxtly 1, then we skip this current node
+                if below_nodes["Chunk Scan"] == 1:
+                    # Find the non_chunk scan
+                    target_child = None
+                    for j in range(len(current_node.plans)):
+                        if current_node.plans[j].node_type != "Chunk Scan":
+                            target_child = current_node.plans[j]
+                            break
+                        
+                    # Add filters to the target child if the current node had them
+                    if hasattr(current_node, "filter") and (current_node.filter != None):
+                        if hasattr(target_child, "filters") and (target_child.filters != None):
+                            # Add to existing filters
+                            target_child.filters = str(target_child.filters) + " AND " + current_node.filter
+                        else:
+                            # Create new filters
+                            target_child.add_filters(str(current_node.filter))
+                        
+                    # Set the parent of prune_children to be tree.plans[i]
+                    target_child.parent = tree.plans[i]
+                
+                    # Set current_node to be the children
+                    tree.plans[i] = target_child
+                # ELIF filter contains NOT(SUBQUERY)
+                elif hasattr(current_node, "filter") and ("NOT(SUBQUERY)" in current_node.filter):
+                    # Remove the filter
+                    current_node.filter = None
+                    # Replace Join type with special mode
+                    current_node.join_type = "Left Anti Join"
+                
+                else:
+                    raise Exception("Not sure how to process Hash Join with Join type Mark")
+          
+    # Perform a Postorder traversal
+    # Check if this node has a child
+    if hasattr(tree, "plans"):
+        if tree.plans != None:
+            for i in range(len(tree.plans)):
+                duck_fix_mark_hash_join(tree.plans[i])
+
 
 def duck_fix_class_tree(tree):
     # Perform a preorder traversal
@@ -2360,6 +2427,9 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         
     elif node_type.lower() == "seq_scan":
         node_class = process_seq_scan(node, col_ref)
+        
+    elif node_type.lower() == "chunk_scan":
+        node_class = chunk_scan_node("Chunk Scan", node["extra_info"])
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
     
@@ -2410,21 +2480,25 @@ def determine_child_relation(item):
     # TODO: Hardcode for TPC-H
     child_relation = None
     
-    if item[0] == "l":
+    local_item = item
+    if "substring(" in local_item:
+        local_item = local_item.replace("substring(", "")
+    
+    if local_item[0] == "l":
         child_relation = "lineitem"
-    elif item[0] == "o":
+    elif local_item[0] == "o":
         child_relation = "orders"
-    elif item[0] == "r":
+    elif local_item[0] == "r":
         child_relation = "region"
-    elif item[0] == "n":
+    elif local_item[0] == "n":
         child_relation = "nation"
-    elif item[0] == "ps":
+    elif local_item[0] == "ps":
         child_relation = "partsupp"
-    elif item[0] == "p":
+    elif local_item[0] == "p":
         child_relation = "part"
-    elif item[0] == "c":
+    elif local_item[0] == "c":
         child_relation = "customer"
-    elif item[0] == "s":
+    elif local_item[0] == "s":
         child_relation = "supplier"
     else:
         return None
@@ -2500,7 +2574,7 @@ def process_hash_join(json, col_ref, external_filters=None):
     join_type = json["extra_info"][0]
     condition = " AND ".join(json["extra_info"][1:])
     
-    child_relation = determine_child_relation(condition[0])
+    child_relation = determine_child_relation(condition)
     
     # If condition is " IS NOT DISTINCT FROM ", Then we need to fix it
     if " IS NOT DISTINCT FROM " in condition:
