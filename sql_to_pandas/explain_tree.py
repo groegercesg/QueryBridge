@@ -1493,6 +1493,19 @@ def create_in_capture(sql):
                     break 
         if (new_attr == True) or (new_vals == True):
             in_capture.append((attribute, vals)) 
+            
+    # REMOVE with NOT as idx 0
+    removes = []
+    for i in range(len(in_capture)):
+        if in_capture[i][0] == "NOT":
+            removes.append(i)
+            
+    # Reverse it
+    removes.reverse()
+    
+    # Carry out deletes
+    for num in removes:
+        del in_capture[num]
     
     return in_capture
 
@@ -1993,7 +2006,7 @@ def duck_fix_mark_hash_join(tree):
                 # ELIF filter contains NOT(SUBQUERY)
                 elif hasattr(current_node, "filter") and ("NOT(SUBQUERY)" in current_node.filter):
                     # Remove the filter
-                    current_node.filter = None
+                    delattr(current_node, "filter")
                     # Replace Join type with special mode
                     current_node.join_type = "Left Anti Join"
                 
@@ -2195,10 +2208,17 @@ def process_extra_info(extra_info, in_capture, col_ref):
     # Before running, construct in_plan_expected from in_capture
     # Rewrite in_capture to in_plan_expected
     in_plan_expected = []
+    in_plan_exp_alternate = "IN (...)"
     in_plan_desired = []
     for attr, vals in in_capture:
         local_vals = vals.copy()
-        desired_str = str(attr) + " = ANY ([" + str(local_vals)[1:-1] + "])"
+        
+        # Special mode for if it's digits, then we treat them as integers
+        if local_vals[0].isdigit():
+            desired_str = str(attr) + " = ANY ([" + str(local_vals)[1:-1].replace("'", "") + "])"
+        else:
+            desired_str = str(attr) + " = ANY ([" + str(local_vals)[1:-1] + "])"
+        
         in_plan_desired.append(desired_str)
         
         for i in range(len(local_vals)):
@@ -2224,7 +2244,15 @@ def process_extra_info(extra_info, in_capture, col_ref):
         for j in range(len(in_plan_expected)):
             if in_plan_expected[j] in new_extra_info[i]:
                 new_extra_info[i] = str(new_extra_info[i]).replace(in_plan_expected[j], in_plan_desired[j])
-
+        
+        # Search for the alternate
+        if in_plan_exp_alternate in new_extra_info[i]:
+            # TODO: Hardcoded for only one replacement
+            if len(in_plan_desired) != 1:
+                raise Exception("Only prepared for 1 desired IN replacement, we have too many")
+            
+            new_extra_info[i] = str(new_extra_info[i]).replace(in_plan_exp_alternate, in_plan_desired[0])
+        
         # Remove CAST
         if "CAST(" in new_extra_info[i]:
             while "CAST(" in new_extra_info[i]:
@@ -2273,14 +2301,26 @@ def process_extra_info(extra_info, in_capture, col_ref):
         if "prefix(" in new_extra_info[i]:
             # (part.p_name)::text ~~ 'promo%'
             # Get prefix_part = 
-            original_prefix = "prefix(" + new_extra_info[i].split("prefix(")[1].split(")")[0] + ")"
-            items = str(str(original_prefix).replace("prefix(", ""))[:-1].split(", ")
+            not_like = False
+
+            # Check the 4 characters before prefix
+            before_prefix = new_extra_info[i][:new_extra_info[i].index("prefix(")][-4:]
+            if before_prefix == "NOT(":
+                not_like = True
+                original_prefix = before_prefix + "prefix(" + new_extra_info[i].split("prefix(")[1].split(")")[0] + "))"
+                items = str(str(original_prefix).replace(before_prefix + "prefix(", ""))[:-2].split(", ")
+            else:
+                original_prefix = "prefix(" + new_extra_info[i].split("prefix(")[1].split(")")[0] + ")"
+                items = str(str(original_prefix).replace("prefix(", ""))[:-1].split(", ")
             
             # Trim quotes
             if (items[1][0] == "'") and (items[1][-1] == "'"):
                 items[1] = items[1][1:-1]
             
-            new_prefix = str(items[0]) + " ~~ '" + str(items[1]) + "%'" 
+            if not_like == False:
+                new_prefix = str(items[0]) + " ~~ '" + str(items[1]) + "%'" 
+            else:
+                new_prefix = str(items[0]) + " !~~ '" + str(items[1]) + "%'" 
             
             new_extra_info[i] = new_extra_info[i].replace(original_prefix, new_prefix)
             
