@@ -2799,7 +2799,7 @@ def process_merge_join(json, col_ref, external_filters=None):
         
         s_condition = condition.split(in_eqs[0])
         for i in range(len(s_condition)):
-            if s_condition[i] != in_eqs[0]:
+            if (s_condition[i] != in_eqs[0]) and (s_condition[i] != "SUBQUERY") and (s_condition[i][:3] != "sum"):
                 s_condition[i] = child_relation + "." + s_condition[i]
         
         cross_filter = in_eqs[0].join(s_condition)
