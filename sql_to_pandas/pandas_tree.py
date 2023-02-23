@@ -232,7 +232,11 @@ def process_output(self, output, codecomphelper):
                     else:
                         raise Exception("Node has no output columns and no sort_key, what should we use to count on?")
                 else:
-                    chosen_column = str(self.output[0])
+                    if isinstance(self.output[0], tuple):
+                        # Use the colname
+                        chosen_column = str(self.output[0][1])
+                    else:
+                        chosen_column = str(self.output[0])
 
                 output[i] = ("count(" + str(chosen_column) + ")", output[i][1])
             elif "extract" in output[i][0].lower():
@@ -285,12 +289,18 @@ def handle_substring(string):
     # Split into where, from and for
     
     # Check is actually a substring
-    if "SUBSTRING" not in string:
-        raise Exception("How did we get here!")
+    if "SUBSTRING" in string:
+        where_value = str(str(string[10:]).split(" ")[0]).strip()
+        from_value = int(str(str(string.split(" FROM ")[1]).split(" FOR ")[0]).strip())
+        for_value = int(str(str(string.split(" FOR ")[1]).split(")")[0]).strip())
     
-    where_value = str(str(string[10:]).split(" ")[0]).strip()
-    from_value = int(str(str(string.split(" FROM ")[1]).split(" FOR ")[0]).strip())
-    for_value = int(str(str(string.split(" FOR ")[1]).split(")")[0]).strip())
+    else:
+        # Do lowercase
+        where_value = str(str(string[10:]).split(" ")[0]).strip()
+        from_value = int(str(str(string.split(" from ")[1]).split(" for ")[0]).strip())
+        for_value = int(str(str(string.split(" for ")[1]).split(")")[0]).strip())
+    
+    
     
     return str(where_value) + ".str.slice(" + str(from_value - 1) + ", " + str((from_value - 1) + for_value) + ")"
 
@@ -2059,6 +2069,13 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
         
             # rename
             if ".dt." in str(col[0]).lower():
+                before_aggrs.append([col[1], prev_df + "." + col[0]])
+                
+                # Don't run rest of this iteration
+                continue
+            
+            # slice
+            if ".str.slice" in str(col[0]).lower():
                 before_aggrs.append([col[1], prev_df + "." + col[0]])
                 
                 # Don't run rest of this iteration

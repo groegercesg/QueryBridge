@@ -1494,6 +1494,43 @@ def create_in_capture(sql):
         if (new_attr == True) or (new_vals == True):
             in_capture.append((attribute, vals)) 
             
+    substr_regex = r"substring.*(IN|in)\s*\([^\)]+"
+    
+    matches = re.finditer(substr_regex, sql, re.MULTILINE)
+    for matchNum, match in enumerate(matches, start=1):
+            
+        gp_match = " ".join(match.group().split())
+        if " in " in gp_match:
+            attribute = str(gp_match.split(" in ")[0]).strip()
+            vals = str(str(str(gp_match.split(" in ")[1]).strip())[1:]).split(",")
+        elif " IN " in gp_match:
+            attribute = str(gp_match.split(" IN ")[0]).strip()
+            vals = str(str(str(gp_match.split(" IN ")[1]).strip())[1:]).split(",")    
+        else:
+            raise Exception("In structure not recognised")
+        
+        # Make formatted good
+        if "substring(" in attribute:
+            attribute = attribute.replace("substring", "SUBSTRING")
+            attribute = attribute.replace("from", "FROM")
+            attribute = attribute.replace("for", "FOR")
+        
+        # Remove ' in vals
+        for i in range(len(vals)):
+            vals[i] = str(vals[i]).strip()
+            if (vals[i][0] == "'") and (vals[i][-1] == "'"):
+                vals[i] = vals[i][1:-1] 
+        
+        new_attr = attribute not in [i[0] for i in in_capture]
+        new_vals = False
+        for i in range(len(in_capture)):
+            if attribute == in_capture[i][0]:
+                if vals != in_capture[i][1]:
+                    new_vals = True
+                    break 
+        if (new_attr == True) or (new_vals == True):
+            in_capture.append((attribute, vals)) 
+            
     # REMOVE with NOT as idx 0
     removes = []
     for i in range(len(in_capture)):
@@ -1538,6 +1575,11 @@ def create_col_refs(sql):
                 
                 if " like " in projection_original:
                     projection_original = projection_original.replace(" like ", " ~~ ")
+                
+                # Substring fix
+                if projection_original[:10] == "substring(":
+                    projection_original = projection_original.replace(",", " from", 1)
+                    projection_original = projection_original.replace(",", " for", 1)
                 
                 # Special to remove tiny alias relation "n2.n_name"
                 # Must not be an empty string or something entirely devoid of letters
@@ -2272,7 +2314,7 @@ def process_extra_info(extra_info, in_capture, col_ref):
         local_vals = vals.copy()
         
         # Special mode for if it's digits, then we treat them as integers
-        if local_vals[0].isdigit():
+        if local_vals[0].isdigit() and "SUBSTRING" not in attr:
             desired_str = str(attr) + " = ANY ([" + str(local_vals)[1:-1].replace("'", "") + "])"
         else:
             desired_str = str(attr) + " = ANY ([" + str(local_vals)[1:-1] + "])"
@@ -2500,6 +2542,8 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
                 sort_keys[i] = sort_keys[i].replace("all_nations", "nation")
             elif "shipping" in sort_keys[i]:
                 sort_keys[i] = sort_keys[i].replace("shipping", "nation")
+            elif "custsale" in sort_keys[i]:
+                sort_keys[i] = sort_keys[i].replace("custsale", "customer")
             
             
             if " - " in sort_keys[i] and not any([True for agg in ["sum", "max", "min", "avg"] if agg == sort_keys[i][:3]]):
@@ -2729,6 +2773,8 @@ def process_merge_join(json, col_ref, external_filters=None):
     condition = " AND ".join(json["extra_info"][1:])
     child_relation = determine_child_relation(condition[0])
     # If condition is " IS NOT DISTINCT FROM ", Then we need to fix it
+    
+    in_eqs = [eq for eq in [" > ", " >= ", " < ", " <= "] if eq in condition]
     if " IS NOT DISTINCT FROM " in condition:
         # Split on AND
         if " AND " in condition:
@@ -2741,11 +2787,23 @@ def process_merge_join(json, col_ref, external_filters=None):
         
         child_relation = determine_child_relation(condition[0])
         
-    elif any([True for eq in [" > ", " >= ", " < ", " <= "] if eq in condition]):
+    elif any(in_eqs):
         # Make join_type = cross
         join_type = "cross"
         cross_filter = condition
         child_relation = determine_child_relation(condition[0])
+        
+        # Split on in_eqs
+        if len(in_eqs) != 1:
+            raise Exception("Unexpected number of equating things")
+        
+        s_condition = condition.split(in_eqs[0])
+        for i in range(len(s_condition)):
+            if s_condition[i] != in_eqs[0]:
+                s_condition[i] = child_relation + "." + s_condition[i]
+        
+        cross_filter = in_eqs[0].join(s_condition)
+        
         condition = ""
     
     node_class = merge_join_node("Merge Join", merge_output, inner_unique, join_type, condition)
@@ -2845,16 +2903,18 @@ def process_external_filters(external_filters, child_relation, col_ref=None):
     
     # Split on AND/OR
     for j in range(len(external_filters)):
-        line_split = list(filter(None, re.split('(AND)|(OR)', external_filters[j])))
+        line_split = list(filter(None, re.split('( AND )|( OR )', external_filters[j])))
             
         for i in range(len(line_split)):
             if (line_split[i][0] == "(") and (line_split[i][-1] == ")"):
                 line_split[i] = line_split[i][1:-1]
             
-            if (line_split[i] != "AND") and (line_split[i] != "OR"):
+            if (line_split[i] != " AND ") and (line_split[i] != " OR "):
                 line_split[i] = str(line_split[i]).strip()
                 if child_relation != None:
-                    are_there_aggs = [agg+"(" for agg in agg_funcs if agg+"(" in line_split[i]]
+                    local_agg_funcs = agg_funcs
+                    local_agg_funcs.add("SUBSTRING")
+                    are_there_aggs = [agg+"(" for agg in local_agg_funcs if agg+"(" in line_split[i]]
                     if any(are_there_aggs):
                         # Put relation after agg_func
                         insert_length = sum(len(s) for s in are_there_aggs)
@@ -2893,7 +2953,7 @@ def process_external_filters(external_filters, child_relation, col_ref=None):
                                 line_split[i] = eq_item.join(s_ls)
                         
         
-        external_filters[j] = " ".join(line_split)
+        external_filters[j] = "".join(line_split)
     external_filters = " AND ".join(external_filters)
     
     # Use attributes collect
