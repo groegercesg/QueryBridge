@@ -3024,6 +3024,9 @@ class merge_node():
             # Do a cross_join
             local_statement = this_df + " = " + left_prev_df+'.merge(' + right_prev_df+', how="' + str('cross') + '", sort=' + str(self.sort) + ')'
             statements.append(local_statement)
+        elif self.join_type.lower() == "left anti join":
+            local_statement = this_df + " = " + left_prev_df + '[~' + left_prev_df + '.' + left_labels[0] + '.isin(' + right_prev_df + '["' + right_labels[0] + '"])]'
+            statements.append(local_statement)
         
         else:
             raise Exception("Unexpected type of Join given: " + str(self.join_type))

@@ -1608,8 +1608,12 @@ def make_tree_from_duck(json, tree, sql):
     # Make the Class tree
     explain_tree = make_class_tree_from_duck(json, tree, in_capture, col_ref) 
     
+    # Do this first, as it makes binary tree(ish), Fix DELIM_JOIN in Tree
+    duck_fix_delim_join(explain_tree)
     # Fix MARK Hash Join
     duck_fix_mark_hash_join(explain_tree)    
+    # Fix DELIM_SCAN in Hash Join
+    duck_fix_delim_scan(explain_tree)
     
     # Iterate through the class tree, fix column references
     explain_tree = duck_fix_class_tree(explain_tree) 
@@ -1844,6 +1848,101 @@ def duck_fix_remove_laters(tree):
                         # Set current_node to be the children
                         tree.plans[i] = prune_children
     
+def duck_fix_delim_join(tree):
+    # Postorder Traversal
+    if tree.plans != None:
+        for i in range(len(tree.plans)):
+            current_node = tree.plans[i]
+            # Fix a Delim Join, that now is represented as a Hash Join
+            if (current_node.node_type == "Hash Join") and hasattr(current_node, "delim_join") and (current_node.delim_join == True):
+                # Does this have != 2 children, we have to remove one then
+                if len(current_node.plans) != 2:
+                    # Iterate through below nodes, create a dictionary of their type
+                    below_nodes = defaultdict(int)
+                    if hasattr(current_node, "plans"):
+                        if current_node.plans != None:
+                            for j in range(len(current_node.plans)):
+                                below_nodes[current_node.plans[j].node_type] += 1
+                    
+                    if "Group Aggregate" in below_nodes:
+                        # Do we have the right amount if we remove the group aggregate node
+                        if len(current_node.plans) - below_nodes["Group Aggregate"] != 2:
+                            raise Exception("Unexpected number of children")
+                        
+                        # Get new children
+                        new_children = []
+                        for j in range(len(current_node.plans)):
+                            if current_node.plans[j].node_type != "Group Aggregate":
+                                new_children.append(current_node.plans[j])
+                        
+                        # Set new plans
+                        tree.plans[i].plans = new_children
+                    else:
+                        raise Exception("We have a Delim Join, now a Hash Join, that has not 2 children. But none of them are Group Aggregate Nodes.")
+
+    # Perform a Postorder traversal
+    # Check if this node has a child
+    if hasattr(tree, "plans"):
+        if tree.plans != None:
+            for i in range(len(tree.plans)):
+                duck_fix_delim_join(tree.plans[i])   
+
+    
+def duck_fix_delim_scan(tree):
+    # Postorder Traversal
+    if tree.plans != None:
+        for i in range(len(tree.plans)):
+            current_node = tree.plans[i]
+            # Fix a Hash Join
+            if (current_node.node_type == "Hash Join"):
+                # Catch unusual number of children, expecting 2
+                if hasattr(current_node, "plans"):
+                    if current_node.plans != None:
+                        if len(current_node.plans) != 2:
+                            raise Exception("The Hash Join, has " + str(len(current_node.plans)) + " nodes below it.")
+                    else:
+                        raise Exception("Hash join with no plans")
+                else:
+                    raise Exception("Hash join with no plans")
+                
+                # Iterate through below nodes, create a dictionary of their type
+                below_nodes = defaultdict(int)
+                if hasattr(current_node, "plans"):
+                    if current_node.plans != None:
+                        for j in range(len(current_node.plans)):
+                            below_nodes[current_node.plans[j].node_type] += 1
+                
+                # How many delim scans do we have below, if it's eaxtly 1, then we skip this current node
+                if below_nodes["Delim Scan"] == 1:
+                    # Find the non-delim scan
+                    target_child = None
+                    for j in range(len(current_node.plans)):
+                        if current_node.plans[j].node_type != "Delim Scan":
+                            target_child = current_node.plans[j]
+                            break
+                        
+                    # Add filters to the target child if the current node had them
+                    if hasattr(current_node, "filter") and (current_node.filter != None):
+                        if hasattr(target_child, "filters") and (target_child.filters != None):
+                            # Add to existing filters
+                            target_child.filters = str(target_child.filters) + " AND " + current_node.filter
+                        else:
+                            # Create new filters
+                            target_child.add_filters(str(current_node.filter))
+                        
+                    # Set the parent of prune_children to be tree.plans[i]
+                    target_child.parent = tree.plans[i]
+                
+                    # Set current_node to be the children
+                    tree.plans[i] = target_child
+
+    # Perform a Postorder traversal
+    # Check if this node has a child
+    if hasattr(tree, "plans"):
+        if tree.plans != None:
+            for i in range(len(tree.plans)):
+                duck_fix_delim_scan(tree.plans[i])   
+
 def duck_fix_mark_hash_join(tree):
     # Postorder Traversal
     if tree.plans != None:
@@ -2412,6 +2511,17 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
             # Change the json
             node = node["children"][0]
             
+        elif child_name.lower() == "delim_join":
+            # child_copy
+            child_copy = node["children"][0].copy()
+            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture, col_ref)
+            # Get the class
+            node_class = process_hash_join(child_copy, col_ref, node["extra_info"])
+            
+            # Change the json
+            node = node["children"][0]
+            
+            
         elif child_name.lower() == "hash_group_by":
             # child_copy
             child_copy = node["children"][0].copy()
@@ -2420,7 +2530,8 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
             node_class = process_hash_group_by(child_copy, col_ref, node["extra_info"])
             
             # Change the json
-            node = node["children"][0]    
+            node = node["children"][0]   
+            node_class.delim_join = True 
         
         else:
             raise Exception("Child is not a seq_scan or hash_join, it's a: " + str(node["children"][0]["name"]))
@@ -2430,6 +2541,12 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         
     elif node_type.lower() == "chunk_scan":
         node_class = chunk_scan_node("Chunk Scan", node["extra_info"])
+    elif node_type.lower() == "delim_scan":
+        node_class = delim_scan_node("Delim Scan", node["extra_info"])
+    elif node_type.lower() == "delim_join":
+        # Remap to be a Hash_join
+        node_class = process_hash_join(node, col_ref)
+        node_class.delim_join = True
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
     
