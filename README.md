@@ -1,15 +1,12 @@
 # Dataframe SQL Benchmark
 
-## Current Postgres and Converted Pandas in TPCH-H 
 
-![Comparison Table, Scaling Factor 1](benchmarking/analysis_results/all_queries_compare_queries.svg)
-
-(Scaling Factor: 1)
-## Current Postgres, Duck DB and Converted Pandas in TPCH-H 
+## Postgres, Duck DB and Converted Pandas in TPCH-H 
 
 ![Comparison Table, Scaling Factor 1](benchmarking/analysis_results/postgres_duck_db_compare_queries.svg)
 
-(Scaling Factor: 1)
+- Scaling Factor: 1
+- 6 Runs with the first removed before creating the Mean
 
 ## Setup
 ### Getting DBGEN
