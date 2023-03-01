@@ -26,6 +26,9 @@ def run_duck_query(db_details, query_file, verbose):
     try:
         con = duckdb.connect(database=db_details, read_only=False)
         
+        # Prepare connection by set to single threaded
+        con.execute("SET threads TO 1;")
+        
         for i, single_query in enumerate(queries):
             if verbose:
                 print("Executing SQL Query, part", i+1, "of", len(queries), ".")
@@ -51,11 +54,3 @@ def run_duck_query(db_details, query_file, verbose):
         raise ValueError("We have multiple statements that return values, we haven't coded how to handle this.")
             
     return results, exec_time
-
-# For testing
-if __name__ == "__main__":
-    pass
-    import json
-    manifest_json = json.load(open('query_15_test.json'))
-
-    run_query(manifest_json["Database Connection Details"], "queries/15.sql", True)
