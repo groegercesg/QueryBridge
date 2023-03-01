@@ -1,5 +1,5 @@
 {
-    "Test Name": "All Queries Test",
+    "Test Name": "Duck DB TPC-H Queries Test",
     "Scaling Factors": [1],
     "Queries": [
         {
@@ -15,9 +15,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q1_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q1_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -34,9 +34,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q2_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q2_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -53,9 +53,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q3_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q3_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -72,9 +72,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q4_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q4_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -91,9 +91,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q5_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q5_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -110,9 +110,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q6_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q6_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -129,9 +129,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q7_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q7_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -149,8 +149,8 @@
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q8_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -167,9 +167,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q9_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q9_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -186,9 +186,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q10_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q10_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -205,9 +205,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q11_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q11_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -224,9 +224,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q12_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q12_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -243,9 +243,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q13_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q13_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -262,9 +262,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q14_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q14_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -281,9 +281,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q15_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q15_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -300,9 +300,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q16_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q16_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -319,9 +319,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q17_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q17_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -338,9 +338,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q18_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q18_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -357,9 +357,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q19_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q19_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -376,9 +376,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q20_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q20_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -395,9 +395,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q21_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q21_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         },
@@ -414,9 +414,9 @@
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "q22_pandas.py",
-                    "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Converted Name": "duck_q22_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         }
@@ -426,8 +426,8 @@
     "SQL Queries Location": "benchmarking/queries",
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 1,
-    "Results Location": "benchmarking/test_results/all_queries_test_results.csv",
+    "Number of Query Runs": 6,
+    "Results Location": "benchmarking/test_results/duck_tpch_queries_test_results.csv",
     "Postgres Connection Details": "postgres_connection.json",
     "Duck DB Connection": "duckdb_tpch.duckdb",
     "DB Gen Location": "tpch-dbgen",
@@ -436,7 +436,7 @@
     "Use Numpy": "False",
     "Results Precision": 4,
     "Store Queries": {
-        "Name": "all_queries_pandas.py",
+        "Name": "duck_tpch_queries_pandas.py",
         "Rename Tables": {
             "lineitem": "li",
             "orders": "ord",

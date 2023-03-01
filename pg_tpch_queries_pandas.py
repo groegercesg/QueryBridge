@@ -257,40 +257,34 @@ def q3():
     df_merge_1 = df_merge_1[['o_orderdate', 'o_shippriority', 'o_orderkey']]
     df_merge_2 = df_filter_1.merge(df_merge_1, left_on=['l_orderkey'], right_on=['o_orderkey'], how="inner", sort=False)
     df_merge_2 = df_merge_2[['l_orderkey', 'o_orderdate', 'o_shippriority', 'l_extendedprice', 'l_discount']]
-    df_sort_1 = df_merge_2.sort_values(by=['l_orderkey', 'o_orderdate', 'o_shippriority'], ascending=[True, True, True])
-    df_sort_1 = df_sort_1[['l_orderkey', 'o_orderdate', 'o_shippriority', 'l_extendedprice', 'l_discount']]
-    df_sort_1['before_1'] = ((df_sort_1.l_extendedprice) * (1 - (df_sort_1.l_discount)))
-    df_group_1 = df_sort_1 \
+    df_merge_2['before_1'] = ((df_merge_2.l_extendedprice) * (1 - (df_merge_2.l_discount)))
+    df_group_1 = df_merge_2 \
         .groupby(['l_orderkey', 'o_orderdate', 'o_shippriority'], sort=False) \
         .agg(
             revenue=("before_1", "sum"),
         )
     df_group_1 = df_group_1[['revenue']]
-    df_sort_2 = df_group_1.sort_values(by=['revenue', 'o_orderdate'], ascending=[False, True])
-    df_sort_2 = df_sort_2[['revenue']]
-    df_limit_1 = df_sort_2.head(10)
+    df_sort_1 = df_group_1.sort_values(by=['revenue', 'o_orderdate'], ascending=[False, True])
+    df_sort_1 = df_sort_1[['revenue']]
+    df_limit_1 = df_sort_1.head(10)
     return df_limit_1
 
 def q4():
     df_filter_1 = ord[(ord.o_orderdate >= '1993-07-01 00:00:00') & (ord.o_orderdate < '1993-10-01 00:00:00')]
-    df_filter_1 = df_filter_1[['o_orderkey', 'o_custkey', 'o_orderstatus', 'o_totalprice', 'o_orderdate', 'o_orderpriority', 'o_clerk', 'o_shippriority', 'o_comment']]
+    df_filter_1 = df_filter_1[['o_orderpriority', 'o_orderkey']]
     df_filter_2 = li[(li.l_commitdate < li.l_receiptdate)]
     df_filter_2 = df_filter_2[['l_orderkey']]
-    df_group_1 = df_filter_2 \
-        .groupby(['l_orderkey'], sort=False) \
-        .last()
-    df_group_1 = df_group_1.reset_index(level=0)
-    df_merge_1 = df_filter_1.merge(df_group_1, left_on=['o_orderkey'], right_on=['l_orderkey'], how="inner", sort=False)
+    df_merge_1 = df_filter_1[df_filter_1.o_orderkey.isin(df_filter_2["l_orderkey"])]
     df_merge_1 = df_merge_1[['o_orderpriority']]
     df_sort_1 = df_merge_1.sort_values(by=['o_orderpriority'], ascending=[True])
     df_sort_1 = df_sort_1[['o_orderpriority']]
-    df_group_2 = df_sort_1 \
+    df_group_1 = df_sort_1 \
         .groupby(['o_orderpriority'], sort=False) \
         .agg(
             order_count=("o_orderpriority", "count"),
         )
-    df_group_2 = df_group_2[['order_count']]
-    df_limit_1 = df_group_2.head(1)
+    df_group_1 = df_group_1[['order_count']]
+    df_limit_1 = df_group_1.head(1)
     return df_limit_1
 
 def q5():
@@ -581,35 +575,38 @@ def q14():
 def q15():
     df_filter_1 = li[(li.l_shipdate >= '1996-01-01 00:00:00') & (li.l_shipdate < '1996-04-01 00:00:00')]
     df_filter_1 = df_filter_1[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_1['supplier_no'] = df_filter_1.l_suppkey
     df_filter_1['before_1'] = ((df_filter_1.l_extendedprice) * (1 - (df_filter_1.l_discount)))
     df_group_1 = df_filter_1 \
-        .groupby(['l_suppkey'], sort=False) \
+        .groupby(['supplier_no'], sort=False) \
         .agg(
-            sum_before_1=("before_1", "sum"),
+            total_revenue=("before_1", "sum"),
         )
-    df_group_1['suml_extendedprice1l_discount'] = df_group_1.sum_before_1
-    df_group_1 = df_group_1[['suml_extendedprice1l_discount']]
+    df_group_1 = df_group_1[['total_revenue']]
+    df_group_1 = df_group_1.reset_index()
     df_aggr_1 = pd.DataFrame()
-    df_aggr_1['maxsuml_extendedprice1l_discount)'] = [(df_group_1.suml_extendedprice1l_discount).max()]
-    df_aggr_1 = df_aggr_1[['maxsuml_extendedprice1l_discount)']]
-    dollar_0 = df_aggr_1['maxsuml_extendedprice1l_discount)'][0]
+    df_aggr_1['maxtotal_revenue'] = [(df_group_1.total_revenue).max()]
+    df_aggr_1 = df_aggr_1[['maxtotal_revenue']]
+    dollar_0 = df_aggr_1['maxtotal_revenue'][0]
     
     df_filter_2 = su[['s_suppkey', 's_name', 's_address', 's_nationkey', 's_phone', 's_acctbal', 's_comment']]
     df_filter_3 = li[(li.l_shipdate >= '1996-01-01 00:00:00') & (li.l_shipdate < '1996-04-01 00:00:00')]
     df_filter_3 = df_filter_3[['l_orderkey', 'l_partkey', 'l_suppkey', 'l_linenumber', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax', 'l_returnflag', 'l_linestatus', 'l_shipdate', 'l_commitdate', 'l_receiptdate', 'l_shipinstruct', 'l_shipmode', 'l_comment']]
+    df_filter_3['supplier_no'] = df_filter_3.l_suppkey
     df_filter_3['before_1'] = ((df_filter_3.l_extendedprice) * (1 - (df_filter_3.l_discount)))
     df_group_2 = df_filter_3 \
-        .groupby(['l_suppkey'], sort=False) \
+        .groupby(['supplier_no'], sort=False) \
         .agg(
+            total_revenue=("before_1", "sum"),
             sum_before_1=("before_1", "sum"),
         )
     df_group_2['suml_extendedprice1l_discount'] = df_group_2.sum_before_1
     df_group_2 = df_group_2[df_group_2.suml_extendedprice1l_discount == dollar_0]
-    df_group_2 = df_group_2[['suml_extendedprice1l_discount']]
-    df_group_2 = df_group_2.rename_axis(['l_suppkey']).reset_index()
+    df_group_2 = df_group_2[['total_revenue']]
+    df_group_2 = df_group_2.rename_axis(['supplier_no']).reset_index()
     df_rename_1 = pd.DataFrame()
-    df_rename_1['total_revenue'] = df_group_2['suml_extendedprice1l_discount']
-    df_rename_1['supplier_no'] = df_group_2['l_suppkey']
+    df_rename_1['total_revenue'] = df_group_2['total_revenue']
+    df_rename_1['supplier_no'] = df_group_2['supplier_no']
     df_sort_1 = df_rename_1.sort_values(by=['supplier_no'], ascending=[True])
     df_sort_1 = df_sort_1[['total_revenue', 'supplier_no']]
     df_merge_1 = df_filter_2.merge(df_sort_1, left_on=['s_suppkey'], right_on=['supplier_no'], how="inner", sort=False)
