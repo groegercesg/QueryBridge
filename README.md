@@ -1,17 +1,14 @@
-# Dataframe SQL Benchmark {ignore=True}
+# Dataframe SQL Benchmark
 
 
-## Postgres, Duck DB and Converted Pandas in TPC-H {ignore=True}
+## Postgres, Duck DB and Converted Pandas in TPC-H
 
 ![Comparison Table, Scaling Factor 1](benchmarking/analysis_results/postgres_duck_db_compare_queries.svg)
 
 - Scaling Factor: 1
 - 6 Runs with the first removed before creating the Mean
 
-##### Table of Contents {ignore=True}
-<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
-
-<!-- code_chunk_output -->
+##### Table of Contents
 
 - [Setup](#-setup)
   - [Getting DBGEN](#-getting-dbgen)
@@ -30,8 +27,6 @@
     - [Additional optimisations](#-additional-optimisations)
   - [Benchmarker demo](#-benchmarker-demo)
 - [Tests for sql_to_pandas](#-tests-for-sql_to_pandas)
-
-<!-- /code_chunk_output -->
 
 ## Setup
 ### Getting DBGEN
