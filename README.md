@@ -1,12 +1,36 @@
-# Dataframe SQL Benchmark
+# Dataframe SQL Benchmark {ignore=True}
 
 
-## Postgres, Duck DB and Converted Pandas in TPCH-H 
+## Postgres, Duck DB and Converted Pandas in TPCH-H {ignore=True}
 
 ![Comparison Table, Scaling Factor 1](benchmarking/analysis_results/postgres_duck_db_compare_queries.svg)
 
 - Scaling Factor: 1
 - 6 Runs with the first removed before creating the Mean
+
+##### Table of Contents {ignore=True}
+<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
+
+<!-- code_chunk_output -->
+
+- [Setup](#-setup)
+  - [Getting DBGEN](#-getting-dbgen)
+  - [Setting up Postgres](#-setting-up-postgres)
+    - [Setting up the connection file for Postgres](#-setting-up-the-connection-file-for-postgres)
+    - [Installing Postgres and creating the Database](#-installing-postgres-and-creating-the-database)
+    - [Disable things in Postgres that we don't support](#-disable-things-in-postgres-that-we-dont-support)
+  - [Setting up DuckDB](#-setting-up-duckdb)
+  - [Setting up Python](#-setting-up-python)
+    - [Setup the Python environment](#-setup-the-python-environment)
+    - [Populate the Postgres Database with data](#-populate-the-postgres-database-with-data)
+- [Demos](#-demos)
+  - [Conversion demo](#-conversion-demo)
+  - [Benchmarker demo](#-benchmarker-demo)
+- [Tests for sql_to_pandas](#-tests-for-sql_to_pandas)
+- [Pending Code tasks](#-pending-code-tasks)
+  - [Distant future](#-distant-future)
+
+<!-- /code_chunk_output -->
 
 ## Setup
 ### Getting DBGEN
@@ -25,8 +49,9 @@ Also, get gcc and make if you don't already have these
 ```bash
 sudo apt-get install -y make gcc
 ```
+### Setting up Postgres
 
-### Setting up the connection file
+#### Setting up the connection file for Postgres
 
 The project comes included with a connection file: _database\_connection.json_
 
@@ -44,7 +69,7 @@ Here is the contents for it below, the Host and Port are the defaults:
 
 You can change the Username, Password and Database name as you wish, but you have to use them below when setting up the databsae.
 
-### Install postgres and make the database
+#### Installing Postgres and creating the Database
 
 Install Postgres-14 (instructions for Ubuntu 22.04):
 
@@ -82,7 +107,7 @@ GRANT ALL PRIVILEGES ON DATABASE tpchdb TO benchmarker;
 ```
 
 <details>
-<summary>Are you trying to use your newly created user on an existing table, run these</summary>
+<summary>Are you trying to use your newly created user on an existing table, run these commands</summary>
 
 
 Assuming your user is: _benchmarker_.
@@ -96,7 +121,7 @@ ALTER DEFAULT PRIVILEGES FOR USER benchmarker IN SCHEMA public GRANT SELECT, INS
 ```
 </details>
 
-### Disable things in Postgres that we don't support
+#### Disable things in Postgres that we don't support
 
 We need to disable some things in the Postgres planner that we don't have support for. To do this, first in the Postgres shell we can find the location of the config file. And then we can edit it:
 ```bash
@@ -129,7 +154,11 @@ systemctl status postgresql-14
 
 The second command should inform whether the database has come back up
 
-## Setup python
+### Setting up DuckDB
+
+As DuckDB is an embedded DBMS, installation is made super easy.  
+
+### Setting up Python
 
 This project requires python version 3.10 or higher, check this by running:
 
@@ -141,7 +170,7 @@ Then install the corresponding version of the Conda package manager, using the b
 
 [Guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
 
-### Setup the python environment
+#### Setup the Python environment
 
 Back in the root directory of this project, we now need to setup the conda environment for the project (this provides us all the dependencies):
 
@@ -152,7 +181,7 @@ conda activate sql_benchmark
 
 And the second command activates it for us.
 
-### Populate the database with data
+#### Populate the Postgres Database with data
 
 With Postgres setup and our database existing, the next step is to populate our database. Run the following command in the root of the project directory, or customise the parameters:
 
@@ -160,7 +189,9 @@ With Postgres setup and our database existing, the next step is to populate our 
 python3 sql_to_pandas/prepare_database.py --database_connection postgres_connection.json --scaling_factor 1 --db_gen tpch-dbgen --data_storage data_storage --constants tpch-prep
 ```
 
-## Demo
+## Demos
+
+### Conversion demo
 
 Assuming you have completed the setup, you can now run the command below to generate the Pandas code for Query 6 from the SQL query plan (with all the diagrams):
 
@@ -169,7 +200,7 @@ conda activate sql_benchmark
 python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location query_6 --name generated_query_6_pandas.py --db_file postgres_connection.json --use_numpy False
 ```
 
-## Run all the queries
+### Benchmarker demo
 
 To use the benchmarking tool to run all the queries, run the below command:
 
