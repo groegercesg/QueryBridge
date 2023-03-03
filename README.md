@@ -1,7 +1,7 @@
 # Dataframe SQL Benchmark {ignore=True}
 
 
-## Postgres, Duck DB and Converted Pandas in TPCH-H {ignore=True}
+## Postgres, Duck DB and Converted Pandas in TPC-H {ignore=True}
 
 ![Comparison Table, Scaling Factor 1](benchmarking/analysis_results/postgres_duck_db_compare_queries.svg)
 
@@ -22,13 +22,14 @@
   - [Setting up DuckDB](#-setting-up-duckdb)
   - [Setting up Python](#-setting-up-python)
     - [Setup the Python environment](#-setup-the-python-environment)
-    - [Populate the Postgres Database with data](#-populate-the-postgres-database-with-data)
+    - [Populate the Databases with data](#-populate-the-databases-with-data)
 - [Demos](#-demos)
   - [Conversion demo](#-conversion-demo)
+    - [Postgres Query Plan](#-postgres-query-plan-)
+    - [DuckDB Query Plan](#-duckdb-query-plan)
+    - [Additional optimisations](#-additional-optimisations)
   - [Benchmarker demo](#-benchmarker-demo)
 - [Tests for sql_to_pandas](#-tests-for-sql_to_pandas)
-- [Pending Code tasks](#-pending-code-tasks)
-  - [Distant future](#-distant-future)
 
 <!-- /code_chunk_output -->
 
@@ -156,7 +157,7 @@ The second command should inform whether the database has come back up
 
 ### Setting up DuckDB
 
-As DuckDB is an embedded DBMS, installation is made super easy.  
+As DuckDB is an embedded DBMS, installation is made super easy. It comes with the Conda environment. So just follow the steps below to setup Python and Conda.
 
 ### Setting up Python
 
@@ -168,7 +169,7 @@ python --version
 
 Then install the corresponding version of the Conda package manager, using the below link:
 
-[Guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
+[Conda installation guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
 
 #### Setup the Python environment
 
@@ -181,33 +182,81 @@ conda activate sql_benchmark
 
 And the second command activates it for us.
 
-#### Populate the Postgres Database with data
+#### Populate the Databases with data
 
-With Postgres setup and our database existing, the next step is to populate our database. Run the following command in the root of the project directory, or customise the parameters:
+With Postgres installed and our Postgres database existing, the next step is to populate our databasse. Run the following command in the root of the project directory, or customise the parameters:
 
 ```bash
-python3 sql_to_pandas/prepare_database.py --database_connection postgres_connection.json --scaling_factor 1 --db_gen tpch-dbgen --data_storage data_storage --constants tpch-prep
+python3 benchmarking/prepare_databases.py --verbose True --data_storage data_storage --db_gen tpch-dbgen --scaling_factor 1 --postgres_connection postgres_connection.json --duck_db_connection duckdb_tpch.duckdb --constants tpch-prep
 ```
+
+The supplied parameters create/initialise the following:
+- A directory called *data_storage* in the root of the directory containing the data for the TPC-H benchmark suite with scaling factor *1*
+- A postgres database, with the connection details as specified, full of the same data from *data_storage*
+- A DuckDB database, called *duckdb_tpch.duckdb*, full of the data also found in *data_storage*
 
 ## Demos
 
 ### Conversion demo
 
-Assuming you have completed the setup, you can now run the command below to generate the Pandas code for Query 6 from the SQL query plan (with all the diagrams):
+#### Postgres Query Plan 
+
+Assuming you have completed all the setup, you can now run the command below to generate the Pandas code for Query 6 from the corresponding PostgreSQL query plan :
 
 ```bash
 conda activate sql_benchmark
-python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location query_6 --name generated_query_6_pandas.py --db_file postgres_connection.json --use_numpy False
+python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location postgres_query_6 --name q6_pandas.py --query_planner Postgres --planner_file postgres_connection.json 
+```
+
+This will run the *6.sql* file in the Postgres database we have created prior, retrieve a query plan and then convert this query plan to Pandas. By default the tool creates diagrams of each of the query plans it encounters, Pandas tree for Query 6 may look similar to this:
+
+![Pandas Query 6 Tree](readme_images/pandas_query6_tree.png)
+
+#### DuckDB Query Plan
+
+If we want to plan the query with the Duck DB query planner, we can use the following query:
+
+```bash
+conda activate sql_benchmark
+python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location duck_query_6 --name q6_pandas.py --query_planner Duck_DB --planner_file duckdb_tpch.duckdb 
+```
+
+This will produce Pandas code that will look pretty much identical to this below:
+
+```python
+df_filter_1 = lineitem[(lineitem.l_shipdate>='1994-01-01') & (lineitem.l_shipdate<'1995-01-01') & (~lineitem.l_shipdate.isnull()) & (lineitem.l_discount>=0.050) & (lineitem.l_discount<=0.070) & (~lineitem.l_discount.isnull()) & (lineitem.l_quantity<24) & (~lineitem.l_quantity.isnull())]
+df_filter_1 = df_filter_1[['l_shipdate', 'l_discount', 'l_quantity', 'l_extendedprice']]
+df_aggr_1 = pd.DataFrame()
+df_aggr_1['l_extendedpricel_discount'] = ((df_filter_1.l_extendedprice) * (df_filter_1.l_discount))
+df_aggr_1 = df_aggr_1[['l_extendedpricel_discount']]
+df_aggr_2 = pd.DataFrame()
+df_aggr_2['revenue'] = [(df_aggr_1.l_extendedpricel_discount).sum()]
+df_aggr_2 = df_aggr_2[['revenue']]
+df_limit_1 = df_aggr_2.head(1)
+```
+
+#### Additional optimisations
+
+I have also created functionality to use various optimisation options. There are many of these but one such option, that can have a 40% performance improvement in some cases is to use Numpy for the execution of CASE queries. We can do this by adding the argument to the end of the command:
+
+```bash
+--use_numpy True
 ```
 
 ### Benchmarker demo
 
-To use the benchmarking tool to run all the queries, run the below command:
+The repository also comes with a custom benchmarking tool. This has been specifically designed to properly gauge runtime and verify correctness for each and every value of every record. The tool provides reproducability by using "test specification" files so that tests are modular and so easy to write.
+
+To use the benchmarking tool to run comparison for all queries, converted to Postgres and DuckDB, run the below command:
 
 ```bash
 conda activate sql_benchmark
-python3 benchmarking/run_benchmarking.py --file benchmarking/test_specifications/all_queries_test.json --verbose
+python3 benchmarking/run_benchmarking.py --file benchmarking/test_specifications/pg_duck_tpch.json --verbose
 ```
+
+This command will run through the test specification file, *pg_duck_tpch.json*, and output the timing and correctness results as specified in the file.
+
+I also provide various other test specifications, including ones to compare queries when we have different scaling factors (**scaling_test.json**) or ones to output all converted queries in a handy file (for Postgres: **pg_tpch.json**, for Duck DB: **duck_tpch.json**).
 
 ## Tests for sql_to_pandas
 
@@ -218,16 +267,3 @@ conda activate sql_benchmark
 cd sql_to_pandas/tests
 python3 -m pytest
 ```
-
-## Pending Code tasks
-
-- **Aggregation Improvements:** Distinct, Count Distinct, CASE integration, Use Intermediate Results (useAlias) _(8h)_
-- **Explain Tree:** Make classes capture all info automatically _(2h)_
-- **Distinct:** Select Distinct Bug _(1h)_
-- **Extract:** Make EXTRACT tests work _(4h)_
-- **Expression Tree:** Make Minus a unary operator _(4h)_
-
-### Distant future
-
-- Set up CI
-- Redo the function importing, make them all modules

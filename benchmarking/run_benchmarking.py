@@ -10,7 +10,7 @@ from math import log10, floor
 from query_pg_database import run_pg_query
 from query_duck_database import run_duck_query
 from compare_results import compare
-from generate_tpch_data import data_generator 
+from prepare_databases import prepare_all
 import os
 from os import path
 import importlib.util
@@ -25,19 +25,6 @@ class HiddenPrinting:
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout.close()
         sys.stdout = self._original_stdout
-
-# TODO: Really gnarly import statement for 
-spec = importlib.util.spec_from_file_location("prepare_postgres", "sql_to_pandas/prepare_postgres.py")
-prepare_postgres = importlib.util.module_from_spec(spec)
-sys.modules["prepare_postgres"] = prepare_postgres
-spec.loader.exec_module(prepare_postgres)
-
-spec = importlib.util.spec_from_file_location("prepare_duckdb", "sql_to_pandas/prepare_duckdb.py")
-prepare_duckdb = importlib.util.module_from_spec(spec)
-sys.modules["prepare_duckdb"] = prepare_duckdb
-spec.loader.exec_module(prepare_duckdb)
-
-import json
 
 def validateJsonKeys(myjson):
     if set(myjson.keys()) == {"Test Name", "Scaling Factors", "Queries", "Temporary Directory", "SQL Converter Location", "SQL Queries Location", "Stored Queries Location", "Pandas Data Loader", "Number of Query Runs", "Results Location", "Postgres Connection Details", "DB Gen Location", "Constants Location", "Data Storage", "Results Precision"}:
@@ -153,38 +140,8 @@ def main():
     for scaling_factor in manifest_json["Scaling Factors"]:
         print("Doing Scaling Factor: " + str(scaling_factor))
         
-        # Data generator
-            # Generates the data and saves it to:
-            # "Data Storage"
-        print("Preparing the TPC-H Data")
-        if args.verbose:
-            data_generator(manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor=int(scaling_factor))
-        else:
-            with HiddenPrinting():
-                data_generator(manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor=int(scaling_factor))
-        print("TPC-H Data Prepared")
-        
-        # Prepare Postgres
-            # Loads the data from "Data Storage" and puts it into the database
-        print("Preparing Postgres Database")
-        pg_db = prepare_postgres.prep_pg(manifest_json["Postgres Connection Details"])
-        if args.verbose:
-            pg_db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"])
-        else:
-            with HiddenPrinting():
-                pg_db.prepare_database(manifest_json["Data Storage"], manifest_json["Constants Location"])
-        print("Postgres Database prepared")
-        
-        # Prepare DuckDB
-            # Loads the data from "Data Storage" and puts it into the DuckDB file
-        print("Preparing DuckDB Database")
-        duck_db = prepare_duckdb.prep_duck(manifest_json["Duck DB Connection"])
-        if args.verbose:
-            duck_db.prepare_database(manifest_json["Data Storage"])
-        else:
-            with HiddenPrinting():
-                duck_db.prepare_database(manifest_json["Data Storage"])
-        print("DuckDB Database prepared")
+        # Prepare databases
+        prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Constants Location"], manifest_json["Duck DB Connection"])
     
         # Import Pandas Data
         print("Importing Pandas Data")
