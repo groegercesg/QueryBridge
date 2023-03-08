@@ -257,15 +257,25 @@ def main():
                         
                         # Use Numpy
                         if "Use Numpy" in manifest_json:
-                            if manifest_json["Use Numpy"] == "False":
-                                cmd += ["--use_numpy", "False"]
-                            elif manifest_json["Use Numpy"] == "True":
-                                cmd += ["--use_numpy", "True"]
+                            set_numpy = False
+                            if "Conversion Options" in query_option:
+                                if "--use_numpy" not in query_option["Conversion Options"]:
+                                    set_numpy = True
+                                else:
+                                    set_numpy = False
                             else:
-                                raise Exception("Unrecognised option in Test specification, 'Use Numpy': " + str(manifest_json["Use Numpy"]))
-                        
+                                set_numpy = True
+                                
+                            if set_numpy == True:      
+                                if manifest_json["Use Numpy"] == "False":
+                                    cmd += ["--use_numpy", "False"]
+                                elif manifest_json["Use Numpy"] == "True":
+                                    cmd += ["--use_numpy", "True"]
+                                else:
+                                    raise Exception("Unrecognised option in Test specification, 'Use Numpy': " + str(manifest_json["Use Numpy"]))
+                            
                         try:
-                            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=10)
+                            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=600)
                         except Exception as ex:
                             bad_query = True
                             # We print the error
