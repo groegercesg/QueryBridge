@@ -141,7 +141,7 @@ def main():
         print("Doing Scaling Factor: " + str(scaling_factor))
         
         # Prepare databases
-        prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Constants Location"], manifest_json["Duck DB Connection"])
+        prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Duck DB Connection"], manifest_json["Constants Location"])
     
         # Import Pandas Data
         print("Importing Pandas Data")
