@@ -141,7 +141,7 @@ def main():
         print("Doing Scaling Factor: " + str(scaling_factor))
         
         # Prepare databases
-        #prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Duck DB Connection"], manifest_json["Constants Location"])
+        prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Duck DB Connection"], manifest_json["Constants Location"])
     
         # Import Pandas Data
         print("Importing Pandas Data")
@@ -395,7 +395,7 @@ def main():
 
                                 end_time = time.time()
                                 
-                                print("\tRun time was: " + str(end_time - start_time))
+                                #print("\tRun time was: " + str(end_time - start_time))
                                 pandas_run_times.append(end_time - start_time)
                             
                         # Change back if we've moved

@@ -9,6 +9,8 @@ makefile
 data_storage/
 sql_to_pandas/test.py
 stored_queries/
+scaling_queries/
+TPC-H_Pandas/
 duckdb
 duckdb_tpch.duckdb
 duckdb_tpch.duckdb.wal
