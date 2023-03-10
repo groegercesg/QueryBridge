@@ -141,7 +141,7 @@ def main():
         print("Doing Scaling Factor: " + str(scaling_factor))
         
         # Prepare databases
-        prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Duck DB Connection"], manifest_json["Constants Location"])
+        #prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Duck DB Connection"], manifest_json["Constants Location"])
     
         # Import Pandas Data
         print("Importing Pandas Data")
@@ -331,6 +331,8 @@ def main():
                         # Set default function name
                         query_name = str(query["SQL Name"].split("/")[-1]).split(".")[0]
                         function_default = "q" + query_name
+
+                        bad_query = False
                     else:
                         raise Exception("Unknown Converter option for a Pandas Type query: " + str(query_option["Converter"]))    
                     

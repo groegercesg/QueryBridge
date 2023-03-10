@@ -1,0 +1,316 @@
+{
+    "Plan": {
+        "Node Type": "Limit",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Output": [
+            "supplier.s_name",
+            "(count(*))"
+        ],
+        "Plans": [
+            {
+                "Node Type": "Sort",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Output": [
+                    "supplier.s_name",
+                    "(count(*))"
+                ],
+                "Sort Key": [
+                    "(count(*)) DESC",
+                    "supplier.s_name"
+                ],
+                "Plans": [
+                    {
+                        "Node Type": "Aggregate",
+                        "Strategy": "Sorted",
+                        "Partial Mode": "Simple",
+                        "Parent Relationship": "Outer",
+                        "Parallel Aware": false,
+                        "Async Capable": false,
+                        "Output": [
+                            "supplier.s_name",
+                            "count(*)"
+                        ],
+                        "Group Key": [
+                            "supplier.s_name"
+                        ],
+                        "Plans": [
+                            {
+                                "Node Type": "Sort",
+                                "Parent Relationship": "Outer",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Output": [
+                                    "supplier.s_name"
+                                ],
+                                "Sort Key": [
+                                    "supplier.s_name"
+                                ],
+                                "Plans": [
+                                    {
+                                        "Node Type": "Merge Join",
+                                        "Parent Relationship": "Outer",
+                                        "Parallel Aware": false,
+                                        "Async Capable": false,
+                                        "Join Type": "Semi",
+                                        "Output": [
+                                            "supplier.s_name"
+                                        ],
+                                        "Inner Unique": false,
+                                        "Merge Cond": "(orders.o_orderkey = l2.l_orderkey)",
+                                        "Join Filter": "(l2.l_suppkey <> l1.l_suppkey)",
+                                        "Plans": [
+                                            {
+                                                "Node Type": "Merge Join",
+                                                "Parent Relationship": "Outer",
+                                                "Parallel Aware": false,
+                                                "Async Capable": false,
+                                                "Join Type": "Inner",
+                                                "Output": [
+                                                    "supplier.s_name",
+                                                    "l1.l_suppkey",
+                                                    "l1.l_orderkey",
+                                                    "orders.o_orderkey"
+                                                ],
+                                                "Inner Unique": false,
+                                                "Merge Cond": "(orders.o_orderkey = l1.l_orderkey)",
+                                                "Plans": [
+                                                    {
+                                                        "Node Type": "Index Scan",
+                                                        "Parent Relationship": "Outer",
+                                                        "Parallel Aware": false,
+                                                        "Async Capable": false,
+                                                        "Scan Direction": "Forward",
+                                                        "Index Name": "orders_pkey",
+                                                        "Relation Name": "orders",
+                                                        "Schema": "public",
+                                                        "Alias": "orders",
+                                                        "Output": [
+                                                            "orders.o_orderkey",
+                                                            "orders.o_custkey",
+                                                            "orders.o_orderstatus",
+                                                            "orders.o_totalprice",
+                                                            "orders.o_orderdate",
+                                                            "orders.o_orderpriority",
+                                                            "orders.o_clerk",
+                                                            "orders.o_shippriority",
+                                                            "orders.o_comment"
+                                                        ],
+                                                        "Filter": "(orders.o_orderstatus = 'F'::bpchar)"
+                                                    },
+                                                    {
+                                                        "Node Type": "Sort",
+                                                        "Parent Relationship": "Inner",
+                                                        "Parallel Aware": false,
+                                                        "Async Capable": false,
+                                                        "Output": [
+                                                            "supplier.s_name",
+                                                            "l1.l_suppkey",
+                                                            "l1.l_orderkey"
+                                                        ],
+                                                        "Sort Key": [
+                                                            "l1.l_orderkey"
+                                                        ],
+                                                        "Plans": [
+                                                            {
+                                                                "Node Type": "Hash Join",
+                                                                "Parent Relationship": "Outer",
+                                                                "Parallel Aware": false,
+                                                                "Async Capable": false,
+                                                                "Join Type": "Anti",
+                                                                "Output": [
+                                                                    "supplier.s_name",
+                                                                    "l1.l_suppkey",
+                                                                    "l1.l_orderkey"
+                                                                ],
+                                                                "Inner Unique": false,
+                                                                "Hash Cond": "(l1.l_orderkey = l3.l_orderkey)",
+                                                                "Join Filter": "(l3.l_suppkey <> l1.l_suppkey)",
+                                                                "Plans": [
+                                                                    {
+                                                                        "Node Type": "Hash Join",
+                                                                        "Parent Relationship": "Outer",
+                                                                        "Parallel Aware": false,
+                                                                        "Async Capable": false,
+                                                                        "Join Type": "Inner",
+                                                                        "Output": [
+                                                                            "supplier.s_name",
+                                                                            "l1.l_suppkey",
+                                                                            "l1.l_orderkey"
+                                                                        ],
+                                                                        "Inner Unique": false,
+                                                                        "Hash Cond": "(l1.l_suppkey = supplier.s_suppkey)",
+                                                                        "Plans": [
+                                                                            {
+                                                                                "Node Type": "Seq Scan",
+                                                                                "Parent Relationship": "Outer",
+                                                                                "Parallel Aware": false,
+                                                                                "Async Capable": false,
+                                                                                "Relation Name": "lineitem",
+                                                                                "Schema": "public",
+                                                                                "Alias": "l1",
+                                                                                "Output": [
+                                                                                    "l1.l_orderkey",
+                                                                                    "l1.l_partkey",
+                                                                                    "l1.l_suppkey",
+                                                                                    "l1.l_linenumber",
+                                                                                    "l1.l_quantity",
+                                                                                    "l1.l_extendedprice",
+                                                                                    "l1.l_discount",
+                                                                                    "l1.l_tax",
+                                                                                    "l1.l_returnflag",
+                                                                                    "l1.l_linestatus",
+                                                                                    "l1.l_shipdate",
+                                                                                    "l1.l_commitdate",
+                                                                                    "l1.l_receiptdate",
+                                                                                    "l1.l_shipinstruct",
+                                                                                    "l1.l_shipmode",
+                                                                                    "l1.l_comment"
+                                                                                ],
+                                                                                "Filter": "(l1.l_receiptdate > l1.l_commitdate)"
+                                                                            },
+                                                                            {
+                                                                                "Node Type": "Hash",
+                                                                                "Parent Relationship": "Inner",
+                                                                                "Parallel Aware": false,
+                                                                                "Async Capable": false,
+                                                                                "Output": [
+                                                                                    "supplier.s_name",
+                                                                                    "supplier.s_suppkey"
+                                                                                ],
+                                                                                "Plans": [
+                                                                                    {
+                                                                                        "Node Type": "Hash Join",
+                                                                                        "Parent Relationship": "Outer",
+                                                                                        "Parallel Aware": false,
+                                                                                        "Async Capable": false,
+                                                                                        "Join Type": "Inner",
+                                                                                        "Output": [
+                                                                                            "supplier.s_name",
+                                                                                            "supplier.s_suppkey"
+                                                                                        ],
+                                                                                        "Inner Unique": true,
+                                                                                        "Hash Cond": "(supplier.s_nationkey = nation.n_nationkey)",
+                                                                                        "Plans": [
+                                                                                            {
+                                                                                                "Node Type": "Seq Scan",
+                                                                                                "Parent Relationship": "Outer",
+                                                                                                "Parallel Aware": false,
+                                                                                                "Async Capable": false,
+                                                                                                "Relation Name": "supplier",
+                                                                                                "Schema": "public",
+                                                                                                "Alias": "supplier",
+                                                                                                "Output": [
+                                                                                                    "supplier.s_suppkey",
+                                                                                                    "supplier.s_name",
+                                                                                                    "supplier.s_address",
+                                                                                                    "supplier.s_nationkey",
+                                                                                                    "supplier.s_phone",
+                                                                                                    "supplier.s_acctbal",
+                                                                                                    "supplier.s_comment"
+                                                                                                ]
+                                                                                            },
+                                                                                            {
+                                                                                                "Node Type": "Hash",
+                                                                                                "Parent Relationship": "Inner",
+                                                                                                "Parallel Aware": false,
+                                                                                                "Async Capable": false,
+                                                                                                "Output": [
+                                                                                                    "nation.n_nationkey"
+                                                                                                ],
+                                                                                                "Plans": [
+                                                                                                    {
+                                                                                                        "Node Type": "Seq Scan",
+                                                                                                        "Parent Relationship": "Outer",
+                                                                                                        "Parallel Aware": false,
+                                                                                                        "Async Capable": false,
+                                                                                                        "Relation Name": "nation",
+                                                                                                        "Schema": "public",
+                                                                                                        "Alias": "nation",
+                                                                                                        "Output": [
+                                                                                                            "nation.n_nationkey"
+                                                                                                        ],
+                                                                                                        "Filter": "(nation.n_name = 'SAUDI ARABIA'::bpchar)"
+                                                                                                    }
+                                                                                                ]
+                                                                                            }
+                                                                                        ]
+                                                                                    }
+                                                                                ]
+                                                                            }
+                                                                        ]
+                                                                    },
+                                                                    {
+                                                                        "Node Type": "Hash",
+                                                                        "Parent Relationship": "Inner",
+                                                                        "Parallel Aware": false,
+                                                                        "Async Capable": false,
+                                                                        "Output": [
+                                                                            "l3.l_orderkey",
+                                                                            "l3.l_suppkey"
+                                                                        ],
+                                                                        "Plans": [
+                                                                            {
+                                                                                "Node Type": "Seq Scan",
+                                                                                "Parent Relationship": "Outer",
+                                                                                "Parallel Aware": false,
+                                                                                "Async Capable": false,
+                                                                                "Relation Name": "lineitem",
+                                                                                "Schema": "public",
+                                                                                "Alias": "l3",
+                                                                                "Output": [
+                                                                                    "l3.l_orderkey",
+                                                                                    "l3.l_suppkey"
+                                                                                ],
+                                                                                "Filter": "(l3.l_receiptdate > l3.l_commitdate)"
+                                                                            }
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                "Node Type": "Index Scan",
+                                                "Parent Relationship": "Inner",
+                                                "Parallel Aware": false,
+                                                "Async Capable": false,
+                                                "Scan Direction": "Forward",
+                                                "Index Name": "idx_lineitem_orderkey",
+                                                "Relation Name": "lineitem",
+                                                "Schema": "public",
+                                                "Alias": "l2",
+                                                "Output": [
+                                                    "l2.l_orderkey",
+                                                    "l2.l_partkey",
+                                                    "l2.l_suppkey",
+                                                    "l2.l_linenumber",
+                                                    "l2.l_quantity",
+                                                    "l2.l_extendedprice",
+                                                    "l2.l_discount",
+                                                    "l2.l_tax",
+                                                    "l2.l_returnflag",
+                                                    "l2.l_linestatus",
+                                                    "l2.l_shipdate",
+                                                    "l2.l_commitdate",
+                                                    "l2.l_receiptdate",
+                                                    "l2.l_shipinstruct",
+                                                    "l2.l_shipmode",
+                                                    "l2.l_comment"
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
