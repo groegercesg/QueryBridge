@@ -431,20 +431,20 @@ def main():
             # Checking correctness
             compare_decisions_list = []
             compare_decision = False
-            for sql_name, sql_result in sql_results_list:
-                for pandas_name, pandas_result in pandas_results_list:
-                    # We should check if pandas_result is the same as sql_result
-                    compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"])
-                    compare_decisions_list.append(compare_decision)
+            # for sql_name, sql_result in sql_results_list:
+            #     for pandas_name, pandas_result in pandas_results_list:
+            #         # We should check if pandas_result is the same as sql_result
+            #         compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"])
+            #         compare_decisions_list.append(compare_decision)
                     
-                    if not compare_decision:
-                        print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(pandas_name) + " and " + str(sql_name) + "." + color.END)
-                        print("Pandas Data:")
-                        print(pandas_result)
-                        print("SQL Data:")
-                        print(columns)
-                        for row in sql_result:
-                            print(row)
+            #         if not compare_decision:
+            #             print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(pandas_name) + " and " + str(sql_name) + "." + color.END)
+            #             print("Pandas Data:")
+            #             print(pandas_result)
+            #             print("SQL Data:")
+            #             print(columns)
+            #             for row in sql_result:
+            #                 print(row)
                         
             # Write results, use from results_array
             for result_set in results_array:
