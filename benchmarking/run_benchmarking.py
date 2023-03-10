@@ -395,6 +395,7 @@ def main():
 
                                 end_time = time.time()
                                 
+                                print("\tRun time was: " + str(end_time - start_time))
                                 pandas_run_times.append(end_time - start_time)
                             
                         # Change back if we've moved
