@@ -141,7 +141,7 @@ def main():
         print("Doing Scaling Factor: " + str(scaling_factor))
         
         # Prepare databases
-        prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Duck DB Connection"], manifest_json["Constants Location"])
+        #prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Duck DB Connection"], manifest_json["Constants Location"])
     
         # Import Pandas Data
         print("Importing Pandas Data")
@@ -251,29 +251,23 @@ def main():
                         else:
                             raise Exception("Unrecognised option")
                         
-                        
                         if "Conversion Options" in query_option:
                             cmd += query_option["Conversion Options"]
                         
-                        # Use Numpy
-                        if "Use Numpy" in manifest_json:
-                            set_numpy = False
-                            if "Conversion Options" in query_option:
-                                if "--use_numpy" not in query_option["Conversion Options"]:
-                                    set_numpy = True
-                                else:
-                                    set_numpy = False
-                            else:
+                        # Use Numpy setting
+                        set_numpy = False
+                        if "Conversion Options" in query_option:
+                            if "--use_numpy" in query_option["Conversion Options"]:
                                 set_numpy = True
-                                
-                            if set_numpy == True:      
-                                if manifest_json["Use Numpy"] == "False":
-                                    cmd += ["--use_numpy", "False"]
-                                elif manifest_json["Use Numpy"] == "True":
-                                    cmd += ["--use_numpy", "True"]
-                                else:
-                                    raise Exception("Unrecognised option in Test specification, 'Use Numpy': " + str(manifest_json["Use Numpy"]))
+                        elif "Use Numpy" in manifest_json:
+                            if manifest_json["Use Numpy"] == "True":
+                                set_numpy = True
                             
+                        if set_numpy == True:
+                            # Only add numpy if not in cmd
+                            if "--use_numpy" not in cmd:
+                                cmd += ["--use_numpy", "True"]
+                        
                         try:
                             result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=600)
                         except Exception as ex:
@@ -354,6 +348,11 @@ def main():
                         
                         bad_exec = False
                         
+                        # if str(query["Query Name"]) in ["Query 8", "Query 12", "Query 14"]:
+                        #     # Print out function content
+                        #     with open(package_location.replace(".", "/") + ".py", 'r') as f:
+                        #         print(f.read())                        
+                        
                         try:
                             query_function = getattr(__import__(package_location, fromlist=[function_default]), function_default)
                         except Exception as ex:
@@ -431,20 +430,20 @@ def main():
             # Checking correctness
             compare_decisions_list = []
             compare_decision = False
-            # for sql_name, sql_result in sql_results_list:
-            #     for pandas_name, pandas_result in pandas_results_list:
-            #         # We should check if pandas_result is the same as sql_result
-            #         compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"])
-            #         compare_decisions_list.append(compare_decision)
+            for sql_name, sql_result in sql_results_list:
+                for pandas_name, pandas_result in pandas_results_list:
+                    # We should check if pandas_result is the same as sql_result
+                    compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"])
+                    compare_decisions_list.append(compare_decision)
                     
-            #         if not compare_decision:
-            #             print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(pandas_name) + " and " + str(sql_name) + "." + color.END)
-            #             print("Pandas Data:")
-            #             print(pandas_result)
-            #             print("SQL Data:")
-            #             print(columns)
-            #             for row in sql_result:
-            #                 print(row)
+                    if not compare_decision:
+                        print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(pandas_name) + " and " + str(sql_name) + "." + color.END)
+                        print("Pandas Data:")
+                        print(pandas_result)
+                        print("SQL Data:")
+                        print(columns)
+                        for row in sql_result:
+                            print(row)
                         
             # Write results, use from results_array
             for result_set in results_array:
