@@ -141,7 +141,7 @@ def main():
         print("Doing Scaling Factor: " + str(scaling_factor))
         
         # Prepare databases
-        #prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Duck DB Connection"], manifest_json["Constants Location"])
+        prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Duck DB Connection"], manifest_json["Constants Location"])
     
         # Import Pandas Data
         print("Importing Pandas Data")
@@ -252,6 +252,8 @@ def main():
                             raise Exception("Unrecognised option")
                         
                         if "Conversion Options" in query_option:
+                            if args.verbose:
+                                print("Adding conversion options: " + str(query_option["Conversion Options"]))
                             cmd += query_option["Conversion Options"]
                         
                         # Use Numpy setting
@@ -269,7 +271,10 @@ def main():
                                 cmd += ["--use_numpy", "True"]
                         
                         try:
+                            if args.verbose:
+                                print("We are running the converter, with the following command: " + str(cmd))
                             result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=600)
+                            bad_query = False
                         except Exception as ex:
                             bad_query = True
                             # We print the error
@@ -277,7 +282,6 @@ def main():
                             print(color.RED + str(query["Query Name"]) + ": Pandas conversion error!" + "\n" + color.END)
                             print(ex)
                         
-                        bad_query = False
                         if result.returncode != 0:
                             # When we are unable to convert, handle the exception
                             bad_query = True
@@ -348,10 +352,10 @@ def main():
                         
                         bad_exec = False
                         
-                        # if str(query["Query Name"]) in ["Query 8", "Query 12", "Query 14"]:
-                        #     # Print out function content
-                        #     with open(package_location.replace(".", "/") + ".py", 'r') as f:
-                        #         print(f.read())                        
+                        if args.verbose and str(query["Query Name"]) in ["Query 8", "Query 12", "Query 14"]:
+                            # Print out function content
+                            with open(package_location.replace(".", "/") + ".py", 'r') as f:
+                                print(f.read())                        
                         
                         try:
                             query_function = getattr(__import__(package_location, fromlist=[function_default]), function_default)
@@ -393,8 +397,8 @@ def main():
                                     bad_exec = True
 
                                 end_time = time.time()
-                                
-                                #print("\tRun time was: " + str(end_time - start_time))
+                                if args.verbose:
+                                    print("\tRun time was: " + str(end_time - start_time))
                                 pandas_run_times.append(end_time - start_time)
                             
                         # Change back if we've moved

@@ -78,7 +78,7 @@
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 1,
-    "Results Location": "benchmarking/test_results/case_performance_results.csv",
+    "Results Location": "benchmarking/test_results/test_case_performance_results.csv",
     "Database Connection Details": "postgres_connection.json",
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",
