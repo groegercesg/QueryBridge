@@ -1,6 +1,6 @@
 {
     "Test Name": "Postgres and Duck DB TPC-H Scaling Test",
-    "Scaling Factors": [4],
+    "Scaling Factors": [0.5,1,2,4],
     "Queries": [
         {
             "Query Name": "Query 1",
@@ -691,7 +691,7 @@
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 6,
-    "Results Location": "benchmarking/test_results/pg_duck_tpch_scaling_test_4_results.csv",
+    "Results Location": "benchmarking/test_results/pg_duck_tpch_scaling_test_retry_results.csv",
     "Postgres Connection Details": "postgres_connection.json",
     "Duck DB Connection": "duckdb_tpch.duckdb",
     "DB Gen Location": "tpch-dbgen",

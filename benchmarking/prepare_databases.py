@@ -31,10 +31,10 @@ def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor,
         # "Data Storage"
     print("Preparing the TPC-H Data")
     if verbose:
-        data_generator(data_storage_location, db_gen_location, scaling_factor=int(scaling_factor))
+        data_generator(data_storage_location, db_gen_location, scaling_factor=float(scaling_factor))
     else:
         with HiddenPrinting():
-            data_generator(data_storage_location, db_gen_location, scaling_factor=int(scaling_factor))
+            data_generator(data_storage_location, db_gen_location, scaling_factor=float(scaling_factor))
     print("TPC-H Data Prepared")
     
     # Prepare Postgres

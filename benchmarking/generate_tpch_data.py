@@ -6,8 +6,7 @@ from subprocess import PIPE
 
 class data_generator():
     def __init__(self, data_dir, dbgen_path, scaling_factor = 1):
-        
-        self.scaling_factor = scaling_factor
+        self.scaling_factor = float(scaling_factor)
         self.data_dir = data_dir
         self.dbgen_path = dbgen_path
         
