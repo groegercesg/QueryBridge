@@ -1,36 +1,43 @@
+<!-- omit in toc -->
 # Dataframe SQL Benchmark
 
+<!-- omit in toc -->
+## Postgres and Pandas from Postgres Query Plan in TPC-H
 
-## Postgres, Duck DB and Converted Pandas in TPC-H
-
-![Comparison Table, Scaling Factor 1](benchmarking/analysis_results/postgres_duck_db_compare_queries.svg)
+![PG Comparison, Scaling Factor 1](benchmarking/analysis_results/postgres_compare_queries.svg)
 
 - Scaling Factor: 1
 - 6 Runs with the first removed before creating the Mean
 
+<!-- omit in toc -->
+## DuckDB and Pandas from DuckDB Query Plan in TPC-H
+
+![Duck Comparison, Scaling Factor 1](benchmarking/analysis_results/duck_db_compare_queries.svg)
+
+- Scaling Factor: 1
+- 6 Runs with the first removed before creating the Mean
+
+<!-- omit in toc -->
 ##### Table of Contents
 
-- [Dataframe SQL Benchmark](#dataframe-sql-benchmark)
-  - [Postgres, Duck DB and Converted Pandas in TPC-H](#postgres-duck-db-and-converted-pandas-in-tpc-h)
-        - [Table of Contents](#table-of-contents)
-  - [Setup](#setup)
-    - [Getting DBGEN](#getting-dbgen)
-    - [Setting up Postgres](#setting-up-postgres)
-      - [Setting up the connection file for Postgres](#setting-up-the-connection-file-for-postgres)
-      - [Installing Postgres and creating the Database](#installing-postgres-and-creating-the-database)
-      - [Disable things in Postgres that we don't support](#disable-things-in-postgres-that-we-dont-support)
-    - [Setting up DuckDB](#setting-up-duckdb)
-    - [Setting up Python](#setting-up-python)
-      - [Setup the Python environment](#setup-the-python-environment)
-      - [Populate the Databases with data](#populate-the-databases-with-data)
-  - [Demos](#demos)
-    - [Conversion demo](#conversion-demo)
-      - [Postgres Query Plan](#postgres-query-plan)
-      - [DuckDB Query Plan](#duckdb-query-plan)
-      - [Converter flags](#converter-flags)
-      - [Additional optimisations](#additional-optimisations)
-    - [Benchmarker demo](#benchmarker-demo)
-  - [Tests for sql\_to\_pandas](#tests-for-sql_to_pandas)
+- [Setup](#setup)
+  - [Getting DBGEN](#getting-dbgen)
+  - [Setting up Postgres](#setting-up-postgres)
+    - [Setting up the connection file for Postgres](#setting-up-the-connection-file-for-postgres)
+    - [Installing Postgres and creating the Database](#installing-postgres-and-creating-the-database)
+    - [Disable things in Postgres that we don't support](#disable-things-in-postgres-that-we-dont-support)
+  - [Setting up DuckDB](#setting-up-duckdb)
+  - [Setting up Python](#setting-up-python)
+    - [Setup the Python environment](#setup-the-python-environment)
+    - [Populate the Databases with data](#populate-the-databases-with-data)
+- [Demos](#demos)
+  - [Conversion demo](#conversion-demo)
+    - [Postgres Query Plan](#postgres-query-plan)
+    - [DuckDB Query Plan](#duckdb-query-plan)
+    - [Converter flags](#converter-flags)
+    - [Additional optimisations](#additional-optimisations)
+  - [Benchmarker demo](#benchmarker-demo)
+- [Tests for sql\_to\_pandas](#tests-for-sql_to_pandas)
 
 ## Setup
 ### Getting DBGEN
@@ -250,7 +257,9 @@ I have also created functionality to use various optimisation options. There are
 --use_numpy True
 ```
 
-The other two optimisations are both 'fusion optimisations', these allow us to combine nodes that can be nested within each other. We can do this for group aggregate and sort, as well as merge join and sort. To use these, set the below arguments:
+![Explanation of Fusion-optimisation Process](readme_images/groupby_fusion.drawio.png)
+
+The other two optimisations are both 'fusion optimisations', these allow us to combine nodes that can be nested within each other. See the image above for an explanation. We can do this for group aggregate and sort, as well as merge join and sort. To use these, set the below arguments:
 
 ```bash
 --groupby_sort_fusion True

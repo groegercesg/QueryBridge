@@ -178,15 +178,13 @@ r_parse_dates = []
 
 # Don't set indexes, as we can't access them with Pandas selection!
 re = pd.read_table("data_storage/region.tbl.csv", sep="|", names=r_columnnames, dtype=r_data_types, parse_dates=r_parse_dates)
-
-
 def q1():
     df_filter_1 = li[(li.l_shipdate<='1998-09-02') & (~li.l_shipdate.isnull())]
     df_filter_1 = df_filter_1[['l_shipdate', 'l_returnflag', 'l_linestatus', 'l_quantity', 'l_extendedprice', 'l_discount', 'l_tax']]
     df_filter_1['before_1'] = ((df_filter_1.l_extendedprice) * (1 - (df_filter_1.l_discount)))
     df_filter_1['before_2'] = (((df_filter_1.l_extendedprice) * (1 - (df_filter_1.l_discount))) * (1 + (df_filter_1.l_tax)))
     df_group_1 = df_filter_1 \
-        .groupby(['l_returnflag', 'l_linestatus'], sort=False) \
+        .groupby(['l_returnflag', 'l_linestatus'], sort=False, as_index=False) \
         .agg(
             sum_qty=("l_quantity", "sum"),
             sum_base_price=("l_extendedprice", "sum"),
@@ -197,7 +195,7 @@ def q1():
             avg_disc=("l_discount", "mean"),
             count_order=("l_returnflag", "count"),
         )
-    df_group_1 = df_group_1[['sum_qty', 'sum_base_price', 'sum_disc_price', 'sum_charge', 'avg_qty', 'avg_price', 'avg_disc', 'count_order']]
+    df_group_1 = df_group_1[['sum_qty', 'sum_base_price', 'sum_disc_price', 'sum_charge', 'avg_qty', 'avg_price', 'avg_disc', 'count_order', 'l_returnflag', 'l_linestatus']]
     df_sort_1 = df_group_1.sort_values(by=['l_returnflag', 'l_linestatus'], ascending=[True, True])
     df_limit_1 = df_sort_1.head(1)
     return df_limit_1
@@ -223,13 +221,12 @@ def q2():
     df_filter_9 = df_filter_9[['r_regionkey', 'r_name']]
     df_merge_7 = df_merge_6.merge(df_filter_9, left_on=['n_regionkey'], right_on=['r_regionkey'], how="inner", sort=False)
     df_group_1 = df_merge_7 \
-        .groupby(['ps_partkey'], sort=False) \
+        .groupby(['ps_partkey'], sort=False, as_index=False) \
         .agg(
             min_ps_supplycost=("ps_supplycost", "min"),
         )
     df_group_1['minps_supplycost'] = df_group_1.min_ps_supplycost
-    df_group_1 = df_group_1[['minps_supplycost']]
-    df_group_1 = df_group_1.reset_index(level=0)
+    df_group_1 = df_group_1[['minps_supplycost', 'ps_partkey']]
     df_merge_8 = df_merge_4.merge(df_group_1, left_on=['p_partkey'], right_on=['ps_partkey'], how="inner", sort=False)
     df_merge_8 = df_merge_8[(df_merge_8.ps_supplycost == df_merge_8.minps_supplycost)]
     df_aggr_1 = pd.DataFrame()
@@ -257,12 +254,11 @@ def q3():
     df_merge_2 = df_merge_1.merge(df_filter_3, left_on=['o_custkey'], right_on=['c_custkey'], how="inner", sort=False)
     df_merge_2['before_1'] = ((df_merge_2.l_extendedprice) * (1 - (df_merge_2.l_discount)))
     df_group_1 = df_merge_2 \
-        .groupby(['l_orderkey', 'o_orderdate', 'o_shippriority'], sort=False) \
+        .groupby(['l_orderkey', 'o_orderdate', 'o_shippriority'], sort=False, as_index=False) \
         .agg(
             revenue=("before_1", "sum"),
         )
-    df_group_1 = df_group_1[['revenue']]
-    df_group_1 = df_group_1.reset_index()
+    df_group_1 = df_group_1[['revenue', 'l_orderkey', 'o_orderdate', 'o_shippriority']]
     df_aggr_1 = pd.DataFrame()
     df_aggr_1['l_orderkey'] = (df_group_1.l_orderkey)
     df_aggr_1['revenue'] = (df_group_1.revenue)
@@ -280,11 +276,11 @@ def q4():
     df_filter_2 = df_filter_2[['l_orderkey', 'l_commitdate', 'l_receiptdate']]
     df_merge_1 = df_filter_1[df_filter_1.o_orderkey.isin(df_filter_2["l_orderkey"])]
     df_group_1 = df_merge_1 \
-        .groupby(['o_orderpriority'], sort=False) \
+        .groupby(['o_orderpriority'], sort=False, as_index=False) \
         .agg(
             order_count=("o_orderpriority", "count"),
         )
-    df_group_1 = df_group_1[['order_count']]
+    df_group_1 = df_group_1[['order_count', 'o_orderpriority']]
     df_sort_1 = df_group_1.sort_values(by=['o_orderpriority'], ascending=[True])
     df_limit_1 = df_sort_1.head(1)
     return df_limit_1
@@ -305,11 +301,11 @@ def q5():
     df_merge_5 = df_merge_4.merge(df_filter_6, left_on=['n_nationkey', 's_nationkey', 'o_custkey'], right_on=['c_nationkey', 'c_nationkey', 'c_custkey'], how="inner", sort=False)
     df_merge_5['before_1'] = ((df_merge_5.l_extendedprice) * (1 - (df_merge_5.l_discount)))
     df_group_1 = df_merge_5 \
-        .groupby(['n_name'], sort=False) \
+        .groupby(['n_name'], sort=False, as_index=False) \
         .agg(
             revenue=("before_1", "sum"),
         )
-    df_group_1 = df_group_1[['revenue']]
+    df_group_1 = df_group_1[['revenue', 'n_name']]
     df_sort_1 = df_group_1.sort_values(by=['revenue'], ascending=[False])
     df_limit_1 = df_sort_1.head(1)
     return df_limit_1
@@ -347,11 +343,11 @@ def q7():
     df_merge_5['l_year'] = df_merge_5.l_shipdate.dt.year
     df_merge_5['volume'] = ((df_merge_5.l_extendedprice) * (1 - (df_merge_5.l_discount)))
     df_group_1 = df_merge_5 \
-        .groupby(['supp_nation', 'cust_nation', 'l_year'], sort=False) \
+        .groupby(['supp_nation', 'cust_nation', 'l_year'], sort=False, as_index=False) \
         .agg(
             revenue=("volume", "sum"),
         )
-    df_group_1 = df_group_1[['revenue']]
+    df_group_1 = df_group_1[['revenue', 'supp_nation', 'cust_nation', 'l_year']]
     df_sort_1 = df_group_1.sort_values(by=['supp_nation', 'cust_nation', 'l_year'], ascending=[True, True, True])
     df_limit_1 = df_sort_1.head(1)
     return df_limit_1
@@ -379,15 +375,14 @@ def q8():
     df_merge_7['o_year'] = df_merge_7.o_orderdate.dt.year
     df_merge_7['volume'] = ((df_merge_7.l_extendedprice) * (1 - (df_merge_7.l_discount)))
     df_group_1 = df_merge_7 \
-        .groupby(['o_year'], sort=False) \
+        .groupby(['o_year'], sort=False, as_index=False) \
         .agg(
             sum_case_a=("case_a", "sum"),
             sum_volume=("volume", "sum"),
         )
     df_group_1['sumcase_a'] = df_group_1.sum_case_a
     df_group_1['suml_extendedprice1l_discount'] = df_group_1.sum_volume
-    df_group_1 = df_group_1[['sumcase_a', 'suml_extendedprice1l_discount']]
-    df_group_1 = df_group_1.reset_index()
+    df_group_1 = df_group_1[['sumcase_a', 'suml_extendedprice1l_discount', 'o_year']]
     df_aggr_1 = pd.DataFrame()
     df_aggr_1['o_year'] = (df_group_1.o_year)
     df_aggr_1['mkt_share'] = ((df_group_1.sumcase_a) / (df_group_1.suml_extendedprice1l_discount))
@@ -413,11 +408,11 @@ def q9():
     df_merge_5['o_year'] = df_merge_5.o_orderdate.dt.year
     df_merge_5['amount'] = (((df_merge_5.l_extendedprice) * (1 - (df_merge_5.l_discount))) - ((df_merge_5.ps_supplycost) * (df_merge_5.l_quantity)))
     df_group_1 = df_merge_5 \
-        .groupby(['nation', 'o_year'], sort=False) \
+        .groupby(['nation', 'o_year'], sort=False, as_index=False) \
         .agg(
             sum_profit=("amount", "sum"),
         )
-    df_group_1 = df_group_1[['sum_profit']]
+    df_group_1 = df_group_1[['sum_profit', 'nation', 'o_year']]
     df_sort_1 = df_group_1.sort_values(by=['nation', 'o_year'], ascending=[True, False])
     df_limit_1 = df_sort_1.head(1)
     return df_limit_1
@@ -434,12 +429,11 @@ def q10():
     df_merge_3 = df_merge_1.merge(df_merge_2, left_on=['o_custkey'], right_on=['c_custkey'], how="inner", sort=False)
     df_merge_3['before_1'] = ((df_merge_3.l_extendedprice) * (1 - (df_merge_3.l_discount)))
     df_group_1 = df_merge_3 \
-        .groupby(['c_custkey', 'c_name', 'c_acctbal', 'c_phone', 'n_name', 'c_address', 'c_comment'], sort=False) \
+        .groupby(['c_custkey', 'c_name', 'c_acctbal', 'c_phone', 'n_name', 'c_address', 'c_comment'], sort=False, as_index=False) \
         .agg(
             revenue=("before_1", "sum"),
         )
-    df_group_1 = df_group_1[['revenue']]
-    df_group_1 = df_group_1.reset_index()
+    df_group_1 = df_group_1[['revenue', 'c_custkey', 'c_name', 'c_acctbal', 'c_phone', 'n_name', 'c_address', 'c_comment']]
     df_aggr_1 = pd.DataFrame()
     df_aggr_1['c_custkey'] = (df_group_1.c_custkey)
     df_aggr_1['c_name'] = (df_group_1.c_name)
@@ -463,11 +457,11 @@ def q11():
     df_merge_2 = df_filter_1.merge(df_merge_1, left_on=['ps_suppkey'], right_on=['s_suppkey'], how="inner", sort=False)
     df_merge_2['before_1'] = ((df_merge_2.ps_supplycost) * (df_merge_2.ps_availqty))
     df_group_1 = df_merge_2 \
-        .groupby(['ps_partkey'], sort=False) \
+        .groupby(['ps_partkey'], sort=False, as_index=False) \
         .agg(
             value=("before_1", "sum"),
         )
-    df_group_1 = df_group_1[['value']]
+    df_group_1 = df_group_1[['value', 'ps_partkey']]
     df_filter_4 = ps[['ps_suppkey', 'ps_supplycost', 'ps_availqty']]
     df_filter_5 = su[['s_suppkey', 's_nationkey']]
     df_filter_6 = na[(na.n_name == 'GERMANY') & (~na.n_name.isnull())]
@@ -478,7 +472,6 @@ def q11():
     df_aggr_1['sumps_supplycostps_availqty00001'] = [(((df_merge_4.ps_supplycost) * (df_merge_4.ps_availqty)).sum() * 0.0001)]
     df_aggr_1 = df_aggr_1[['sumps_supplycostps_availqty00001']]
     df_limit_1 = df_aggr_1.head(1)
-    df_group_1 = df_group_1.reset_index(level=0)
     df_merge_5 = df_group_1.merge(df_limit_1, how="cross", sort=False)
     df_merge_5 = df_merge_5[(df_merge_5.value > df_merge_5.sumps_supplycostps_availqty00001)]
     df_aggr_2 = pd.DataFrame()
@@ -497,12 +490,12 @@ def q12():
     df_merge_1['case_a'] = df_merge_1.apply(lambda x: ( 1 ) if ( x['o_orderpriority'] == '1-URGENT' ) | ( x['o_orderpriority'] == '2-HIGH' ) else 0, axis=1)
     df_merge_1['case_b'] = df_merge_1.apply(lambda x: ( 1 ) if ( x['o_orderpriority'] != '1-URGENT' ) & ( x['o_orderpriority'] != '2-HIGH' ) else 0, axis=1)
     df_group_1 = df_merge_1 \
-        .groupby(['l_shipmode'], sort=False) \
+        .groupby(['l_shipmode'], sort=False, as_index=False) \
         .agg(
             high_line_count=("case_a", "sum"),
             low_line_count=("case_b", "sum"),
         )
-    df_group_1 = df_group_1[['high_line_count', 'low_line_count']]
+    df_group_1 = df_group_1[['high_line_count', 'low_line_count', 'l_shipmode']]
     df_sort_1 = df_group_1.sort_values(by=['l_shipmode'], ascending=[True])
     df_limit_1 = df_sort_1.head(1)
     return df_limit_1
@@ -513,17 +506,17 @@ def q13():
     df_filter_2 = cu[['c_custkey']]
     df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['o_custkey'], right_on=['c_custkey'], how="right", sort=False)
     df_group_1 = df_merge_1 \
-        .groupby(['c_custkey'], sort=False) \
+        .groupby(['c_custkey'], sort=False, as_index=False) \
         .agg(
             c_count=("o_orderkey", "count"),
         )
-    df_group_1 = df_group_1[['c_count']]
+    df_group_1 = df_group_1[['c_count', 'c_custkey']]
     df_group_2 = df_group_1 \
-        .groupby(['c_count'], sort=False) \
+        .groupby(['c_count'], sort=False, as_index=False) \
         .agg(
             custdist=("c_count", "count"),
         )
-    df_group_2 = df_group_2[['custdist']]
+    df_group_2 = df_group_2[['custdist', 'c_count']]
     df_sort_1 = df_group_2.sort_values(by=['custdist', 'c_count'], ascending=[False, False])
     df_limit_1 = df_sort_1.head(1)
     return df_limit_1
@@ -551,24 +544,22 @@ def q15():
     df_filter_2['supplier_no'] = df_filter_2.l_suppkey
     df_filter_2['before_1'] = ((df_filter_2.l_extendedprice) * (1 - (df_filter_2.l_discount)))
     df_group_1 = df_filter_2 \
-        .groupby(['supplier_no'], sort=False) \
+        .groupby(['supplier_no'], sort=False, as_index=False) \
         .agg(
             total_revenue=("before_1", "sum"),
         )
-    df_group_1 = df_group_1[['total_revenue']]
-    df_group_1 = df_group_1.reset_index(level=0)
+    df_group_1 = df_group_1[['total_revenue', 'supplier_no']]
     df_merge_1 = df_filter_1.merge(df_group_1, left_on=['s_suppkey'], right_on=['supplier_no'], how="inner", sort=False)
     df_filter_3 = li[(li.l_shipdate>='1996-01-01') & (li.l_shipdate<'1996-04-01') & (~li.l_shipdate.isnull())]
     df_filter_3 = df_filter_3[['l_shipdate', 'l_suppkey', 'l_extendedprice', 'l_discount']]
     df_filter_3['supplier_no'] = df_filter_3.l_suppkey
     df_filter_3['before_1'] = ((df_filter_3.l_extendedprice) * (1 - (df_filter_3.l_discount)))
     df_group_2 = df_filter_3 \
-        .groupby(['supplier_no'], sort=False) \
+        .groupby(['supplier_no'], sort=False, as_index=False) \
         .agg(
             total_revenue=("before_1", "sum"),
         )
-    df_group_2 = df_group_2[['total_revenue']]
-    df_group_2 = df_group_2.reset_index()
+    df_group_2 = df_group_2[['total_revenue', 'supplier_no']]
     df_aggr_1 = pd.DataFrame()
     df_aggr_1['maxtotal_revenue'] = [(df_group_2.total_revenue).max()]
     df_aggr_1 = df_aggr_1[['maxtotal_revenue']]
@@ -594,11 +585,11 @@ def q16():
     df_filter_3 = df_filter_3[['s_comment', 's_suppkey']]
     df_merge_2 = df_merge_1[~df_merge_1.ps_suppkey.isin(df_filter_3["s_suppkey"])]
     df_group_1 = df_merge_2 \
-        .groupby(['p_brand', 'p_type', 'p_size'], sort=False) \
+        .groupby(['p_brand', 'p_type', 'p_size'], sort=False, as_index=False) \
         .agg(
             supplier_cnt=("ps_suppkey", lambda x: x.nunique()),
         )
-    df_group_1 = df_group_1[['supplier_cnt']]
+    df_group_1 = df_group_1[['supplier_cnt', 'p_brand', 'p_type', 'p_size']]
     df_sort_1 = df_group_1.sort_values(by=['supplier_cnt', 'p_brand', 'p_type', 'p_size'], ascending=[False, True, True, True])
     df_limit_1 = df_sort_1.head(1)
     return df_limit_1
@@ -610,13 +601,12 @@ def q17():
     df_merge_1 = df_filter_1.merge(df_filter_2, left_on=['l_partkey'], right_on=['p_partkey'], how="inner", sort=False)
     df_filter_3 = li[['l_partkey', 'l_quantity']]
     df_group_1 = df_filter_3 \
-        .groupby(['l_partkey'], sort=False) \
+        .groupby(['l_partkey'], sort=False, as_index=False) \
         .agg(
             mean_l_quantity=("l_quantity", "mean"),
         )
     df_group_1['avgl_quantity'] = df_group_1.mean_l_quantity
-    df_group_1 = df_group_1[['avgl_quantity']]
-    df_group_1 = df_group_1.reset_index(level=0)
+    df_group_1 = df_group_1[['avgl_quantity', 'l_partkey']]
     df_merge_2 = df_merge_1.merge(df_group_1, left_on=['p_partkey'], right_on=['l_partkey'], how="inner", sort=False)
     df_merge_2 = df_merge_2[(df_merge_2.l_quantity < 0.200000 * df_merge_2.avgl_quantity)]
     df_aggr_1 = pd.DataFrame()
@@ -636,21 +626,20 @@ def q18():
     df_merge_2 = df_merge_1.merge(df_filter_3, left_on=['o_custkey'], right_on=['c_custkey'], how="inner", sort=False)
     df_filter_4 = li[['l_orderkey', 'l_quantity']]
     df_group_1 = df_filter_4 \
-        .groupby(['l_orderkey'], sort=False) \
+        .groupby(['l_orderkey'], sort=False, as_index=False) \
         .agg(
             sum_l_quantity=("l_quantity", "sum"),
         )
     df_group_1['suml_quantity'] = df_group_1.sum_l_quantity
     df_group_1 = df_group_1[df_group_1.suml_quantity > 300.000]
-    df_group_1 = df_group_1[['suml_quantity']]
-    df_group_1 = df_group_1.reset_index(level=0)
+    df_group_1 = df_group_1[['suml_quantity', 'l_orderkey']]
     df_merge_3 = df_merge_2[df_merge_2.o_orderkey.isin(df_group_1["l_orderkey"])]
     df_group_2 = df_merge_3 \
-        .groupby(['c_name', 'c_custkey', 'o_orderkey', 'o_orderdate', 'o_totalprice'], sort=False) \
+        .groupby(['c_name', 'c_custkey', 'o_orderkey', 'o_orderdate', 'o_totalprice'], sort=False, as_index=False) \
         .agg(
             suml_quantity=("l_quantity", "sum"),
         )
-    df_group_2 = df_group_2[['suml_quantity']]
+    df_group_2 = df_group_2[['suml_quantity', 'c_name', 'c_custkey', 'o_orderkey', 'o_orderdate', 'o_totalprice']]
     df_sort_1 = df_group_2.sort_values(by=['o_totalprice', 'o_orderdate'], ascending=[False, True])
     df_limit_1 = df_sort_1.head(100)
     return df_limit_1
@@ -682,13 +671,12 @@ def q20():
     df_filter_5 = li[(li.l_shipdate>='1994-01-01') & (li.l_shipdate<'1995-01-01') & (~li.l_shipdate.isnull())]
     df_filter_5 = df_filter_5[['l_partkey', 'l_suppkey', 'l_shipdate', 'l_quantity']]
     df_group_1 = df_filter_5 \
-        .groupby(['l_partkey', 'l_suppkey'], sort=False) \
+        .groupby(['l_partkey', 'l_suppkey'], sort=False, as_index=False) \
         .agg(
             sum_l_quantity=("l_quantity", "sum"),
         )
     df_group_1['suml_quantity'] = df_group_1.sum_l_quantity
-    df_group_1 = df_group_1[['suml_quantity']]
-    df_group_1 = df_group_1.reset_index(level=0)
+    df_group_1 = df_group_1[['suml_quantity', 'l_partkey', 'l_suppkey']]
     df_merge_3 = df_merge_2.merge(df_group_1, left_on=['ps_partkey', 'ps_suppkey'], right_on=['l_partkey', 'l_suppkey'], how="inner", sort=False)
     df_merge_3 = df_merge_3[(df_merge_3.ps_availqty > 0.5 * df_merge_3.suml_quantity)]
     df_merge_4 = df_merge_1[df_merge_1.s_suppkey.isin(df_merge_3["ps_suppkey"])]
@@ -722,11 +710,11 @@ def q21():
     df_merge_5 = df_merge_4.merge(inner_cond, left_on=['l_orderkey'], right_on=['l_orderkey'], how="outer", indicator=True, sort=False)
     df_merge_5 = df_merge_5[df_merge_5._merge == "left_only"]
     df_group_1 = df_merge_5 \
-        .groupby(['s_name'], sort=False) \
+        .groupby(['s_name'], sort=False, as_index=False) \
         .agg(
             numwait=("s_name", "count"),
         )
-    df_group_1 = df_group_1[['numwait']]
+    df_group_1 = df_group_1[['numwait', 's_name']]
     df_sort_1 = df_group_1.sort_values(by=['numwait', 's_name'], ascending=[False, True])
     df_limit_1 = df_sort_1.head(100)
     return df_limit_1
@@ -747,12 +735,12 @@ def q22():
     df_merge_2 = df_merge_2[df_merge_2._merge == "left_only"]
     df_merge_2['cntrycode'] = df_merge_2.c_phone.str.slice(0, 2)
     df_group_1 = df_merge_2 \
-        .groupby(['cntrycode'], sort=False) \
+        .groupby(['cntrycode'], sort=False, as_index=False) \
         .agg(
             numcust=("cntrycode", "count"),
             totacctbal=("c_acctbal", "sum"),
         )
-    df_group_1 = df_group_1[['numcust', 'totacctbal']]
+    df_group_1 = df_group_1[['numcust', 'totacctbal', 'cntrycode']]
     df_sort_1 = df_group_1.sort_values(by=['cntrycode'], ascending=[True])
     df_limit_2 = df_sort_1.head(1)
     return df_limit_2

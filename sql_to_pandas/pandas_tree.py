@@ -2621,7 +2621,7 @@ class group_aggr_node():
         # Handle group
         instructions.append(this_df + " = " + prev_df + " \\")
         # Use the "sort=False", so that groupby doesn't change the sorting of groups themselves
-        instructions.append("    .groupby(" + str(self.group_key) + ", sort=" + str(treeHelper.groupby_fusion) + ") \\")
+        instructions.append("    .groupby(" + str(self.group_key) + ", sort=" + str(treeHelper.groupby_fusion) + ", as_index=" + str(False) + ") \\")
         
         # Incase we aren't being given any aggregation operations
         if during_group == []:
@@ -2708,6 +2708,10 @@ class group_aggr_node():
         
         # Limit to output columns
         if output_cols != [] and codeCompHelper.column_limiting:
+            # Add self.group_keys to output_cols if not already in there
+            for gp_key in self.group_key:
+                if gp_key not in output_cols:
+                    output_cols.append(gp_key)
             statement2_string = this_df + " = " + this_df + "[" + str(output_cols) + "]"
             instructions.append(statement2_string)
             
@@ -2733,6 +2737,9 @@ class group_aggr_node():
         
         # Add case_replaces into codeCompHelper bracket replace
         codeCompHelper.bracket_replace.update(case_locations)
+        
+        # We have just done a groupby, set index to empty list
+        codeCompHelper.indexes = []
         
         return instructions   
     
@@ -2972,6 +2979,8 @@ class merge_node():
             raise Exception("Merge node with too many children")
         
         # Iterate through to discover
+        """
+        # We don't need to do this anymore, as now groups don't have an index
         for i in range(len(self.nodes)):
             if self.nodes[i].__class__.__name__ == "group_aggr_node":
                 # df_group_1 = df_group_1.reset_index(level=0)
@@ -2985,7 +2994,8 @@ class merge_node():
                     raise Exception("Unexpected number of iterations")
                     
                 statements.append(using_df + " = " + using_df + ".reset_index(level=0)")
-            
+        """
+        
         if self.join_type.lower() == "semi":
             if (len(left_labels) > 1) or (len(right_labels) > 1):
                 # Semi Join with multiple key columns
@@ -3174,6 +3184,8 @@ class aggr_node():
         
         instructions = []
         
+        """
+        # We don't need to do this now, as group_aggr_nodes no longer have an index
         for i in range(len(self.nodes)):
             if self.nodes[i].__class__.__name__ == "group_aggr_node":
                 # df_group_1 = df_group_1.reset_index(level=0)
@@ -3188,7 +3200,7 @@ class aggr_node():
                 
                 # Reset indexes
                 codeCompHelper.indexes = []
-        
+        """
         # Process output:
         self.output = process_output(self, self.output, codeCompHelper)
         
@@ -3325,8 +3337,11 @@ class rename_node():
         instructions = []
         
         # Reset indexes to normal columns so we can reference them
+        """
+        # I hope we don't need this anymore, because we don't have indexes
         if codeCompHelper.indexes != []:
             instructions.append(prev_df + " = " + prev_df + ".rename_axis(" + str(codeCompHelper.indexes) + ").reset_index()")
+        """
         
         # Create the current dataframe
         instructions.append(this_df + " = pd.DataFrame()")
