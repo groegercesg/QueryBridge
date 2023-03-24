@@ -10,23 +10,27 @@
 
 ##### Table of Contents
 
-- [Setup](#-setup)
-  - [Getting DBGEN](#-getting-dbgen)
-  - [Setting up Postgres](#-setting-up-postgres)
-    - [Setting up the connection file for Postgres](#-setting-up-the-connection-file-for-postgres)
-    - [Installing Postgres and creating the Database](#-installing-postgres-and-creating-the-database)
-    - [Disable things in Postgres that we don't support](#-disable-things-in-postgres-that-we-dont-support)
-  - [Setting up DuckDB](#-setting-up-duckdb)
-  - [Setting up Python](#-setting-up-python)
-    - [Setup the Python environment](#-setup-the-python-environment)
-    - [Populate the Databases with data](#-populate-the-databases-with-data)
-- [Demos](#-demos)
-  - [Conversion demo](#-conversion-demo)
-    - [Postgres Query Plan](#-postgres-query-plan-)
-    - [DuckDB Query Plan](#-duckdb-query-plan)
-    - [Additional optimisations](#-additional-optimisations)
-  - [Benchmarker demo](#-benchmarker-demo)
-- [Tests for sql_to_pandas](#-tests-for-sql_to_pandas)
+- [Dataframe SQL Benchmark](#dataframe-sql-benchmark)
+  - [Postgres, Duck DB and Converted Pandas in TPC-H](#postgres-duck-db-and-converted-pandas-in-tpc-h)
+        - [Table of Contents](#table-of-contents)
+  - [Setup](#setup)
+    - [Getting DBGEN](#getting-dbgen)
+    - [Setting up Postgres](#setting-up-postgres)
+      - [Setting up the connection file for Postgres](#setting-up-the-connection-file-for-postgres)
+      - [Installing Postgres and creating the Database](#installing-postgres-and-creating-the-database)
+      - [Disable things in Postgres that we don't support](#disable-things-in-postgres-that-we-dont-support)
+    - [Setting up DuckDB](#setting-up-duckdb)
+    - [Setting up Python](#setting-up-python)
+      - [Setup the Python environment](#setup-the-python-environment)
+      - [Populate the Databases with data](#populate-the-databases-with-data)
+  - [Demos](#demos)
+    - [Conversion demo](#conversion-demo)
+      - [Postgres Query Plan](#postgres-query-plan)
+      - [DuckDB Query Plan](#duckdb-query-plan)
+      - [Converter flags](#converter-flags)
+      - [Additional optimisations](#additional-optimisations)
+    - [Benchmarker demo](#benchmarker-demo)
+  - [Tests for sql\_to\_pandas](#tests-for-sql_to_pandas)
 
 ## Setup
 ### Getting DBGEN
@@ -230,12 +234,27 @@ df_aggr_2 = df_aggr_2[['revenue']]
 df_limit_1 = df_aggr_2.head(1)
 ```
 
+#### Converter flags
+
+We provide the following additional flags for user convenience, we will explain each of these in turn, to set them just pass them in set to true
+
+- `column_ordering`, Whether we would like our column ordering in the final returned DataFrame to be perfectly accurate or not. Has significant impact on run-time.
+- `column_limiting`, Whether we would like our columns between nodes to not have all DBMS specified projections, can help with ongoing memory usage.
+- `benchmarking`, Setting this to true greatly reduces the amount of program output - reducing it to only what is strictly required for operation.
+
 #### Additional optimisations
 
 I have also created functionality to use various optimisation options. There are many of these but one such option, that can have a 40% performance improvement in some cases is to use Numpy for the execution of CASE queries. We can do this by adding the argument to the end of the command:
 
 ```bash
 --use_numpy True
+```
+
+The other two optimisations are both 'fusion optimisations', these allow us to combine nodes that can be nested within each other. We can do this for group aggregate and sort, as well as merge join and sort. To use these, set the below arguments:
+
+```bash
+--groupby_sort_fusion True
+--merge_join_sort_fusion True
 ```
 
 ### Benchmarker demo
