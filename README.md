@@ -201,6 +201,9 @@ The supplied parameters create/initialise the following:
 - A postgres database, with the connection details as specified, full of the same data from *data_storage*
 - A DuckDB database, called *duckdb_tpch.duckdb*, full of the data also found in *data_storage*
 
+You can even just create one form of the data, with the parameter: *--run_only*
+For instance, to create only Duck DB, one would run: *... --run_only 'DuckDB'*
+
 ## Demos
 
 ### Conversion demo
