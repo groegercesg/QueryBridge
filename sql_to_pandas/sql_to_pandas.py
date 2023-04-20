@@ -320,7 +320,6 @@ def main():
         else:
             raise Exception("Unknown database planner specified")
         
-
         # Let's try and visualise the explain tree now
         from visualising_tree import plot_tree
         if not args.benchmarking:

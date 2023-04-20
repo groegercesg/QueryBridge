@@ -358,10 +358,10 @@ def main():
                         
                         bad_exec = False
                         
-                        if args.verbose and str(query["Query Name"]) in ["Query 8", "Query 12", "Query 14"]:
-                            # Print out function content
-                            with open(package_location.replace(".", "/") + ".py", 'r') as f:
-                                print(f.read())                        
+                        # if args.verbose and str(query["Query Name"]) in ["Query 8", "Query 12", "Query 14"]:
+                        #     # Print out function content
+                        #     with open(package_location.replace(".", "/") + ".py", 'r') as f:
+                        #         print(f.read())                        
                         
                         try:
                             query_function = getattr(__import__(package_location, fromlist=[function_default]), function_default)

@@ -2214,10 +2214,28 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
     return before_aggrs, during_aggrs, after_aggrs
 
 def pandas_aggregate_case(inner_string, prev_df):
-    else_value = str(inner_string.split("ELSE")[1].split("END")[0]).strip()
-    when_value = str(inner_string.split("CASE WHEN")[1].split("THEN")[0]).strip()
-    then_value = str(inner_string.split("THEN")[1].split("ELSE")[0]).strip()
+    # TODO: This is horrible, fix this
+    if "ELSE" in inner_string and "END" in inner_string:
+        else_value = str(inner_string.split("ELSE")[1].split("END")[0]).strip()
+    elif "else" in inner_string and "end" in inner_string:
+        else_value = str(inner_string.split("else")[1].split("end")[0]).strip()
+    else:
+        raise ValueError("Inconsistent capitalisation")
     
+    if "CASE WHEN" in inner_string and "THEN" in inner_string:
+        when_value = str(inner_string.split("CASE WHEN")[1].split("THEN")[0]).strip()
+    elif "case when" in inner_string and "then" in inner_string:
+        when_value = str(inner_string.split("case when")[1].split("then")[0]).strip()
+    else:
+        raise ValueError("Inconsistent capitalisation")  
+    
+    if "THEN" in inner_string and "ELSE" in inner_string:
+        then_value = str(inner_string.split("THEN")[1].split("ELSE")[0]).strip()
+    elif "then" in inner_string and "else" in inner_string:
+        then_value = str(inner_string.split("then")[1].split("else")[0]).strip() 
+    else:
+        raise ValueError("Inconsistent capitalisation")   
+            
     # Clean values
     # Put values in the order of the pandas expression
     values = [then_value, when_value, else_value]
@@ -2270,7 +2288,8 @@ def pandas_aggregate_case(inner_string, prev_df):
         # Hand this off to the s_group function
         elif ("*" in values[i]):  # and (len(values[i]) > 1)
             values[i] = aggregate_sum(values[i], s_group = "x")
-            
+        
+        # TODO: What about lowercase or/and
         elif ("OR" in values[i]) or ("AND" in values[i]):
             # Shuck the value
             if (values[i][0] == "(") and (values[i][-1] == ")"):
@@ -3275,10 +3294,19 @@ class aggr_node():
                 if isinstance(self.output[i], tuple):
                     # Iterate through keys in bracket_replace
                     for j in range(len(list(codeCompHelper.bracket_replace.keys()))):
-                        if (list(codeCompHelper.bracket_replace.keys())[j].lower() in self.output[i][0]) and (list(codeCompHelper.bracket_replace.keys())[j] != self.output[i][0]):
+                        current_key = list(codeCompHelper.bracket_replace.keys())[j]
+                        # TODO: This is quite a temporary fix, we need to resolve this bracket situation properly
+                        key_lower = current_key.lower()
+                        key_no_brackets = key_lower.replace("(", "").replace(")", "")
+                        if (key_lower in self.output[i][0]) and (current_key != self.output[i][0]):
                             # We have a bracket replace that's inside a columnar output and not identical to it,
                             # So we do a replace on the self.output - form a new tuple
-                            self.output[i] = (self.output[i][0].replace(list(codeCompHelper.bracket_replace.keys())[j].lower(), list(codeCompHelper.bracket_replace.values())[j]), self.output[i][1])
+                            self.output[i] = (self.output[i][0].replace(key_lower, list(codeCompHelper.bracket_replace.values())[j]), self.output[i][1])
+                        elif (key_no_brackets in self.output[i][0].replace("(", "").replace(")", "")) and (current_key != self.output[i][0]):
+                            # We have a bracket replace that's inside a columnar output and not identical to it,
+                            # So we do a replace on the self.output - form a new tuple
+                            self.output[i] = (self.output[i][0].replace("(", "").replace(")", "").replace(key_no_brackets, list(codeCompHelper.bracket_replace.values())[j]), self.output[i][1])
+                    
                     # Iterate through keys in useAlias
                     for j in range(len(list(codeCompHelper.useAlias.keys()))):
                         if (list(codeCompHelper.useAlias.keys())[j].lower() in self.output[i][0]) and (list(codeCompHelper.useAlias.keys())[j] != self.output[i][0]):
