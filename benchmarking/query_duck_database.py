@@ -36,9 +36,8 @@ def run_duck_query(db_details, query_file, verbose):
             start = time.time()
             exec = con.execute(single_query)
             
-            if single_query[:6].lower() == "select":
-                retrieved_records = exec.fetchall()
-                results.append(retrieved_records)
+            retrieved_records = exec.fetchall()
+            results.append(retrieved_records)
             
             end = time.time()
             

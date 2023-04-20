@@ -141,6 +141,7 @@ def main():
         print("Doing Scaling Factor: " + str(scaling_factor))
         
         if "Regenerate Data" in manifest_json and manifest_json["Regenerate Data"] == "False":
+            # TODO: Check that PG/DuckDB have the required data!
             # Don't regenerate the data
             print("We are skipping generating new Data!")
             pass

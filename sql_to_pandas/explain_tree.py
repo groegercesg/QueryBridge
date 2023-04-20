@@ -2808,8 +2808,8 @@ def process_sort_node(sort_keys):
             if "((" in sort_keys[i]:
                 sort_keys[i] = sort_keys[i].replace("((", "(").replace("))", ")")
          
-        sort = sort_node("Sort", [], sort_keys)
-        return sort
+    sort = sort_node("Sort", [], sort_keys)
+    return sort
 
 def process_hash_group_by(json, col_ref, external_filters=None):
     # Iterate through extra_info
