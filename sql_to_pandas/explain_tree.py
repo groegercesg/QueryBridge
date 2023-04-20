@@ -2621,68 +2621,7 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
                 break
         
         sort_keys = list(node["extra_info"][start_info+1:])
-        # TODO: Hardcoded replace, in future, if theres a "."
-        # Audit the LHS for relations that we are tracking up,
-        # If it's not in there, then replace it
-        for i in range(len(sort_keys)):
-            if "c_orders" in sort_keys[i]:
-                sort_keys[i] = sort_keys[i].replace("c_orders", "orders")
-            elif "profit" in sort_keys[i]:
-                sort_keys[i] = sort_keys[i].replace("profit", "nation")
-            elif "all_nations" in sort_keys[i]:
-                sort_keys[i] = sort_keys[i].replace("all_nations", "nation")
-            elif "shipping" in sort_keys[i]:
-                sort_keys[i] = sort_keys[i].replace("shipping", "nation")
-            elif "custsale" in sort_keys[i]:
-                sort_keys[i] = sort_keys[i].replace("custsale", "customer")
-            
-            
-            if " - " in sort_keys[i] and not any([True for agg in ["sum", "max", "min", "avg"] if agg == sort_keys[i][:3]]):
-                sort_by = None
-                if "ASC" == sort_keys[i][-3:]:
-                    sort_by = "ASC"
-                elif "DESC" == sort_keys[i][-4:]:
-                    sort_by = "DESC"
-                else:
-                    raise Exception("Couldn't detect a parameter to sort by!")
-                
-                sort_keys[i] = sort_keys[i].replace(sort_by, "").strip()
-                
-                if (sort_keys[i][0] == "(") and (sort_keys[i][-1] == ")"):
-                    sort_keys[i] = sort_keys[i][1:-1]
-                
-                sort_keys[i] = str(sort_keys[i].split(" - ")[0]).strip()
-                
-                sort_keys[i] = sort_keys[i] + " " + sort_by
-            
-                
-            # Remove CAST
-            if "CAST(" in sort_keys[i]:
-                # Extract ASC or DESC
-                
-                sort_by = None
-                if "ASC" == sort_keys[i][-3:]:
-                    sort_by = "ASC"
-                elif "DESC" == sort_keys[i][-4:]:
-                    sort_by = "DESC"
-                else:
-                    raise Exception("Couldn't detect a parameter to sort by!")
-                
-                sort_keys[i] = str(sort_keys[i].split("CAST(")[1].split(" AS ")[0]).strip()
-                if (sort_keys[i][0] == "(") and (sort_keys[i][-1] == ")"):
-                    sort_keys[i] = sort_keys[i][1:-1]
-                    
-                if " - " in sort_keys[i]:
-                    sort_keys[i] = str(sort_keys[i].split(" - ")[0]).strip()
-                    
-                sort_keys[i] = sort_keys[i] + " " + sort_by
-                
-                # Simplfy too many brackets
-                if "((" in sort_keys[i]:
-                    sort_keys[i] = sort_keys[i].replace("((", "(").replace("))", ")")
-            
-                
-        sort = sort_node("Sort", [], sort_keys)
+        sort = process_sort_node(sort_keys)
         
         # Set plans
         node_class.set_plans([sort])
@@ -2780,6 +2719,10 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         # Remap to be a Hash_join
         node_class = process_hash_join(node, col_ref)
         node_class.delim_join = True
+    elif node_type.lower() == "order_by":
+        sort_keys = list(node["extra_info"])
+        node_class = process_sort_node(sort_keys)    
+    
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
     
@@ -2803,6 +2746,70 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
                 raise Exception("Unknown top_n value")
     
     return node_class
+
+def process_sort_node(sort_keys):
+    
+    # TODO: Hardcoded replace, in future, if theres a "."
+    # Audit the LHS for relations that we are tracking up,
+    # If it's not in there, then replace it
+    for i in range(len(sort_keys)):
+        if "c_orders" in sort_keys[i]:
+            sort_keys[i] = sort_keys[i].replace("c_orders", "orders")
+        elif "profit" in sort_keys[i]:
+            sort_keys[i] = sort_keys[i].replace("profit", "nation")
+        elif "all_nations" in sort_keys[i]:
+            sort_keys[i] = sort_keys[i].replace("all_nations", "nation")
+        elif "shipping" in sort_keys[i]:
+            sort_keys[i] = sort_keys[i].replace("shipping", "nation")
+        elif "custsale" in sort_keys[i]:
+            sort_keys[i] = sort_keys[i].replace("custsale", "customer")
+        
+        
+        if " - " in sort_keys[i] and not any([True for agg in ["sum", "max", "min", "avg"] if agg == sort_keys[i][:3]]):
+            sort_by = None
+            if "ASC" == sort_keys[i][-3:]:
+                sort_by = "ASC"
+            elif "DESC" == sort_keys[i][-4:]:
+                sort_by = "DESC"
+            else:
+                raise Exception("Couldn't detect a parameter to sort by!")
+            
+            sort_keys[i] = sort_keys[i].replace(sort_by, "").strip()
+            
+            if (sort_keys[i][0] == "(") and (sort_keys[i][-1] == ")"):
+                sort_keys[i] = sort_keys[i][1:-1]
+            
+            sort_keys[i] = str(sort_keys[i].split(" - ")[0]).strip()
+            
+            sort_keys[i] = sort_keys[i] + " " + sort_by
+        
+        # Remove CAST
+        if "CAST(" in sort_keys[i]:
+            # Extract ASC or DESC
+            
+            sort_by = None
+            if "ASC" == sort_keys[i][-3:]:
+                sort_by = "ASC"
+            elif "DESC" == sort_keys[i][-4:]:
+                sort_by = "DESC"
+            else:
+                raise Exception("Couldn't detect a parameter to sort by!")
+            
+            sort_keys[i] = str(sort_keys[i].split("CAST(")[1].split(" AS ")[0]).strip()
+            if (sort_keys[i][0] == "(") and (sort_keys[i][-1] == ")"):
+                sort_keys[i] = sort_keys[i][1:-1]
+                
+            if " - " in sort_keys[i]:
+                sort_keys[i] = str(sort_keys[i].split(" - ")[0]).strip()
+                
+            sort_keys[i] = sort_keys[i] + " " + sort_by
+            
+            # Simplfy too many brackets
+            if "((" in sort_keys[i]:
+                sort_keys[i] = sort_keys[i].replace("((", "(").replace("))", ")")
+         
+        sort = sort_node("Sort", [], sort_keys)
+        return sort
 
 def process_hash_group_by(json, col_ref, external_filters=None):
     # Iterate through extra_info
