@@ -12,20 +12,36 @@ class HiddenPrinting:
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout.close()
         sys.stdout = self._original_stdout
-        
-# TODO: Really gnarly import statement for 
-spec = importlib.util.spec_from_file_location("prepare_postgres", "sql_to_pandas/prepare_postgres.py")
-prepare_postgres = importlib.util.module_from_spec(spec)
-sys.modules["prepare_postgres"] = prepare_postgres
-spec.loader.exec_module(prepare_postgres)
 
-spec = importlib.util.spec_from_file_location("prepare_duckdb", "sql_to_pandas/prepare_duckdb.py")
-prepare_duckdb = importlib.util.module_from_spec(spec)
-sys.modules["prepare_duckdb"] = prepare_duckdb
-spec.loader.exec_module(prepare_duckdb)
+import prepare_postgres
+import prepare_duckdb
+
+def do_postgres(verbose, data_storage_location, postgres_connection_details, constants_location):
+    # Prepare Postgres
+        # Loads the data from "Data Storage" and puts it into the database
+    print("Preparing Postgres Database")
+    pg_db = prepare_postgres.prep_pg(postgres_connection_details)
+    if verbose:
+        pg_db.prepare_database(data_storage_location, constants_location)
+    else:
+        with HiddenPrinting():
+            pg_db.prepare_database(data_storage_location, constants_location)
+    print("Postgres Database prepared")
+
+def do_duckdb(verbose, data_storage_location, duck_db_connection_details):
+    # Prepare DuckDB
+        # Loads the data from "Data Storage" and puts it into the DuckDB file
+    print("Preparing DuckDB Database")
+    duck_db = prepare_duckdb.prep_duck(duck_db_connection_details)
+    if verbose:
+        duck_db.prepare_database(data_storage_location)
+    else:
+        with HiddenPrinting():
+            duck_db.prepare_database(data_storage_location)
+    print("DuckDB Database prepared")
 
 def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor, postgres_connection_details,
-                duck_db_connection_details, constants_location):
+                duck_db_connection_details, constants_location, run_only = None):
     # Data generator
         # Generates the data and saves it to:
         # "Data Storage"
@@ -37,27 +53,19 @@ def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor,
             data_generator(data_storage_location, db_gen_location, scaling_factor=float(scaling_factor))
     print("TPC-H Data Prepared")
     
-    # Prepare Postgres
-        # Loads the data from "Data Storage" and puts it into the database
-    print("Preparing Postgres Database")
-    pg_db = prepare_postgres.prep_pg(postgres_connection_details)
-    if verbose:
-        pg_db.prepare_database(data_storage_location, constants_location)
+    if (run_only == None):
+        # Do Postgres
+        do_postgres(verbose, data_storage_location, postgres_connection_details, constants_location)
+        # Do Duck DB
+        do_duckdb()
+
+    elif (run_only != None) and (run_only == "PostgreSQL"):
+        do_postgres(verbose, data_storage_location, postgres_connection_details, constants_location)
+    elif (run_only != None) and (run_only == "DuckDB"):
+        do_duckdb(verbose, data_storage_location, duck_db_connection_details)
     else:
-        with HiddenPrinting():
-            pg_db.prepare_database(data_storage_location, constants_location)
-    print("Postgres Database prepared")
-    
-    # Prepare DuckDB
-        # Loads the data from "Data Storage" and puts it into the DuckDB file
-    print("Preparing DuckDB Database")
-    duck_db = prepare_duckdb.prep_duck(duck_db_connection_details)
-    if verbose:
-        duck_db.prepare_database(data_storage_location)
-    else:
-        with HiddenPrinting():
-            duck_db.prepare_database(data_storage_location)
-    print("DuckDB Database prepared")
+        raise Exception("Unexpected options for '--run_only. The supported options are: \n\t'PostgreSQL'\n\t'DuckDB'")
+
     
 def str2bool(v):
     if isinstance(v, bool):
@@ -116,6 +124,12 @@ def init_argparse() -> argparse.ArgumentParser:
                         type=str,
                         help='The location where information like prep_queries are stored',
                         required=True)
+    requiredNamed.add_argument('--run_only',
+                        metavar='run_only',
+                        type=str,
+                        help='Run only a certain database',
+                        default=None
+                        )
     
     return parser
 
@@ -129,4 +143,4 @@ if __name__ == "__main__":
         parser.print_help()
         sys.exit(1)
     
-    prepare_all(args.verbose, args.data_storage, args.db_gen, args.scaling_factor, args.postgres_connection, args.duck_db_connection, args.constants)
+    prepare_all(args.verbose, args.data_storage, args.db_gen, args.scaling_factor, args.postgres_connection, args.duck_db_connection, args.constants, args.run_only)
