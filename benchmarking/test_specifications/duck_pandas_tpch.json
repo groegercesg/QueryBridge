@@ -435,6 +435,7 @@
     "Data Storage": "data_storage",
     "Use Numpy": "False",
     "Results Precision": 4,
+    "Regenerate Data": "False",
     "Store Queries": {
         "Name": "duck_pandas_tpch_queries_pandas.py",
         "Rename Tables": {

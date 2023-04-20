@@ -15,3 +15,4 @@ duckdb
 duckdb_tpch.duckdb
 duckdb_tpch.duckdb.wal
 duck_testing/
+benchmarking/temp_queries/

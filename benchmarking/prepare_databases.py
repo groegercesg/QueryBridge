@@ -57,7 +57,7 @@ def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor,
         # Do Postgres
         do_postgres(verbose, data_storage_location, postgres_connection_details, constants_location)
         # Do Duck DB
-        do_duckdb()
+        do_duckdb(verbose, data_storage_location, duck_db_connection_details)
 
     elif (run_only != None) and (run_only == "PostgreSQL"):
         do_postgres(verbose, data_storage_location, postgres_connection_details, constants_location)
