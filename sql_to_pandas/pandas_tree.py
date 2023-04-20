@@ -3447,6 +3447,11 @@ class sql_class():
         f = open(sql_file, "r")
         file = f.read()
         file = ' '.join(file.split())
+        
+        # Strip out comment at start
+        if file[:2] == "--":
+            file = file[file.lower().index("select"):]
+        
         return file
 
     def read_sql_for_col_refs(self, sql_content, col_dict, references=None):

@@ -14,3 +14,4 @@ TPC-H_Pandas/
 duckdb
 duckdb_tpch.duckdb
 duckdb_tpch.duckdb.wal
+duck_testing/
