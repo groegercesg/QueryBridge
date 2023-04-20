@@ -1695,6 +1695,8 @@ def make_tree_from_duck(json, tree, sql):
     
     # Replace for the column references
     # TODO: Maybe, we should keep all projections where we have made col ref insertions?!?
+    # Run on top level
+    duck_col_ref_insert_current(explain_tree, col_ref)
     duck_col_ref_insert(explain_tree, col_ref)
 
     return explain_tree
@@ -1710,51 +1712,51 @@ def duck_keep_top_proj(tree):
             
     if skip_save == False:
         tree.remove_later = False
+        
+def duck_col_ref_insert_current(current_node, cols):
+    if current_node.node_type in alias_locations:
+        for loc in alias_locations[current_node.node_type]:
+            if hasattr(current_node, loc):
+                if isinstance(getattr(current_node, loc), list):
+                    for i in range(len(getattr(current_node, loc))):
+                        for col_key in cols.keys():
+                            regex_col = r"(\(|\s)" + str(col_key) + r"(\)|\s)"
+                            if re.search(regex_col, getattr(current_node, loc)[i]):
+                                getattr(current_node, loc)[i] = re.sub(regex_col, r"\1" + str(cols[col_key]) + r"\2", str(getattr(current_node, loc)[i]))
+                                # Keep nodes where have made insertions
+                                if hasattr(current_node, "remove_later"):
+                                    current_node.remove_later = False
+                            
+                            # Or is the col_key equal to the loc
+                            if col_key == getattr(current_node, loc)[i]:
+                                getattr(current_node, loc)[i] = str(cols[col_key])
+                                # Keep nodes where have made insertions
+                                if hasattr(current_node, "remove_later"):
+                                    current_node.remove_later = False
+                else:
+                    for col_key in cols.keys():
+                        regex_col = r"(\(|\s)" + str(col_key) + r"(\)|\s)"
+                        # Can we find it inside
+                        if re.search(regex_col, getattr(current_node, loc)):
+                            setattr(current_node, loc, re.sub(regex_col, r"\1" + str(cols[col_key]) + r"\2", str(getattr(current_node, loc))))
+                            # Keep nodes where have made insertions
+                            if hasattr(current_node, "remove_later"):
+                                current_node.remove_later = False
+                        # Or is the col_key equal to the loc
+                        if col_key == getattr(current_node, loc):
+                            setattr(current_node, loc, str(cols[col_key]))
+                            # Keep nodes where have made insertions
+                            if hasattr(current_node, "remove_later"):
+                                current_node.remove_later = False
 
 def duck_col_ref_insert(tree, cols):
     # Postorder traversal
-    if tree.plans != None:
+    if tree != None and tree.plans != None:
         for i in range(len(tree.plans)):
-            current_node = tree.plans[i]
-            
-            if current_node.node_type in alias_locations:
-                for loc in alias_locations[current_node.node_type]:
-                    if hasattr(current_node, loc):
-                        if isinstance(getattr(current_node, loc), list):
-                            for i in range(len(getattr(current_node, loc))):
-                                for col_key in cols.keys():
-                                    regex_col = r"(\(|\s)" + str(col_key) + r"(\)|\s)"
-                                    if re.search(regex_col, getattr(current_node, loc)[i]):
-                                        getattr(current_node, loc)[i] = re.sub(regex_col, r"\1" + str(cols[col_key]) + r"\2", str(getattr(current_node, loc)[i]))
-                                        # Keep nodes where have made insertions
-                                        if hasattr(current_node, "remove_later"):
-                                            current_node.remove_later = False
-                                    
-                                    # Or is the col_key equal to the loc
-                                    if col_key == getattr(current_node, loc)[i]:
-                                        getattr(current_node, loc)[i] = str(cols[col_key])
-                                        # Keep nodes where have made insertions
-                                        if hasattr(current_node, "remove_later"):
-                                            current_node.remove_later = False
-                        else:
-                            for col_key in cols.keys():
-                                regex_col = r"(\(|\s)" + str(col_key) + r"(\)|\s)"
-                                # Can we find it inside
-                                if re.search(regex_col, getattr(current_node, loc)):
-                                    setattr(current_node, loc, re.sub(regex_col, r"\1" + str(cols[col_key]) + r"\2", str(getattr(current_node, loc))))
-                                    # Keep nodes where have made insertions
-                                    if hasattr(current_node, "remove_later"):
-                                        current_node.remove_later = False
-                                # Or is the col_key equal to the loc
-                                if col_key == getattr(current_node, loc):
-                                    setattr(current_node, loc, str(cols[col_key]))
-                                    # Keep nodes where have made insertions
-                                    if hasattr(current_node, "remove_later"):
-                                        current_node.remove_later = False
-                                
+            duck_col_ref_insert_current(tree.plans[i], cols)          
 
     # Run this function on below nodes
-    if tree.plans != None:
+    if tree != None and tree.plans != None:
         for individual_plan in tree.plans:
             duck_col_ref_insert(individual_plan, cols)
 
