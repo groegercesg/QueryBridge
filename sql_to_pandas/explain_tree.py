@@ -1536,6 +1536,8 @@ def create_in_capture(sql):
     for i in range(len(in_capture)):
         if in_capture[i][0] == "NOT":
             removes.append(i)
+        elif in_capture[i][0] == "not":
+            removes.append(i)
             
     # Reverse it
     removes.reverse()
@@ -1695,6 +1697,7 @@ def make_tree_from_duck(json, tree, sql):
     
     # Replace for the column references
     # TODO: Maybe, we should keep all projections where we have made col ref insertions?!?
+    # TODO: Change that we run all the other fix functions on every level of the tree, including the top level
     # Run on top level
     duck_col_ref_insert_current(explain_tree, col_ref)
     duck_col_ref_insert(explain_tree, col_ref)

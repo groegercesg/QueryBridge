@@ -3474,11 +3474,12 @@ class sql_class():
     def read_sql_file_for_information(self, sql_file):
         f = open(sql_file, "r")
         file = f.read()
-        file = ' '.join(file.split())
         
-        # Strip out comment at start
+        # Strip out comment at start, after a comment there should always be a newline
         if file[:2] == "--":
-            file = file[file.lower().index("select"):]
+            file = file[file.lower().index("\n"):]
+        
+        file = ' '.join(file.split())
         
         return file
 

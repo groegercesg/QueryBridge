@@ -256,7 +256,7 @@ def main():
         
         view_query = False
         # Determine whether this sub_query is a view or not
-        if sub_query[:12] == "create view ":
+        if "create view " in sub_query:
             # Don't continue the execution if it's a create view
             view_name = str(str(sub_query.split("create view ")[1]).split("(")[0]).strip()
             view_names.append(view_name)

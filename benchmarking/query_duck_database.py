@@ -50,6 +50,10 @@ def run_duck_query(db_details, query_file, verbose):
     if len(results) == 1:
         results = results[0]
     else:
-        raise ValueError("We have multiple statements that return values, we haven't coded how to handle this.")
+        for individual_res in results:
+            if individual_res != []:
+                results = individual_res
+                break
+        #raise ValueError("We have multiple statements that return values, we haven't coded how to handle this.")
             
     return results, exec_time
