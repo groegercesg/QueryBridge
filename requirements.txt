@@ -1,0 +1,12 @@
+duckdb==0.7.1
+numpy==1.24.3
+pandas==2.0.1
+psycopg2==2.9.6
+pydot==1.4.2
+pyparsing==3.0.9
+python-dateutil==2.8.2
+pytz==2023.3
+regex==2023.3.23
+six==1.16.0
+sqlglot==11.6.0
+tzdata==2023.3

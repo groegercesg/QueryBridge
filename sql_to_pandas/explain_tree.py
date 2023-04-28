@@ -3133,7 +3133,7 @@ def process_seq_scan(json, col_ref, external_filters=None):
         if elem == '[INFOSEPARATOR]':
             end_info = idx + start_info + 1
             break
-        
+    
     filters = None
     if end_info == None:
         # No end, just use the rest
@@ -3143,7 +3143,18 @@ def process_seq_scan(json, col_ref, external_filters=None):
         
         if json["extra_info"][end_info+1][:9] == "Filters: ":
             json["extra_info"][end_info+1] = json["extra_info"][end_info+1][9:]
-            pre_filters = json["extra_info"][end_info+1:]
+            # We can't just take to the end
+            # There might be another infoseparator
+            another_infosep = None
+            for idx, elem in enumerate(json["extra_info"][end_info+1:]):
+                if elem == '[INFOSEPARATOR]':
+                    another_infosep = idx + end_info + 1
+                    break
+
+            if another_infosep == None:
+                pre_filters = json["extra_info"][end_info+1:]
+            else:
+                pre_filters = json["extra_info"][end_info+1:another_infosep]
             
             # Split on AND/OR
             for j in range(len(pre_filters)):
