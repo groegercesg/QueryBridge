@@ -3,12 +3,26 @@ import shutil
 import sys
 from pathlib import Path
 import argparse
-import shlex
-import subprocess
+import ast, traceback
 
 # Prepare database file
 from prepare_postgres import prep_pg
 from prepare_duckdb import prep_duck
+
+def syntax_check_code(path):
+    with open(path) as f:
+        source = f.read()
+
+    valid = True
+    detail = ""
+
+    try:
+        ast.parse(source)
+    except SyntaxError:
+        valid = False
+        detail = traceback.format_exc()
+    
+    return valid, detail
 
 def str2bool(v):
     if isinstance(v, bool):
@@ -101,9 +115,7 @@ def init_argparse() -> argparse.ArgumentParser:
                         default=False,
                         help='Should we fuse merge join and sort operations. Defaults to False.')
 
-
     return parser
-
 
 def line_prepender(filename, line):
     with open(filename, 'r+') as f:
@@ -432,13 +444,17 @@ def main():
             if args.use_numpy != None and args.use_numpy == True:
                 # We have set use_numpy in args, use that false
                 line_prepender(python_output_name, "import numpy as np\n")
-        
-    # Tear Down
-    # If it's benchmarking, delete results
-    if args.benchmarking:
+
+        # Tear Down, delete results
         results_folder = Path("results")
         if results_folder.exists() and results_folder.is_dir():
             shutil.rmtree(results_folder)
+
+    # After writing, check the syntax
+    decision, detail = syntax_check_code(python_output_name)
+    if decision != True:
+        print("Syntax Error detected in Generated Python Code: " + str(python_output_name))
+        print(detail)
             
 if __name__ == "__main__":
     main()
