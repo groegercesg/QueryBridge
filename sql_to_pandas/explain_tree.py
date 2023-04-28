@@ -2533,6 +2533,10 @@ def process_extra_info(extra_info, in_capture, col_ref):
             new_suffix = str(items[0]) + " ~~ '%" + str(items[1]) + "'" 
             
             new_extra_info[i] = new_extra_info[i].replace(original_suffix, new_suffix)
+
+        # Sum no overflow
+        if "sum_no_overflow(" in new_extra_info[i]:
+            new_extra_info[i] = new_extra_info[i].replace("sum_no_overflow", "sum")
             
                 
         # Search for CASE
@@ -2634,6 +2638,10 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         top_n_special = True
     elif node_type.lower() == "limit":
         node_class = limit_node("Limit", node["extra_info"])
+    elif node_type.lower() == "streaming_limit":
+        node_class = limit_node("Limit", node["extra_info"])
+    elif node_type.lower() == "ungrouped_aggregate":
+        node_class = aggregate_node("Aggregate", node["extra_info"])
     elif node_type.lower() == "simple_aggregate":
         node_class = aggregate_node("Aggregate", node["extra_info"])
         

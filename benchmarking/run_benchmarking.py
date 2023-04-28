@@ -26,11 +26,13 @@ class HiddenPrinting:
         sys.stdout.close()
         sys.stdout = self._original_stdout
 
-def validateJsonKeys(myjson):
-    if set(myjson.keys()) == {"Test Name", "Scaling Factors", "Queries", "Temporary Directory", "SQL Converter Location", "SQL Queries Location", "Stored Queries Location", "Pandas Data Loader", "Number of Query Runs", "Results Location", "Postgres Connection Details", "DB Gen Location", "Constants Location", "Data Storage", "Results Precision"}:
-        return True
-    else:
+def validateJSON(path):
+    try:
+        json.load(open(path))
+    except ValueError as err:
+        print(err)
         return False
+    return True
 
 class color:
     PURPLE = '\033[95m'
@@ -96,11 +98,13 @@ def main():
         sys.exit(1)
         
     manifest = args.file
-    manifest_json = json.load(open(manifest))
-    
+
     # Validate JSON
-    # TODO: Could make this validation stronger, using: https://pypi.org/project/jsonschema/
-    validateJsonKeys(manifest_json)
+    if validateJSON(manifest) != True:
+        print("JSON Error: The JSON test specification file supplied has Syntax Errors")
+        exit(0)
+
+    manifest_json = json.load(open(manifest))
     
     with open(manifest_json["Postgres Connection Details"], "r") as f:
         pg_db_details = json.load(f)
@@ -288,7 +292,7 @@ def main():
                             print(color.RED + str(query["Query Name"]) + ": Pandas conversion error!" + "\n" + color.END)
                             print(ex)
                         
-                        if result.returncode != 0:
+                        if bad_query == False & result.returncode != 0:
                             # When we are unable to convert, handle the exception
                             bad_query = True
                             # We print the error

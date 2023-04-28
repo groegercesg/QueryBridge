@@ -1,7 +1,6 @@
 import json
 import psycopg2
 import os
-import sys
 
 class prep_pg():
     def __init__(self, connection_details):

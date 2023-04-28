@@ -177,13 +177,15 @@ Then install the corresponding version of the Conda package manager, using the b
 
 [Conda installation guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
 
-#### Setup the Python environment
+#### Setup the Python Environment
 
-Back in the root directory of this project, we now need to setup the conda environment for the project (this provides us all the dependencies):
+Back in the root directory of this project, create the virtual environment and source it.
+Then install the packages required.
 
 ```bash
-conda env create -n sql_benchmark --file environment.yml
-conda activate sql_benchmark
+python3 -m venv "sqlconv_env"
+source sqlconv_env/bin/activate
+pip install -r requirements.txt
 ```
 
 And the second command activates it for us.
@@ -193,6 +195,7 @@ And the second command activates it for us.
 With Postgres installed and our Postgres database existing, the next step is to populate our databasse. Run the following command in the root of the project directory, or customise the parameters:
 
 ```bash
+python3 -m venv "sqlconv_env"
 python3 benchmarking/prepare_databases.py --verbose True --data_storage data_storage --db_gen tpch-dbgen --scaling_factor 1 --postgres_connection postgres_connection.json --duck_db_connection duckdb_tpch.duckdb --constants tpch-prep
 ```
 
@@ -208,12 +211,12 @@ For instance, to create only Duck DB, one would run: *... --run_only 'DuckDB'*
 
 ### Conversion demo
 
-#### Postgres Query Plan 
+#### Postgres Query Plan
 
 Assuming you have completed all the setup, you can now run the command below to generate the Pandas code for Query 6 from the corresponding PostgreSQL query plan :
 
 ```bash
-conda activate sql_benchmark
+source sqlconv_env/bin/activate
 python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location postgres_query_6 --name q6_pandas.py --query_planner Postgres --planner_file postgres_connection.json 
 ```
 
@@ -226,7 +229,7 @@ This will run the *6.sql* file in the Postgres database we have created prior, r
 If we want to plan the query with the Duck DB query planner, we can use the following query:
 
 ```bash
-conda activate sql_benchmark
+source sqlconv_env/bin/activate
 python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location duck_query_6 --name q6_pandas.py --query_planner Duck_DB --planner_file duckdb_tpch.duckdb 
 ```
 
@@ -276,7 +279,7 @@ The repository also comes with a custom benchmarking tool. This has been specifi
 To use the benchmarking tool to run comparison for all queries, converted to Postgres and DuckDB, run the below command:
 
 ```bash
-conda activate sql_benchmark
+source sqlconv_env/bin/activate
 python3 benchmarking/run_benchmarking.py --file benchmarking/test_specifications/pg_duck_tpch.json --verbose
 ```
 
@@ -289,7 +292,16 @@ I also provide various other test specifications, including ones to compare quer
 Located in [sql_to_pandas/tests](sql_to_pandas/tests). Can be run with the following command:
 
 ```bash
-conda activate sql_benchmark
+source sqlconv_env/bin/activate
 cd sql_to_pandas/tests
 python3 -m pytest
+```
+
+## Development stuff
+
+### Update requirements
+
+```bash
+source sqlconv_env/bin/activate
+pip freeze > requirements.txt
 ```

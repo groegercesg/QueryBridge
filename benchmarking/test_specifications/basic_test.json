@@ -9,15 +9,15 @@
             "Options": [
                 {
                     "Type": "SQL",
-                    "Results Name": "Postgres",
-                    "DBMS": "Postgres"
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "q1_pandas.py",
-                    "Results Name": "Pandas Converted",
-                    "Query Plan": "Postgres"
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
                 }
             ]
         }
@@ -28,25 +28,12 @@
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 1,
-    "Results Location": "benchmarking/test_results/basic_test_results.csv",
+    "Results Location": "benchmarking/test_results/testing_basic_test_results.csv",
     "Postgres Connection Details": "postgres_connection.json",
     "Duck DB Connection": "duckdb_tpch.duckdb",
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",
     "Data Storage": "data_storage",
     "Results Precision": 4,
-    "Store Queries": {
-        "Name": "basic_test_pandas.py",
-        "Rename Tables": {
-            "lineitem": "li",
-            "orders": "ord",
-            "customer": "cu",
-            "part": "pa",
-            "nation": "na",
-            "supplier": "su",
-            "partsupp": "ps",
-            "region": "re"
-        },
-        "Data Loader": "benchmarking/tpch_data_loader_modified.py"
-    }
+    "Regenerate Data": "False"
 }   

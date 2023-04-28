@@ -1,5 +1,4 @@
-from generate_tpch_data import data_generator 
-import importlib.util
+from generate_tpch_data import data_generator
 import sys
 import os
 import argparse
