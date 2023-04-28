@@ -78,13 +78,19 @@ class prep_duck():
     def prepare_database(self, data_dir):
         # Set the data dir
         self.data_dir = data_dir
+
+        # Close self connection
+        self.connection.close()
         
         # Remove existing file
-        os.remove(self.file_name)
+        try:
+            os.remove(self.file_name)
+        except OSError:
+            pass
         
         # Create new file
-        con = duckdb.connect(database=self.file_name, read_only=False)
-        print("Created new Database file")
+        self.connection = duckdb.connect(database=self.file_name, read_only=False)
+        print("Created new Database file, at: " + str(self.file_name))
         
         # Create table
         create_table_commands = [
@@ -99,7 +105,7 @@ class prep_duck():
         ]
         
         for command in create_table_commands:
-            con.execute(command)
+            self.connection.execute(command)
         
         print("Created tables")
         
@@ -116,11 +122,11 @@ class prep_duck():
         ]
         
         for command in load_data_commands:
-            con.execute(command)
+            self.connection.execute(command)
             
         print("Loaded data into tables")
         
-        # Set indexes
+        # Set indexes   
         # TODO
         """
         primary_key_commands = [
@@ -168,7 +174,7 @@ class prep_duck():
         """
         
         # Commit changes performed within a transaction
-        con.commit()
+        self.connection.commit()
         
         print("Indexes and Foreign keys set on tables")
         
