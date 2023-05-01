@@ -2766,8 +2766,22 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
             sort_keys = sort_keys[1:]
         else:
             raise Exception("First parameter issue")
-        node_class = process_sort_node(sort_keys)    
-    
+        node_class = process_sort_node(sort_keys)
+    elif node_type.lower() == "nested_loop_join":
+        # TODO: Determine a proper fix for this!
+        # We remap this to be a hash join
+
+        # Infoseparator at end!
+        node = handle_end_infosep(node)
+
+        # TODO Plan:
+            # Make a Nested Loop Join Node
+            # Then in the make_class_tree_from_duck function
+            # Replace these at the right time, as a Hash Join between output[0]
+                # or left and right child
+            # Move the current condition to be a filter
+
+        node_class = process_hash_join(node, col_ref)
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
     
@@ -3062,11 +3076,15 @@ def process_external_filters(external_filters, child_relation, col_ref=None):
     
     # Split on AND/OR
     for j in range(len(external_filters)):
+        # TODO: Maybe we should split in a hierarchical way, respecting the precendence of operators
         line_split = list(filter(None, re.split('( AND )|( OR )', external_filters[j])))
             
         for i in range(len(line_split)):
-            if (line_split[i][0] == "(") and (line_split[i][-1] == ")"):
-                line_split[i] = line_split[i][1:-1]
+            #if (line_split[i][0] == "(") and (line_split[i][-1] == ")"):
+            #    line_split[i] = line_split[i][1:-1]
+
+            # Brief patch, remove all brackets
+            line_split[i] = line_split[i].replace("(", "").replace(")", "")
             
             if (line_split[i] != " AND ") and (line_split[i] != " OR "):
                 line_split[i] = str(line_split[i]).strip()
