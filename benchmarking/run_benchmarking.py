@@ -177,7 +177,12 @@ def main():
         def make_temp_folder():
             temp_path = Path(manifest_json["Temporary Directory"])
             if temp_path.exists() and temp_path.is_dir():
-                shutil.rmtree(temp_path)
+                try:
+                    shutil.rmtree(temp_path)
+                except:
+                    # Sometimes due to AFS permissions we're not able to delete the directory
+                    pass
+            
             # Make a folder
             Path(temp_path).mkdir(parents=True, exist_ok=True)
             
@@ -190,7 +195,11 @@ def main():
             # Tear Down
             # Delete temporary folder
             if temp_path.exists() and temp_path.is_dir():
-                shutil.rmtree(temp_path)
+                try:
+                    shutil.rmtree(temp_path)
+                except:
+                    # Sometimes due to AFS permission we're not able to delete the directory
+                    pass
                 
         def make_sql_file_path(manifest, query):
             file_path = None
@@ -426,7 +435,9 @@ def main():
                             results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("Yes"), pandas_run_times])
                         
                         # Append to pandas_results_list, in a tuple
-                        pandas_results_list.append((query_option["Results Name"], pandas_result))
+                        # If we were able to convert and run the query
+                        if (bad_query == False) and (bad_exec == False):
+                            pandas_results_list.append((query_option["Results Name"], pandas_result))
                     else:
                         # It's a bad query, so do the bare minimum
                         

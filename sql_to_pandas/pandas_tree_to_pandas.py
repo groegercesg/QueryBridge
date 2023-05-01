@@ -1,7 +1,7 @@
 from collections import defaultdict
 from copy import deepcopy
 import functools
-
+import sys
 
 class TreeHelper():
     def __init__(self, expr_tree_output_path, benchmarking, in_use_numpy, in_groupbyfusion, in_mergefusion):
@@ -52,7 +52,10 @@ class CodeCompilation():
         
     def __add__(self, other):
         # bracket_replace
-        new_bracket_replace = self.bracket_replace | other.bracket_replace
+        if (int(sys.version_info[1]) < 9):
+            new_bracket_replace = {**self.bracket_replace, **other.bracket_replace}
+        else:
+            new_bracket_replace = self.bracket_replace | other.bracket_replace
         # column_ordering
         new_column_ordering = self.column_ordering or other.column_ordering
         # column_limiting
@@ -66,9 +69,15 @@ class CodeCompilation():
         # usePostAggr
         new_use_post_aggr = self.usePostAggr or other.usePostAggr
         # useAlias
-        new_use_alias = self.useAlias | other.useAlias
+        if (int(sys.version_info[1]) < 9):
+            new_use_alias = {**self.useAlias, **other.useAlias}
+        else:
+            new_use_alias = self.useAlias | other.useAlias
         # relationAliasPairs
-        new_alias_relation_pairs = self.aliasRelationPairs | other.aliasRelationPairs
+        if (int(sys.version_info[1]) < 9):
+            new_alias_relation_pairs = {**self.aliasRelationPairs, **other.aliasRelationPairs}
+        else:
+            new_alias_relation_pairs = self.aliasRelationPairs | other.aliasRelationPairs
         
         # Make class
         returningCodeComp = CodeCompilation(new_sql, new_column_ordering, new_column_limiting)

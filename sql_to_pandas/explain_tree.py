@@ -2400,7 +2400,7 @@ def determine_local_child(tree, location, target):
     
     return child
 
-def process_extra_info(extra_info, in_capture, col_ref):
+def process_extra_info(extra_info, in_capture, col_ref, end_info_separator=False):
     # Before running, construct in_plan_expected from in_capture
     # Rewrite in_capture to in_plan_expected
     in_plan_expected = []
@@ -2601,6 +2601,20 @@ def process_extra_info(extra_info, in_capture, col_ref):
                        
             else:
                 raise Exception("Unexpectedly formatted CASE statement: " + str(new_extra_info[i]))
+            
+    if (end_info_separator == True):
+        # After the end of this processing, sometimes at the end we have a INFOSEPARATOR
+        end_info = None
+        for idx, elem in enumerate(new_extra_info):
+            if elem == '[INFOSEPARATOR]':
+                end_info = idx
+                break
+        
+        if end_info == None:
+            # No end, just use the rest
+            pass
+        else:
+            new_extra_info = new_extra_info[:end_info]
     
     return new_extra_info
                 
@@ -2666,6 +2680,8 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
     elif node_type.lower() == "piecewise_merge_join":
         node_class = process_merge_join(node, col_ref)
     elif node_type.lower() == "hash_join":
+        # Infoseparator at end!
+        node = handle_end_infosep(node)
         node_class = process_hash_join(node, col_ref)
     elif node_type.lower() == "perfect_hash_group_by":
         node_class = process_hash_group_by(node, col_ref)
@@ -2675,6 +2691,19 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         # If it's a filter node, check if we have a seq_scan below
         if len(node["children"]) != 1:
             raise Exception("Too many children, the filter node has: " + str(len(node["children"]) + " children."))
+        
+        # After the end of this processing, sometimes at the end we have a INFOSEPARATOR
+        end_info = None
+        for idx, elem in enumerate(node["extra_info"]):
+            if elem == '[INFOSEPARATOR]':
+                end_info = idx
+                break
+        
+        if end_info == None:
+            # No end, just use the rest
+            pass
+        else:
+            node["extra_info"] = node["extra_info"][:end_info]
         
         child_name = str(node["children"][0]["name"])
         if child_name.lower() == "seq_scan":
@@ -2689,7 +2718,7 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         elif child_name.lower() == "hash_join":
             # child_copy
             child_copy = node["children"][0].copy()
-            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture, col_ref)
+            child_copy["extra_info"] = process_extra_info(child_copy["extra_info"], in_capture, col_ref, end_info_separator=True)
             # Get the class
             node_class = process_hash_join(child_copy, col_ref, node["extra_info"])
             
@@ -2723,7 +2752,6 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         
     elif node_type.lower() == "seq_scan":
         node_class = process_seq_scan(node, col_ref)
-        
     elif node_type.lower() == "chunk_scan":
         node_class = chunk_scan_node("Chunk Scan", node["extra_info"])
     elif node_type.lower() == "delim_scan":
@@ -2734,6 +2762,10 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         node_class.delim_join = True
     elif node_type.lower() == "order_by":
         sort_keys = list(node["extra_info"])
+        if (sort_keys[0] == "ORDERS:"):
+            sort_keys = sort_keys[1:]
+        else:
+            raise Exception("First parameter issue")
         node_class = process_sort_node(sort_keys)    
     
     else:
@@ -2759,6 +2791,22 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
                 raise Exception("Unknown top_n value")
     
     return node_class
+
+def handle_end_infosep(node):
+    # After the end of this processing, sometimes at the end we have a INFOSEPARATOR
+    end_info = None
+    for idx, elem in enumerate(node["extra_info"]):
+        if elem == '[INFOSEPARATOR]':
+            end_info = idx
+            break
+    
+    if end_info == None:
+        # No end, just use the rest
+        pass
+    else:
+        node["extra_info"] = node["extra_info"][:end_info]
+
+    return node
 
 def process_sort_node(sort_keys):
     
@@ -3193,7 +3241,8 @@ def process_seq_scan(json, col_ref, external_filters=None):
             filter_pre_string = " AND ".join(pre_filters)
             filters = str(filter_pre_string).strip()
         else:
-            raise Exception("Trying to format a filter string, formatting: " + str(filter_pre_string))
+            #raise Exception("Trying to format a filter string, formatting: " + str(filter_pre_string))
+            pass
     
     node_class = seq_scan_node("Seq Scan", output, relation_name, alias_name)
     

@@ -186,6 +186,11 @@ def main():
         # display help message when no args are passed.
         parser.print_help()
         sys.exit(1)
+
+    # Validate python version
+    if (int(sys.version_info[0]) != 3):
+        print("Python Version was not 3.X, exiting!")
+        exit(0)
         
     # Validate arguments
     if args.query_planner == "Postgres":
@@ -211,7 +216,11 @@ def main():
     # Delete if already exists
     folder_path = Path(args.output_location)
     if folder_path.exists() and folder_path.is_dir():
-        shutil.rmtree(folder_path)
+        try:
+            shutil.rmtree(folder_path)
+        except:
+            # Sometimes due to AFS permission we're not able to delete the directory
+            pass
     # Make a folder
     Path(folder_path).mkdir(parents=True, exist_ok=True)
     # Move query_file into it
