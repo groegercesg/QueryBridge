@@ -2781,7 +2781,7 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
                 # or left and right child
             # Move the current condition to be a filter
 
-        node_class = process_hash_join(node, col_ref)
+        node_class = nested_loop_node("Nested Loop")
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
     
