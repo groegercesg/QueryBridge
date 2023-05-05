@@ -1948,7 +1948,7 @@ def duck_fix_remove_laters(tree):
                     else:
                         for j in range(len(current_node.output)):
                             difference = None
-                             = filterif current_node.plans[0].output[j] in current_node.output[j]:
+                            if current_node.plans[0].output[j] in current_node.output[j]:
                                 difference = current_node.output[j].replace(current_node.plans[0].output[j], "")
                             
                             if difference == None:
@@ -2644,6 +2644,10 @@ def process_extra_info(extra_info, in_capture, col_ref, end_info_separator=False
                 not_like = True
                 original_prefix = before_prefix + "prefix(" + new_extra_info[i].split("prefix(")[1].split(")")[0] + "))"
                 items = str(str(original_prefix).replace(before_prefix + "prefix(", ""))[:-2].split(", ")
+            elif before_prefix == "NOT ":
+                not_like = True
+                original_prefix = before_prefix + "prefix(" + new_extra_info[i].split("prefix(")[1].split(")")[0] + ")"
+                items = str(str(original_prefix).replace(before_prefix + "prefix(", ""))[:-1].split(", ")
             else:
                 original_prefix = "prefix(" + new_extra_info[i].split("prefix(")[1].split(")")[0] + ")"
                 items = str(str(original_prefix).replace("prefix(", ""))[:-1].split(", ")
