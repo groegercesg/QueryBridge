@@ -301,6 +301,7 @@ def main():
                             print(color.RED + str(query["Query Name"]) + ": Pandas conversion error!" + "\n" + color.END)
                             print(ex)
                         
+                        print(result.returncode)
                         if bad_query == False & result.returncode != 0:
                             # When we are unable to convert, handle the exception
                             bad_query = True

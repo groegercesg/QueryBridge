@@ -1669,6 +1669,8 @@ def make_tree_from_duck(json, tree, sql):
     duck_fix_delim_join(explain_tree)
     # Fix CHUNK_SCAN in Hash Join
     duck_fix_chunk_scan_hash_join(explain_tree)
+    # Fix COLUMN_DATA_SCAN in Hash Join
+    duck_fix_column_data_scan_hash_join(explain_tree)
     # Fix MARK Hash Join
     duck_fix_mark_hash_join(explain_tree)    
     # Fix DELIM_SCAN in Hash Join
@@ -1723,15 +1725,13 @@ def duck_nested_loop_join(tree):
                 # Make new_output the union of both children
                 new_output = tree.plans[i].plans[0].output + tree.plans[i].plans[1].output
                 inner_unique = False
-                # Get left and right conds
+                # Get left a = filternd right conds
                 left_child = tree.plans[i].plans[0]
                 while len(left_child.output) == 0:
                     left_child = left_child.plans[0]
-                right_child = tree.plans[i].plans[1]
-                while len(right_child.output) == 0:
-                    right_child = right_child.plans[0]
 
-                new_hash_cond = str(left_child.output[0]) + " = " + str(right_child.output[0])
+                # TODO: Set to LEFT = LEFT, is this correct?
+                new_hash_cond = str(left_child.output[0]) + " = " + str(left_child.output[0])
                 new_node = hash_join_node("Hash Join", new_output, inner_unique, tree.plans[i].join_type, new_hash_cond)
                 
                 # Add filter
@@ -1948,7 +1948,7 @@ def duck_fix_remove_laters(tree):
                     else:
                         for j in range(len(current_node.output)):
                             difference = None
-                            if current_node.plans[0].output[j] in current_node.output[j]:
+                             = filterif current_node.plans[0].output[j] in current_node.output[j]:
                                 difference = current_node.output[j].replace(current_node.plans[0].output[j], "")
                             
                             if difference == None:
@@ -2100,6 +2100,62 @@ def duck_search_for_delim_scan(tree):
                     output = new_output
     
     return output
+
+def duck_fix_column_data_scan_hash_join(tree):
+    # Postorder Traversal
+    if tree.plans != None:
+        for i in range(len(tree.plans)):
+            current_node = tree.plans[i]
+            # Fix a Hash Join
+            if (current_node.node_type == "Hash Join"):
+                # Catch unusual number of children, expecting 2
+                if hasattr(current_node, "plans"):
+                    if current_node.plans != None:
+                        if len(current_node.plans) != 2:
+                            raise Exception("The Hash Join, has " + str(len(current_node.plans)) + " nodes below it.")
+                    else:
+                        raise Exception("Hash join with no plans")
+                else:
+                    raise Exception("Hash join with no plans")
+                
+                # Iterate through below nodes, create a dictionary of their type
+                below_nodes = defaultdict(int)
+                if hasattr(current_node, "plans"):
+                    if current_node.plans != None:
+                        for j in range(len(current_node.plans)):
+                            below_nodes[current_node.plans[j].node_type] += 1
+                
+                # How many column data scans do we have below, if it's exactly 1, then we skip this current node
+                if below_nodes["Column Data Scan"] == 1:
+                    # Find the non-delim scan
+                    target_child = None
+                    for j in range(len(current_node.plans)):
+                        if current_node.plans[j].node_type != "Column Data Scan":
+                            target_child = current_node.plans[j]
+                            break
+                        
+                    # Add filters to the target child if the current node had them
+                    if hasattr(current_node, "filter") and (current_node.filter != None):
+                        if hasattr(target_child, "filters") and (target_child.filters != None):
+                            # Add to existing filters
+                            target_child.filters = str(target_child.filters) + " AND " + current_node.filter
+                        else:
+                            # Create new filters
+                            target_child.add_filters(str(current_node.filter))
+                        
+                    # Set the parent of prune_children to be tree.plans[i]
+                    target_child.parent = tree.plans[i]
+                
+                    # Set current_node to be the children
+                    tree.plans[i] = target_child
+
+    # Perform a Postorder traversal
+    # Check if this node has a child
+    if hasattr(tree, "plans"):
+        if tree.plans != None:
+            for i in range(len(tree.plans)):
+                duck_fix_column_data_scan_hash_join(tree.plans[i])   
+
 
 def duck_fix_chunk_scan_hash_join(tree):
     # Postorder Traversal
@@ -2259,8 +2315,31 @@ def duck_fix_mark_hash_join(tree):
                 
                     # Set current_node to be the children
                     tree.plans[i] = target_child
+                # Do it for column data scan
+                elif below_nodes["Column Data Scan"] == 1:
+                    # Find the non_chunk scan
+                    target_child = None
+                    for j in range(len(current_node.plans)):
+                        if current_node.plans[j].node_type != "Column Data Scan":
+                            target_child = current_node.plans[j]
+                            break
+                        
+                    # Add filters to the target child if the current node had them
+                    if hasattr(current_node, "filter") and (current_node.filter != None):
+                        if hasattr(target_child, "filters") and (target_child.filters != None):
+                            # Add to existing filters
+                            target_child.filters = str(target_child.filters) + " AND " + current_node.filter
+                        else:
+                            # Create new filters
+                            target_child.add_filters(str(current_node.filter))
+                        
+                    # Set the parent of prune_children to be tree.plans[i]
+                    target_child.parent = tree.plans[i]
+                
+                    # Set current_node to be the children
+                    tree.plans[i] = target_child
                 # ELIF filter contains NOT(SUBQUERY)
-                elif hasattr(current_node, "filter") and ("NOT(SUBQUERY)" in current_node.filter):
+                elif hasattr(current_node, "filter") and (("NOT(SUBQUERY)" in current_node.filter) or ("NOT SUBQUERY" in current_node.filter)):
                     # Remove the filter
                     delattr(current_node, "filter")
                     # Replace Join type with special mode
@@ -2803,6 +2882,8 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         node_class = chunk_scan_node("Chunk Scan", node["extra_info"])
     elif node_type.lower() == "delim_scan":
         node_class = delim_scan_node("Delim Scan", node["extra_info"])
+    elif node_type.lower() == "column_data_scan":
+        node_class = column_data_scan_node("Column Data Scan", node["extra_info"])
     elif node_type.lower() == "delim_join":
         # Remap to be a Hash_join
         node_class = process_hash_join(node, col_ref)

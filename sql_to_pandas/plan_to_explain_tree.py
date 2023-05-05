@@ -23,6 +23,10 @@ class base_node():
 class chunk_scan_node(base_node):
     def __init__(self, node_type, output):
         super().__init__(node_type, output)
+
+class column_data_scan_node(base_node):
+    def __init__(self, node_type, output):
+        super().__init__(node_type, output)   
         
 class delim_scan_node(base_node):
     def __init__(self, node_type, output):

@@ -464,6 +464,7 @@ def main():
     if decision != True:
         print("Syntax Error detected in Generated Python Code: " + str(python_output_name))
         print(detail)
+        exit(0)
             
 if __name__ == "__main__":
     main()
