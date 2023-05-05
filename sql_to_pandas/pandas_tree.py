@@ -2203,7 +2203,8 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
                         
                         # It's okay that we add multiple, we need all of these                   
                         codeCompHelper.add_bracket_replace(col, new_name)
-                    new_after.append([str(new_name), item])
+                    if new_name != None:
+                        new_after.append([str(new_name), item])
                 
                 after_aggrs += new_after
                 

@@ -2574,6 +2574,10 @@ def process_extra_info(extra_info, in_capture, col_ref, end_info_separator=False
         new_extra_info[i] = str(new_extra_info[i]).strip()
         if re.search("\w=\w", new_extra_info[i]) != None:
             new_extra_info[i] = new_extra_info[i].replace("=", " = ")
+
+        # Replace not equal
+        if " != " in new_extra_info[i]:
+            new_extra_info[i] = new_extra_info[i].replace("!=", "<>")
             
         # Search for in_plan_expected
         for j in range(len(in_plan_expected)):
