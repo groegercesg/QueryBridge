@@ -1885,7 +1885,7 @@ def duck_solve_subquery(tree):
                                 while (child.output == []) or any([True for outp in child.output if "#" in outp]):
                                     child = child.plans[0]
                                 
-                                if source_loc != "filter":
+                                if (source_loc != "filter") and (source_loc != "output"):
                                     child_value = str(child.output[0]).replace("(", "").replace(")", "")
                                 else:
                                     child_value = str(child.output[0])
