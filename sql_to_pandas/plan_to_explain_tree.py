@@ -113,9 +113,8 @@ class subquery_scan_node(base_node):
         self.alias = alias
         
 class nested_loop_node(base_node):
-    def __init__(self, node_type, output, inner_unique, join_type):
+    def __init__(self, node_type, output, join_type):
         super().__init__(node_type, output)
-        self.inner_unique = inner_unique
         self.join_type = join_type
         
     def add_merge_cond(self, merge_cond):

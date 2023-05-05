@@ -1702,7 +1702,48 @@ def make_tree_from_duck(json, tree, sql):
     duck_col_ref_insert_current(explain_tree, col_ref)
     duck_col_ref_insert(explain_tree, col_ref)
 
+    # Fix Nested Loop Join, replace them to Hash Joins
+    duck_nested_loop_join(explain_tree)
+
     return explain_tree
+
+def duck_nested_loop_join(tree):
+    # Postorder traversal
+    if tree != None and tree.plans != None:
+        for i in range(len(tree.plans)):
+            duck_nested_loop_join(tree.plans[i])          
+
+    # Run this function on below nodes
+    if tree != None and tree.plans != None:
+        for i in range(len(tree.plans)):
+            if tree.plans[i].node_type == "Nested Loop":
+                assert len(tree.plans[i].plans) == 2
+                assert len(tree.plans[i].output) == 1
+
+                # Make new_output the union of both children
+                new_output = tree.plans[i].plans[0].output + tree.plans[i].plans[1].output
+                inner_unique = False
+                # Get left and right conds
+                left_child = tree.plans[i].plans[0]
+                while len(left_child.output) == 0:
+                    left_child = left_child.plans[0]
+                right_child = tree.plans[i].plans[1]
+                while len(right_child.output) == 0:
+                    right_child = right_child.plans[0]
+
+                new_hash_cond = str(left_child.output[0]) + " = " + str(right_child.output[0])
+                new_node = hash_join_node("Hash Join", new_output, inner_unique, tree.plans[i].join_type, new_hash_cond)
+                
+                # Add filter
+                new_filter = str(tree.plans[i].output[0])
+                new_node.add_filter(new_filter)
+                
+                # Add plans
+                new_node.plans = tree.plans[i].plans
+                new_node.parent = tree.plans[i].parent
+
+                # Replace
+                tree.plans[i] = new_node
 
 def duck_keep_top_proj(tree):
     skip_save = False
@@ -1769,8 +1810,9 @@ def duck_solve_subquery(tree):
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             # For the moment, only fix "SUBQUERY" in Hash Join
-            if (current_node.node_type == "Hash Join") or (current_node.node_type == "Merge Join"):
-                if ((hasattr(current_node, "hash_cond")) and ("SUBQUERY" in current_node.hash_cond)) or ((hasattr(current_node, "merge_cond")) and ("SUBQUERY" in current_node.merge_cond)) or ((hasattr(current_node, "filter")) and ("SUBQUERY" in current_node.filter)):
+            if (current_node.node_type == "Hash Join") or (current_node.node_type == "Merge Join") or (current_node.node_type == "Nested Loop"):
+                # Remap a list to a string to check if "SUBQUERY" is in
+                if ((hasattr(current_node, "hash_cond")) and ("SUBQUERY" in current_node.hash_cond)) or ((hasattr(current_node, "merge_cond")) and ("SUBQUERY" in current_node.merge_cond)) or ((hasattr(current_node, "filter")) and ("SUBQUERY" in current_node.filter)) or ((hasattr(current_node, "output")) and ("SUBQUERY" in ' '.join(current_node.output))):
                     # We have a subquery to solve
                     if (current_node.node_type == "Hash Join") and ("SUBQUERY" in current_node.hash_cond):
                         source_loc = "hash_cond"
@@ -1785,6 +1827,26 @@ def duck_solve_subquery(tree):
                     elif (current_node.node_type == "Merge Join") and ("SUBQUERY" in current_node.filter):
                         source_loc = "filter"
                         cond_split = list(filter(None, re.split('(AND)|(OR)', current_node.filter)))
+
+                    elif (current_node.node_type == "Nested Loop") and ("SUBQUERY" in ' '.join(current_node.output)):
+                        source_loc = "output"
+                        # Decide which index it's in
+                        output_index = None
+                        # Gather all the subquery positions
+                        positions = []
+
+                        for i in range(len(current_node.output)):
+                            if "SUBQUERY" in current_node.output[i]:
+                                output_index = i
+                                cond_split = list(filter(None, re.split('(AND)|(OR)', current_node.output[i])))
+                                positions.append(i)
+ 
+                        # Assert we found the subquery
+                        assert output_index != None
+                        assert len(positions) == 1
+
+                    else:
+                        raise ValueError("Not detected source for SUBQUERY")
                     
                     for k in range(len(cond_split)):
                         if "SUBQUERY" in cond_split[k]:
@@ -1852,7 +1914,10 @@ def duck_solve_subquery(tree):
                             raise Exception("Unexpectedly, cond in Hash Join doesn't have an equals in it")
                     
                     # Join local_split back together
-                    setattr(current_node, source_loc, " ".join(cond_split))
+                    if source_loc == "output":
+                        getattr(current_node, source_loc)[output_index] = " ".join(cond_split)
+                    else:
+                        setattr(current_node, source_loc, " ".join(cond_split))
     
     # Run this function on below nodes
     if tree.plans != None:
@@ -1996,9 +2061,7 @@ def duck_fix_delim_join(tree):
                                 tree.plans[i].add_filter(join_neq)
                                 
                         # Add join_eq as condition
-                        tree.plans[i].hash_cond = join_eq
-                        
-                                            
+                        tree.plans[i].hash_cond = join_eq                                  
 
     # Perform a Postorder traversal
     # Check if this node has a child
@@ -2037,9 +2100,6 @@ def duck_search_for_delim_scan(tree):
                     output = new_output
     
     return output
-
-                
-
 
 def duck_fix_chunk_scan_hash_join(tree):
     # Postorder Traversal
@@ -2656,23 +2716,10 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         node_class = limit_node("Limit", node["extra_info"])
     elif node_type.lower() == "ungrouped_aggregate":
         node_class = aggregate_node("Aggregate", node["extra_info"])
+        remove_firsts(node_class)
     elif node_type.lower() == "simple_aggregate":
         node_class = aggregate_node("Aggregate", node["extra_info"])
-        
-        # Set first, first
-        if any([True for item in node["extra_info"] if "first(" in item]):
-            # This node has a first in it, so we set it to be removed later
-            node_class.add_remove_later(True)
-            
-        # Then remove it 
-        for i in range(len(node_class.output)):
-            if "first(" in node_class.output[i]:
-                f_pos = node_class.output[i].find("first(")
-                f_brack_pos = node_class.output[i].find(")", f_pos)
-                # Get rid of bracket, after first in sequence so do before
-                node_class.output[i] = node_class.output[i][:f_brack_pos] + node_class.output[i][f_brack_pos+1:]
-                node_class.output[i] = node_class.output[i].replace("first(", "", 1)
-        
+        remove_firsts(node_class)
     elif node_type.lower() == "projection":
         # Make a projection node an aggregate node
         node_class = aggregate_node("Aggregate", node["extra_info"])
@@ -2769,19 +2816,10 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
         node_class = process_sort_node(sort_keys)
     elif node_type.lower() == "nested_loop_join":
         # TODO: Determine a proper fix for this!
-        # We remap this to be a hash join
 
         # Infoseparator at end!
         node = handle_end_infosep(node)
-
-        # TODO Plan:
-            # Make a Nested Loop Join Node
-            # Then in the make_class_tree_from_duck function
-            # Replace these at the right time, as a Hash Join between output[0]
-                # or left and right child
-            # Move the current condition to be a filter
-
-        node_class = nested_loop_node("Nested Loop")
+        node_class = nested_loop_node("Nested Loop", node['extra_info'][1:], node['extra_info'][0])
     else:
         raise Exception("Node Type", node_type, "is not recognised, many Node Types have not been implemented.")
     
@@ -2805,6 +2843,21 @@ def make_class_tree_from_duck(json, tree, in_capture, col_ref, parent=None):
                 raise Exception("Unknown top_n value")
     
     return node_class
+
+def remove_firsts(node):
+    # Set first, first
+    if any([True for item in node.output if "first(" in item]):
+        # This node has a first in it, so we set it to be removed later
+        node.add_remove_later(True)
+        
+    # Then remove it 
+    for i in range(len(node.output)):
+        if "first(" in node.output[i]:
+            f_pos = node.output[i].find("first(")
+            f_brack_pos = node.output[i].find(")", f_pos)
+            # Get rid of bracket, after first in sequence so do before
+            node.output[i] = node.output[i][:f_brack_pos] + node.output[i][f_brack_pos+1:]
+            node.output[i] = node.output[i].replace("first(", "", 1)
 
 def handle_end_infosep(node):
     # After the end of this processing, sometimes at the end we have a INFOSEPARATOR

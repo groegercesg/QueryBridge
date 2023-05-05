@@ -2927,8 +2927,10 @@ class merge_node():
                     if replaced == True:
                         # Add in relation
                         if capture_relation == None:
-                            raise Exception("No relation has been captured at this point, unexpected!")
-                        replace_dict[key] = str(capture_relation) + str(process_key)
+                            #raise Exception("No relation has been captured at this point, unexpected!")
+                            replace_dict[key] = str(process_key)
+                        else:
+                            replace_dict[key] = str(capture_relation) + str(process_key)
                         
                 
                 # At end, carry out replace dict on params
