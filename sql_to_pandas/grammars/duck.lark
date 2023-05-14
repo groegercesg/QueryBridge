@@ -1,7 +1,12 @@
 ?start:   
          | eq_op
+
 ?eq_op: 
-         | sort_op " = " eq_op -> equate
+         | sort_op "<=" eq_op -> leq
+         | sort_op ">=" eq_op -> geq
+         | sort_op "<" eq_op -> lt
+         | sort_op ">" eq_op -> gt
+         | sort_op "=" eq_op -> eq
          | sort_op
 
 ?sort_op:
@@ -31,8 +36,20 @@
 ?element:
          | NUMBER -> number
          | "-" element -> neg
+         | date
          | col_ref
          | "(" sum_op ")"
+
+// Parsing date
+YEAR  : DIGIT DIGIT DIGIT DIGIT
+MONTH : "0" "1".."9"
+      | "1" "1".."2" 
+DAY   : "0" DIGIT
+      | "1" DIGIT 
+      | "2" DIGIT
+      | "3" "0".."1" 
+
+?date: YEAR "-"? MONTH "-"? DAY -> date
 
 // Recognising Column References
 ?col_ref:
@@ -54,6 +71,7 @@
 %import common.WORD  
 %import common.LETTER   
 %import common.NUMBER
+%import common.DIGIT
 
 %import common.WS_INLINE
 %ignore WS_INLINE

@@ -86,7 +86,33 @@ def test_parse_sort_desc():
 def test_parse_equate():
     in_string = "ps_suppkey = s_suppkey"
     out_tree = parse(in_string)
-    intended_tree = Tree('equate', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'suppkey')]), Tree('col_ref', [Token('WORD', 's'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'suppkey')])])
+    intended_tree = Tree('eq', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'suppkey')]), Tree('col_ref', [Token('WORD', 's'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'suppkey')])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
+def test_parse_date():
+    in_string = "l_shipdate=1998-09-02"
+    out_tree = parse(in_string)
+    intended_tree = Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipdate')]), Tree('date', [Token('YEAR', '1998'), Token('MONTH', '09'), Token('DAY', '02')])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
+def test_parse_leq():
+    in_string = "l_shipdate<=1998-09-02"
+    out_tree = parse(in_string)
+    intended_tree = Tree('leq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipdate')]), Tree('date', [Token('YEAR', '1998'), Token('MONTH', '09'), Token('DAY', '02')])])
     
     print("Out Tree:")
     print(out_tree)
