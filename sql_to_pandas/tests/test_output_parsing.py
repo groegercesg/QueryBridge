@@ -305,5 +305,15 @@ def test_parse_case_2():
 
     assert out_tree == intended_tree, "Test Assertion Failed"
 
+def test_parse_string_no_quotes():
+    in_string = "n_name=SAUDI ARABIA AND n_name IS NOT NULL"
+    out_tree = parse(in_string)
+    intended_tree = Tree('and', [Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('STRING', 'SAUDI'), Token('STRING', 'ARABIA')])]), Tree('isnotnull', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')])])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
 
-# n_name=SAUDI ARABIA AND n_name IS NOT NULL
+    assert out_tree == intended_tree, "Test Assertion Failed"
