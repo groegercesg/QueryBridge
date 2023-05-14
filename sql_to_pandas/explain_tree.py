@@ -1693,6 +1693,9 @@ def make_tree_from_duck(json, tree, sql):
     
     # Iterate 3 times
     iter_count = 0
+    # TODO: Replace with iteration check for do remove laters still exist
+    # TODO: A bit like bubble sort, we run the function until we've iterated once with no
+    # TODO: Need to change anything
     while iter_count < 3:
         duck_fix_remove_laters(explain_tree)
         iter_count += 1
