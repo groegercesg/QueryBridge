@@ -1,5 +1,10 @@
 ?start:   
-        | aggr_op
+        | sort_op
+
+?sort_op:
+         | aggr_op "DESC" -> sort_desc
+         | aggr_op "ASC" -> sort_asc
+         | aggr_op
 
 ?aggr_op: 
          | "count(*)" -> count_star
