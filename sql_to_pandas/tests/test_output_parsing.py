@@ -122,8 +122,45 @@ def test_parse_leq():
 
     assert out_tree == intended_tree, "Test Assertion Failed"
 
-# l_shipdate<=1998-09-02 AND l_shipdate IS NOT NULL
-# p_size=15 AND p_size IS NOT NULL
+def test_parse_is_not_null():
+    in_string = "l_shipdate IS NOT NULL"
+    out_tree = parse(in_string)
+    intended_tree = Tree('isnotnull', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipdate')])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
+def test_parse_and():
+    in_string = "l_shipdate<=1998-09-02 AND l_shipdate IS NOT NULL"
+    out_tree = parse(in_string)
+    intended_tree = Tree('and', [Tree('leq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipdate')]), Tree('date', [Token('YEAR', '1998'), Token('MONTH', '09'), Token('DAY', '02')])]), Tree('isnotnull', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipdate')])])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
+def test_parse_or():
+    in_string = "p_size=15 OR p_size IS NOT NULL"
+    out_tree = parse(in_string)
+    intended_tree = Tree('or', [Tree('eq', [Tree('col_ref', [Token('WORD', 'p'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'size')]), Tree('number', [Token('NUMBER', '15')])]), Tree('isnotnull', [Tree('col_ref', [Token('WORD', 'p'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'size')])])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
 # suffix(p_type, 'BRASS')
 # (((n_name = 'FRANCE') AND (n_name = 'GERMANY')) OR ((n_name = 'GERMANY') AND (n_name = 'FRANCE')))
 # sum((partsupp.ps_supplycost * partsupp.ps_availqty)) DESC

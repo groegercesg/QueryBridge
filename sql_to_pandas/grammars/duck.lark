@@ -1,4 +1,16 @@
 ?start:   
+         | or_op
+
+?or_op:
+         | or_op "OR" and_op -> or
+         | and_op
+
+?and_op:
+         | and_op "AND" null_op -> and
+         | null_op
+
+?null_op: 
+         | eq_op "IS NOT NULL" -> isnotnull
          | eq_op
 
 ?eq_op: 
