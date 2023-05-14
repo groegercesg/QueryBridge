@@ -279,7 +279,31 @@ def test_parse_suffix():
 
     assert out_tree == intended_tree, "Test Assertion Failed"
 
+def test_parse_case():
+    in_string = "CASE  WHEN (((o_orderpriority = '1-URGENT') OR (o_orderpriority = '2-HIGH'))) THEN (1) ELSE 0 END"
+    out_tree = parse(in_string)
+    intended_tree = Tree('case', [Tree('or', [Tree('eq', [Tree('col_ref', [Token('WORD', 'o'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'orderpriority')]), Tree('string', [Token('STRING', '1-URGENT')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'o'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'orderpriority')]), Tree('string', [Token('STRING', '2-HIGH')])])]), Tree('number', [Token('NUMBER', '1')]), Tree('number', [Token('NUMBER', '0')])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
 
-# CASE  WHEN (((o_orderpriority = '1-URGENT') OR (o_orderpriority = '2-HIGH'))) THEN (1) ELSE 0 END
-# CASE  WHEN (((o_orderpriority != '1-URGENT') AND (o_orderpriority != '2-HIGH'))) THEN (1) ELSE 0 END
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
+def test_parse_case_2():
+    in_string = "CASE  WHEN (((o_orderpriority != '1-URGENT') AND (o_orderpriority != '2-HIGH'))) THEN (1) ELSE 0 END"
+    out_tree = parse(in_string)
+    intended_tree = Tree('case', [Tree('and', [Tree('neq', [Tree('col_ref', [Token('WORD', 'o'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'orderpriority')]), Tree('string', [Token('STRING', '1-URGENT')])]), Tree('neq', [Tree('col_ref', [Token('WORD', 'o'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'orderpriority')]), Tree('string', [Token('STRING', '2-HIGH')])])]), Tree('number', [Token('NUMBER', '1')]), Tree('number', [Token('NUMBER', '0')])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
+
 # n_name=SAUDI ARABIA AND n_name IS NOT NULL

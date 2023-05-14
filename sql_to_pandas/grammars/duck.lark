@@ -1,4 +1,8 @@
 ?start:   
+         | case_op
+
+?case_op:
+         | "CASE  WHEN" or_op "THEN" element "ELSE" element "END" -> case
          | or_op
 
 ?or_op:
