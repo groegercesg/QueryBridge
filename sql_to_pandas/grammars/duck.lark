@@ -1,0 +1,49 @@
+?start:   
+        | aggr_op
+
+?aggr_op: 
+         | "count(*)" -> count_star
+         | sum
+         | avg
+         | min
+         | max
+         | sum_op
+
+?sum_op:  
+         | product_op
+         | sum_op "+" product_op -> add
+         | sum_op "-" product_op -> sub
+
+?product_op:
+         | element
+         | product_op "*" element -> mul
+         | product_op "/" element -> div
+
+?element:
+         | NUMBER -> number
+         | "-" element -> neg
+         | col_ref
+         | "(" sum_op ")"
+
+// Recognising Column References
+?col_ref:
+         | table "." column -> table_ref
+         | column 
+
+?underscore: "_"
+?column: LETTER underscore WORD -> col_ref
+?table: WORD
+
+// Aggregation operations
+?sum: "sum(" sum_op ")" -> sum
+?avg: "avg(" sum_op ")" -> avg
+?min: "min(" sum_op ")" -> min
+?max: "max(" sum_op ")" -> max
+
+// imports stuff from library
+%import common.WORD  
+%import common.LETTER   
+%import common.NUMBER
+
+%import common.WS_INLINE
+%ignore WS_INLINE
