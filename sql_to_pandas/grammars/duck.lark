@@ -32,6 +32,7 @@
          | avg
          | min
          | max
+         | countdistinct
          | count
          | sum_op
 
@@ -50,7 +51,10 @@
          | "-" element -> neg
          | date
          | col_ref
-         | "(" sum_op ")"
+         | "(" or_op ")"
+         | string
+
+string: "'" WORD* "'"
 
 // Parsing date
 YEAR  : DIGIT DIGIT DIGIT DIGIT
@@ -73,11 +77,12 @@ DAY   : "0" DIGIT
 ?table: WORD
 
 // Aggregation operations
-?sum: "sum(" sum_op ")" -> sum
-?avg: "avg(" sum_op ")" -> avg
-?min: "min(" sum_op ")" -> min
-?max: "max(" sum_op ")" -> max
-?count: "count(" sum_op ")" -> count
+?sum: "sum(" or_op ")" -> sum
+?avg: "avg(" or_op ")" -> avg
+?min: "min(" or_op ")" -> min
+?max: "max(" or_op ")" -> max
+?count: "count(" or_op ")" -> count
+?countdistinct: "count(DISTINCT" or_op ")" -> countdistinct
 
 // imports stuff from library
 %import common.WORD  
