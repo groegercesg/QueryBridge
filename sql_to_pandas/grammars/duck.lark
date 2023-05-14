@@ -1,5 +1,8 @@
 ?start:   
-        | sort_op
+         | eq_op
+?eq_op: 
+         | sort_op " = " eq_op -> equate
+         | sort_op
 
 ?sort_op:
          | aggr_op "DESC" -> sort_desc
@@ -12,6 +15,7 @@
          | avg
          | min
          | max
+         | count
          | sum_op
 
 ?sum_op:  
@@ -36,7 +40,7 @@
          | column 
 
 ?underscore: "_"
-?column: LETTER underscore WORD -> col_ref
+?column: WORD underscore WORD -> col_ref
 ?table: WORD
 
 // Aggregation operations
@@ -44,6 +48,7 @@
 ?avg: "avg(" sum_op ")" -> avg
 ?min: "min(" sum_op ")" -> min
 ?max: "max(" sum_op ")" -> max
+?count: "count(" sum_op ")" -> count
 
 // imports stuff from library
 %import common.WORD  
