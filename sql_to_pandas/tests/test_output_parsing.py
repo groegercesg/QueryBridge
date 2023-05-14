@@ -177,7 +177,20 @@ def test_parse_sum_sort_desc():
 def test_parse_equate_string():
     in_string = "n_name = 'FRANCE'"
     out_tree = parse(in_string)
-    intended_tree = Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('WORD', 'FRANCE')])])
+    intended_tree = Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('STRING', 'FRANCE')])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
+def test_parse_negate_string():
+    in_string = "o_orderpriority != '1-URGENT'"
+    out_tree = parse(in_string)
+    intended_tree = Tree('neq', [Tree('col_ref', [Token('WORD', 'o'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'orderpriority')]), Tree('string', [Token('STRING', '1-URGENT')])])
     
     print("Out Tree:")
     print(out_tree)
@@ -190,7 +203,7 @@ def test_parse_equate_string():
 def test_parse_and_or_complex():
     in_string = "(((n_name = 'FRANCE') AND (n_name = 'GERMANY')) OR ((n_name = 'GERMANY') AND (n_name = 'FRANCE')))"
     out_tree = parse(in_string)
-    intended_tree = Tree('or', [Tree('and', [Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('WORD', 'FRANCE')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('WORD', 'GERMANY')])])]), Tree('and', [Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('WORD', 'GERMANY')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('WORD', 'FRANCE')])])])])
+    intended_tree = Tree('or', [Tree('and', [Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('STRING', 'FRANCE')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('STRING', 'GERMANY')])])]), Tree('and', [Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('STRING', 'GERMANY')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('STRING', 'FRANCE')])])])])
     
     print("Out Tree:")
     print(out_tree)
@@ -203,7 +216,7 @@ def test_parse_and_or_complex():
 def test_parse_and_or_complex_2():
     in_string = "((l_commitdate < l_receiptdate) AND (l_shipdate < l_commitdate) AND ((l_shipmode = 'MAIL') OR (l_shipmode = 'SHIP')))"
     out_tree = parse(in_string)
-    intended_tree = Tree('and', [Tree('and', [Tree('lt', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'commitdate')]), Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'receiptdate')])]), Tree('lt', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipdate')]), Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'commitdate')])])]), Tree('or', [Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('WORD', 'MAIL')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('WORD', 'SHIP')])])])])
+    intended_tree = Tree('and', [Tree('and', [Tree('lt', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'commitdate')]), Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'receiptdate')])]), Tree('lt', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipdate')]), Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'commitdate')])])]), Tree('or', [Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('STRING', 'MAIL')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('STRING', 'SHIP')])])])])
     
     print("Out Tree:")
     print(out_tree)
@@ -216,13 +229,14 @@ def test_parse_and_or_complex_2():
 def test_parse_or_complex():
     in_string = "((l_shipmode = 'AIR') OR (l_shipmode = 'AIR REG'))"
     out_tree = parse(in_string)
-    intended_tree = Tree('or', [Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('WORD', 'AIR')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('WORD', 'AIR'), Token('WORD', 'REG')])])])
+    intended_tree = Tree('or', [Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('STRING', 'AIR')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('STRING', 'AIR'), Token('STRING', 'REG')])])])
     
     print("Out Tree:")
     print(out_tree)
     print(out_tree.pretty())
     print("Intended String:")
     print(intended_tree)
+    print(intended_tree.pretty())
 
     assert out_tree == intended_tree, "Test Assertion Failed"
 
@@ -252,7 +266,20 @@ def test_parse_countdistinct():
 
     assert out_tree == intended_tree, "Test Assertion Failed"
 
-# suffix(p_type, 'BRASS')
+def test_parse_suffix():
+    in_string = "suffix(p_type, 'BRASS')"
+    out_tree = parse(in_string)
+    intended_tree = Tree('suffix', [Tree('col_ref', [Token('WORD', 'p'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'type')]), Tree('string', [Token('STRING', 'BRASS')])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
+
 # CASE  WHEN (((o_orderpriority = '1-URGENT') OR (o_orderpriority = '2-HIGH'))) THEN (1) ELSE 0 END
 # CASE  WHEN (((o_orderpriority != '1-URGENT') AND (o_orderpriority != '2-HIGH'))) THEN (1) ELSE 0 END
 # n_name=SAUDI ARABIA AND n_name IS NOT NULL

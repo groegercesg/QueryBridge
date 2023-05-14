@@ -19,6 +19,7 @@
          | sort_op "<" eq_op -> lt
          | sort_op ">" eq_op -> gt
          | sort_op "=" eq_op -> eq
+         | sort_op "!=" eq_op -> neq
          | sort_op
 
 ?sort_op:
@@ -34,6 +35,8 @@
          | max
          | countdistinct
          | count
+         | suffix
+         | prefix
          | sum_op
 
 ?sum_op:  
@@ -54,7 +57,9 @@
          | "(" or_op ")"
          | string
 
-string: "'" WORD* "'"
+STRING: /[a-zA-Z0-9_.-]{2,}/
+
+?string: "'" STRING* "'" -> string
 
 // Parsing date
 YEAR  : DIGIT DIGIT DIGIT DIGIT
@@ -83,6 +88,8 @@ DAY   : "0" DIGIT
 ?max: "max(" or_op ")" -> max
 ?count: "count(" or_op ")" -> count
 ?countdistinct: "count(DISTINCT" or_op ")" -> countdistinct
+?suffix: "suffix(" col_ref "," string ")" -> suffix
+?prefix: "prefix(" col_ref "," string ")" -> prefix
 
 // imports stuff from library
 %import common.WORD  
