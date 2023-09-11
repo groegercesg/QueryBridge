@@ -1,4 +1,8 @@
 ?start:   
+         | first_op
+
+?first_op:
+         | "first(" cast_op ")"
          | cast_op
 
 // CAST(ps_availqty AS DECIMAL(18,0))
@@ -41,6 +45,7 @@
 
 ?aggr_op: 
          | "count(*)" -> count_star
+         | "count_star()" -> count_star
          | sum
          | avg
          | min

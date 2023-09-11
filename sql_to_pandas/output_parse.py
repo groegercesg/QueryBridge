@@ -46,8 +46,6 @@ def make_tree_from_duck(explain_path):
     explain_tree = make_class_tree_from_duck(explain_content)
     
     print(explain_tree)
-    
-    print(explain_tree.plans[0].output)
 
 class ReferenceTracker():
     changes = False
@@ -175,7 +173,7 @@ def make_class_tree_from_duck(json, parent=None):
         for col in extra_info:
             if not any([True for agg in AGG_FUNCTIONS if agg+"(" in col]):
                 group_keys.append(col)
-        node_class = group_aggregate_node("Group Aggregate", extra_info, group_keys)
+        node_class = group_aggregate_node("Group Aggregate", parse_larks(extra_info), parse_larks(group_keys))
     elif node_type == "top_n":
         # We start with a limit node
         node_class = limit_node("Limit", [])
@@ -193,6 +191,8 @@ def make_class_tree_from_duck(json, parent=None):
         join_type = extra_info[0]
         inner_unique = False
         node_class = hash_join_node("Hash Join", hash_join_output, inner_unique, join_type, parse_larks(extra_info[1:]))
+    elif node_type.lower() == "limit":
+        node_class = limit_node("Limit", extra_info)
     else:
         raise Exception(f"Node Type: '{node_type}' is not recognised, many Node Types have not been implemented.")
     
@@ -230,10 +230,19 @@ def run_tree_generation():
     explain_directory = 'sql_to_pandas/tpch_explain'
     onlyfiles = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
     
+    # Track failures
+    failed = 0
     for explain_file in onlyfiles:
         print(f'Doing: {explain_file}')
-        make_tree_from_duck(f'{explain_directory}/{explain_file}')
+        try:
+            make_tree_from_duck(f'{explain_directory}/{explain_file}')
+        except:
+            print('\tFAILED')
+            failed += 1
+    
+    print('-'*15)
+    print(f'We have been able to parse {len(onlyfiles) - failed}/{len(onlyfiles)} explain JSONs.')
 
-#run_tree_generation()
+run_tree_generation()
 
-make_tree_from_duck(f'sql_to_pandas/tpch_explain/{11}_duck.json')
+#make_tree_from_duck(f'sql_to_pandas/tpch_explain/{11}_duck.json')

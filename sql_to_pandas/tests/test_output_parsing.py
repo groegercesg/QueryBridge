@@ -40,6 +40,19 @@ def test_parse_count_star():
 
     assert out_tree == intended_tree, "Test Assertion Failed"
 
+def test_parse_count_star_2():
+    in_string = "count_star()"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('count_star', [])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
 def test_parse_avg():
     in_string = "avg(l_extendedprice)"
     out_tree = parse_lark(in_string)
@@ -361,6 +374,32 @@ def test_parse_string_advanced_cast():
     out_tree = parse_lark(in_string)
     intended_tree = Tree('gt', [Tree('cast', [Tree('sum', [Tree('mul', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'supplycost')]), Tree('cast', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'availqty')]), Tree(Token('RULE', 'cast_type'), []), Token('NUMBER', '18'), Token('NUMBER', '0')])])]), Tree(Token('RULE', 'cast_type'), []), Token('NUMBER', '38'), Token('NUMBER', '7')]), Tree('string', [Token('STRING', 'SUBQUERY')])])
         
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  
+    
+def test_parse_string_first_basic():
+    in_string = "first(2123)"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('number', [Token('NUMBER', '2123')])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  
+    
+def test_parse_string_first_advanced():
+    in_string = "first((sum((ps_supplycost * CAST(ps_availqty AS DECIMAL(18,0)))) * 0.0001))"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('mul', [Tree('sum', [Tree('mul', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'supplycost')]), Tree('cast', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'availqty')]), Tree(Token('RULE', 'cast_type'), []), Token('NUMBER', '18'), Token('NUMBER', '0')])])]), Tree('number', [Token('NUMBER', '0.0001')])])
+    
     print("Out Tree:")
     print(out_tree)
     print(out_tree.pretty())
