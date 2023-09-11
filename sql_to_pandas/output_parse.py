@@ -1,12 +1,11 @@
 # Use the lark package to parse strings from the Output into a tree-based class representation
-import lark
-from lark import ParseTree
-from prepare_duckdb import prep_duck
 from os import listdir
 from os.path import isfile, join
 import json
 import re
 
+from prepare_duckdb import prep_duck
+from lark_parsing import parse_larks
 from plan_to_explain_tree import *
 
 def generate_duckdb_explains():
@@ -35,56 +34,76 @@ def generate_duckdb_explains():
         
     print(f'Generated Explain output for all {len(onlyfiles)} queries.')
 
-def parse_larks(texts: list[str]) -> list[ParseTree]:
-    lark_parse_trees = []
-    for text in texts:
-        lark_parse_trees.append(parse_lark(text))
-    return lark_parse_trees
-
-def parse_lark(text):
-    parser = lark.Lark.open('grammars/duck.lark', rel_to=__file__, parser="earley", start="start")
-
-    tree = parser.parse(text)
-
-    return tree
-
 def make_tree_from_duck():
-    explain_path = 'sql_to_pandas/tpch_explain/6_duck.json'
+    explain_path = 'sql_to_pandas/tpch_explain/10_duck.json'
     with open(explain_path, "r") as f:
         explain_content = json.loads(f.read())["children"][0]
-    
+       
+    # Fix JSON, it should be split by newline 
+    duck_fix_extra_info(explain_content)
     # Fix JSON, it has '#0' references, edit in-place
-    duck_fix_explain_references(explain_content)
+    duck_fix_explain_references_controller(explain_content)
 
     explain_tree = make_class_tree_from_duck(explain_content)
     
-    print(explain_tree.output[0])
+    print(explain_tree)
     
-def duck_fix_explain_references(json):
-    # Column reference regex
-    col_ref_regex = r"\#[0-9]*(?!.*')"
+    print(explain_tree.plans[0].output)
+
+class ReferenceTracker():
+    changes = False
+    def changed(self):
+        self.changes = True
+    def reset(self):
+        self.changes = False
+
+INFO_SEPARATOR = "[INFOSEPARATOR]"
+AGG_FUNCTIONS = {"sum", "avg", "count", "max", "min", "distinct", "mean", "count_star"}
+ 
+def duck_fix_extra_info(json):
+    json["extra_info"] = json["extra_info"].split('\n')
     
-    regex_search = re.search(col_ref_regex, json['extra_info'])
-    if regex_search != None:
-        col_replace = regex_search.group(0)
-        col_index = int(col_replace.replace("#", ""))
-        
-        if len(json['children']) != 1:
-            raise Exception("Have to implement a determine_local_child style method")
-        
-        # Get child_value
-        child_value = json['children'][0]['extra_info'].split('\n')[col_index]
-        
-        # Do replacement 
-        json['extra_info'] = json['extra_info'].replace(col_replace, child_value)
-                                    
     # Check if this node has a child
     if "children" in json:
         if json["children"] != []:
             for individual_plan in json['children']:
-                duck_fix_explain_references(individual_plan)
+                duck_fix_extra_info(individual_plan)
+
+def duck_fix_explain_references_controller(json):
+    # We should run this function repeatedly until it doesn't change anything
+    ref_tracker = ReferenceTracker()
+    duck_fix_explain_references(json, ref_tracker)
+    while ref_tracker.changes == True:
+        ref_tracker.reset()
+        duck_fix_explain_references(json, ref_tracker)
+
+def duck_fix_explain_references(json, ref_tracker):
+    # Column reference regex
+    col_ref_regex = r"\#[0-9]*(?!.*')"
     
-INFO_SEPARATOR = "[INFOSEPARATOR]"
+    for index, col in enumerate(json['extra_info']):
+        regex_search = re.search(col_ref_regex, col)
+        if regex_search != None:
+            col_replace = regex_search.group(0)
+            col_index = int(col_replace.replace("#", ""))
+            
+            if len(json['children']) != 1:
+                raise Exception("Have to implement a determine_local_child style method")
+            
+            # Get child_value
+            child_value = json['children'][0]['extra_info'][col_index]
+            
+            # Do replacement 
+            json['extra_info'][index] = json['extra_info'][index].replace(col_replace, child_value)
+            
+            # Set replaced variable to true
+            ref_tracker.changed()
+                                        
+    # Check if this node has a child
+    if "children" in json:
+        if json["children"] != []:
+            for individual_plan in json['children']:
+                duck_fix_explain_references(individual_plan, ref_tracker)
 
 # Specialist process methods
 def process_seq_scan(extra_info):
@@ -135,34 +154,74 @@ def process_seq_scan(extra_info):
 
 def make_class_tree_from_duck(json, parent=None):
     node_type = json["name"].lower()
-    extra_info = json["extra_info"].split('\n')
+    extra_info = json["extra_info"]
         
     if node_type == "simple_aggregate":
         node_class = aggregate_node("Aggregate", parse_larks(extra_info))
     elif node_type == "projection":
         # Make a projection node an aggregate node
-        node_class = aggregate_node("Aggregate", parse_larks(extra_info))
-        node_class.add_remove_later(True)
+        #node_class = aggregate_node("Aggregate", parse_larks(extra_info))
+        #node_class.add_remove_later(True)
+        # Don't add things with remove laters
+        node_class = None
     elif node_type == "seq_scan":
         node_class = process_seq_scan(extra_info)
+    elif node_type == "order_by":
+        node_class = sort_node("Sort", [], parse_larks(extra_info))
+    elif node_type == "hash_group_by":
+        group_keys = []
+        for col in extra_info:
+            if not any([True for agg in AGG_FUNCTIONS if agg+"(" in col]):
+                group_keys.append(col)
+        node_class = group_aggregate_node("Group Aggregate", extra_info, group_keys)
+    elif node_type == "top_n":
+        # We start with a limit node
+        node_class = limit_node("Limit", [])
+        # Below this we have a sort_node
+        start_keys = 0
+        for idx, elem in enumerate(extra_info):
+            if elem == INFO_SEPARATOR:
+                start_keys = idx
+                break
+        
+        sort_node_object = sort_node("Sort", [], parse_larks(extra_info[start_keys+1:]))
+        node_class.set_plans([sort_node_object])
+    elif node_type == 'hash_join':
+        hash_join_output = []
+        join_type = extra_info[0]
+        inner_unique = False
+        node_class = hash_join_node("Hash Join", hash_join_output, inner_unique, join_type, parse_larks(extra_info[1:]))
     else:
         raise Exception(f"Node Type: '{node_type}' is not recognised, many Node Types have not been implemented.")
     
     # Check if this node has a parent
-    if parent != None:
+    if parent != None and node_class != None:
         # We have a parent
         node_class.set_parent(parent)
         
     # Check if this node has a child
+    node_class_plans = []
     if "children" in json:
         if json["children"] != []:
-            node_class_plans = []
             for individual_plan in json['children']:
-                node_class_plans.append(make_class_tree_from_duck(individual_plan, node_class))
+                sub_plans = make_class_tree_from_duck(individual_plan, node_class)
+                if isinstance(sub_plans, list):
+                    node_class_plans.extend(sub_plans)
+                else:
+                    node_class_plans.append(sub_plans)
             
-            node_class.set_plans(node_class_plans)
+            if node_class != None:
+                lowest_node = node_class
+                while lowest_node.plans != []:
+                    if len(lowest_node.plans) != 1:
+                        raise Exception(f'Adding to node with children, but multiple. See here: {lowest_node}')
+                    lowest_node = lowest_node.plans[0]
+                lowest_node.set_plans(node_class_plans)
     
-    return node_class
+    if node_class != None:
+        return node_class
+    else:
+        return node_class_plans
     
 
 make_tree_from_duck()

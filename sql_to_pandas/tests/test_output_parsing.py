@@ -1,9 +1,5 @@
-from ..output_parse import parse_lark
+from ..lark_parsing import parse_lark
 from lark import Tree, Token
-
-"""
-
-"""
 
 def test_parse_table_column():
     in_string = "lineitem.l_returnflag"
@@ -67,6 +63,7 @@ def test_parse_nested():
     print(out_tree.pretty())
     print("Intended String:")
     print(intended_tree)
+    print(intended_tree.pretty())
 
     assert out_tree == intended_tree, "Test Assertion Failed"
 
@@ -309,6 +306,19 @@ def test_parse_string_no_quotes():
     in_string = "n_name=SAUDI ARABIA AND n_name IS NOT NULL"
     out_tree = parse_lark(in_string)
     intended_tree = Tree('and', [Tree('eq', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('STRING', 'SAUDI'), Token('STRING', 'ARABIA')])]), Tree('isnotnull', [Tree('col_ref', [Token('WORD', 'n'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')])])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+    
+def test_parse_string_no_quotes_2():
+    in_string = "l_returnflag=R AND l_returnflag IS NOT NULL"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('and', [Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'returnflag')]), Tree('char', [Token('CHAR', 'R')])]), Tree('isnotnull', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'returnflag')])])])
     
     print("Out Tree:")
     print(out_tree)

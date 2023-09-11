@@ -2,7 +2,7 @@ class base_node():
     def __init__(self, node_type, output):
         self.node_type = node_type
         self.output = output
-        self.plans = None
+        self.plans = []
         self.parent_relationship = None
         
     def set_plans(self, plans):
@@ -19,6 +19,12 @@ class base_node():
         
     def add_renames(self, renames):
         self.renames = renames
+        
+    def __str__(self, level=0):
+        ret = "\t"*level+repr(self.node_type)+"\n"
+        for child in self.plans:
+            ret += child.__str__(level+1)
+        return ret
         
 class chunk_scan_node(base_node):
     def __init__(self, node_type, output):

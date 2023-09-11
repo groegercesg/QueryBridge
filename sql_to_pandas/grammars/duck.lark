@@ -60,11 +60,16 @@
          | col_ref
          | "(" or_op ")"
          | string
+         | char
 
 STRING: /[a-zA-Z0-9_.-]{2,}/
+CHAR: /[a-zA-Z_.-]/
 
 ?string: | "'" STRING* "'" -> string
          | STRING* -> string
+
+?char:   | "'" CHAR "'" -> char
+         | CHAR -> char
 
 // Parsing date
 YEAR  : DIGIT DIGIT DIGIT DIGIT
