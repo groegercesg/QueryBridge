@@ -1,0 +1,105 @@
+{
+    "name": "Query",
+    "result": 0.424761,
+    "timing": 0.424761,
+    "cardinality": 20,
+    "extra-info": "\n-- TPC-H Query 10\n\nselect\n        c_custkey,\n        c_name,\n        sum(l_extendedprice * (1 - l_discount)) as revenue,\n        c_acctbal,\n        n_name,\n        c_address,\n        c_phone,\n        c_comment\nfrom\n        customer,\n        orders,\n        lineitem,\n        nation\nwhere\n        c_custkey = o_custkey\n        and l_orderkey = o_orderkey\n        and o_orderdate >= date '1993-10-01'\n        and o_orderdate < date '1994-01-01'\n        and l_returnflag = 'R'\n        and c_nationkey = n_nationkey\ngroup by\n        c_custkey,\n        c_name,\n        c_acctbal,\n        c_phone,\n        n_name,\n        c_address,\n        c_comment\norder by\n        revenue desc\nlimit 20\n",
+    "timings": [],
+    "children": [
+        {
+            "name": "TOP_N",
+            "timing": 0.002265,
+            "cardinality": 20,
+            "extra_info": "Top 20\n[INFOSEPARATOR]\nsum((lineitem.l_extendedprice * (1 - lineitem.l_discount))) DESC",
+            "timings": [],
+            "children": [
+                {
+                    "name": "PROJECTION",
+                    "timing": 1.3e-05,
+                    "cardinality": 37967,
+                    "extra_info": "c_custkey\nc_name\nrevenue\nc_acctbal\nn_name\nc_address\nc_phone\nc_comment\n",
+                    "timings": [],
+                    "children": [
+                        {
+                            "name": "HASH_GROUP_BY",
+                            "timing": 0.063766,
+                            "cardinality": 37967,
+                            "extra_info": "#0\n#1\n#2\n#3\n#4\n#5\n#6\nsum(#7)",
+                            "timings": [],
+                            "children": [
+                                {
+                                    "name": "PROJECTION",
+                                    "timing": 0.000555,
+                                    "cardinality": 114705,
+                                    "extra_info": "c_custkey\nc_name\nc_acctbal\nc_phone\nn_name\nc_address\nc_comment\n(l_extendedprice * (1.000 - l_discount))\n",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "HASH_JOIN",
+                                            "timing": 0.048833,
+                                            "cardinality": 114705,
+                                            "extra_info": "INNER\no_custkey = c_custkey\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "HASH_JOIN",
+                                                    "timing": 0.061279,
+                                                    "cardinality": 114705,
+                                                    "extra_info": "INNER\nl_orderkey = o_orderkey\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 0.151584,
+                                                            "cardinality": 1478870,
+                                                            "extra_info": "lineitem\n[INFOSEPARATOR]\nl_orderkey\nl_returnflag\nl_extendedprice\nl_discount\n[INFOSEPARATOR]\nFilters: l_returnflag=R AND l_returnflag IS NOT NULL\n",
+                                                            "timings": [],
+                                                            "children": []
+                                                        },
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 0.026803,
+                                                            "cardinality": 57069,
+                                                            "extra_info": "orders\n[INFOSEPARATOR]\no_custkey\no_orderkey\no_orderdate\n[INFOSEPARATOR]\nFilters: o_orderdate>=1993-10-01 AND o_orderdate<1994-01-01 AND o_orderdate IS NOT NULL\n",
+                                                            "timings": [],
+                                                            "children": []
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "HASH_JOIN",
+                                                    "timing": 0.000717,
+                                                    "cardinality": 150000,
+                                                    "extra_info": "INNER\nc_nationkey = n_nationkey\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 0.034981,
+                                                            "cardinality": 150000,
+                                                            "extra_info": "customer\n[INFOSEPARATOR]\nc_custkey\nc_nationkey\nc_name\nc_acctbal\nc_phone\nc_address\nc_comment",
+                                                            "timings": [],
+                                                            "children": []
+                                                        },
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 1.1e-05,
+                                                            "cardinality": 25,
+                                                            "extra_info": "nation\n[INFOSEPARATOR]\nn_nationkey\nn_name",
+                                                            "timings": [],
+                                                            "children": []
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

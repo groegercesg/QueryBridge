@@ -1,0 +1,80 @@
+{
+    "name": "Query",
+    "result": 0.247619,
+    "timing": 0.247619,
+    "cardinality": 5,
+    "extra-info": "\n-- TPC-H Query 4\n\nselect\n        o_orderpriority,\n        count(*) as order_count\nfrom\n        orders\nwhere\n        o_orderdate >= date '1993-07-01'\n        and o_orderdate < date '1993-10-01'\n        and exists (\n                select\n                        *\n                from\n                        lineitem\n                where\n                        l_orderkey = o_orderkey\n                        and l_commitdate < l_receiptdate\n        )\ngroup by\n        o_orderpriority\norder by\n        o_orderpriority\n",
+    "timings": [],
+    "children": [
+        {
+            "name": "ORDER_BY",
+            "timing": 5.8e-05,
+            "cardinality": 5,
+            "extra_info": "orders.o_orderpriority ASC",
+            "timings": [],
+            "children": [
+                {
+                    "name": "HASH_GROUP_BY",
+                    "timing": 0.001748,
+                    "cardinality": 5,
+                    "extra_info": "#0\ncount_star()",
+                    "timings": [],
+                    "children": [
+                        {
+                            "name": "PROJECTION",
+                            "timing": 1.5e-05,
+                            "cardinality": 52523,
+                            "extra_info": "o_orderpriority\n",
+                            "timings": [],
+                            "children": [
+                                {
+                                    "name": "HASH_JOIN",
+                                    "timing": 0.082434,
+                                    "cardinality": 52523,
+                                    "extra_info": "SEMI\no_orderkey IS NOT DISTINCT FROM o_orderkey\n",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "SEQ_SCAN",
+                                            "timing": 0.013268,
+                                            "cardinality": 57218,
+                                            "extra_info": "orders\n[INFOSEPARATOR]\no_orderdate\no_orderkey\no_orderpriority\n[INFOSEPARATOR]\nFilters: o_orderdate>=1993-07-01 AND o_orderdate<1993-10-01 AND o_orderdate IS NOT NULL\n",
+                                            "timings": [],
+                                            "children": []
+                                        },
+                                        {
+                                            "name": "PROJECTION",
+                                            "timing": 0.000866,
+                                            "cardinality": 3793296,
+                                            "extra_info": "#0\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "FILTER",
+                                                    "timing": 0.014092,
+                                                    "cardinality": 3793296,
+                                                    "extra_info": "l_commitdate < l_receiptdate",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 0.047286,
+                                                            "cardinality": 6001215,
+                                                            "extra_info": "lineitem\n[INFOSEPARATOR]\nl_orderkey\nl_commitdate\nl_receiptdate",
+                                                            "timings": [],
+                                                            "children": []
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

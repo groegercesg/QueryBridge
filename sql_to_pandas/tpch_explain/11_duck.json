@@ -1,0 +1,193 @@
+{
+    "name": "Query",
+    "result": 0.035619,
+    "timing": 0.035619,
+    "cardinality": 1048,
+    "extra-info": "\n-- TPC-H Query 11\n\nselect\n        ps_partkey,\n        sum(ps_supplycost * ps_availqty) as \"value\"\nfrom\n        partsupp,\n        supplier,\n        nation\nwhere\n        ps_suppkey = s_suppkey\n        and s_nationkey = n_nationkey\n        and n_name = 'GERMANY'\ngroup by\n        ps_partkey having\n                sum(ps_supplycost * ps_availqty) > (\n                        select\n                                sum(ps_supplycost * ps_availqty) * 0.0001\n                        from\n                                partsupp,\n                                supplier,\n                                nation\n                        where\n                                ps_suppkey = s_suppkey\n                                and s_nationkey = n_nationkey\n                                and n_name = 'GERMANY'\n                )\norder by\n        \"value\" desc\n",
+    "timings": [],
+    "children": [
+        {
+            "name": "ORDER_BY",
+            "timing": 7.7e-05,
+            "cardinality": 1048,
+            "extra_info": "sum((partsupp.ps_supplycost * partsupp.ps_availqty)) DESC",
+            "timings": [],
+            "children": [
+                {
+                    "name": "PROJECTION",
+                    "timing": 1e-06,
+                    "cardinality": 1048,
+                    "extra_info": "ps_partkey\nvalue\n",
+                    "timings": [],
+                    "children": [
+                        {
+                            "name": "PIECEWISE_MERGE_JOIN",
+                            "timing": 0.009187,
+                            "cardinality": 1048,
+                            "extra_info": "INNER\nCAST(sum((ps_supplycost * CAST(ps_availqty AS DECIMAL(18,0)))) AS DECIMAL(38,7)) > SUBQUERY\n",
+                            "timings": [],
+                            "children": [
+                                {
+                                    "name": "HASH_GROUP_BY",
+                                    "timing": 0.002375,
+                                    "cardinality": 29818,
+                                    "extra_info": "#0\nsum(#1)",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "PROJECTION",
+                                            "timing": 0.00018,
+                                            "cardinality": 31680,
+                                            "extra_info": "ps_partkey\n(ps_supplycost * CAST(ps_availqty AS DECIMAL(18,0)))\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "HASH_JOIN",
+                                                    "timing": 0.001898,
+                                                    "cardinality": 31680,
+                                                    "extra_info": "INNER\nps_suppkey = s_suppkey\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 0.004774,
+                                                            "cardinality": 800000,
+                                                            "extra_info": "partsupp\n[INFOSEPARATOR]\nps_suppkey\nps_partkey\nps_supplycost\nps_availqty",
+                                                            "timings": [],
+                                                            "children": []
+                                                        },
+                                                        {
+                                                            "name": "HASH_JOIN",
+                                                            "timing": 3.1e-05,
+                                                            "cardinality": 396,
+                                                            "extra_info": "INNER\ns_nationkey = n_nationkey\n",
+                                                            "timings": [],
+                                                            "children": [
+                                                                {
+                                                                    "name": "SEQ_SCAN",
+                                                                    "timing": 0.000113,
+                                                                    "cardinality": 10000,
+                                                                    "extra_info": "supplier\n[INFOSEPARATOR]\ns_suppkey\ns_nationkey",
+                                                                    "timings": [],
+                                                                    "children": []
+                                                                },
+                                                                {
+                                                                    "name": "SEQ_SCAN",
+                                                                    "timing": 1e-05,
+                                                                    "cardinality": 1,
+                                                                    "extra_info": "nation\n[INFOSEPARATOR]\nn_nationkey\nn_name\n[INFOSEPARATOR]\nFilters: n_name=GERMANY AND n_name IS NOT NULL\n",
+                                                                    "timings": [],
+                                                                    "children": []
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "SIMPLE_AGGREGATE",
+                                    "timing": 1.1e-05,
+                                    "cardinality": 1,
+                                    "extra_info": "first(#0)",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "PROJECTION",
+                                            "timing": 1e-06,
+                                            "cardinality": 1,
+                                            "extra_info": "#0\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "LIMIT",
+                                                    "timing": 4e-06,
+                                                    "cardinality": 1,
+                                                    "extra_info": "",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "PROJECTION",
+                                                            "timing": 5e-06,
+                                                            "cardinality": 1,
+                                                            "extra_info": "(sum((ps_supplycost * CAST(ps_availqty AS DECIMAL(18,0)))) * 0.0001)\n",
+                                                            "timings": [],
+                                                            "children": [
+                                                                {
+                                                                    "name": "SIMPLE_AGGREGATE",
+                                                                    "timing": 8.8e-05,
+                                                                    "cardinality": 1,
+                                                                    "extra_info": "sum(#0)",
+                                                                    "timings": [],
+                                                                    "children": [
+                                                                        {
+                                                                            "name": "PROJECTION",
+                                                                            "timing": 0.00032,
+                                                                            "cardinality": 31680,
+                                                                            "extra_info": "(ps_supplycost * CAST(ps_availqty AS DECIMAL(18,0)))\n",
+                                                                            "timings": [],
+                                                                            "children": [
+                                                                                {
+                                                                                    "name": "HASH_JOIN",
+                                                                                    "timing": 0.003163,
+                                                                                    "cardinality": 31680,
+                                                                                    "extra_info": "INNER\nps_suppkey = s_suppkey\n",
+                                                                                    "timings": [],
+                                                                                    "children": [
+                                                                                        {
+                                                                                            "name": "SEQ_SCAN",
+                                                                                            "timing": 0.004984,
+                                                                                            "cardinality": 800000,
+                                                                                            "extra_info": "partsupp\n[INFOSEPARATOR]\nps_suppkey\nps_supplycost\nps_availqty",
+                                                                                            "timings": [],
+                                                                                            "children": []
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "HASH_JOIN",
+                                                                                            "timing": 3.1e-05,
+                                                                                            "cardinality": 396,
+                                                                                            "extra_info": "INNER\ns_nationkey = n_nationkey\n",
+                                                                                            "timings": [],
+                                                                                            "children": [
+                                                                                                {
+                                                                                                    "name": "SEQ_SCAN",
+                                                                                                    "timing": 1.9e-05,
+                                                                                                    "cardinality": 10000,
+                                                                                                    "extra_info": "supplier\n[INFOSEPARATOR]\ns_suppkey\ns_nationkey",
+                                                                                                    "timings": [],
+                                                                                                    "children": []
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "SEQ_SCAN",
+                                                                                                    "timing": 3e-06,
+                                                                                                    "cardinality": 1,
+                                                                                                    "extra_info": "nation\n[INFOSEPARATOR]\nn_nationkey\nn_name\n[INFOSEPARATOR]\nFilters: n_name=GERMANY AND n_name IS NOT NULL\n",
+                                                                                                    "timings": [],
+                                                                                                    "children": []
+                                                                                                }
+                                                                                            ]
+                                                                                        }
+                                                                                    ]
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

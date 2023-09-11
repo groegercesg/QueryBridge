@@ -28,7 +28,7 @@
     - [Disable things in Postgres that we don't support](#disable-things-in-postgres-that-we-dont-support)
   - [Setting up DuckDB](#setting-up-duckdb)
   - [Setting up Python](#setting-up-python)
-    - [Setup the Python environment](#setup-the-python-environment)
+    - [Setup the Python Environment](#setup-the-python-environment)
     - [Populate the Databases with data](#populate-the-databases-with-data)
 - [Demos](#demos)
   - [Conversion demo](#conversion-demo)
@@ -38,6 +38,8 @@
     - [Additional optimisations](#additional-optimisations)
   - [Benchmarker demo](#benchmarker-demo)
 - [Tests for sql\_to\_pandas](#tests-for-sql_to_pandas)
+- [Development stuff](#development-stuff)
+  - [Update requirements](#update-requirements)
 
 ## Setup
 ### Getting DBGEN
@@ -183,7 +185,7 @@ Back in the root directory of this project, create the virtual environment and s
 Then install the packages required.
 
 ```bash
-python3 -m venv "sqlconv_env"
+python3 -m venv sqlconv_env
 source sqlconv_env/bin/activate
 pip install -r requirements.txt
 ```
@@ -195,7 +197,7 @@ And the second command activates it for us.
 With Postgres installed and our Postgres database existing, the next step is to populate our databasse. Run the following command in the root of the project directory, or customise the parameters:
 
 ```bash
-python3 -m venv "sqlconv_env"
+source sqlconv_env/bin/activate
 python3 benchmarking/prepare_databases.py --verbose True --data_storage data_storage --db_gen tpch-dbgen --scaling_factor 1 --postgres_connection postgres_connection.json --duck_db_connection duckdb_tpch.duckdb --constants tpch-prep
 ```
 

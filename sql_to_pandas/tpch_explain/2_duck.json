@@ -1,0 +1,235 @@
+{
+    "name": "Query",
+    "result": 0.057351,
+    "timing": 0.057351,
+    "cardinality": 100,
+    "extra-info": "\n-- TPC-H Query 2\n\nselect\n        s_acctbal,\n        s_name,\n        n_name,\n        p_partkey,\n        p_mfgr,\n        s_address,\n        s_phone,\n        s_comment\nfrom\n        part,\n        supplier,\n        partsupp,\n        nation,\n        region\nwhere\n        p_partkey = ps_partkey\n        and s_suppkey = ps_suppkey\n        and p_size = 15\n        and p_type like '%BRASS'\n        and s_nationkey = n_nationkey\n        and n_regionkey = r_regionkey\n        and r_name = 'EUROPE'\n        and ps_supplycost = (\n                select\n                        min(ps_supplycost)\n                from\n                        partsupp,\n                        supplier,\n                        nation,\n                        region\n                where\n                        p_partkey = ps_partkey\n                        and s_suppkey = ps_suppkey\n                        and s_nationkey = n_nationkey\n                        and n_regionkey = r_regionkey\n                        and r_name = 'EUROPE'\n        )\norder by\n        s_acctbal desc,\n        n_name,\n        s_name,\n        p_partkey\nlimit 100\n",
+    "timings": [],
+    "children": [
+        {
+            "name": "TOP_N",
+            "timing": 0.000194,
+            "cardinality": 100,
+            "extra_info": "Top 100\n[INFOSEPARATOR]\nsupplier.s_acctbal DESC\nnation.n_name ASC\nsupplier.s_name ASC\npart.p_partkey ASC",
+            "timings": [],
+            "children": [
+                {
+                    "name": "PROJECTION",
+                    "timing": 4e-06,
+                    "cardinality": 460,
+                    "extra_info": "s_acctbal\ns_name\nn_name\np_partkey\np_mfgr\ns_address\ns_phone\ns_comment\n",
+                    "timings": [],
+                    "children": [
+                        {
+                            "name": "PROJECTION",
+                            "timing": 3e-06,
+                            "cardinality": 460,
+                            "extra_info": "#0\n#4\n#5\n#6\n#7\n#8\n#9\n#10\n",
+                            "timings": [],
+                            "children": [
+                                {
+                                    "name": "FILTER",
+                                    "timing": 1.1e-05,
+                                    "cardinality": 460,
+                                    "extra_info": "ps_supplycost = SUBQUERY",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "HASH_JOIN",
+                                            "timing": 0.003443,
+                                            "cardinality": 642,
+                                            "extra_info": "SINGLE\np_partkey IS NOT DISTINCT FROM p_partkey\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "HASH_JOIN",
+                                                    "timing": 0.001986,
+                                                    "cardinality": 642,
+                                                    "extra_info": "INNER\nps_partkey = p_partkey\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "HASH_JOIN",
+                                                            "timing": 0.005417,
+                                                            "cardinality": 158960,
+                                                            "extra_info": "INNER\ns_nationkey = n_nationkey\n",
+                                                            "timings": [],
+                                                            "children": [
+                                                                {
+                                                                    "name": "HASH_JOIN",
+                                                                    "timing": 0.004313,
+                                                                    "cardinality": 800000,
+                                                                    "extra_info": "INNER\nps_suppkey = s_suppkey\n",
+                                                                    "timings": [],
+                                                                    "children": [
+                                                                        {
+                                                                            "name": "SEQ_SCAN",
+                                                                            "timing": 0.00486,
+                                                                            "cardinality": 800000,
+                                                                            "extra_info": "partsupp\n[INFOSEPARATOR]\nps_partkey\nps_suppkey\nps_supplycost",
+                                                                            "timings": [],
+                                                                            "children": []
+                                                                        },
+                                                                        {
+                                                                            "name": "SEQ_SCAN",
+                                                                            "timing": 0.000749,
+                                                                            "cardinality": 10000,
+                                                                            "extra_info": "supplier\n[INFOSEPARATOR]\ns_suppkey\ns_nationkey\ns_acctbal\ns_name\ns_address\ns_phone\ns_comment",
+                                                                            "timings": [],
+                                                                            "children": []
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                {
+                                                                    "name": "HASH_JOIN",
+                                                                    "timing": 1e-05,
+                                                                    "cardinality": 5,
+                                                                    "extra_info": "INNER\nn_regionkey = r_regionkey\n",
+                                                                    "timings": [],
+                                                                    "children": [
+                                                                        {
+                                                                            "name": "SEQ_SCAN",
+                                                                            "timing": 2e-06,
+                                                                            "cardinality": 25,
+                                                                            "extra_info": "nation\n[INFOSEPARATOR]\nn_nationkey\nn_regionkey\nn_name",
+                                                                            "timings": [],
+                                                                            "children": []
+                                                                        },
+                                                                        {
+                                                                            "name": "SEQ_SCAN",
+                                                                            "timing": 8e-06,
+                                                                            "cardinality": 1,
+                                                                            "extra_info": "region\n[INFOSEPARATOR]\nr_regionkey\nr_name\n[INFOSEPARATOR]\nFilters: r_name=EUROPE AND r_name IS NOT NULL\n",
+                                                                            "timings": [],
+                                                                            "children": []
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "PROJECTION",
+                                                            "timing": 0.0,
+                                                            "cardinality": 747,
+                                                            "extra_info": "#0\n#3\n",
+                                                            "timings": [],
+                                                            "children": [
+                                                                {
+                                                                    "name": "FILTER",
+                                                                    "timing": 0.000301,
+                                                                    "cardinality": 747,
+                                                                    "extra_info": "suffix(p_type, 'BRASS')",
+                                                                    "timings": [],
+                                                                    "children": [
+                                                                        {
+                                                                            "name": "SEQ_SCAN",
+                                                                            "timing": 0.001017,
+                                                                            "cardinality": 3907,
+                                                                            "extra_info": "part\n[INFOSEPARATOR]\np_partkey\np_size\np_type\np_mfgr\n[INFOSEPARATOR]\nFilters: p_size=15 AND p_size IS NOT NULL\n",
+                                                                            "timings": [],
+                                                                            "children": []
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "PROJECTION",
+                                                    "timing": 3.8e-05,
+                                                    "cardinality": 117422,
+                                                    "extra_info": "min(ps_supplycost)\n#0\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "HASH_GROUP_BY",
+                                                            "timing": 0.011592,
+                                                            "cardinality": 117422,
+                                                            "extra_info": "#0\nmin(#1)",
+                                                            "timings": [],
+                                                            "children": [
+                                                                {
+                                                                    "name": "PROJECTION",
+                                                                    "timing": 0.000146,
+                                                                    "cardinality": 158960,
+                                                                    "extra_info": "ps_partkey\nps_supplycost\n",
+                                                                    "timings": [],
+                                                                    "children": [
+                                                                        {
+                                                                            "name": "HASH_JOIN",
+                                                                            "timing": 0.005143,
+                                                                            "cardinality": 158960,
+                                                                            "extra_info": "INNER\nn_regionkey = r_regionkey\n",
+                                                                            "timings": [],
+                                                                            "children": [
+                                                                                {
+                                                                                    "name": "HASH_JOIN",
+                                                                                    "timing": 0.00239,
+                                                                                    "cardinality": 800000,
+                                                                                    "extra_info": "INNER\ns_nationkey = n_nationkey\n",
+                                                                                    "timings": [],
+                                                                                    "children": [
+                                                                                        {
+                                                                                            "name": "HASH_JOIN",
+                                                                                            "timing": 0.002511,
+                                                                                            "cardinality": 800000,
+                                                                                            "extra_info": "INNER\nps_suppkey = s_suppkey\n",
+                                                                                            "timings": [],
+                                                                                            "children": [
+                                                                                                {
+                                                                                                    "name": "SEQ_SCAN",
+                                                                                                    "timing": 0.004148,
+                                                                                                    "cardinality": 800000,
+                                                                                                    "extra_info": "partsupp\n[INFOSEPARATOR]\nps_partkey\nps_suppkey\nps_supplycost",
+                                                                                                    "timings": [],
+                                                                                                    "children": []
+                                                                                                },
+                                                                                                {
+                                                                                                    "name": "SEQ_SCAN",
+                                                                                                    "timing": 2.1e-05,
+                                                                                                    "cardinality": 10000,
+                                                                                                    "extra_info": "supplier\n[INFOSEPARATOR]\ns_suppkey\ns_nationkey",
+                                                                                                    "timings": [],
+                                                                                                    "children": []
+                                                                                                }
+                                                                                            ]
+                                                                                        },
+                                                                                        {
+                                                                                            "name": "SEQ_SCAN",
+                                                                                            "timing": 2e-06,
+                                                                                            "cardinality": 25,
+                                                                                            "extra_info": "nation\n[INFOSEPARATOR]\nn_nationkey\nn_regionkey",
+                                                                                            "timings": [],
+                                                                                            "children": []
+                                                                                        }
+                                                                                    ]
+                                                                                },
+                                                                                {
+                                                                                    "name": "SEQ_SCAN",
+                                                                                    "timing": 3e-06,
+                                                                                    "cardinality": 1,
+                                                                                    "extra_info": "region\n[INFOSEPARATOR]\nr_regionkey\nr_name\n[INFOSEPARATOR]\nFilters: r_name=EUROPE AND r_name IS NOT NULL\n",
+                                                                                    "timings": [],
+                                                                                    "children": []
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

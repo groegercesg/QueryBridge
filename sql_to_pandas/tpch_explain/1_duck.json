@@ -1,0 +1,54 @@
+{
+    "name": "Query",
+    "result": 0.373065,
+    "timing": 0.373065,
+    "cardinality": 4,
+    "extra-info": "\n-- TPC-H Query 1\n\nselect\n        l_returnflag,\n        l_linestatus,\n        sum(l_quantity) as sum_qty,\n        sum(l_extendedprice) as sum_base_price,\n        sum(l_extendedprice * (1 - l_discount)) as sum_disc_price,\n        sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,\n        avg(l_quantity) as avg_qty,\n        avg(l_extendedprice) as avg_price,\n        avg(l_discount) as avg_disc,\n        count(*) as count_order\nfrom\n        lineitem\nwhere\n        l_shipdate <= date '1998-12-01' - interval '90' day\ngroup by\n        l_returnflag,\n        l_linestatus\norder by\n        l_returnflag,\n        l_linestatus\n",
+    "timings": [],
+    "children": [
+        {
+            "name": "ORDER_BY",
+            "timing": 4.4e-05,
+            "cardinality": 4,
+            "extra_info": "lineitem.l_returnflag ASC\nlineitem.l_linestatus ASC",
+            "timings": [],
+            "children": [
+                {
+                    "name": "HASH_GROUP_BY",
+                    "timing": 0.219593,
+                    "cardinality": 4,
+                    "extra_info": "#0\n#1\nsum(#2)\nsum(#3)\nsum(#4)\nsum(#5)\navg(#6)\navg(#7)\navg(#8)\ncount_star()",
+                    "timings": [],
+                    "children": [
+                        {
+                            "name": "PROJECTION",
+                            "timing": 0.024175,
+                            "cardinality": 5916591,
+                            "extra_info": "l_returnflag\nl_linestatus\nl_quantity\nl_extendedprice\n#4\n(#4 * (1.000 + l_tax))\nl_quantity\nl_extendedprice\nl_discount\n",
+                            "timings": [],
+                            "children": [
+                                {
+                                    "name": "PROJECTION",
+                                    "timing": 0.027195,
+                                    "cardinality": 5916591,
+                                    "extra_info": "l_returnflag\nl_linestatus\nl_quantity\nl_extendedprice\n(l_extendedprice * (1.000 - l_discount))\nl_tax\nl_discount\n",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "SEQ_SCAN",
+                                            "timing": 0.095409,
+                                            "cardinality": 5916591,
+                                            "extra_info": "lineitem\n[INFOSEPARATOR]\nl_shipdate\nl_returnflag\nl_linestatus\nl_quantity\nl_extendedprice\nl_discount\nl_tax\n[INFOSEPARATOR]\nFilters: l_shipdate<=1998-09-02 AND l_shipdate IS NOT NULL\n",
+                                            "timings": [],
+                                            "children": []
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
