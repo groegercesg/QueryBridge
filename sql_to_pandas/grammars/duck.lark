@@ -1,5 +1,13 @@
 ?start:   
+         | cast_op
+
+// CAST(ps_availqty AS DECIMAL(18,0))
+?cast_op:
+         | "CAST(" case_op " AS " cast_type "(" NUMBER "," NUMBER "))" -> cast
          | case_op
+
+?cast_type:
+         | "DECIMAL"
 
 ?case_op:
          | "CASE  WHEN" or_op "THEN" element "ELSE" element "END" -> case
@@ -58,7 +66,8 @@
          | "-" element -> neg
          | date
          | col_ref
-         | "(" or_op ")"
+         | "(" start ")"
+         | start
          | string
          | char
 
@@ -92,12 +101,12 @@ DAY   : "0" DIGIT
 ?table: WORD
 
 // Aggregation operations
-?sum: "sum(" or_op ")" -> sum
-?avg: "avg(" or_op ")" -> avg
-?min: "min(" or_op ")" -> min
-?max: "max(" or_op ")" -> max
-?count: "count(" or_op ")" -> count
-?countdistinct: "count(DISTINCT" or_op ")" -> countdistinct
+?sum: | "sum" "(" start ")" -> sum
+?avg: "avg(" start ")" -> avg
+?min: "min(" start ")" -> min
+?max: "max(" start ")" -> max
+?count: "count(" start ")" -> count
+?countdistinct: "count(DISTINCT" start ")" -> countdistinct
 ?suffix: "suffix(" col_ref "," string ")" -> suffix
 ?prefix: "prefix(" col_ref "," string ")" -> prefix
 

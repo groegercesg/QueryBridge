@@ -214,14 +214,16 @@ def test_parse_and_or_complex_2():
     in_string = "((l_commitdate < l_receiptdate) AND (l_shipdate < l_commitdate) AND ((l_shipmode = 'MAIL') OR (l_shipmode = 'SHIP')))"
     out_tree = parse_lark(in_string)
     intended_tree = Tree('and', [Tree('and', [Tree('lt', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'commitdate')]), Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'receiptdate')])]), Tree('lt', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipdate')]), Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'commitdate')])])]), Tree('or', [Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('STRING', 'MAIL')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('STRING', 'SHIP')])])])])
+    alternate_tree = Tree('and', [Tree('lt', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'commitdate')]), Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'receiptdate')])]), Tree('and', [Tree('lt', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipdate')]), Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'commitdate')])]), Tree('or', [Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('STRING', 'MAIL')])]), Tree('eq', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipmode')]), Tree('string', [Token('STRING', 'SHIP')])])])])])
     
     print("Out Tree:")
     print(out_tree)
     print(out_tree.pretty())
     print("Intended String:")
-    print(intended_tree)
+    #print(intended_tree)
+    print(intended_tree.pretty())
 
-    assert out_tree == intended_tree, "Test Assertion Failed"
+    assert (out_tree == intended_tree) | (out_tree == alternate_tree), "Test Assertion Failed"
 
 def test_parse_or_complex():
     in_string = "((l_shipmode = 'AIR') OR (l_shipmode = 'AIR REG'))"
@@ -327,3 +329,42 @@ def test_parse_string_no_quotes_2():
     print(intended_tree)
 
     assert out_tree == intended_tree, "Test Assertion Failed"
+
+def test_parse_string_sum_brackets():
+    in_string = "sum(((dogs_and_cats)))"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('sum', [Tree('string', [Token('STRING', 'dogs_and_cats')])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
+def test_parse_string_basic_cast():
+    in_string = "CAST(ps_availqty AS DECIMAL(18,0))"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('cast', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'availqty')]), Tree(Token('RULE', 'cast_type'), []), Token('NUMBER', '18'), Token('NUMBER', '0')])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"
+
+def test_parse_string_advanced_cast():
+    in_string = "CAST(sum((ps_supplycost * CAST(ps_availqty AS DECIMAL(18,0)))) AS DECIMAL(38,7)) > SUBQUERY"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('gt', [Tree('cast', [Tree('sum', [Tree('mul', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'supplycost')]), Tree('cast', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'availqty')]), Tree(Token('RULE', 'cast_type'), []), Token('NUMBER', '18'), Token('NUMBER', '0')])])]), Tree(Token('RULE', 'cast_type'), []), Token('NUMBER', '38'), Token('NUMBER', '7')]), Tree('string', [Token('STRING', 'SUBQUERY')])])
+        
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  

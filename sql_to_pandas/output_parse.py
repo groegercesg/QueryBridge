@@ -34,8 +34,7 @@ def generate_duckdb_explains():
         
     print(f'Generated Explain output for all {len(onlyfiles)} queries.')
 
-def make_tree_from_duck():
-    explain_path = 'sql_to_pandas/tpch_explain/10_duck.json'
+def make_tree_from_duck(explain_path):
     with open(explain_path, "r") as f:
         explain_content = json.loads(f.read())["children"][0]
        
@@ -61,7 +60,7 @@ INFO_SEPARATOR = "[INFOSEPARATOR]"
 AGG_FUNCTIONS = {"sum", "avg", "count", "max", "min", "distinct", "mean", "count_star"}
  
 def duck_fix_extra_info(json):
-    json["extra_info"] = json["extra_info"].split('\n')
+    json["extra_info"] = list(filter(None, json["extra_info"].split('\n')))
     
     # Check if this node has a child
     if "children" in json:
@@ -91,7 +90,10 @@ def duck_fix_explain_references(json, ref_tracker):
                 raise Exception("Have to implement a determine_local_child style method")
             
             # Get child_value
-            child_value = json['children'][0]['extra_info'][col_index]
+            child = json['children'][0]
+            while len(child['extra_info']) < 1:
+                child = child['children'][0]
+            child_value = child['extra_info'][col_index]
             
             # Do replacement 
             json['extra_info'][index] = json['extra_info'][index].replace(col_replace, child_value)
@@ -186,7 +188,7 @@ def make_class_tree_from_duck(json, parent=None):
         
         sort_node_object = sort_node("Sort", [], parse_larks(extra_info[start_keys+1:]))
         node_class.set_plans([sort_node_object])
-    elif node_type == 'hash_join':
+    elif node_type in ['hash_join', 'piecewise_merge_join']:
         hash_join_output = []
         join_type = extra_info[0]
         inner_unique = False
@@ -224,4 +226,14 @@ def make_class_tree_from_duck(json, parent=None):
         return node_class_plans
     
 
-make_tree_from_duck()
+def run_tree_generation():
+    explain_directory = 'sql_to_pandas/tpch_explain'
+    onlyfiles = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
+    
+    for explain_file in onlyfiles:
+        print(f'Doing: {explain_file}')
+        make_tree_from_duck(f'{explain_directory}/{explain_file}')
+
+#run_tree_generation()
+
+make_tree_from_duck(f'sql_to_pandas/tpch_explain/{11}_duck.json')
