@@ -7,6 +7,7 @@ import re
 from prepare_duckdb import prep_duck
 from lark_parsing import parse_larks
 from plan_to_explain_tree import *
+from lark import Transformer
 
 def generate_duckdb_explains():
     db = prep_duck('duckdb_tpch.duckdb')
@@ -43,14 +44,56 @@ def make_tree_from_duck(explain_path):
 
     explain_tree = make_class_tree_from_duck(explain_content)
     
-    # TODO: Fix Tree, it has '#0' references in it
-    # duck_fix_explain_references_controller(explain_content)
-    # TODO: After doing this (^), remove Projection Nodes
-    
     if isinstance(explain_tree, list):
         print(explain_tree[0])
     else:
         print(explain_tree)
+    
+    # TODO: Fix Tree, it has '#0' references in it
+    # Visit the explain_tree in bottom_up order
+    postorder_traversal(explain_tree, ReplaceColumnReferences)
+    
+    # TODO: After doing this (^), remove Projection Nodes
+    
+    #print(explain_tree.output)
+
+def postorder_traversal(root: base_node, transformer: Transformer):
+    #if root is None return
+    if root==None:
+        return
+    
+    # Run on children
+    for child in root.plans:
+        postorder_traversal(child, transformer)
+        
+    # Work on Root
+    # Skip the leaves - these shouldn't have column replacements 
+    if len(root.plans) > 0:
+        #print(root.node_type)
+        for index, output_tree in enumerate(root.output):
+            root.output[index] = transformer(root.plans).transform(output_tree)
+
+class ReplaceColumnReferences(Transformer):
+    column_reference_regex = r"^#[0-9]+$"
+    
+    def __init__(self, child_trees: list[base_node]):
+        self.child_trees = child_trees
+    
+    def string(self, token):
+        assert len(token) == 1
+        regex_search = re.search(self.column_reference_regex,token[0])
+        if regex_search != None:
+            column_target = int(token[0].strip().replace('#', ''))
+            #print(f'We need to do col_ref replacing on {token[0]}')
+            
+            # Return the new element
+            # TODO: This is hardcoded logic, we can determine the appropriate paradigm in the future
+            return self.child_trees[0].output[column_target]
+        else:
+            # Return the existing element
+            return token
+
+#def duck_resolve_column_references(tree):
 
 class ReferenceTracker():
     changes = False
@@ -254,8 +297,7 @@ def run_tree_generation():
         for failed_file in failed:
             print(f'\t{failed_file}')
 
-
-generate_duckdb_explains()
+# generate_duckdb_explains()
 run_tree_generation()
 
-# make_tree_from_duck(f'sql_to_pandas/tpch_explain/{22}_duck.json')
+# make_tree_from_duck(f'sql_to_pandas/tpch_explain/{6}_duck.json')
