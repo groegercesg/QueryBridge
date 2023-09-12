@@ -1,14 +1,14 @@
 {
     "name": "Query",
-    "result": 0.274058,
-    "timing": 0.274058,
+    "result": 0.271279,
+    "timing": 0.271279,
     "cardinality": 186,
     "extra-info": "\n-- TPC-H Query 20\n\nselect\n        s_name,\n        s_address\nfrom\n        supplier,\n        nation\nwhere\n        s_suppkey in (\n                select\n                        ps_suppkey\n                from\n                        partsupp\n                where\n                        ps_partkey in (\n                                select\n                                        p_partkey\n                                from\n                                        part\n                                where\n                                        p_name like 'forest%'\n                        )\n                        and ps_availqty > (\n                                select\n                                        0.5 * sum(l_quantity)\n                                from\n                                        lineitem\n                                where\n                                        l_partkey = ps_partkey\n                                        and l_suppkey = ps_suppkey\n                                        and l_shipdate >= date '1994-01-01'\n                                        and l_shipdate < date '1995-01-01'\n                        )\n        )\n        and s_nationkey = n_nationkey\n        and n_name = 'CANADA'\norder by\n        s_name\n",
     "timings": [],
     "children": [
         {
             "name": "ORDER_BY",
-            "timing": 6.9e-05,
+            "timing": 6.4e-05,
             "cardinality": 186,
             "extra_info": "supplier.s_name ASC",
             "timings": [],
@@ -22,21 +22,21 @@
                     "children": [
                         {
                             "name": "HASH_JOIN",
-                            "timing": 0.000198,
+                            "timing": 0.000207,
                             "cardinality": 186,
                             "extra_info": "SEMI\ns_suppkey = #0\n",
                             "timings": [],
                             "children": [
                                 {
                                     "name": "HASH_JOIN",
-                                    "timing": 4.5e-05,
+                                    "timing": 4.8e-05,
                                     "cardinality": 412,
                                     "extra_info": "INNER\ns_nationkey = n_nationkey\n",
                                     "timings": [],
                                     "children": [
                                         {
                                             "name": "SEQ_SCAN",
-                                            "timing": 0.000354,
+                                            "timing": 0.00036,
                                             "cardinality": 10000,
                                             "extra_info": "supplier\n[INFOSEPARATOR]\ns_suppkey\ns_nationkey\ns_name\ns_address",
                                             "timings": [],
@@ -44,7 +44,7 @@
                                         },
                                         {
                                             "name": "SEQ_SCAN",
-                                            "timing": 1.6e-05,
+                                            "timing": 2.4e-05,
                                             "cardinality": 1,
                                             "extra_info": "nation\n[INFOSEPARATOR]\nn_nationkey\nn_name\n[INFOSEPARATOR]\nFilters: n_name=CANADA AND n_name IS NOT NULL\n",
                                             "timings": [],
@@ -61,28 +61,28 @@
                                     "children": [
                                         {
                                             "name": "FILTER",
-                                            "timing": 0.000254,
+                                            "timing": 0.000241,
                                             "cardinality": 5833,
                                             "extra_info": "CAST(ps_availqty AS DECIMAL(38,4)) > SUBQUERY",
                                             "timings": [],
                                             "children": [
                                                 {
                                                     "name": "HASH_JOIN",
-                                                    "timing": 0.018261,
+                                                    "timing": 0.015771,
                                                     "cardinality": 8508,
                                                     "extra_info": "SINGLE\nps_partkey IS NOT DISTINCT FROM ps_partkey\nps_suppkey IS NOT DISTINCT FROM ps_suppkey\n",
                                                     "timings": [],
                                                     "children": [
                                                         {
                                                             "name": "HASH_JOIN",
-                                                            "timing": 0.003924,
+                                                            "timing": 0.003661,
                                                             "cardinality": 8508,
                                                             "extra_info": "SEMI\nps_partkey = #0\n",
                                                             "timings": [],
                                                             "children": [
                                                                 {
                                                                     "name": "SEQ_SCAN",
-                                                                    "timing": 0.002204,
+                                                                    "timing": 0.002134,
                                                                     "cardinality": 800000,
                                                                     "extra_info": "partsupp\n[INFOSEPARATOR]\nps_partkey\nps_availqty\nps_suppkey",
                                                                     "timings": [],
@@ -90,21 +90,21 @@
                                                                 },
                                                                 {
                                                                     "name": "PROJECTION",
-                                                                    "timing": 3e-06,
+                                                                    "timing": 4e-06,
                                                                     "cardinality": 2127,
                                                                     "extra_info": "#1\n",
                                                                     "timings": [],
                                                                     "children": [
                                                                         {
                                                                             "name": "FILTER",
-                                                                            "timing": 0.000423,
+                                                                            "timing": 0.000373,
                                                                             "cardinality": 2127,
                                                                             "extra_info": "prefix(p_name, 'forest')",
                                                                             "timings": [],
                                                                             "children": [
                                                                                 {
                                                                                     "name": "SEQ_SCAN",
-                                                                                    "timing": 0.016315,
+                                                                                    "timing": 0.019711,
                                                                                     "cardinality": 2127,
                                                                                     "extra_info": "part\n[INFOSEPARATOR]\np_name\np_partkey\n[INFOSEPARATOR]\nFilters: p_name>=forest AND p_name<foresu AND p_name IS NOT NULL\n",
                                                                                     "timings": [],
@@ -118,28 +118,28 @@
                                                         },
                                                         {
                                                             "name": "PROJECTION",
-                                                            "timing": 0.011151,
+                                                            "timing": 0.009912,
                                                             "cardinality": 543210,
                                                             "extra_info": "(0.5 * sum(l_quantity))\n#0\n#1\n",
                                                             "timings": [],
                                                             "children": [
                                                                 {
                                                                     "name": "HASH_GROUP_BY",
-                                                                    "timing": 0.125094,
+                                                                    "timing": 0.126592,
                                                                     "cardinality": 543210,
                                                                     "extra_info": "#0\n#1\nsum(#2)",
                                                                     "timings": [],
                                                                     "children": [
                                                                         {
                                                                             "name": "PROJECTION",
-                                                                            "timing": 0.00149,
+                                                                            "timing": 0.001405,
                                                                             "cardinality": 909455,
                                                                             "extra_info": "l_partkey\nl_suppkey\nl_quantity\n",
                                                                             "timings": [],
                                                                             "children": [
                                                                                 {
                                                                                     "name": "SEQ_SCAN",
-                                                                                    "timing": 0.069812,
+                                                                                    "timing": 0.067258,
                                                                                     "cardinality": 909455,
                                                                                     "extra_info": "lineitem\n[INFOSEPARATOR]\nl_partkey\nl_suppkey\nl_shipdate\nl_quantity\n[INFOSEPARATOR]\nFilters: l_shipdate>=1994-01-01 AND l_shipdate<1995-01-01 AND l_shipdate IS NOT NULL\n",
                                                                                     "timings": [],

@@ -187,17 +187,19 @@ def make_class_tree_from_duck(json, parent=None):
         
         sort_node_object = sort_node("Sort", [], parse_larks(extra_info[start_keys+1:]))
         node_class.set_plans([sort_node_object])
-    elif node_type in ['hash_join', 'piecewise_merge_join']:
+    elif node_type in ['hash_join', 'piecewise_merge_join', 'delim_join']:
         hash_join_output = []
         join_type = extra_info[0]
         inner_unique = False
         node_class = hash_join_node("Hash Join", hash_join_output, inner_unique, join_type, parse_larks(extra_info[1:]))
-    elif node_type.lower() == "limit":
+    elif node_type == "limit":
         node_class = limit_node("Limit", parse_larks(extra_info))
-    elif node_type.lower() == "filter":
+    elif node_type == "filter":
         node_class = filter_node("Filter", parse_larks(extra_info))
-    elif node_type.lower() == "chunk_scan":
+    elif node_type == "chunk_scan":
         node_class = chunk_scan_node("Chunk Scan", parse_larks(extra_info))
+    elif node_type == "delim_scan":
+        node_class = delim_scan_node('Delim Scan', parse_larks(extra_info))
     else:
         raise Exception(f"Node Type: '{node_type}' is not recognised, many Node Types have not been implemented.")
     
@@ -236,18 +238,24 @@ def run_tree_generation():
     onlyfiles = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
     
     # Track failures
-    failed = 0
+    failed = []
     for explain_file in onlyfiles:
         print(f'Doing: {explain_file}')
         try:
             make_tree_from_duck(f'{explain_directory}/{explain_file}')
         except:
             print('\tFAILED')
-            failed += 1
+            failed.append(explain_file)
     
     print('-'*15)
-    print(f'We have been able to parse {len(onlyfiles) - failed}/{len(onlyfiles)} explain JSONs.')
+    print(f'We have been able to parse {len(onlyfiles) - len(failed)}/{len(onlyfiles)} explain JSONs.')
+    if len(failed) > 0:
+        print('We failed:')
+        for failed_file in failed:
+            print(f'\t{failed_file}')
 
+
+generate_duckdb_explains()
 run_tree_generation()
 
-# make_tree_from_duck(f'sql_to_pandas/tpch_explain/{16}_duck.json')
+# make_tree_from_duck(f'sql_to_pandas/tpch_explain/{22}_duck.json')

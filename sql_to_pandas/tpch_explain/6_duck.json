@@ -1,28 +1,28 @@
 {
     "name": "Query",
-    "result": 0.114241,
-    "timing": 0.114241,
+    "result": 0.128923,
+    "timing": 0.128923,
     "cardinality": 1,
     "extra-info": "\n-- TPC-H Query 6\n\nselect\n        sum(l_extendedprice * l_discount) as revenue\nfrom\n        lineitem\nwhere\n        l_shipdate >= date '1994-01-01'\n        and l_shipdate < date '1995-01-01'\n        and l_discount between 0.06 - 0.01 and 0.06 + 0.01\n        and l_quantity < 24\n",
     "timings": [],
     "children": [
         {
             "name": "SIMPLE_AGGREGATE",
-            "timing": 0.001246,
+            "timing": 0.001542,
             "cardinality": 1,
             "extra_info": "sum(#0)",
             "timings": [],
             "children": [
                 {
                     "name": "PROJECTION",
-                    "timing": 0.00438,
+                    "timing": 0.005087,
                     "cardinality": 114160,
                     "extra_info": "(l_extendedprice * l_discount)\n",
                     "timings": [],
                     "children": [
                         {
                             "name": "SEQ_SCAN",
-                            "timing": 0.104383,
+                            "timing": 0.117554,
                             "cardinality": 114160,
                             "extra_info": "lineitem\n[INFOSEPARATOR]\nl_shipdate\nl_discount\nl_quantity\nl_extendedprice\n[INFOSEPARATOR]\nFilters: l_shipdate>=1994-01-01 AND l_shipdate<1995-01-01 AND l_shipdate IS NOT NULL\nl_discount>=0.050 AND l_discount<=0.070 AND l_discount IS NOT NULL\nl_quantity<24.000 AND l_quantity IS NOT NULL\n",
                             "timings": [],

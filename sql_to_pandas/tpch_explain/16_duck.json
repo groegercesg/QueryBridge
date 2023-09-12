@@ -1,63 +1,63 @@
 {
     "name": "Query",
-    "result": 0.146721,
-    "timing": 0.146721,
+    "result": 0.102042,
+    "timing": 0.102042,
     "cardinality": 18314,
     "extra-info": "\n-- TPC-H Query 16\n\nselect\n        p_brand,\n        p_type,\n        p_size,\n        count(distinct ps_suppkey) as supplier_cnt\nfrom\n        partsupp,\n        part\nwhere\n        p_partkey = ps_partkey\n        and p_brand <> 'Brand#45'\n        and p_type not like 'MEDIUM POLISHED%'\n        and p_size in (49, 14, 23, 45, 19, 3, 36, 9)\n        and ps_suppkey not in (\n                select\n                        s_suppkey\n                from\n                        supplier\n                where\n                        s_comment like '%Customer%Complaints%'\n        )\ngroup by\n        p_brand,\n        p_type,\n        p_size\norder by\n        supplier_cnt desc,\n        p_brand,\n        p_type,\n        p_size\n",
     "timings": [],
     "children": [
         {
             "name": "ORDER_BY",
-            "timing": 0.00757,
+            "timing": 0.003463,
             "cardinality": 18314,
             "extra_info": "count(DISTINCT partsupp.ps_suppkey) DESC\npart.p_brand ASC\npart.p_type ASC\nCAST((part.p_size - 1) AS UTINYINT) ASC",
             "timings": [],
             "children": [
                 {
                     "name": "HASH_GROUP_BY",
-                    "timing": 0.070685,
+                    "timing": 0.050923,
                     "cardinality": 18314,
                     "extra_info": "#0\n#1\n#2\ncount(DISTINCT #3)",
                     "timings": [],
                     "children": [
                         {
                             "name": "PROJECTION",
-                            "timing": 0.000337,
+                            "timing": 0.000225,
                             "cardinality": 118274,
                             "extra_info": "p_brand\np_type\np_size\nps_suppkey\n",
                             "timings": [],
                             "children": [
                                 {
                                     "name": "PROJECTION",
-                                    "timing": 0.000363,
+                                    "timing": 0.000231,
                                     "cardinality": 118274,
                                     "extra_info": "#1\n#2\n#3\n#4\n",
                                     "timings": [],
                                     "children": [
                                         {
                                             "name": "FILTER",
-                                            "timing": 0.001112,
+                                            "timing": 0.000785,
                                             "cardinality": 118274,
                                             "extra_info": "NOT(SUBQUERY)",
                                             "timings": [],
                                             "children": [
                                                 {
                                                     "name": "HASH_JOIN",
-                                                    "timing": 0.003629,
+                                                    "timing": 0.002331,
                                                     "cardinality": 118324,
                                                     "extra_info": "MARK\nps_suppkey = #0\n",
                                                     "timings": [],
                                                     "children": [
                                                         {
                                                             "name": "HASH_JOIN",
-                                                            "timing": 0.005023,
+                                                            "timing": 0.003914,
                                                             "cardinality": 118324,
                                                             "extra_info": "INNER\nps_partkey = p_partkey\n",
                                                             "timings": [],
                                                             "children": [
                                                                 {
                                                                     "name": "SEQ_SCAN",
-                                                                    "timing": 0.004129,
+                                                                    "timing": 0.002896,
                                                                     "cardinality": 800000,
                                                                     "extra_info": "partsupp\n[INFOSEPARATOR]\nps_partkey\nps_suppkey",
                                                                     "timings": [],
@@ -65,28 +65,28 @@
                                                                 },
                                                                 {
                                                                     "name": "PROJECTION",
-                                                                    "timing": 4.3e-05,
+                                                                    "timing": 5.4e-05,
                                                                     "cardinality": 29581,
                                                                     "extra_info": "#0\n#1\n#2\n#3\n",
                                                                     "timings": [],
                                                                     "children": [
                                                                         {
                                                                             "name": "FILTER",
-                                                                            "timing": 0.001541,
+                                                                            "timing": 0.001455,
                                                                             "cardinality": 29581,
                                                                             "extra_info": "IN (...) AND p_brand != 'Brand#45' AND NOT(prefix(p_type, 'MEDIUM POLISHED'))",
                                                                             "timings": [],
                                                                             "children": [
                                                                                 {
                                                                                     "name": "HASH_JOIN",
-                                                                                    "timing": 0.00105,
+                                                                                    "timing": 0.001012,
                                                                                     "cardinality": 200000,
                                                                                     "extra_info": "MARK\np_size = #0\n",
                                                                                     "timings": [],
                                                                                     "children": [
                                                                                         {
                                                                                             "name": "SEQ_SCAN",
-                                                                                            "timing": 0.000896,
+                                                                                            "timing": 0.001122,
                                                                                             "cardinality": 200000,
                                                                                             "extra_info": "part\n[INFOSEPARATOR]\np_partkey\np_brand\np_type\np_size",
                                                                                             "timings": [],
@@ -117,14 +117,14 @@
                                                             "children": [
                                                                 {
                                                                     "name": "FILTER",
-                                                                    "timing": 0.000164,
+                                                                    "timing": 0.000148,
                                                                     "cardinality": 4,
                                                                     "extra_info": "(s_comment ~~ '%Customer%Complaints%')",
                                                                     "timings": [],
                                                                     "children": [
                                                                         {
                                                                             "name": "SEQ_SCAN",
-                                                                            "timing": 0.000614,
+                                                                            "timing": 0.000639,
                                                                             "cardinality": 10000,
                                                                             "extra_info": "supplier\n[INFOSEPARATOR]\ns_comment\ns_suppkey",
                                                                             "timings": [],

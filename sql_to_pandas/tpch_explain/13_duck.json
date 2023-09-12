@@ -1,28 +1,28 @@
 {
     "name": "Query",
-    "result": 0.2959,
-    "timing": 0.2959,
+    "result": 0.258111,
+    "timing": 0.258111,
     "cardinality": 42,
     "extra-info": "\n-- TPC-H Query 13\n\nselect\n        c_count,\n        count(*) as custdist\nfrom\n        (\n                select\n                        c_custkey,\n                        count(o_orderkey) c_count\n                from\n                        customer left outer join orders on\n                                c_custkey = o_custkey\n                                and o_comment not like '%special%requests%'\n                group by\n                        c_custkey\n        ) as c_orders\ngroup by\n        c_count\norder by\n        custdist desc,\n        c_count desc\n",
     "timings": [],
     "children": [
         {
             "name": "ORDER_BY",
-            "timing": 2.9e-05,
+            "timing": 2.4e-05,
             "cardinality": 42,
             "extra_info": "count_star() DESC\nc_orders.c_count DESC",
             "timings": [],
             "children": [
                 {
                     "name": "HASH_GROUP_BY",
-                    "timing": 0.001593,
+                    "timing": 0.001578,
                     "cardinality": 42,
                     "extra_info": "#0\ncount_star()",
                     "timings": [],
                     "children": [
                         {
                             "name": "PROJECTION",
-                            "timing": 1e-05,
+                            "timing": 1.1e-05,
                             "cardinality": 150000,
                             "extra_info": "c_count\n",
                             "timings": [],
@@ -36,42 +36,42 @@
                                     "children": [
                                         {
                                             "name": "HASH_GROUP_BY",
-                                            "timing": 0.074581,
+                                            "timing": 0.060015,
                                             "cardinality": 150000,
                                             "extra_info": "#0\ncount(#1)",
                                             "timings": [],
                                             "children": [
                                                 {
                                                     "name": "PROJECTION",
-                                                    "timing": 0.000482,
+                                                    "timing": 0.000387,
                                                     "cardinality": 1533923,
                                                     "extra_info": "c_custkey\no_orderkey\n",
                                                     "timings": [],
                                                     "children": [
                                                         {
                                                             "name": "HASH_JOIN",
-                                                            "timing": 0.059315,
+                                                            "timing": 0.049568,
                                                             "cardinality": 1533923,
                                                             "extra_info": "RIGHT\no_custkey = c_custkey\n",
                                                             "timings": [],
                                                             "children": [
                                                                 {
                                                                     "name": "PROJECTION",
-                                                                    "timing": 0.000358,
+                                                                    "timing": 0.000238,
                                                                     "cardinality": 1483918,
                                                                     "extra_info": "#0\n#2\n",
                                                                     "timings": [],
                                                                     "children": [
                                                                         {
                                                                             "name": "FILTER",
-                                                                            "timing": 0.080297,
+                                                                            "timing": 0.067147,
                                                                             "cardinality": 1483918,
                                                                             "extra_info": "(o_comment !~~ '%special%requests%')",
                                                                             "timings": [],
                                                                             "children": [
                                                                                 {
                                                                                     "name": "SEQ_SCAN",
-                                                                                    "timing": 0.074301,
+                                                                                    "timing": 0.075226,
                                                                                     "cardinality": 1500000,
                                                                                     "extra_info": "orders\n[INFOSEPARATOR]\no_custkey\no_comment\no_orderkey",
                                                                                     "timings": [],
@@ -83,7 +83,7 @@
                                                                 },
                                                                 {
                                                                     "name": "SEQ_SCAN",
-                                                                    "timing": 0.000183,
+                                                                    "timing": 0.000164,
                                                                     "cardinality": 150000,
                                                                     "extra_info": "customer\n[INFOSEPARATOR]\nc_custkey",
                                                                     "timings": [],

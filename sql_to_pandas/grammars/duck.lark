@@ -66,6 +66,10 @@
          | "count_star()" -> count_star
          // IN (...)
          | "IN (...)" -> in_op
+         // year(l_shipdate)
+         | "year(" start ")" -> year_op
+         // substring(c_phone, 1, 2)
+         | "substring(" start ", " NUMBER ", " NUMBER ")" -> substring_op
          | sum
          | avg
          | min

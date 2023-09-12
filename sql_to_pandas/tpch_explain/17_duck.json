@@ -1,7 +1,7 @@
 {
     "name": "Query",
-    "result": 0.340629,
-    "timing": 0.340629,
+    "result": 0.30827,
+    "timing": 0.30827,
     "cardinality": 1,
     "extra-info": "\n-- TPC-H Query 17\n\nselect\n        sum(l_extendedprice) / 7.0 as avg_yearly\nfrom\n        lineitem,\n        part\nwhere\n        p_partkey = l_partkey\n        and p_brand = 'Brand#23'\n        and p_container = 'MED BOX'\n        and l_quantity < (\n                select\n                        0.2 * avg(l_quantity)\n                from\n                        lineitem\n                where\n                        l_partkey = p_partkey\n        )\n",
     "timings": [],
@@ -36,28 +36,28 @@
                                     "children": [
                                         {
                                             "name": "FILTER",
-                                            "timing": 0.00011,
+                                            "timing": 9.7e-05,
                                             "cardinality": 587,
                                             "extra_info": "CAST(l_quantity AS DOUBLE) < SUBQUERY",
                                             "timings": [],
                                             "children": [
                                                 {
                                                     "name": "HASH_JOIN",
-                                                    "timing": 0.002916,
+                                                    "timing": 0.002681,
                                                     "cardinality": 6088,
                                                     "extra_info": "SINGLE\np_partkey IS NOT DISTINCT FROM p_partkey\n",
                                                     "timings": [],
                                                     "children": [
                                                         {
                                                             "name": "HASH_JOIN",
-                                                            "timing": 0.013148,
+                                                            "timing": 0.011907,
                                                             "cardinality": 6088,
                                                             "extra_info": "INNER\nl_partkey = p_partkey\n",
                                                             "timings": [],
                                                             "children": [
                                                                 {
                                                                     "name": "SEQ_SCAN",
-                                                                    "timing": 0.019669,
+                                                                    "timing": 0.017883,
                                                                     "cardinality": 6001215,
                                                                     "extra_info": "lineitem\n[INFOSEPARATOR]\nl_partkey\nl_quantity\nl_extendedprice",
                                                                     "timings": [],
@@ -65,7 +65,7 @@
                                                                 },
                                                                 {
                                                                     "name": "SEQ_SCAN",
-                                                                    "timing": 0.005059,
+                                                                    "timing": 0.004925,
                                                                     "cardinality": 204,
                                                                     "extra_info": "part\n[INFOSEPARATOR]\np_partkey\np_brand\np_container\n[INFOSEPARATOR]\nFilters: p_brand=Brand#23 AND p_brand IS NOT NULL\np_container=MED BOX AND p_container IS NOT NULL\n",
                                                                     "timings": [],
@@ -75,28 +75,28 @@
                                                         },
                                                         {
                                                             "name": "PROJECTION",
-                                                            "timing": 0.000832,
+                                                            "timing": 0.000775,
                                                             "cardinality": 200000,
                                                             "extra_info": "(0.200000 * avg(l_quantity))\n#0\n",
                                                             "timings": [],
                                                             "children": [
                                                                 {
                                                                     "name": "HASH_GROUP_BY",
-                                                                    "timing": 0.267016,
+                                                                    "timing": 0.241213,
                                                                     "cardinality": 200000,
                                                                     "extra_info": "#0\navg(#1)",
                                                                     "timings": [],
                                                                     "children": [
                                                                         {
                                                                             "name": "PROJECTION",
-                                                                            "timing": 0.001456,
+                                                                            "timing": 0.001307,
                                                                             "cardinality": 6001215,
                                                                             "extra_info": "l_partkey\nl_quantity\n",
                                                                             "timings": [],
                                                                             "children": [
                                                                                 {
                                                                                     "name": "SEQ_SCAN",
-                                                                                    "timing": 0.019709,
+                                                                                    "timing": 0.016822,
                                                                                     "cardinality": 6001215,
                                                                                     "extra_info": "lineitem\n[INFOSEPARATOR]\nl_partkey\nl_quantity",
                                                                                     "timings": [],

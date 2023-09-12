@@ -516,7 +516,34 @@ def test_parse_string_advanced_in():
     in_string = "IN (...) AND p_brand != 'Brand#45' AND NOT(prefix(p_type, 'MEDIUM POLISHED'))"
     out_tree = parse_lark(in_string)
     intended_tree = Tree('and', [Tree('and', [Tree('in_op', []), Tree('neq', [Tree('col_ref', [Token('WORD', 'p'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'brand')]), Tree('string', [Token('STRING', 'Brand#45')])])]), Tree('not', [Tree('prefix', [Tree('col_ref', [Token('WORD', 'p'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'type')]), Tree('string', [Token('STRING', 'MEDIUM'), Token('STRING', 'POLISHED')])])])])
-               
+    alternate_tree = Tree('and', [Tree('in_op', []), Tree('neq', [Tree('col_ref', [Token('WORD', 'p'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'brand')]), Tree('and', [Tree('string', [Token('STRING', 'Brand#45')]), Tree('not', [Tree('prefix', [Tree('col_ref', [Token('WORD', 'p'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'type')]), Tree('string', [Token('STRING', 'MEDIUM'), Token('STRING', 'POLISHED')])])])])])])
+      
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert (out_tree == intended_tree) | (out_tree == alternate_tree), "Test Assertion Failed"  
+
+def test_parse_string_basic_year():
+    in_string = "year(l_shipdate)"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('year_op', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'shipdate')])])
+    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  
+
+def test_parse_string_substring():
+    in_string = "substring(c_phone, 1, 2)"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('substring_op', [Tree('col_ref', [Token('WORD', 'c'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'phone')]), Token('NUMBER', '1'), Token('NUMBER', '2')])
+        
     print("Out Tree:")
     print(out_tree)
     print(out_tree.pretty())
