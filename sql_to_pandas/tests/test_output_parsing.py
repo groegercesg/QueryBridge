@@ -356,11 +356,11 @@ def test_parse_string_sum_brackets():
 
     assert out_tree == intended_tree, "Test Assertion Failed"
 
-def test_parse_string_basic_cast():
+def test_parse_string_basic_cast_decimal():
     in_string = "CAST(ps_availqty AS DECIMAL(18,0))"
     out_tree = parse_lark(in_string)
-    intended_tree = Tree('cast', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'availqty')]), Tree(Token('RULE', 'cast_type'), []), Token('NUMBER', '18'), Token('NUMBER', '0')])
-    
+    intended_tree = Tree('cast', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'availqty')]), Tree(Token('RULE', 'cast_type'), [Token('NUMBER', '18'), Token('NUMBER', '0')])])
+        
     print("Out Tree:")
     print(out_tree)
     print(out_tree.pretty())
@@ -369,11 +369,11 @@ def test_parse_string_basic_cast():
 
     assert out_tree == intended_tree, "Test Assertion Failed"
 
-def test_parse_string_advanced_cast():
+def test_parse_string_advanced_cast_decimal():
     in_string = "CAST(sum((ps_supplycost * CAST(ps_availqty AS DECIMAL(18,0)))) AS DECIMAL(38,7)) > SUBQUERY"
     out_tree = parse_lark(in_string)
-    intended_tree = Tree('gt', [Tree('cast', [Tree('sum', [Tree('mul', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'supplycost')]), Tree('cast', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'availqty')]), Tree(Token('RULE', 'cast_type'), []), Token('NUMBER', '18'), Token('NUMBER', '0')])])]), Tree(Token('RULE', 'cast_type'), []), Token('NUMBER', '38'), Token('NUMBER', '7')]), Tree('string', [Token('STRING', 'SUBQUERY')])])
-        
+    intended_tree = Tree('gt', [Tree('cast', [Tree('sum', [Tree('mul', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'supplycost')]), Tree('cast', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'availqty')]), Tree(Token('RULE', 'cast_type'), [Token('NUMBER', '18'), Token('NUMBER', '0')])])])]), Tree(Token('RULE', 'cast_type'), [Token('NUMBER', '38'), Token('NUMBER', '7')])]), Tree('string', [Token('STRING', 'SUBQUERY')])])
+            
     print("Out Tree:")
     print(out_tree)
     print(out_tree.pretty())
@@ -398,8 +398,8 @@ def test_parse_string_first_basic():
 def test_parse_string_first_advanced():
     in_string = "first((sum((ps_supplycost * CAST(ps_availqty AS DECIMAL(18,0)))) * 0.0001))"
     out_tree = parse_lark(in_string)
-    intended_tree = Tree('mul', [Tree('sum', [Tree('mul', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'supplycost')]), Tree('cast', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'availqty')]), Tree(Token('RULE', 'cast_type'), []), Token('NUMBER', '18'), Token('NUMBER', '0')])])]), Tree('number', [Token('NUMBER', '0.0001')])])
-    
+    intended_tree = Tree('mul', [Tree('sum', [Tree('mul', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'supplycost')]), Tree('cast', [Tree('col_ref', [Token('WORD', 'ps'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'availqty')]), Tree(Token('RULE', 'cast_type'), [Token('NUMBER', '18'), Token('NUMBER', '0')])])])]), Tree('number', [Token('NUMBER', '0.0001')])])
+        
     print("Out Tree:")
     print(out_tree)
     print(out_tree.pretty())
@@ -407,3 +407,43 @@ def test_parse_string_first_advanced():
     print(intended_tree)
 
     assert out_tree == intended_tree, "Test Assertion Failed"  
+
+def test_parse_string_basic_cast_utinyint():
+    in_string = "CAST((shipping.l_year - 1992) AS UTINYINT)"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('cast', [Tree('sub', [Tree('table_ref', [Token('WORD', 'shipping'), Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'year')])]), Tree('number', [Token('NUMBER', '1992')])]), Tree(Token('RULE', 'cast_type'), [])])
+            
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  
+    
+def test_parse_string_basic_cast_usmallint():
+    in_string = "CAST((supplier.s_suppkey - 1) AS USMALLINT)"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('cast', [Tree('sub', [Tree('table_ref', [Token('WORD', 'supplier'), Tree('col_ref', [Token('WORD', 's'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'suppkey')])]), Tree('number', [Token('NUMBER', '1')])]), Tree(Token('RULE', 'cast_type'), [])])
+            
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  
+   
+def test_parse_string_basic_cast_double():
+    in_string = "CAST(l_quantity AS DOUBLE)"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('cast', [Tree('col_ref', [Token('WORD', 'l'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'quantity')]), Tree(Token('RULE', 'cast_type'), [])])
+            
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  
+   

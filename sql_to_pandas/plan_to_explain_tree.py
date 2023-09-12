@@ -147,6 +147,10 @@ class hash_node(base_node):
     def __init__(self, node_type, output):
         super().__init__(node_type, output)
         
+class filter_node(base_node):
+    def __init__(self, node_type, output):
+        super().__init__(node_type, output)
+        
 class index_scan_node(base_node):
     def __init__(self, node_type, scan_direction, index_name, relation_name, alias, output):
         super().__init__(node_type, output)

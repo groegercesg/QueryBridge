@@ -45,7 +45,10 @@ def make_tree_from_duck(explain_path):
 
     explain_tree = make_class_tree_from_duck(explain_content)
     
-    print(explain_tree)
+    if isinstance(explain_tree, list):
+        print(explain_tree[0])
+    else:
+        print(explain_tree)
 
 class ReferenceTracker():
     changes = False
@@ -89,7 +92,7 @@ def duck_fix_explain_references(json, ref_tracker):
             
             # Get child_value
             child = json['children'][0]
-            while len(child['extra_info']) < 1:
+            while len(child['extra_info']) - 1 < col_index:
                 child = child['children'][0]
             child_value = child['extra_info'][col_index]
             
@@ -192,7 +195,9 @@ def make_class_tree_from_duck(json, parent=None):
         inner_unique = False
         node_class = hash_join_node("Hash Join", hash_join_output, inner_unique, join_type, parse_larks(extra_info[1:]))
     elif node_type.lower() == "limit":
-        node_class = limit_node("Limit", extra_info)
+        node_class = limit_node("Limit", parse_larks(extra_info))
+    elif node_type.lower() == "filter":
+        node_class = filter_node("Filter", parse_larks(extra_info))
     else:
         raise Exception(f"Node Type: '{node_type}' is not recognised, many Node Types have not been implemented.")
     
@@ -245,4 +250,4 @@ def run_tree_generation():
 
 run_tree_generation()
 
-#make_tree_from_duck(f'sql_to_pandas/tpch_explain/{11}_duck.json')
+#make_tree_from_duck(f'sql_to_pandas/tpch_explain/{7}_duck.json')

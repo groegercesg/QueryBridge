@@ -5,13 +5,19 @@
          | "first(" cast_op ")"
          | cast_op
 
-// CAST(ps_availqty AS DECIMAL(18,0))
 ?cast_op:
-         | "CAST(" case_op " AS " cast_type "(" NUMBER "," NUMBER "))" -> cast
+         | "CAST(" case_op " AS " cast_type ")" -> cast
          | case_op
 
 ?cast_type:
-         | "DECIMAL"
+         // CAST(ps_availqty AS DECIMAL(18,0))
+         | "DECIMAL(" NUMBER "," NUMBER ")"
+         // CAST((shipping.l_year - 1992) AS UTINYINT)
+         | "UTINYINT"
+         // CAST((supplier.s_suppkey - 1) AS USMALLINT)
+         | "USMALLINT"
+         // CAST(l_quantity AS DOUBLE)
+         | "DOUBLE"
 
 ?case_op:
          | "CASE  WHEN" or_op "THEN" element "ELSE" element "END" -> case
