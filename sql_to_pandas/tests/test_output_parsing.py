@@ -446,4 +446,81 @@ def test_parse_string_basic_cast_double():
     print(intended_tree)
 
     assert out_tree == intended_tree, "Test Assertion Failed"  
-   
+  
+def test_parse_string_basic_contains():
+    in_string = "contains(p_name, 'green')"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree(Token('RULE', 'contains_op'), [Tree('col_ref', [Token('WORD', 'p'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'name')]), Tree('string', [Token('STRING', 'green')])])
+                
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"   
+
+def test_parse_string_basic_not_like():
+    in_string = "(o_comment !~~ '%special%requests%')"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('not_like', [Tree('col_ref', [Token('WORD', 'o'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'comment')]), Tree('pattern', [Token('PATTERN', '%special%requests%')])])
+                    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"   
+
+def test_parse_string_basic_like():
+    in_string = "(s_comment ~~ '%Customer%Complaints%')"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('like', [Tree('col_ref', [Token('WORD', 's'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'comment')]), Tree('pattern', [Token('PATTERN', '%Customer%Complaints%')])])
+                    
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  
+
+def test_parse_string_basic_not():
+    in_string = "NOT(SUBQUERY)"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('not', [Tree('string', [Token('STRING', 'SUBQUERY')])])
+           
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  
+
+def test_parse_string_basic_in():
+    in_string = "IN (...)"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('in_op', [])
+               
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  
+
+def test_parse_string_advanced_in():
+    in_string = "IN (...) AND p_brand != 'Brand#45' AND NOT(prefix(p_type, 'MEDIUM POLISHED'))"
+    out_tree = parse_lark(in_string)
+    intended_tree = Tree('and', [Tree('and', [Tree('in_op', []), Tree('neq', [Tree('col_ref', [Token('WORD', 'p'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'brand')]), Tree('string', [Token('STRING', 'Brand#45')])])]), Tree('not', [Tree('prefix', [Tree('col_ref', [Token('WORD', 'p'), Tree(Token('RULE', 'underscore'), []), Token('WORD', 'type')]), Tree('string', [Token('STRING', 'MEDIUM'), Token('STRING', 'POLISHED')])])])])
+               
+    print("Out Tree:")
+    print(out_tree)
+    print(out_tree.pretty())
+    print("Intended String:")
+    print(intended_tree)
+
+    assert out_tree == intended_tree, "Test Assertion Failed"  

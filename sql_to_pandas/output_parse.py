@@ -40,10 +40,12 @@ def make_tree_from_duck(explain_path):
        
     # Fix JSON, it should be split by newline 
     duck_fix_extra_info(explain_content)
-    # Fix JSON, it has '#0' references, edit in-place
-    duck_fix_explain_references_controller(explain_content)
 
     explain_tree = make_class_tree_from_duck(explain_content)
+    
+    # TODO: Fix Tree, it has '#0' references in it
+    # duck_fix_explain_references_controller(explain_content)
+    # TODO: After doing this (^), remove Projection Nodes
     
     if isinstance(explain_tree, list):
         print(explain_tree[0])
@@ -162,16 +164,12 @@ def make_class_tree_from_duck(json, parent=None):
     if node_type == "simple_aggregate":
         node_class = aggregate_node("Aggregate", parse_larks(extra_info))
     elif node_type == "projection":
-        # Make a projection node an aggregate node
-        #node_class = aggregate_node("Aggregate", parse_larks(extra_info))
-        #node_class.add_remove_later(True)
-        # Don't add things with remove laters
-        node_class = None
+        node_class = projection_node("Projection", parse_larks(extra_info))
     elif node_type == "seq_scan":
         node_class = process_seq_scan(extra_info)
     elif node_type == "order_by":
         node_class = sort_node("Sort", [], parse_larks(extra_info))
-    elif node_type == "hash_group_by":
+    elif node_type in ["hash_group_by", "perfect_hash_group_by"]:
         group_keys = []
         for col in extra_info:
             if not any([True for agg in AGG_FUNCTIONS if agg+"(" in col]):
@@ -198,6 +196,8 @@ def make_class_tree_from_duck(json, parent=None):
         node_class = limit_node("Limit", parse_larks(extra_info))
     elif node_type.lower() == "filter":
         node_class = filter_node("Filter", parse_larks(extra_info))
+    elif node_type.lower() == "chunk_scan":
+        node_class = chunk_scan_node("Chunk Scan", parse_larks(extra_info))
     else:
         raise Exception(f"Node Type: '{node_type}' is not recognised, many Node Types have not been implemented.")
     
@@ -250,4 +250,4 @@ def run_tree_generation():
 
 run_tree_generation()
 
-#make_tree_from_duck(f'sql_to_pandas/tpch_explain/{7}_duck.json')
+# make_tree_from_duck(f'sql_to_pandas/tpch_explain/{16}_duck.json')
