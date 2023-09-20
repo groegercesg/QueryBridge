@@ -84,6 +84,7 @@ class ReplaceColumnReferences(Transformer):
         regex_search = re.search(self.column_reference_regex,token[0])
         if regex_search != None:
             column_target = int(token[0].strip().replace('#', ''))
+            assert len(self.child_trees[0].output) - 1 >= column_target, f"Child does not have the required length ({column_target})"
             #print(f'We need to do col_ref replacing on {token[0]}')
             
             # Return the new element
@@ -298,6 +299,6 @@ def run_tree_generation():
             print(f'\t{failed_file}')
 
 # generate_duckdb_explains()
-run_tree_generation()
+# run_tree_generation()
 
-# make_tree_from_duck(f'sql_to_pandas/tpch_explain/{6}_duck.json')
+make_tree_from_duck(f'sql_to_pandas/tpch_explain/{12}_duck.json')

@@ -32,13 +32,14 @@
     - [Populate the Databases with data](#populate-the-databases-with-data)
 - [Demos](#demos)
   - [Conversion demo](#conversion-demo)
-    - [Postgres Query Plan](#postgres-query-plan)
+    - [PostgreSQL Query Plan](#postgresql-query-plan)
     - [DuckDB Query Plan](#duckdb-query-plan)
     - [Converter flags](#converter-flags)
     - [Additional optimisations](#additional-optimisations)
   - [Benchmarker demo](#benchmarker-demo)
 - [Tests for sql\_to\_pandas](#tests-for-sql_to_pandas)
-- [Development stuff](#development-stuff)
+- [Development Notes](#development-notes)
+  - [Duck DB Plan Parsing](#duck-db-plan-parsing)
   - [Update requirements](#update-requirements)
 
 ## Setup
@@ -87,6 +88,34 @@ sudo apt update
 sudo apt install postgresql postgresql-contrib -y
 ```
 
+<details>
+<summary>Detailed Fedora 38 Install Instructions</summary>
+<br>
+First, add the PostgreSQL Yum Repository to your Fedora system by running the below command:
+
+```
+sudo dnf -y install https://download.postgresql.org/pub/repos/yum/reporpms/F-38-x86_64/pgdg-fedora-repo-latest.noarch.rpm
+```
+
+Next, install the PostgreSQL-14 Client and Server:
+
+```
+sudo dnf module reset postgresql -y
+sudo dnf install vim postgresql14-server postgresql14
+```
+
+Then, initialize the DBMS and start the Database service:
+```
+sudo /usr/pgsql-14/bin/postgresql-14-setup initdb
+sudo systemctl enable --now postgresql-14
+```
+
+And to double check everything is working, check the service status to confirm the Database came up:
+```
+systemctl status postgresql-14
+```
+</details>
+
 Change to the newly created postgres user:
 
 ```bash
@@ -99,7 +128,7 @@ And check it's installed with:
 psql -V
 ```
 
-If this version is not Postgres 14.X, please install Postgres 14
+If this version is not Postgres 14.X, please install Postgres 14.
 
 Now we can create the table, use the same name as specified in your _database\_connection.json_ file. First enter the postgres shell, then create the database.
 
@@ -203,7 +232,7 @@ python3 benchmarking/prepare_databases.py --verbose True --data_storage data_sto
 
 The supplied parameters create/initialise the following:
 - A directory called *data_storage* in the root of the directory containing the data for the TPC-H benchmark suite with scaling factor *1*
-- A postgres database, with the connection details as specified, full of the same data from *data_storage*
+- A PostgreSQL database, with the connection details as specified, full of the same data from *data_storage*
 - A DuckDB database, called *duckdb_tpch.duckdb*, full of the data also found in *data_storage*
 
 You can even just create one form of the data, with the parameter: *--run_only*
@@ -213,7 +242,7 @@ For instance, to create only Duck DB, one would run: *... --run_only 'DuckDB'*
 
 ### Conversion demo
 
-#### Postgres Query Plan
+#### PostgreSQL Query Plan
 
 Assuming you have completed all the setup, you can now run the command below to generate the Pandas code for Query 6 from the corresponding PostgreSQL query plan :
 
@@ -222,7 +251,7 @@ source sqlconv_env/bin/activate
 python3 sql_to_pandas/sql_to_pandas.py --file sql_to_pandas/queries/6.sql --output_location postgres_query_6 --name q6_pandas.py --query_planner Postgres --planner_file postgres_connection.json 
 ```
 
-This will run the *6.sql* file in the Postgres database we have created prior, retrieve a query plan and then convert this query plan to Pandas. By default the tool creates diagrams of each of the query plans it encounters, Pandas tree for Query 6 may look similar to this:
+This will run the *6.sql* file in the PostgreSQL database we have created prior, retrieve a query plan and then convert this query plan to Pandas. By default the tool creates diagrams of each of the query plans it encounters, Pandas tree for Query 6 may look similar to this:
 
 ![Pandas Query 6 Tree](readme_images/pandas_query6_tree.png)
 
@@ -299,7 +328,16 @@ cd sql_to_pandas/tests
 python3 -m pytest
 ```
 
-## Development stuff
+## Development Notes
+
+### Duck DB Plan Parsing
+
+- The existing version is incredibly error prone
+- Effort has been put into using a Grammar for parsing the incoming plan JSON
+- The [`output_parse.py`](sql_to_pandas/output_parse.py) file contains the majority of the development of this
+- The [grammar](sql_to_pandas/grammars/duck.lark) also has it's correctness validated by [tests](sql_to_pandas/tests/test_output_parsing.py)
+
+
 
 ### Update requirements
 

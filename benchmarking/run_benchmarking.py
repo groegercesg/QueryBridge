@@ -301,15 +301,20 @@ def main():
                             print(color.RED + str(query["Query Name"]) + ": Pandas conversion error!" + "\n" + color.END)
                             print(ex)
                         
-                        print(result.returncode)
+                        # Print returncode
+                        if args.verbose:
+                            print(f'The returncode for running the query was: {result.returncode}')
+                        
                         if bad_query == False & result.returncode != 0:
                             # When we are unable to convert, handle the exception
                             bad_query = True
                             # We print the error
                             # But still output to CSV and to the query file
                             print(color.RED + str(query["Query Name"]) + ": Pandas conversion error!" + "\n" + color.END)
-                            print(result.stdout)
-                            print(result.stderr)
+                            error_locations = [result.stdout, result.stderr]
+                            for error_msg in error_locations:
+                                if str(error_msg) != '':
+                                    print(error_msg)
                             #raise Exception( f'Invalid result: { result.returncode }' )      
                         
                         query_name = str(query["SQL Name"].split("/")[-1]).split(".")[0]

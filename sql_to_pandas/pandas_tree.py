@@ -88,6 +88,7 @@ def process_output(self, output, codecomphelper):
         # A brack cleaned option that removes multiple equals into one, and get's rid of quotes and dots
         brack_cleaned_equal_quote_lower_output = brack_cleaned_lower_output.replace(" == ", " = ").replace("'", "")
         brack_cleaned_equal_quote_lower_output_no_end = rreplace(rreplace(brack_cleaned_equal_quote_lower_output, "end", " ", 1).strip(), " else", "", 1).strip()
+        brack_cleaned_equal_quote_lower_output_no_end_single_space = ' '.join(brack_cleaned_equal_quote_lower_output_no_end.split())
         brack_cleaned_equal_quote_lower_output_no_end_spaced = rreplace(rreplace(brack_cleaned_equal_quote_lower_output, " end ", "  ", 1).strip(), " else", "", 1).strip()
         brack_cleaned_equal_quote_lower_output_no_end_spaced_like = brack_cleaned_equal_quote_lower_output_no_end_spaced.replace(" like ", " ~~ ")
         brack_cleaned_equal_quote_lower_output_dots = brack_cleaned_equal_quote_lower_output.replace("." , "")
@@ -138,6 +139,10 @@ def process_output(self, output, codecomphelper):
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
             output[i] = (output_original_value, col_ref_complete[brack_cleaned_equal_quote_lower_output_dots_no_end])
+        elif brack_cleaned_equal_quote_lower_output_no_end_single_space in col_ref_complete:
+            # We have an item in output that needs to be changed
+            output_original_value = cleaned_output
+            output[i] = (output_original_value, col_ref_complete[brack_cleaned_equal_quote_lower_output_no_end_single_space])
         elif brack_cleaned_equal_quote_lower_output_no_end_spaced_like in col_ref_complete:
             # We have an item in output that needs to be changed
             output_original_value = cleaned_output
@@ -284,25 +289,49 @@ def handle_extract(string):
     
     return str(source) + ".dt." + str(param)
 
+def get_numbers_greedy(string):
+    char_list = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+    i = 0
+    for incoming_char in string:
+        if incoming_char in char_list:
+            i += 1
+        else:
+            break
+        
+    return string[0:i]
+
 def handle_substring(string):
     # String: SUBSTRING(c_phone FROM 1 FOR 2)
     # Split into where, from and for
     
+    after_substring = ""
+    
     # Check is actually a substring
     if "SUBSTRING" in string:
-        where_value = str(str(string[10:]).split(" ")[0]).strip()
-        from_value = int(str(str(string.split(" FROM ")[1]).split(" FOR ")[0]).strip())
-        for_value = int(str(str(string.split(" FOR ")[1]).split(")")[0]).strip())
-    
+        if string[9] == "(":
+            where_value = str(str(string[10:]).split(" ")[0]).strip()
+            from_value = int(str(str(string.split(" FROM ")[1]).split(" FOR ")[0]).strip())
+            for_value = int(str(str(string.split(" FOR ")[1]).split(")")[0]).strip())
+        else:
+            # Version without brackets!
+            # String: SUBSTRINGc_phone FROM 1 FOR 2...
+            where_value = str(str(string[9:]).split(" ")[0]).strip()
+            from_value = int(str(str(string.split(" FROM ")[1]).split(" FOR ")[0]).strip())
+            after_for = str(str(string.split(" FOR ")[1]))             
+            for_value = int(get_numbers_greedy(after_for).strip())
+            after_substring = string[string.find(str(for_value)) + len(str(for_value)):]
     else:
         # Do lowercase
-        where_value = str(str(string[10:]).split(" ")[0]).strip()
-        from_value = int(str(str(string.split(" from ")[1]).split(" for ")[0]).strip())
-        for_value = int(str(str(string.split(" for ")[1]).split(")")[0]).strip())
+        if string[9] == "(":
+            where_value = str(str(string[10:]).split(" ")[0]).strip()
+            from_value = int(str(str(string.split(" from ")[1]).split(" for ")[0]).strip())
+            for_value = int(str(str(string.split(" for ")[1]).split(")")[0]).strip())
+        else:
+            raise Exception(f"Lowercase version with no brackets.\nSee here: {string}")
     
     
     
-    return str(where_value) + ".str.slice(" + str(from_value - 1) + ", " + str((from_value - 1) + for_value) + ")"
+    return str(where_value) + ".str.slice(" + str(from_value - 1) + ", " + str((from_value - 1) + for_value) + ")" + after_substring
 
 def remove_range(sentence, matches):
     return "".join(
@@ -717,10 +746,22 @@ def clean_filter_params(self, params, codeCompHelper, prev_df):
             # If line_split[i] contains an "ANY", the replace with ".isin"
             if " = ANY " in line_split[i]:
                 line_split[i] = line_split[i].replace(" = ANY ", ".isin")
-                
+                if line_split[i][line_split[i].find("isin") + len("isin")] != "(":
+                    # Insert a "("
+                    bracket_position = line_split[i].find("isin") + len("isin")
+                    line_split[i] = line_split[i][:bracket_position] + "(" + line_split[i][bracket_position:]
+                    if line_split[i][-1] == "]":
+                        line_split[i]+= ")"
+                    else:
+                        raise Exception("Can't add bracket to end of isin, as unexpected format")
+                    
             # Do replacements for all
             if " <> ALL " in line_split[i]:
-                line_split[i] = line_split[i].replace(" <> ALL ", ".isin")
+                line_split[i] = line_split[i].replace(" <> ALL ", ".isin(")
+                if line_split[i][-1] == "]":
+                    line_split[i]+= ")"
+                else:
+                    raise Exception("Can't add bracket to end of isin, as unexpected format")
                 line_split[i] = "~" + line_split[i]
                 
             # Handle not equals case
@@ -2309,6 +2350,9 @@ def pandas_aggregate_case(inner_string, prev_df):
                 # If contained in brackets
                 if (split_on[j][0] == "(") and (split_on[j][-1] == ")"):
                     split_on[j] = split_on[j][1:-1]
+                
+                # Strip to remove whitespace
+                split_on[j] = split_on[j].strip()
                 
                 if " = " in split_on[j]:
                     split_on_eq = split_on[j].split(" = ")

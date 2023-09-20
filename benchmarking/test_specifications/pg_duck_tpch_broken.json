@@ -1,0 +1,268 @@
+{
+    "Test Name": "Postgres and Duck DB TPC-H Test",
+    "Scaling Factors": [1],
+    "Queries": [
+        {
+            "Query Name": "Query 2",
+            "Required Data": ["part", "supplier", "partsupp", "nation", "region"],
+            "SQL Name": "2.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q2_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q2_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 12",
+            "Required Data": ["orders", "lineitem"],
+            "SQL Name": "12.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q12_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q12_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 16",
+            "Required Data": ["partsupp", "part", "supplier"],
+            "SQL Name": "16.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q16_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q16_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 17",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "17.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q17_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q17_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 19",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "19.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q19_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q19_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 20",
+            "Required Data": ["supplier", "nation", "partsupp", "part", "lineitem"],
+            "SQL Name": "20.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q20_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q20_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 21",
+            "Required Data": ["supplier", "lineitem", "orders", "nation"],
+            "SQL Name": "21.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q21_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q21_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 22",
+            "Required Data": ["customer", "orders"],
+            "SQL Name": "22.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q22_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q22_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                }
+            ]
+        }
+    ],
+    "Temporary Directory": "benchmarking/temp_queries",
+    "SQL Converter Location": "sql_to_pandas/sql_to_pandas.py",
+    "SQL Queries Location": "benchmarking/queries",
+    "Stored Queries Location": "benchmarking/stored_queries",
+    "Pandas Data Loader": "tpch_data_loader.py",
+    "Number of Query Runs": 6,
+    "Results Location": "benchmarking/test_results/pg_duck_tpch_test_results_sem2.csv",
+    "Postgres Connection Details": "postgres_connection.json",
+    "Duck DB Connection": "duckdb_tpch.duckdb",
+    "DB Gen Location": "tpch-dbgen",
+    "Constants Location": "tpch-prep",
+    "Data Storage": "data_storage",
+    "Use Numpy": "False",
+    "Results Precision": 4
+}

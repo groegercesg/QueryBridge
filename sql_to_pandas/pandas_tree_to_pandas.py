@@ -183,7 +183,7 @@ def postorder_traversal(tree, pandas_statements, baseCodeCompHelper, aggrs, tree
         # We have an id collision, these are not unique
         raise ValueError("We have a node_id collision!")
         
-    if hasattr(tree, 'nodes'):
+    if hasattr(tree, 'nodes') and tree.nodes != []:
         # Not first time, figure out what previous df would be called
         prev_node_names = []
         for prev_node in tree.nodes:

@@ -206,7 +206,7 @@ def solve_nested_loop_node(tree):
             else:
                 raise Exception("Didn't find a merging condition to add to our Nested Loop node.")
     
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             solve_nested_loop_node(individual_plan)
 
@@ -246,7 +246,7 @@ def solve_null_output(tree):
     # Preorder Traversal
  
     # Check current node
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for i in range(len(tree.plans)):
             child_node = tree.plans[i]
             # Iterate through output
@@ -267,7 +267,7 @@ def solve_null_output(tree):
             child_node.output = child_output_list
     
     # Run this function on below nodes
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             solve_null_output(individual_plan)   
         
@@ -275,7 +275,7 @@ def solve_groupby_fusion(tree):
     # Check current node
     # Only run checking if we're a group aggregate node
     if tree.node_type == "Group Aggregate":
-        if tree.plans != None:
+        if tree.plans != None and tree.plans != []:
             for i in range(len(tree.plans)):
                 current_node = tree.plans[i]
                 if current_node.node_type == "Sort":
@@ -293,7 +293,7 @@ def solve_groupby_fusion(tree):
                     tree.plans[i] = prune_children
     
     # Run this function on below nodes
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             solve_groupby_fusion(individual_plan)  
 
@@ -301,7 +301,7 @@ def solve_merge_join_fusion(tree):
     # Check current node
     # Only run checking if we're a group aggregate node
     if tree.node_type == "Merge Join" and tree.join_type.lower() != "semi":
-        if tree.plans != None:
+        if tree.plans != None and tree.plans != []:
             for i in range(len(tree.plans)):
                 current_node = tree.plans[i]
                 if current_node.node_type == "Sort":
@@ -319,7 +319,7 @@ def solve_merge_join_fusion(tree):
                     tree.plans[i] = prune_children
     
     # Run this function on below nodes
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             solve_merge_join_fusion(individual_plan)  
  
@@ -336,7 +336,7 @@ def solve_prune_node(prune_type, tree):
             # And "Hash" will never be the last node
             
     # Check current node
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             if current_node.node_type == prune_type:
@@ -354,7 +354,7 @@ def solve_prune_node(prune_type, tree):
                 tree.plans[i] = prune_children
     
     # Run this function on below nodes
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             solve_prune_node(prune_type, individual_plan)               
             
@@ -385,7 +385,7 @@ def solve_aliases(tree, replaces = None):
     
     # We want to use a post-order traversal
     # First we traverse the left subtree, then the right subtree and finally the root node.
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             solve_aliases(individual_plan, replaces)
          
@@ -535,12 +535,12 @@ def solve_correlated_subquery(tree, subquery_helper, subplan_zone):
             
     # Go left, right
     # Run this function on below nodes
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             solve_correlated_subquery(individual_plan, subquery_helper, subplan_zone)
     
     # Act on the children of the current node
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         new_plans = []
         for current_child in tree.plans:            
             child_subplan = False
@@ -1071,7 +1071,7 @@ def actual_correlation_to_join_node(node, correlation_location, correlated_relat
     """
     
     # Check for children
-    if node.plans != None:
+    if node.plans != None and node.plans != []:
         raise Exception("Correlated node has children, we haven't written to deal with this.")
     
     # Reset correlated_relation
@@ -1271,7 +1271,7 @@ def delete_tree_branches_by_id(tree, ids):
     # Preorder Traversal
             
     # Check current node
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         to_remove = []
         for i in range(len(tree.plans)):
             below_current_node = tree.plans[i]
@@ -1284,7 +1284,7 @@ def delete_tree_branches_by_id(tree, ids):
             del tree.plans[i]
     
     # Run this function on below nodes
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             delete_tree_branches_by_id(individual_plan, ids)     
 
@@ -1320,7 +1320,7 @@ def recurse_and_replace(tree, replaces):
     
     # We want to use a post-order traversal
     # First we traverse the left subtree, then the right subtree and finally the root node.
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             recurse_and_replace(individual_plan, replaces)
     
@@ -1809,7 +1809,7 @@ def duck_col_ref_insert(tree, cols):
 
 def duck_solve_subquery(tree):
     # Postorder Traversal
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             # For the moment, only fix "SUBQUERY" in Hash Join
@@ -1923,19 +1923,19 @@ def duck_solve_subquery(tree):
                         setattr(current_node, source_loc, " ".join(cond_split))
     
     # Run this function on below nodes
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             duck_solve_subquery(individual_plan)   
 
 def duck_fix_remove_laters(tree):
     # Run this function on below nodes
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for individual_plan in tree.plans:
             duck_fix_remove_laters(individual_plan)   
             
     # Preorder Traversal
     
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             if hasattr(current_node, "remove_later"):
@@ -1980,7 +1980,7 @@ def duck_fix_remove_laters(tree):
     
 def duck_fix_delim_join(tree):
     # Postorder Traversal
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             # Fix a Delim Join, that now is represented as a Hash Join
@@ -2024,7 +2024,9 @@ def duck_fix_delim_join(tree):
                                 pass
                             elif " = " in elem:
                                 eqs.append(elem)
-                            elif " != " in elem:
+                            elif any(x in elem for x in [" != ", " <> "]):
+                                if " != " in elem:
+                                    elem = elem.replace("!=", "<>")
                                 new_elem_s = elem.replace("!=", "<>").split(" <> ")
                                 for j in range(len(new_elem_s)):
                                     new_elem_s[j] = new_elem_s[j].strip()
@@ -2069,13 +2071,13 @@ def duck_fix_delim_join(tree):
     # Perform a Postorder traversal
     # Check if this node has a child
     if hasattr(tree, "plans"):
-        if tree.plans != None:
+        if tree.plans != None and tree.plans != []:
             for i in range(len(tree.plans)):
                 duck_fix_delim_join(tree.plans[i])   
                 
 def duck_search_for_delim_scan(tree):
     # Postorder traversal
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             # Fix a Hash Join
@@ -2088,7 +2090,7 @@ def duck_search_for_delim_scan(tree):
                         for j in range(len(current_node.plans)):
                             below_nodes[current_node.plans[j].node_type] += 1
                             
-                # How many chunk scans do we have below, if it's eaxtly 1, then we skip this current node
+                # How many chunk scans do we have below, if it's exactly 1, then we skip this current node
                 if below_nodes["Delim Scan"] == 1:
                     return current_node
                             
@@ -2096,7 +2098,7 @@ def duck_search_for_delim_scan(tree):
     # Check if this node has a child
     output = None
     if hasattr(tree, "plans"):
-        if tree.plans != None:
+        if tree.plans != None and tree.plans != []:
             for i in range(len(tree.plans)):
                 new_output = duck_search_for_delim_scan(tree.plans[i])   
                 if new_output != None:
@@ -2106,7 +2108,7 @@ def duck_search_for_delim_scan(tree):
 
 def duck_fix_column_data_scan_hash_join(tree):
     # Postorder Traversal
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             # Fix a Hash Join
@@ -2155,14 +2157,14 @@ def duck_fix_column_data_scan_hash_join(tree):
     # Perform a Postorder traversal
     # Check if this node has a child
     if hasattr(tree, "plans"):
-        if tree.plans != None:
+        if tree.plans != None and tree.plans != []:
             for i in range(len(tree.plans)):
                 duck_fix_column_data_scan_hash_join(tree.plans[i])   
 
 
 def duck_fix_chunk_scan_hash_join(tree):
     # Postorder Traversal
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             # Fix a Hash Join
@@ -2211,14 +2213,14 @@ def duck_fix_chunk_scan_hash_join(tree):
     # Perform a Postorder traversal
     # Check if this node has a child
     if hasattr(tree, "plans"):
-        if tree.plans != None:
+        if tree.plans != None and tree.plans != []:
             for i in range(len(tree.plans)):
                 duck_fix_chunk_scan_hash_join(tree.plans[i])   
 
     
 def duck_fix_delim_scan(tree):
     # Postorder Traversal
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             # Fix a Hash Join
@@ -2267,13 +2269,13 @@ def duck_fix_delim_scan(tree):
     # Perform a Postorder traversal
     # Check if this node has a child
     if hasattr(tree, "plans"):
-        if tree.plans != None:
+        if tree.plans != None and tree.plans != []:
             for i in range(len(tree.plans)):
                 duck_fix_delim_scan(tree.plans[i])   
 
 def duck_fix_mark_hash_join(tree):
     # Postorder Traversal
-    if tree.plans != None:
+    if tree.plans != None and tree.plans != []:
         for i in range(len(tree.plans)):
             current_node = tree.plans[i]
             # Fix a Hash Join with Join_type: mark
@@ -2342,7 +2344,7 @@ def duck_fix_mark_hash_join(tree):
                     # Set current_node to be the children
                     tree.plans[i] = target_child
                 # ELIF filter contains NOT(SUBQUERY)
-                elif hasattr(current_node, "filter") and (("NOT(SUBQUERY)" in current_node.filter) or ("NOT SUBQUERY" in current_node.filter)):
+                elif hasattr(current_node, "filter") and (("NOT(SUBQUERY)" in current_node.filter) or ("NOT SUBQUERY" in current_node.filter) or ("NOTSUBQUERY" in current_node.filter)):
                     # Remove the filter
                     delattr(current_node, "filter")
                     # Replace Join type with special mode
@@ -2354,7 +2356,7 @@ def duck_fix_mark_hash_join(tree):
     # Perform a Postorder traversal
     # Check if this node has a child
     if hasattr(tree, "plans"):
-        if tree.plans != None:
+        if tree.plans != None and tree.plans != []:
             for i in range(len(tree.plans)):
                 duck_fix_mark_hash_join(tree.plans[i])
 
@@ -2363,7 +2365,7 @@ def duck_fix_class_tree(tree):
     # Perform a preorder traversal
     # Check if this node has a child
     if hasattr(tree, "plans"):
-        if tree.plans != None:
+        if tree.plans != None and tree.plans != []:
             for i in range(len(tree.plans)):
                 tree.plans[i] = duck_fix_class_tree(tree.plans[i])
     
@@ -2372,7 +2374,7 @@ def duck_fix_class_tree(tree):
     
     # Process current
     # Do we have lower references, that we need to fix
-    if (hasattr(tree, "plans")) and (tree.plans != None):
+    if (hasattr(tree, "plans")) and (tree.plans != None) and (tree.plans != []):
         need_col_fix = False
         if tree.node_type in alias_locations:
             for loc in alias_locations[tree.node_type]:
