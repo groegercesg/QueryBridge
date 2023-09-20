@@ -337,8 +337,6 @@ python3 -m pytest
 - The [`output_parse.py`](sql_to_pandas/output_parse.py) file contains the majority of the development of this
 - The [grammar](sql_to_pandas/grammars/duck.lark) also has it's correctness validated by [tests](sql_to_pandas/tests/test_output_parsing.py)
 
-
-
 ### Update requirements
 
 ```bash
