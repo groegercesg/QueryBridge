@@ -93,25 +93,25 @@ sudo apt install postgresql postgresql-contrib -y
 <br>
 First, add the PostgreSQL Yum Repository to your Fedora system by running the below command:
 
-```
+```bash
 sudo dnf -y install https://download.postgresql.org/pub/repos/yum/reporpms/F-38-x86_64/pgdg-fedora-repo-latest.noarch.rpm
 ```
 
 Next, install the PostgreSQL-14 Client and Server:
 
-```
+```bash
 sudo dnf module reset postgresql -y
 sudo dnf install vim postgresql14-server postgresql14
 ```
 
 Then, initialize the DBMS and start the Database service:
-```
+```bash
 sudo /usr/pgsql-14/bin/postgresql-14-setup initdb
 sudo systemctl enable --now postgresql-14
 ```
 
 And to double check everything is working, check the service status to confirm the Database came up:
-```
+```bash
 systemctl status postgresql-14
 ```
 </details>
