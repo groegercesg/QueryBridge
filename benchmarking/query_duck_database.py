@@ -1,5 +1,5 @@
 import time
-import duckdb
+from prepare_databases.prepare_duckdb import PrepareDuckDB
 
 def run_duck_query(db_details, query_file, verbose):
     # Read SQL file
@@ -24,19 +24,19 @@ def run_duck_query(db_details, query_file, verbose):
 
     # Try query, catch error
     try:
-        con = duckdb.connect(database=db_details, read_only=False)
+        #con = duckdb.connect(database=db_details, read_only=False)
+        db = PrepareDuckDB(db_details)
         
         # Prepare connection by set to single threaded
-        con.execute("SET threads TO 1;")
+        db.execute_query("SET threads TO 1;")
         
         for i, single_query in enumerate(queries):
             if verbose:
                 print("Executing SQL Query, part", i+1, "of", len(queries), ".")
             
             start = time.time()
-            exec = con.execute(single_query)
             
-            retrieved_records = exec.fetchall()
+            retrieved_records = db.execute_query(single_query)
             results.append(retrieved_records)
             
             end = time.time()

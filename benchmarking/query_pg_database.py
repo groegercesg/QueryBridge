@@ -3,6 +3,7 @@ import time
 import psycopg2.extensions
 from psycopg2.extras import LoggingConnection, LoggingCursor
 import logging
+from prepare_databases.prepare_postgres import PreparePostgres
 
 logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
@@ -23,7 +24,6 @@ class MyLoggingCursor(LoggingCursor):
 class MyLoggingConnection(LoggingConnection):
     def filter(self, msg, curs):
         self.exec_time = time.time() - curs.timestamp
-
         
     def cursor(self, *args, **kwargs):
         kwargs.setdefault('cursor_factory', MyLoggingCursor)
@@ -52,35 +52,27 @@ def run_pg_query(db_details, query_file, verbose):
 
     # Try connection, catch error
     try:
-        connection = psycopg2.connect(user=db_details["User"],
-                                    password=db_details["Password"],
-                                    host=db_details["Host"],
-                                    port=db_details["Port"],
-                                    database=db_details["Database"],
-                                    connection_factory=MyLoggingConnection)
-        connection.initialize(logger)
-        cursor = connection.cursor()
+        db = PreparePostgres(db_details, MyLoggingConnection)
+        db.connection.initialize(logger)
         
         for i, single_query in enumerate(queries):
             if verbose:
                 print("Executing SQL Query, part", i+1, "of", len(queries), ".")
             
-            cursor.execute(single_query)
+            retrieved_records = db.execute_query(single_query)
             
+            # If it's a select query, we store the results
             if single_query[:6].lower() == "select":
-                retrieved_records = cursor.fetchall()
                 results.append(retrieved_records)
             
-            exec_time += connection.exec_time
+            exec_time += db.connection.exec_time
     except (Exception, psycopg2.Error) as error:
-        print("Error while fetching data from PostgreSQL", error)
+        print(f"Error while fetching data from PostgreSQL: {error}")
     finally:
         # closing database connection.
-        if connection:
-            cursor.close()
-            connection.close()
-            if verbose:
-                print("PostgreSQL connection is closed")
+        db.connection.close()
+        if verbose:
+            print("PostgreSQL connection is closed")
     
     # Choose results
     if len(results) == 1:
@@ -89,11 +81,3 @@ def run_pg_query(db_details, query_file, verbose):
         raise ValueError("We have multiple statements that return values, we haven't coded how to handle this.")
             
     return results, exec_time
-
-# For testing
-if __name__ == "__main__":
-    pass
-    import json
-    manifest_json = json.load(open('query_15_test.json'))
-
-    run_query(manifest_json["Database Connection Details"], "queries/15.sql", True)

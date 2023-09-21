@@ -4,18 +4,28 @@ import psycopg2
 import os
 
 class PreparePostgres(PrepareDatabase):
-    def __init__(self, connection_details):
-        with open(connection_details) as f:
-            super().__init__(json.load(f), "Postgres")
-        self.connection = self.__open_connection()
+    def __init__(self, connection_details, connection_factory=None):
+        # connection details might be a dict
+        if isinstance(connection_details, dict):
+            pass
+        # Or if it's just a str, we try to open a file from it
+        elif isinstance(connection_details, str):
+            with open(connection_details) as f:
+                connection_details = json.load(f)
+        else:
+            raise Exception(f"Unknown format for connection_details: {type(connection_details)}")
+            
+        super().__init__(connection_details, "Postgres")
+        self.connection = self.__open_connection(connection_factory)
         
-    def __open_connection(self):
+    def __open_connection(self, connection_factory):
         try:
             connection = psycopg2.connect(user=self.connection_details["User"],
                                     password=self.connection_details["Password"],
                                     host=self.connection_details["Host"],
                                     port=self.connection_details["Port"],
-                                    database=self.connection_details["Database"])
+                                    database=self.connection_details["Database"],
+                                    connection_factory=connection_factory)
         except Exception as ex:
             raise Exception(ex)
         return connection

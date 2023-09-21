@@ -167,7 +167,6 @@ class PrepareDuckDB(PrepareDatabase):
         
         for command in index_on_f_keys_commands:
             con.execute(command)
-        
         """
         
         # Commit changes performed within a transaction
