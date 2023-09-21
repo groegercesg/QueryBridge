@@ -18,3 +18,5 @@ duck_testing/
 benchmarking/temp_queries/
 sqlconv_env/
 debugging/
+hyperd.log
+hyperdb.hyper
