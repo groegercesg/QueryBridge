@@ -1,8 +1,12 @@
 import argparse
 import sys
+# Add the parent directory of package to sys.path before attempting to import anything from package using absolute imports:
+from pathlib import Path # if you haven't already done so
+current_file = Path(__file__).resolve()
+parent, root = current_file.parent, current_file.parents[1]
+sys.path.append(str(root))
 import json
 import subprocess
-from pathlib import Path
 import shutil
 import time
 import csv
@@ -10,7 +14,7 @@ from math import log10, floor
 from query_pg_database import run_pg_query
 from query_duck_database import run_duck_query
 from compare_results import compare
-from prepare_databases import prepare_all
+from prepare_all_databases import prepare_all
 import os
 from os import path
 import importlib.util

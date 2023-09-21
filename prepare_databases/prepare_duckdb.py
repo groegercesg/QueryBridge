@@ -1,24 +1,16 @@
-import json
+from prepare_databases.prepare_database import PrepareDatabase
 import duckdb
+import json
 import os
 
-class prep_duck():
-    """
-    Required methods:
-        get_explain
-        execute_query
-        is_database_empty
-        __init__
-    """
-    def __init__(self, in_duckdb):
-        self.file_name = str(in_duckdb)
-        self.connection = duckdb.connect(database=in_duckdb, read_only=False)
+class PrepareDuckDB(PrepareDatabase):
+    def __init__(self, connection_details):
+        super().__init__(connection_details, "Duck DB")
+        self.connection = self.__open_connection()
+        self.explain_options = "EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON)"
         
-        # Store TPC-H tables
-        self.tables = ['LINEITEM', 'PARTSUPP', 'ORDERS', 'CUSTOMER', 'SUPPLIER', 'NATION', 'REGION', 'PART']
-    
-    def is_database_empty(self):        
-        cursor_fetch = self.connection.execute("""SELECT table_name FROM information_schema.tables""").fetchall()
+    def is_database_empty(self):
+        cursor_fetch = self.execute_query("""SELECT table_name FROM information_schema.tables""")
         
         if len(cursor_fetch) > 0:
             return False
@@ -26,17 +18,16 @@ class prep_duck():
             print(cursor_fetch)
             return True
         
-    def execute_query(self, query):
+    def execute_query(self, query_text):
         # Execute a query
-        self.connection.execute(query)
-             
-    def get_explain(self, query, query_name=None):
+        return self.connection.execute(query_text).fetchall()
         
-        explain_opts = "EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON) "
-        
+    def get_explain(self, query_text, query_name=None):
         # Replace out our explain options
-        if explain_opts in query:
-            query = query.replace(explain_opts, "")
+        if self.explain_options in query_text:
+            print("We had to replace here!")
+            print("TODO: FIX this!")
+            query_text = query_text.replace(self.explain_options, "")
         
         if query_name == None:
             raise Exception("We haven't set our query name!")
@@ -49,15 +40,15 @@ class prep_duck():
                             "SET threads TO 1;"]
             
         for command in explain_commands:
-            self.connection.execute(command)
+            self.execute_query(command)
         
         try:
-            self.connection.execute(query).fetchall()
+            self.execute_query(query_text)
         except RuntimeError as ex:
             if "Catalog Error:" == str(ex)[:14]:
                 name = str(str(ex).split('name "')[1].split('"')[0]).strip()
                 self.execute_query("drop view " + name + ";")
-                self.connection.execute(query).fetchall()
+                self.execute_query(query_text)
             else:
                 print(ex)
                 exit(0)
@@ -75,7 +66,14 @@ class prep_duck():
         
         return json_data
     
-    def prepare_database(self, data_dir):
+    def __open_connection(self):
+        try:
+            connection = duckdb.connect(database=self.connection_details, read_only=False)
+        except Exception as ex:
+            raise Exception(ex)
+        return connection
+    
+    def prepare_database(self, data_dir, constants_dir=None):
         # Set the data dir
         self.data_dir = data_dir
 
@@ -84,13 +82,13 @@ class prep_duck():
         
         # Remove existing file
         try:
-            os.remove(self.file_name)
+            os.remove(self.connection_details)
         except OSError:
             pass
         
         # Create new file
-        self.connection = duckdb.connect(database=self.file_name, read_only=False)
-        print("Created new Database file, at: " + str(self.file_name))
+        self.connection = self.__open_connection()
+        print("Created new Database file, at: " + str(self.connection_details))
         
         # Create table
         create_table_commands = [
@@ -105,7 +103,7 @@ class prep_duck():
         ]
         
         for command in create_table_commands:
-            self.connection.execute(command)
+            self.execute_query(command)
         
         print("Created tables")
         
@@ -122,12 +120,11 @@ class prep_duck():
         ]
         
         for command in load_data_commands:
-            self.connection.execute(command)
+            self.execute_query(command)
             
         print("Loaded data into tables")
         
-        # Set indexes   
-        # TODO
+        # TODO: Set indexes
         """
         primary_key_commands = [
             "ALTER TABLE part ADD PRIMARY KEY (p_partkey);",
@@ -179,3 +176,4 @@ class prep_duck():
         print("Indexes and Foreign keys set on tables")
         
         print("DuckDB Database creation completed")
+        

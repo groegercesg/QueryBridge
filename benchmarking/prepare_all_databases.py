@@ -1,7 +1,12 @@
 from generate_tpch_data import data_generator
+
+from prepare_databases.prepare_duckdb import PrepareDuckDB
+from prepare_databases.prepare_postgres import PreparePostgres
+
 import sys
 import os
 import argparse
+from enum import Enum
 
 class HiddenPrinting:
     def __enter__(self):
@@ -11,15 +16,33 @@ class HiddenPrinting:
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout.close()
         sys.stdout = self._original_stdout
+        
+class KnownDatabases(Enum):
+    POSTGRES = PreparePostgres
+    DUCK_DB = PrepareDuckDB
+        
+def run_prepare(prepare_class, verbose, data_storage_location, connection_details, constants_location=None):
+    if isinstance(prepare_class, KnownDatabases):
+        prepare_class = prepare_class.value
+    else:
+        raise Exception(f"The prepare_class was of type: {type(prepare_class)}")
+    
+    # Prepare the passed class: prepare_class
+    prep_db = prepare_class(connection_details)
+    print(f"Prepare {prep_db.database_name} Database")
+    if verbose:
+        prep_db.prepare_database(data_storage_location, constants_location)
+    else:
+        with HiddenPrinting():
+            prep_db.prepare_database(data_storage_location, constants_location)
+    print(f"{prep_db.database_name} Database Prepared")
 
-import prepare_postgres
-import prepare_duckdb
-
+"""
 def do_postgres(verbose, data_storage_location, postgres_connection_details, constants_location):
     # Prepare Postgres
         # Loads the data from "Data Storage" and puts it into the database
     print("Preparing Postgres Database")
-    pg_db = prepare_postgres.prep_pg(postgres_connection_details)
+    pg_db = PreparePostgres(postgres_connection_details)
     if verbose:
         pg_db.prepare_database(data_storage_location, constants_location)
     else:
@@ -31,13 +54,14 @@ def do_duckdb(verbose, data_storage_location, duck_db_connection_details):
     # Prepare DuckDB
         # Loads the data from "Data Storage" and puts it into the DuckDB file
     print("Preparing DuckDB Database")
-    duck_db = prepare_duckdb.prep_duck(duck_db_connection_details)
+    duck_db = PrepareDuckDB(duck_db_connection_details)
     if verbose:
         duck_db.prepare_database(data_storage_location)
     else:
         with HiddenPrinting():
             duck_db.prepare_database(data_storage_location)
     print("DuckDB Database prepared")
+"""
 
 def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor, postgres_connection_details,
                 duck_db_connection_details, constants_location, run_only = None):
@@ -54,14 +78,14 @@ def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor,
     
     if (run_only == None):
         # Do Postgres
-        do_postgres(verbose, data_storage_location, postgres_connection_details, constants_location)
+        run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, constants_location)
         # Do Duck DB
-        do_duckdb(verbose, data_storage_location, duck_db_connection_details)
+        run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, constants_location)
 
     elif (run_only != None) and (run_only == "PostgreSQL"):
-        do_postgres(verbose, data_storage_location, postgres_connection_details, constants_location)
+        run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, constants_location)
     elif (run_only != None) and (run_only == "DuckDB"):
-        do_duckdb(verbose, data_storage_location, duck_db_connection_details)
+        run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, constants_location)
     else:
         raise Exception("Unexpected options for '--run_only. The supported options are: \n\t'PostgreSQL'\n\t'DuckDB'")
 
