@@ -17,3 +17,4 @@ duckdb_tpch.duckdb.wal
 duck_testing/
 benchmarking/temp_queries/
 sqlconv_env/
+debugging/

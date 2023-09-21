@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+EXPLAIN_LOCATION = 1
+
 class PrepareDatabase(ABC):
     
     """
@@ -35,4 +37,10 @@ class PrepareDatabase(ABC):
     def prepare_database(self, data_dir, constants_dir=None):
         raise Exception("Abstract method")
     
-    
+    def create_explain(self, explain_list: list) -> str:
+        # We have a list, where one of the elements
+        for idx, content in enumerate(explain_list):
+            if content == EXPLAIN_LOCATION:
+                explain_list[idx] = self.explain_options
+                
+        return ' '.join(explain_list)

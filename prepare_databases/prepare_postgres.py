@@ -17,8 +17,9 @@ class PreparePostgres(PrepareDatabase):
             
         super().__init__(connection_details, "Postgres")
         self.connection = self.__open_connection(connection_factory)
-        
-    def __open_connection(self, connection_factory):
+        self.explain_options = "EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON)"
+    
+    def __open_connection(self, connection_factory=None):
         try:
             connection = psycopg2.connect(user=self.connection_details["User"],
                                     password=self.connection_details["Password"],
@@ -44,15 +45,25 @@ class PreparePostgres(PrepareDatabase):
     def execute_query(self, query_text):
         query_fetch = None
         with self.connection.cursor() as cursor:
-            cursor.execute(query_text)
-            query_fetch = cursor.fetchall()
+            try:
+                cursor.execute(query_text)
+                if cursor.description != None:
+                    query_fetch = cursor.fetchall()
+                else:
+                    query_fetch = []
+            except psycopg2.errors.UndefinedTable:
+                self.connection.close()
+                self.connection = self.__open_connection()
+            except Exception as ex:
+                raise Exception(ex)
         return query_fetch
         
     def get_explain(self, query_text, query_name=None):
+        query_text = self.create_explain(query_text)
         # Return explain data as json
         desired_json = self.execute_query(query_text)[0][0][0]
         
-        return desired_json
+        return desired_json, query_text
     
     def prepare_database(self, data_dir, constants_dir=None):# Set the data dir
         self.data_dir = data_dir    

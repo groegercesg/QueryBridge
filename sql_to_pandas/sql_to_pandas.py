@@ -1,13 +1,18 @@
 import json
 import shutil
 import sys
-from pathlib import Path
+# Add the parent directory of package to sys.path before attempting to import anything from package using absolute imports:
+from pathlib import Path # if you haven't already done so
+current_file = Path(__file__).resolve()
+parent, root = current_file.parent, current_file.parents[1]
+sys.path.append(str(root))
 import argparse
 import ast, traceback
 
 # Prepare database file
-from prepare_postgres import prep_pg
-from prepare_duckdb import prep_duck
+from prepare_databases.prepare_duckdb import PrepareDuckDB
+from prepare_databases.prepare_postgres import PreparePostgres
+from prepare_databases.prepare_database import EXPLAIN_LOCATION
 
 def syntax_check_code(path):
     with open(path) as f:
@@ -207,9 +212,6 @@ def main():
     # Set the Arguments
     query_file = args.file
     
-    # Append the EXPLAIN options to the start of the file
-    explain_opts = "EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON) "
-    
     # Create a folder for files and diagrams
     query_name = str(query_file.split("/")[-1]).split(".")[0]
 
@@ -242,7 +244,7 @@ def main():
     python_output_name = args.output_location + "/" + args.name
     
     # Variable to store the explain content
-    explain_content = ""
+    explain_content = []
     
     # Postgres planning
     if args.query_planner == "Postgres":
@@ -250,13 +252,13 @@ def main():
         if args.planner_file == None:
             raise Exception("No database connection file specified")
         
-        db = prep_pg(args.planner_file)
+        db = PreparePostgres(args.planner_file)
     elif args.query_planner == "Duck_DB":
         # Validation for duck_db_prep
         if args.planner_file == None:
             raise Exception("No duck db preparation file specified")
         
-        db = prep_duck(args.planner_file)
+        db = PrepareDuckDB(args.planner_file)
     
     # Iterate through every subquery
     for i, sub_query in enumerate(split_query):
@@ -274,7 +276,6 @@ def main():
             # Don't iterate after dropping
             continue
 
-        
         view_query = False
         # Determine whether this sub_query is a view or not
         if "create view " in sub_query:
@@ -291,24 +292,33 @@ def main():
             # Not a subquery
             if i != 0:
                 # There has been a view, therefore use the previous query
-                sub_query = split_query[i-1].strip() + ";" + "\n\n" + explain_opts + "\n" + sub_query.strip() + ";"
+                old_subquery = sub_query
+                sub_query = [split_query[i-1].strip() + ";"]
+                sub_query.append(EXPLAIN_LOCATION) 
+                sub_query.append(old_subquery.strip() + ";")
         
-        # Write subquery into explain the explain_content variable
-        if sub_query[-1] != ";":
-            sub_query = sub_query + ";"
-        explain_content += sub_query
+        
+        # Write subquery into explain the explain_content variable  
+        if isinstance(sub_query, str):
+            if sub_query[-1] != ";":
+                sub_query = sub_query + ";"
+            explain_content.append(sub_query)
+        elif isinstance(sub_query, list):
+            explain_content.extend(sub_query)
+        else:
+            raise Exception(f"Unknown format for the variable 'sub_query' it is: {type(sub_query)}")
             
         # Write the explain options out to the file
         # We already do this we have created a view beforehand
         if view_query == True:
-            explain_content = explain_opts.rstrip('\r\n') + '\n' + explain_content
+            explain_content = [EXPLAIN_LOCATION]  + explain_content
             
         # Check if no views then do line_prepender
         if len(split_query) == 2 and ((split_query[1] == "") or (split_query[1] == '\n')):
             # We have no view, so have to prepend the explain options
-            explain_content = explain_opts.rstrip('\r\n') + '\n' + explain_content
+            explain_content = [EXPLAIN_LOCATION] + explain_content
         elif len(split_query) == 1:
-            explain_content = explain_opts.rstrip('\r\n') + '\n' + explain_content
+            explain_content = [EXPLAIN_LOCATION] + explain_content
             
         explain_output_path = f"{folder_path}" + "/"+ query_name+"_explain_" + str(i) + ".json"
         tree_output = f"{folder_path}" + "/"+query_name+"_explain_tree_" + str(i)
@@ -320,8 +330,10 @@ def main():
             # Database is empty
             raise Exception("The database is empty, please specify a connection to a database with tables")
         
-        # Else, we can request the explain data from the database
-        explain_json = db.get_explain(explain_content, query_name)
+        # We can request the explain data from the database
+        
+        explain_json, explain_content = db.get_explain(explain_content, query_name)
+        print(explain_content)
 
         # Write out explain_content to explain_file_path
         with open(explain_output_path, "w") as outfile:
@@ -337,7 +349,13 @@ def main():
         if args.query_planner == "Postgres":
             explain_tree = make_tree_from_pg(explain_json, explain_tree)
         elif args.query_planner == "Duck_DB":
-            explain_tree = make_tree_from_duck(explain_json, explain_tree, sub_query)   
+            if isinstance(sub_query, list):
+                last_query = sub_query[-1]
+            elif isinstance(sub_query, str):
+                last_query = sub_query
+            else:
+                raise Exception(f'Unable to assign sub_query to last_query, it was of an odd type: {type(sub_query)}')
+            explain_tree = make_tree_from_duck(explain_json, explain_tree, last_query)   
         else:
             raise Exception("Unknown database planner specified")
         

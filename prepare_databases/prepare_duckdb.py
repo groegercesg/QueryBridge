@@ -7,7 +7,7 @@ class PrepareDuckDB(PrepareDatabase):
     def __init__(self, connection_details):
         super().__init__(connection_details, "Duck DB")
         self.connection = self.__open_connection()
-        self.explain_options = "EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON)"
+        self.explain_options = '\n'
         
     def is_database_empty(self):
         cursor_fetch = self.execute_query("""SELECT table_name FROM information_schema.tables""")
@@ -23,14 +23,10 @@ class PrepareDuckDB(PrepareDatabase):
         return self.connection.execute(query_text).fetchall()
         
     def get_explain(self, query_text, query_name=None):
-        # Replace out our explain options
-        if self.explain_options in query_text:
-            print("We had to replace here!")
-            print("TODO: FIX this!")
-            query_text = query_text.replace(self.explain_options, "")
-        
+        query_text = self.create_explain(query_text)
         if query_name == None:
             raise Exception("We haven't set our query name!")
+        
         output_explain_name = str(query_name) + "_duck_db_explain.json"
 
         explain_commands = ["PRAGMA enable_profiling='json';",
@@ -64,7 +60,7 @@ class PrepareDuckDB(PrepareDatabase):
         if os.path.exists(output_explain_name):
             os.remove(output_explain_name)
         
-        return json_data
+        return json_data, query_text
     
     def __open_connection(self):
         try:
