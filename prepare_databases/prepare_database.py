@@ -39,8 +39,10 @@ class PrepareDatabase(ABC):
     
     def create_explain(self, explain_list: list) -> str:
         # We have a list, where one of the elements
-        for idx, content in enumerate(explain_list):
-            if content == EXPLAIN_LOCATION:
-                explain_list[idx] = self.explain_options
-                
-        return ' '.join(explain_list)
+        if isinstance(explain_list, list):
+            for idx, content in enumerate(explain_list):
+                if content == EXPLAIN_LOCATION:
+                    explain_list[idx] = self.explain_options
+            return ' '.join(explain_list)
+        else:
+            raise Exception(f"Unknown format for the explain_list variable, it was of type: { type(explain_list) }")

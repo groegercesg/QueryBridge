@@ -23,9 +23,14 @@ def generate_hyperdb_explains():
             explain_content = r.read()
             
         query_name = query_file.split('.')[0]
+        
+        # TODO: Skip Query 15:
+        # HyperException: Views are disabled.
+        if str(query_name) == "15":
+            continue
     
         # Else, we can request the explain data from the database
-        explain_json = db.get_explain(explain_content, query_name)
+        explain_json, query_content = db.get_explain(explain_content, query_name)
 
         # Write out explain_content to explain_file_path
         with open(f'{explain_directory}/{query_name}_hyper.json', "w") as outfile:
@@ -36,4 +41,35 @@ def generate_hyperdb_explains():
         
     print(f'Generated Explain output for all {len(onlyfiles)} queries.')
 
+def gather_operators(explain_node):
+    operators = set()
+    has_below = False
+    for option in ["input", "left", "right"]: 
+        if option in explain_node:
+            has_below = True
+            operators.update(gather_operators(explain_node[option]))
+    
+    if has_below == False and explain_node["operator"] != "tablescan":
+        raise Exception(f"New leaf node discovered: { explain_node['operator'] }")
+    
+    operators.add(explain_node["operator"])
+    return operators
+
+def inspect_explain_plans():
+    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain'
+    
+    onlyfiles = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
+    
+    operators = set()
+    
+    for explain_file in onlyfiles:
+        with open(f'{explain_directory}/{explain_file}') as r:
+            explain_content = json.loads(r.read())
+
+        operators.update(gather_operators(explain_content))
+    
+    print("Below are the operators that Hyper DB Uses:")
+    print(operators)
+
 generate_hyperdb_explains()
+inspect_explain_plans()

@@ -1,0 +1,1024 @@
+{
+    "operator": "executiontarget",
+    "operatorId": 1,
+    "cardinality": 794.666,
+    "producesRows": true,
+    "output": [
+        {
+            "expression": "iuref",
+            "iu": [
+                "v",
+                [
+                    "Varchar",
+                    25
+                ]
+            ]
+        },
+        {
+            "expression": "iuref",
+            "iu": [
+                "v2",
+                [
+                    "Integer"
+                ]
+            ]
+        },
+        {
+            "expression": "iuref",
+            "iu": [
+                "v3",
+                [
+                    "Double"
+                ]
+            ]
+        }
+    ],
+    "outputNames": [
+        "nation",
+        "o_year",
+        "sum_profit"
+    ],
+    "input": {
+        "operator": "sort",
+        "operatorId": 2,
+        "sqlpos": [
+            [
+                1004,
+                1010
+            ]
+        ],
+        "cardinality": 794.666,
+        "criterion": [
+            {
+                "value": {
+                    "expression": "iuref",
+                    "iu": "v"
+                },
+                "descending": false,
+                "nullFirst": false
+            },
+            {
+                "value": {
+                    "expression": "iuref",
+                    "iu": "v2"
+                },
+                "descending": true,
+                "nullFirst": true
+            }
+        ],
+        "input": {
+            "operator": "groupby",
+            "operatorId": 3,
+            "sqlpos": [
+                [
+                    947,
+                    986
+                ],
+                [
+                    65,
+                    76
+                ]
+            ],
+            "cardinality": 794.666,
+            "input": {
+                "operator": "map",
+                "operatorId": 4,
+                "sqlpos": [
+                    [
+                        153,
+                        169
+                    ]
+                ],
+                "cardinality": 882.962,
+                "input": {
+                    "operator": "join",
+                    "operatorId": 5,
+                    "cardinality": 882.962,
+                    "method": "hash",
+                    "singleMatch": true,
+                    "left": {
+                        "operator": "tablescan",
+                        "operatorId": 6,
+                        "sqlpos": [
+                            [
+                                544,
+                                550
+                            ]
+                        ],
+                        "cardinality": 25,
+                        "relationId": 1,
+                        "schema": {
+                            "type": "persistedschema",
+                            "name": "hyperdb_tpch.hyper"
+                        },
+                        "values": [
+                            {
+                                "name": "n_nationkey",
+                                "type": [
+                                    "Integer"
+                                ],
+                                "iu": [
+                                    "v4",
+                                    [
+                                        "Integer"
+                                    ]
+                                ]
+                            },
+                            {
+                                "name": "n_name",
+                                "type": [
+                                    "Varchar",
+                                    25
+                                ],
+                                "iu": [
+                                    "v5",
+                                    [
+                                        "Varchar",
+                                        25
+                                    ]
+                                ]
+                            },
+                            {
+                                "name": "n_regionkey",
+                                "type": [
+                                    "Integer"
+                                ],
+                                "iu": null
+                            },
+                            {
+                                "name": "n_comment",
+                                "type": [
+                                    "Varchar",
+                                    152
+                                ],
+                                "iu": null
+                            }
+                        ],
+                        "debugName": {
+                            "classification": "nonsensitive",
+                            "value": "nation"
+                        },
+                        "selectivity": 1
+                    },
+                    "right": {
+                        "operator": "join",
+                        "operatorId": 7,
+                        "cardinality": 882.962,
+                        "method": "hash",
+                        "referencedByScanEarlyProbe": true,
+                        "left": {
+                            "operator": "join",
+                            "operatorId": 8,
+                            "cardinality": 1625.97,
+                            "method": "hash",
+                            "singleMatch": true,
+                            "referencedByScanEarlyProbe": true,
+                            "left": {
+                                "operator": "join",
+                                "operatorId": 9,
+                                "cardinality": 2730.86,
+                                "method": "hash",
+                                "singleMatch": true,
+                                "left": {
+                                    "operator": "tablescan",
+                                    "operatorId": 10,
+                                    "sqlpos": [
+                                        [
+                                            410,
+                                            418
+                                        ]
+                                    ],
+                                    "cardinality": 10000,
+                                    "relationId": 2,
+                                    "schema": {
+                                        "type": "persistedschema",
+                                        "name": "hyperdb_tpch.hyper"
+                                    },
+                                    "values": [
+                                        {
+                                            "name": "s_suppkey",
+                                            "type": [
+                                                "Integer"
+                                            ],
+                                            "iu": [
+                                                "v6",
+                                                [
+                                                    "Integer"
+                                                ]
+                                            ]
+                                        },
+                                        {
+                                            "name": "s_name",
+                                            "type": [
+                                                "Varchar",
+                                                25
+                                            ],
+                                            "iu": null
+                                        },
+                                        {
+                                            "name": "s_address",
+                                            "type": [
+                                                "Varchar",
+                                                40
+                                            ],
+                                            "iu": null
+                                        },
+                                        {
+                                            "name": "s_nationkey",
+                                            "type": [
+                                                "Integer"
+                                            ],
+                                            "iu": [
+                                                "v7",
+                                                [
+                                                    "Integer"
+                                                ]
+                                            ]
+                                        },
+                                        {
+                                            "name": "s_phone",
+                                            "type": [
+                                                "Char",
+                                                15
+                                            ],
+                                            "iu": null
+                                        },
+                                        {
+                                            "name": "s_acctbal",
+                                            "type": [
+                                                "Double"
+                                            ],
+                                            "iu": null
+                                        },
+                                        {
+                                            "name": "s_comment",
+                                            "type": [
+                                                "Varchar",
+                                                101
+                                            ],
+                                            "iu": null
+                                        }
+                                    ],
+                                    "debugName": {
+                                        "classification": "nonsensitive",
+                                        "value": "supplier"
+                                    },
+                                    "selectivity": 1
+                                },
+                                "right": {
+                                    "operator": "join",
+                                    "operatorId": 11,
+                                    "cardinality": 16414.9,
+                                    "method": "hash",
+                                    "singleMatch": true,
+                                    "referencedByScanEarlyProbe": true,
+                                    "left": {
+                                        "operator": "tablescan",
+                                        "operatorId": 12,
+                                        "sqlpos": [
+                                            [
+                                                380,
+                                                384
+                                            ]
+                                        ],
+                                        "cardinality": 10000,
+                                        "relationId": 4,
+                                        "schema": {
+                                            "type": "persistedschema",
+                                            "name": "hyperdb_tpch.hyper"
+                                        },
+                                        "values": [
+                                            {
+                                                "name": "p_partkey",
+                                                "type": [
+                                                    "Integer"
+                                                ],
+                                                "iu": [
+                                                    "v8",
+                                                    [
+                                                        "Integer"
+                                                    ]
+                                                ]
+                                            },
+                                            {
+                                                "name": "p_name",
+                                                "type": [
+                                                    "Varchar",
+                                                    55
+                                                ],
+                                                "iu": [
+                                                    "v9",
+                                                    [
+                                                        "Varchar",
+                                                        55
+                                                    ]
+                                                ]
+                                            },
+                                            {
+                                                "name": "p_mfgr",
+                                                "type": [
+                                                    "Varchar",
+                                                    25
+                                                ],
+                                                "iu": null
+                                            },
+                                            {
+                                                "name": "p_brand",
+                                                "type": [
+                                                    "Varchar",
+                                                    10
+                                                ],
+                                                "iu": null
+                                            },
+                                            {
+                                                "name": "p_type",
+                                                "type": [
+                                                    "Varchar",
+                                                    25
+                                                ],
+                                                "iu": null
+                                            },
+                                            {
+                                                "name": "p_size",
+                                                "type": [
+                                                    "Integer"
+                                                ],
+                                                "iu": null
+                                            },
+                                            {
+                                                "name": "p_container",
+                                                "type": [
+                                                    "Varchar",
+                                                    10
+                                                ],
+                                                "iu": null
+                                            },
+                                            {
+                                                "name": "p_retailprice",
+                                                "type": [
+                                                    "Double"
+                                                ],
+                                                "iu": null
+                                            },
+                                            {
+                                                "name": "p_comment",
+                                                "type": [
+                                                    "Varchar",
+                                                    23
+                                                ],
+                                                "iu": null
+                                            }
+                                        ],
+                                        "debugName": {
+                                            "classification": "nonsensitive",
+                                            "value": "part"
+                                        },
+                                        "restrictions": [
+                                            {
+                                                "attribute": 1,
+                                                "mode": "lambda",
+                                                "value": {
+                                                    "expression": "like",
+                                                    "arguments": [
+                                                        {
+                                                            "expression": "iuref",
+                                                            "iu": "v9"
+                                                        },
+                                                        {
+                                                            "expression": "const",
+                                                            "value": {
+                                                                "type": [
+                                                                    "Varchar"
+                                                                ],
+                                                                "value": "%green%"
+                                                            }
+                                                        },
+                                                        {
+                                                            "expression": "const",
+                                                            "value": {
+                                                                "type": [
+                                                                    "Varchar"
+                                                                ],
+                                                                "value": "\\"
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                "value2": null
+                                            }
+                                        ],
+                                        "selectivity": 0.05
+                                    },
+                                    "right": {
+                                        "operator": "tablescan",
+                                        "operatorId": 13,
+                                        "sqlpos": [
+                                            [
+                                                478,
+                                                486
+                                            ]
+                                        ],
+                                        "cardinality": 800000,
+                                        "relationId": 5,
+                                        "schema": {
+                                            "type": "persistedschema",
+                                            "name": "hyperdb_tpch.hyper"
+                                        },
+                                        "values": [
+                                            {
+                                                "name": "ps_partkey",
+                                                "type": [
+                                                    "Integer"
+                                                ],
+                                                "iu": [
+                                                    "v10",
+                                                    [
+                                                        "Integer"
+                                                    ]
+                                                ]
+                                            },
+                                            {
+                                                "name": "ps_suppkey",
+                                                "type": [
+                                                    "Integer"
+                                                ],
+                                                "iu": [
+                                                    "v11",
+                                                    [
+                                                        "Integer"
+                                                    ]
+                                                ]
+                                            },
+                                            {
+                                                "name": "ps_availqty",
+                                                "type": [
+                                                    "Integer"
+                                                ],
+                                                "iu": null
+                                            },
+                                            {
+                                                "name": "ps_supplycost",
+                                                "type": [
+                                                    "Double"
+                                                ],
+                                                "iu": [
+                                                    "v12",
+                                                    [
+                                                        "Double"
+                                                    ]
+                                                ]
+                                            },
+                                            {
+                                                "name": "ps_coment",
+                                                "type": [
+                                                    "Varchar",
+                                                    199
+                                                ],
+                                                "iu": null
+                                            }
+                                        ],
+                                        "debugName": {
+                                            "classification": "nonsensitive",
+                                            "value": "partsupp"
+                                        },
+                                        "earlyProbes": [
+                                            {
+                                                "builder": 11,
+                                                "attributes": [
+                                                    0
+                                                ],
+                                                "type": "lookup"
+                                            }
+                                        ],
+                                        "selectivity": 1
+                                    },
+                                    "condition": {
+                                        "expression": "comparison",
+                                        "mode": "=",
+                                        "left": {
+                                            "expression": "iuref",
+                                            "iu": "v10"
+                                        },
+                                        "right": {
+                                            "expression": "iuref",
+                                            "iu": "v8"
+                                        }
+                                    }
+                                },
+                                "condition": {
+                                    "expression": "comparison",
+                                    "mode": "=",
+                                    "left": {
+                                        "expression": "iuref",
+                                        "iu": "v11"
+                                    },
+                                    "right": {
+                                        "expression": "iuref",
+                                        "iu": "v6"
+                                    }
+                                }
+                            },
+                            "right": {
+                                "operator": "tablescan",
+                                "operatorId": 14,
+                                "sqlpos": [
+                                    [
+                                        444,
+                                        452
+                                    ]
+                                ],
+                                "cardinality": 6001220.0,
+                                "relationId": 7,
+                                "schema": {
+                                    "type": "persistedschema",
+                                    "name": "hyperdb_tpch.hyper"
+                                },
+                                "values": [
+                                    {
+                                        "name": "l_orderkey",
+                                        "type": [
+                                            "Integer"
+                                        ],
+                                        "iu": [
+                                            "v13",
+                                            [
+                                                "Integer"
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "name": "l_partkey",
+                                        "type": [
+                                            "Integer"
+                                        ],
+                                        "iu": [
+                                            "v14",
+                                            [
+                                                "Integer"
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "name": "l_suppkey",
+                                        "type": [
+                                            "Integer"
+                                        ],
+                                        "iu": [
+                                            "v15",
+                                            [
+                                                "Integer"
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "name": "l_linenumber",
+                                        "type": [
+                                            "Integer"
+                                        ],
+                                        "iu": null
+                                    },
+                                    {
+                                        "name": "l_quantity",
+                                        "type": [
+                                            "Double"
+                                        ],
+                                        "iu": [
+                                            "v16",
+                                            [
+                                                "Double"
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "name": "l_extendedprice",
+                                        "type": [
+                                            "Double"
+                                        ],
+                                        "iu": [
+                                            "v17",
+                                            [
+                                                "Double"
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "name": "l_discount",
+                                        "type": [
+                                            "Double"
+                                        ],
+                                        "iu": [
+                                            "v18",
+                                            [
+                                                "Double"
+                                            ]
+                                        ]
+                                    },
+                                    {
+                                        "name": "l_tax",
+                                        "type": [
+                                            "Double"
+                                        ],
+                                        "iu": null
+                                    },
+                                    {
+                                        "name": "l_returnflag",
+                                        "type": [
+                                            "Varchar",
+                                            1
+                                        ],
+                                        "iu": null
+                                    },
+                                    {
+                                        "name": "l_linestatus",
+                                        "type": [
+                                            "Varchar",
+                                            1
+                                        ],
+                                        "iu": null
+                                    },
+                                    {
+                                        "name": "l_shipdate",
+                                        "type": [
+                                            "Date"
+                                        ],
+                                        "iu": null
+                                    },
+                                    {
+                                        "name": "l_commitdate",
+                                        "type": [
+                                            "Date"
+                                        ],
+                                        "iu": null
+                                    },
+                                    {
+                                        "name": "l_receiptdate",
+                                        "type": [
+                                            "Date"
+                                        ],
+                                        "iu": null
+                                    },
+                                    {
+                                        "name": "l_shipinstruct",
+                                        "type": [
+                                            "Varchar",
+                                            25
+                                        ],
+                                        "iu": null
+                                    },
+                                    {
+                                        "name": "l_shipmode",
+                                        "type": [
+                                            "Varchar",
+                                            10
+                                        ],
+                                        "iu": null
+                                    },
+                                    {
+                                        "name": "l_comment",
+                                        "type": [
+                                            "Varchar",
+                                            44
+                                        ],
+                                        "iu": null
+                                    }
+                                ],
+                                "debugName": {
+                                    "classification": "nonsensitive",
+                                    "value": "lineitem"
+                                },
+                                "earlyProbes": [
+                                    {
+                                        "builder": 8,
+                                        "attributes": [
+                                            1,
+                                            1,
+                                            2,
+                                            2
+                                        ],
+                                        "type": "minmaxonly"
+                                    }
+                                ],
+                                "selectivity": 1
+                            },
+                            "condition": {
+                                "expression": "and",
+                                "arguments": [
+                                    {
+                                        "expression": "comparison",
+                                        "mode": "=",
+                                        "left": {
+                                            "expression": "iuref",
+                                            "iu": "v8"
+                                        },
+                                        "right": {
+                                            "expression": "iuref",
+                                            "iu": "v14"
+                                        }
+                                    },
+                                    {
+                                        "expression": "comparison",
+                                        "mode": "=",
+                                        "left": {
+                                            "expression": "iuref",
+                                            "iu": "v10"
+                                        },
+                                        "right": {
+                                            "expression": "iuref",
+                                            "iu": "v14"
+                                        }
+                                    },
+                                    {
+                                        "expression": "comparison",
+                                        "mode": "=",
+                                        "left": {
+                                            "expression": "iuref",
+                                            "iu": "v11"
+                                        },
+                                        "right": {
+                                            "expression": "iuref",
+                                            "iu": "v15"
+                                        }
+                                    },
+                                    {
+                                        "expression": "comparison",
+                                        "mode": "=",
+                                        "left": {
+                                            "expression": "iuref",
+                                            "iu": "v6"
+                                        },
+                                        "right": {
+                                            "expression": "iuref",
+                                            "iu": "v15"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        "right": {
+                            "operator": "tablescan",
+                            "operatorId": 15,
+                            "sqlpos": [
+                                [
+                                    512,
+                                    518
+                                ]
+                            ],
+                            "cardinality": 1500000.0,
+                            "relationId": 6,
+                            "schema": {
+                                "type": "persistedschema",
+                                "name": "hyperdb_tpch.hyper"
+                            },
+                            "values": [
+                                {
+                                    "name": "o_orderkey",
+                                    "type": [
+                                        "Integer"
+                                    ],
+                                    "iu": [
+                                        "v19",
+                                        [
+                                            "Integer"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "name": "o_custkey",
+                                    "type": [
+                                        "Integer"
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_orderstatus",
+                                    "type": [
+                                        "Varchar",
+                                        1
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_totalprice",
+                                    "type": [
+                                        "Double"
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_orderdate",
+                                    "type": [
+                                        "Date"
+                                    ],
+                                    "iu": [
+                                        "v20",
+                                        [
+                                            "Date"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "name": "o_orderpriority",
+                                    "type": [
+                                        "Varchar",
+                                        15
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_clerk",
+                                    "type": [
+                                        "Varchar",
+                                        15
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_shippriority",
+                                    "type": [
+                                        "Integer"
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_comment",
+                                    "type": [
+                                        "Varchar",
+                                        79
+                                    ],
+                                    "iu": null
+                                }
+                            ],
+                            "debugName": {
+                                "classification": "nonsensitive",
+                                "value": "orders"
+                            },
+                            "earlyProbes": [
+                                {
+                                    "builder": 7,
+                                    "attributes": [
+                                        0
+                                    ],
+                                    "type": "lookup"
+                                }
+                            ],
+                            "selectivity": 1
+                        },
+                        "condition": {
+                            "expression": "comparison",
+                            "mode": "=",
+                            "left": {
+                                "expression": "iuref",
+                                "iu": "v19"
+                            },
+                            "right": {
+                                "expression": "iuref",
+                                "iu": "v13"
+                            }
+                        }
+                    },
+                    "condition": {
+                        "expression": "comparison",
+                        "mode": "=",
+                        "left": {
+                            "expression": "iuref",
+                            "iu": "v7"
+                        },
+                        "right": {
+                            "expression": "iuref",
+                            "iu": "v4"
+                        }
+                    }
+                },
+                "values": [
+                    {
+                        "iu": [
+                            "v21",
+                            [
+                                "Integer"
+                            ]
+                        ],
+                        "value": {
+                            "expression": "extractyear",
+                            "input": {
+                                "expression": "iuref",
+                                "iu": "v20"
+                            }
+                        }
+                    },
+                    {
+                        "iu": [
+                            "v22",
+                            [
+                                "Double"
+                            ]
+                        ],
+                        "value": {
+                            "expression": "sub",
+                            "left": {
+                                "expression": "mul",
+                                "left": {
+                                    "expression": "iuref",
+                                    "iu": "v17"
+                                },
+                                "right": {
+                                    "expression": "sub",
+                                    "left": {
+                                        "expression": "const",
+                                        "value": {
+                                            "type": [
+                                                "Integer"
+                                            ],
+                                            "value": 1
+                                        }
+                                    },
+                                    "right": {
+                                        "expression": "iuref",
+                                        "iu": "v18"
+                                    }
+                                }
+                            },
+                            "right": {
+                                "expression": "mul",
+                                "left": {
+                                    "expression": "iuref",
+                                    "iu": "v12"
+                                },
+                                "right": {
+                                    "expression": "iuref",
+                                    "iu": "v16"
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "keyExpressions": [
+                {
+                    "expression": {
+                        "value": {
+                            "expression": "iuref",
+                            "iu": "v5"
+                        }
+                    },
+                    "iu": [
+                        "v",
+                        [
+                            "Varchar",
+                            25
+                        ]
+                    ]
+                },
+                {
+                    "expression": {
+                        "value": {
+                            "expression": "iuref",
+                            "iu": "v21"
+                        }
+                    },
+                    "iu": [
+                        "v2",
+                        [
+                            "Integer"
+                        ]
+                    ]
+                }
+            ],
+            "groupingSets": [
+                {
+                    "keyIndices": [
+                        0,
+                        1
+                    ],
+                    "coreIndices": [
+                        0,
+                        1
+                    ],
+                    "behavior": "regular"
+                }
+            ],
+            "emptyGroups": false,
+            "aggExpressions": [
+                {
+                    "value": {
+                        "expression": "iuref",
+                        "iu": "v22"
+                    }
+                }
+            ],
+            "aggregates": [
+                {
+                    "source": 0,
+                    "operation": {
+                        "aggregate": "sum"
+                    },
+                    "iu": [
+                        "v3",
+                        [
+                            "Double"
+                        ]
+                    ]
+                }
+            ]
+        }
+    }
+}
