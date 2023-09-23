@@ -37,32 +37,6 @@ def run_prepare(prepare_class, verbose, data_storage_location, connection_detail
             prep_db.prepare_database(data_storage_location, constants_location)
     print(f"{prep_db.database_name} Database Prepared")
 
-"""
-def do_postgres(verbose, data_storage_location, postgres_connection_details, constants_location):
-    # Prepare Postgres
-        # Loads the data from "Data Storage" and puts it into the database
-    print("Preparing Postgres Database")
-    pg_db = PreparePostgres(postgres_connection_details)
-    if verbose:
-        pg_db.prepare_database(data_storage_location, constants_location)
-    else:
-        with HiddenPrinting():
-            pg_db.prepare_database(data_storage_location, constants_location)
-    print("Postgres Database prepared")
-
-def do_duckdb(verbose, data_storage_location, duck_db_connection_details):
-    # Prepare DuckDB
-        # Loads the data from "Data Storage" and puts it into the DuckDB file
-    print("Preparing DuckDB Database")
-    duck_db = PrepareDuckDB(duck_db_connection_details)
-    if verbose:
-        duck_db.prepare_database(data_storage_location)
-    else:
-        with HiddenPrinting():
-            duck_db.prepare_database(data_storage_location)
-    print("DuckDB Database prepared")
-"""
-
 def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor, postgres_connection_details,
                 duck_db_connection_details, constants_location, run_only = None):
     # Data generator

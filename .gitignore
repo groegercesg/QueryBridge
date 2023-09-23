@@ -19,4 +19,4 @@ benchmarking/temp_queries/
 sqlconv_env/
 debugging/
 hyperd.log
-hyperdb.hyper
+hyperdb_tpch.hyper

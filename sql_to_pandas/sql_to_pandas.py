@@ -333,7 +333,6 @@ def main():
         # We can request the explain data from the database
         
         explain_json, explain_content = db.get_explain(explain_content, query_name)
-        print(explain_content)
 
         # Write out explain_content to explain_file_path
         with open(explain_output_path, "w") as outfile:
