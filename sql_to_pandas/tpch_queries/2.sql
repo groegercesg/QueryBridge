@@ -1,5 +1,3 @@
--- TPC-H Query 2
-
 select
         s_acctbal,
         s_name,

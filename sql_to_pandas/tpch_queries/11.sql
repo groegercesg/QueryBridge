@@ -1,5 +1,3 @@
--- TPC-H Query 11
-
 select
         ps_partkey,
         sum(ps_supplycost * ps_availqty) as "value"

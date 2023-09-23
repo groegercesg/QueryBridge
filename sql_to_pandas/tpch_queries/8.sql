@@ -1,5 +1,3 @@
--- TPC-H Query 8
-
 select
         o_year,
         sum(case

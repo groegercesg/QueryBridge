@@ -1,5 +1,3 @@
--- TPC-H Query 21
-
 select
         s_name,
         count(*) as numwait

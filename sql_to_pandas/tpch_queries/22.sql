@@ -1,5 +1,3 @@
--- TPC-H Query 22
-
 select
         cntrycode,
         count(*) as numcust,

@@ -1,5 +1,3 @@
--- TPC-H Query 18
-
 select
         c_name,
         c_custkey,

@@ -1,5 +1,3 @@
--- TPC-H Query 16
-
 select
         p_brand,
         p_type,
