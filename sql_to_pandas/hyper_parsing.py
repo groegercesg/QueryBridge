@@ -52,6 +52,9 @@ def gather_operators(explain_node):
     if has_below == False and explain_node["operator"] != "tablescan":
         raise Exception(f"New leaf node discovered: { explain_node['operator'] }")
     
+    if explain_node["operator"] == "select":
+        print("a")
+    
     operators.add(explain_node["operator"])
     return operators
 
@@ -71,5 +74,105 @@ def inspect_explain_plans():
     print("Below are the operators that Hyper DB Uses:")
     print(operators)
 
-generate_hyperdb_explains()
-inspect_explain_plans()
+from hyper_classes import *
+
+SUPPORTED_OPERATORS = {'leftsemijoin', 'map', 'sort', 'join', 'groupby', 'leftantijoin', 'groupjoin', 'rightsemijoin', 'executiontarget', 'select', 'rightantijoin', 'tablescan'}
+
+def str_to_class(classname):
+    return getattr(sys.modules[__name__], classname)
+
+def create_operator_tree(explain_json):
+    operator_name = explain_json["operator"].lower()
+    if operator_name not in SUPPORTED_OPERATORS:
+        raise Exception(f"Unknown operator in explain json: {operator_name}")
+    
+    operator_class = None
+    if operator_name == "executiontarget":
+        operator_class = executiontargetNode(explain_json["output"], explain_json["outputNames"])
+    elif operator_name == "groupby":
+        keyExpressions = []
+        if "keyExpressions" in explain_json:
+            keyExpressions = explain_json["keyExpressions"]
+        aggExpressions = []
+        if "aggExpressions" in explain_json:
+            aggExpressions = explain_json["aggExpressions"]
+        operator_class = groupbyNode(keyExpressions, aggExpressions, explain_json["aggregates"])
+    elif operator_name == "tablescan":
+        tableRestrictions = []
+        if "restrictions" in explain_json:
+            tableRestrictions = explain_json["restrictions"]
+        operator_class = tablescanNode(explain_json["debugName"]["value"], explain_json["values"], tableRestrictions)
+    elif operator_name == "sort":
+        operator_class = sortNode(explain_json["criterion"])
+    elif operator_name == "map":
+        operator_class = mapNode(explain_json["values"])
+    elif operator_name == "select":
+        operator_class = selectNode(explain_json["condition"])
+    elif operator_name == "join":
+        operator_class = joinNode(explain_json["method"], explain_json["condition"])
+    elif operator_name == "groupjoin":
+        operator_class = groupjoinNode(explain_json["semantic"],
+                                       explain_json["leftKey"],
+                                       explain_json["rightKey"],
+                                       explain_json["leftExpressions"],
+                                       explain_json["leftAggregates"],
+                                       explain_json["rightExpressions"],
+                                       explain_json["rightAggregates"])
+    elif operator_name == "leftsemijoin":
+        operator_class = leftsemijoinNode(explain_json["method"], explain_json["condition"])
+    elif operator_name == "leftantijoin":
+        operator_class = leftantijoinNode(explain_json["method"], explain_json["condition"])
+    elif operator_name == "rightsemijoin":
+        operator_class = rightsemijoinNode(explain_json["method"], explain_json["condition"])
+    elif operator_name == "rightantijoin":
+        operator_class = rightantijoinNode(explain_json["method"], explain_json["condition"])
+    else:
+        raise Exception(f"No Operator Class Creation has been defined for the {operator_name} operator.")
+
+    # Validate children operator options are as expected
+    if ("input" in explain_json) and (any(x in explain_json for x in ["left", "right"])):
+        raise Exception("There shouldn't be 'input' as well as either 'left'/'right' parameters for an operator")
+    
+    # Add children to the different operators
+    if ("input" in explain_json):
+        operator_class.addChild(create_operator_tree(explain_json["input"]))
+    elif any(x in explain_json for x in ["left", "right"]):
+        # It should be an operator type if we're here
+        assert isinstance(operator_class, JoinNode) and hasattr(operator_class, "isJoinNode") and operator_class.isJoinNode == True
+        operator_class.addLeft(create_operator_tree(explain_json["left"]))
+        operator_class.addRight(create_operator_tree(explain_json["right"]))
+    else:
+        # Only table scan node should have no children
+        assert isinstance(operator_class, tablescanNode)
+    
+    return operator_class
+    
+def parse_explain_plans():
+    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain'
+    
+    onlyfiles = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
+    
+    all_operator_trees = []
+    for explain_file in onlyfiles:
+        print(f"Transforming {explain_file} into a Hyper Tree")
+        with open(f'{explain_directory}/{explain_file}') as r:
+            explain_content = json.loads(r.read())
+        
+        op_tree = create_operator_tree(explain_content)
+        all_operator_trees.append(op_tree)
+
+    assert len(all_operator_trees) == 21
+    print("All 21 HyperDB plans have been parsed into Hyper DB Class Trees")
+    
+    # Transform the operator_trees
+    # Task 1: Solve the 'v1' references, in 'iu'
+        # These propagate up, and are occasionally reset by things like "mapNode" or "groupbyNode"
+        # Postorder traversal is required for this, make a dict of the pairs:
+            # v1: l_suppkey
+            # v3: p_partkey
+            # ...
+    # Task 2: ...
+
+#generate_hyperdb_explains()
+#inspect_explain_plans()
+parse_explain_plans()
