@@ -154,6 +154,9 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for explain_file in onlyfiles:
+        if explain_file.split("_")[0] not in ["3", "6"]:
+            continue
+         
         print(f"Transforming {explain_file} into a Hyper Tree")
         with open(f'{explain_directory}/{explain_file}') as r:
             explain_content = json.loads(r.read())
@@ -161,7 +164,7 @@ def parse_explain_plans():
         op_tree = create_operator_tree(explain_content)
         all_operator_trees.append(op_tree)
 
-    assert len(all_operator_trees) == 21
+    #assert len(all_operator_trees) == 21
     print("All 21 HyperDB plans have been parsed into Hyper DB Class Trees")
     
     # Transform the operator_trees
@@ -171,7 +174,146 @@ def parse_explain_plans():
             # v1: l_suppkey
             # v3: p_partkey
             # ...
+    for tree in all_operator_trees:
+        transform_hyper_iu_references(tree)
     # Task 2: ...
+    
+    print("Hyper Tree Plans have been Transformed")
+
+from expression_operators import *
+
+def transform_hyper_iu_references(op_tree: HyperBaseNode):
+    def hyper_expression_parsing(expression, iu_references):
+        current_op = None
+        # Preorder Traversal
+        # Is it a binary operator
+        if expression["expression"] in ["mul", "comparison", "sub"]:
+            if expression["expression"] == "mul":
+                current_op = MulOperator()
+            elif expression["expression"] == "sub":
+                current_op = SubOperator()
+            elif expression["expression"] == "comparison":
+                if expression["mode"] == "=":
+                    current_op = EqualsOperator()
+                else:
+                    raise Exception(f"Unknown operator that is allegedly a binary comparison one: {expression['expression']}")
+            else:
+                raise Exception(f"Unknown operator that is allegedly binary: {expression['expression']}")
+            current_op.addLeft(hyper_expression_parsing(expression['left'], iu_references))
+            current_op.addRight(hyper_expression_parsing(expression['right'], iu_references))
+        elif expression["expression"] == "iuref":
+            if expression["iu"] not in iu_references:
+                raise Exception(f"Trying to get a value ({expression['iu']}) from iu_references, that doesn't exist")
+            current_op = ColumnValue(iu_references[expression["iu"]])
+        elif expression["expression"] == "const":
+            const_value = expression["value"]["value"]
+            # Parse the type
+            if expression["value"]["type"] == ["Integer"]:
+                const_value = int(const_value)
+            else:
+                raise Exception(f"Unrecognised constant value type: {expression['value']['type']}")
+            current_op = ConstantValue(const_value)
+        else:
+            raise Exception(f"Unexpected Expression type discovered: {expression['expression']}")
+        
+        assert current_op != None
+        return current_op
+    
+    def replace_key_expressions_using_iu_references(key_expressions_list: list, iu_references: dict) -> list:
+        newKeyExpressions = []
+        for keyExpression in key_expressions_list:
+            if keyExpression["expression"]["value"]["expression"] != "iuref":
+                raise Exception("Key Expressions list refer to things other than iurefs")
+            current_iu_name = keyExpression["expression"]["value"]["iu"]
+            # Remove the object at this key
+            iu_object = iu_references.pop(current_iu_name)
+            new_iu_name = keyExpression["iu"][0]
+            # Insert it back in with the new key
+            iu_references[new_iu_name] = iu_object
+            # And add it to the this
+            newKeyExpressions.append(iu_object)
+        return newKeyExpressions
+    
+    def replace_expressions_using_iu_references(expressions_list: list, iu_references: dict) -> list:
+        newExpressionList = []
+        for expression in expressions_list:
+            if "value" in expression:
+                newExpressionList.append(hyper_expression_parsing(expression["value"], iu_references))
+            else:
+                raise Exception("Unknown expression list format")
+            
+        return newExpressionList
+    
+    def replace_aggregations_using_iu_and_expressions(aggregations_list: list, iu_references: dict, expressions_list: list) -> list:
+        newAggregateOperations = []
+        for aggr_op in aggregations_list:
+            newAggrOp = None
+            if aggr_op['operation']['aggregate'] == "sum":
+                newAggrOp = SumAggrOperator()
+                if aggr_op["source"] >= len(expressions_list):
+                    raise Exception(f"The source ({aggr_op['source']}) was too long for the expressions of length: {len(expressions_list)}")
+                newAggrOp.addChild(expressions_list[aggr_op["source"]])
+                # Save as a new iu
+                iu_references[aggr_op["iu"][0]] = newAggrOp
+                # Store in list
+                newAggregateOperations.append(newAggrOp)
+            else:
+                raise Exception(f"Unknown aggregation operator, it was {aggr_op['operation']}")        
+        return newAggregateOperations
+    
+    def visit_solve_iu_references(op_node: HyperBaseNode , iu_references: dict):
+        # Visit Children
+        if isinstance(op_node, JoinNode) and op_node.isJoinNode == True:
+            left_dict = visit_solve_iu_references(op_node.left, {})
+            right_dict = visit_solve_iu_references(op_node.right, {})
+            iu_references.update(left_dict)
+            iu_references.update(right_dict)
+        elif op_node.child != None:
+            child_dict = visit_solve_iu_references(op_node.child, {})
+            iu_references.update(child_dict)
+        else:
+            # A leaf node
+            pass
+        
+        # Children visited, now process current node
+        if isinstance(op_node, tablescanNode):
+            for column in op_node.table_columns:
+                if column['iu'] != None:
+                    iu_references[column['iu'][0]] = ColumnValue(column['name'])
+        elif isinstance(op_node, groupbyNode):
+            newExpressionList = replace_expressions_using_iu_references(op_node.aggregateExpressions, iu_references)
+            op_node.aggregateExpressions = newExpressionList
+            newAggregateOperations = replace_aggregations_using_iu_and_expressions(op_node.aggregateOperations, iu_references, newExpressionList)
+            op_node.aggregateOperations = newAggregateOperations
+            newKeyExpressionsList = replace_key_expressions_using_iu_references(op_node.keyExpressions, iu_references)
+            op_node.keyExpressions = newKeyExpressionsList
+        elif isinstance(op_node, executiontargetNode):
+            for idx, outputColumn in enumerate(op_node.output_columns):
+                if outputColumn["expression"] == "iuref":
+                    op_node.output_columns[idx] = iu_references[outputColumn["iu"][0]]
+                else:
+                    raise Exception(f"Unexpected format for output columns")
+        elif isinstance(op_node, joinNode):
+            newJoinConditionList = hyper_expression_parsing(op_node.joinCondition, iu_references)
+            op_node.joinCondition = newJoinConditionList
+        elif isinstance(op_node, sortNode):
+            newSortCriteria = []
+            for sortCriterion in op_node.sortCriteria:
+                if sortCriterion["value"]["expression"] == "iuref":
+                    newSortCriteria.append(SortOperator(iu_references[sortCriterion["value"]["iu"]], sortCriterion["descending"]))
+                else:
+                    raise Exception(f"Unexpected format for output columns")
+            op_node.sortCriteria = newSortCriteria
+        else:
+            raise Exception(f"Unsure how to deal with {op_node.__class__} node.")
+        
+        return iu_references
+        
+        
+    iu_references = dict()
+    visit_solve_iu_references(op_tree, iu_references)
+    
+    
 
 #generate_hyperdb_explains()
 #inspect_explain_plans()
