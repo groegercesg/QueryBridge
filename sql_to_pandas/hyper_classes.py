@@ -1,5 +1,5 @@
 # Classes for HyperDB
-# {'leftsemijoin', 'map', 'sort', 'join', 'groupby', 'leftantijoin', 'groupjoin', 'rightsemijoin', 'executiontarget', 'select', 'rightantijoin', 'tablescan'}
+SUPPORTED_HYPER_OPERATORS = {'leftsemijoin', 'map', 'sort', 'join', 'groupby', 'leftantijoin', 'groupjoin', 'rightsemijoin', 'executiontarget', 'select', 'rightantijoin', 'tablescan'}
 
 class HyperBaseNode():
     def __init__(self):
@@ -45,11 +45,12 @@ class selectNode(HyperBaseNode):
         self.selectCondition = selectCondition
   
 class JoinNode(HyperBaseNode):
-    def __init__(self):
+    def __init__(self, joinType):
         super().__init__()
         self.isJoinNode = True
         self.left = None
         self.right = None
+        self.joinType = joinType
     
     def addLeft(self, left: HyperBaseNode):
         assert self.left == None
@@ -61,7 +62,7 @@ class JoinNode(HyperBaseNode):
 
 class groupjoinNode(JoinNode):
     def __init__(self, joinType, leftKey, rightKey, leftExpressions, leftAggregates, rightExpressions, rightAggregates):
-        super().__init__()
+        super().__init__("groupjoin")
         self.joinType = joinType
         self.leftKey = leftKey
         self.rightKey = rightKey
@@ -71,31 +72,7 @@ class groupjoinNode(JoinNode):
         self.rightAggregates = rightAggregates
 
 class joinNode(JoinNode):
-    def __init__(self, joinMethod, joinCondition):
-        super().__init__()
+    def __init__(self, joinType, joinMethod, joinCondition):
+        super().__init__(joinType)
         self.joinMethod = joinMethod
         self.joinCondition = joinCondition
-
-class leftsemijoinNode(JoinNode):
-    def __init__(self, joinMethod, joinCondition):
-        super().__init__()
-        self.joinMethod = joinMethod
-        self.joinCondition = joinCondition
-
-class leftantijoinNode(JoinNode):
-    def __init__(self, joinMethod, joinCondition):
-        super().__init__()
-        self.joinMethod = joinMethod
-        self.joinCondition = joinCondition
-
-class rightsemijoinNode(JoinNode):
-    def __init__(self, joinMethod, joinCondition):
-        super().__init__()
-        self.joinMethod = joinMethod
-        self.joinCondition = joinCondition 
-
-class rightantijoinNode(JoinNode):
-    def __init__(self, joinMethod, joinCondition):
-        super().__init__()
-        self.joinMethod = joinMethod
-        self.joinCondition = joinCondition 

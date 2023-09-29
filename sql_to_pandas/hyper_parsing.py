@@ -76,14 +76,12 @@ def inspect_explain_plans():
 
 from hyper_classes import *
 
-SUPPORTED_OPERATORS = {'leftsemijoin', 'map', 'sort', 'join', 'groupby', 'leftantijoin', 'groupjoin', 'rightsemijoin', 'executiontarget', 'select', 'rightantijoin', 'tablescan'}
-
 def str_to_class(classname):
     return getattr(sys.modules[__name__], classname)
 
 def create_operator_tree(explain_json):
     operator_name = explain_json["operator"].lower()
-    if operator_name not in SUPPORTED_OPERATORS:
+    if operator_name not in SUPPORTED_HYPER_OPERATORS:
         raise Exception(f"Unknown operator in explain json: {operator_name}")
     
     operator_class = None
@@ -108,8 +106,6 @@ def create_operator_tree(explain_json):
         operator_class = mapNode(explain_json["values"])
     elif operator_name == "select":
         operator_class = selectNode(explain_json["condition"])
-    elif operator_name == "join":
-        operator_class = joinNode(explain_json["method"], explain_json["condition"])
     elif operator_name == "groupjoin":
         operator_class = groupjoinNode(explain_json["semantic"],
                                        explain_json["leftKey"],
@@ -118,14 +114,10 @@ def create_operator_tree(explain_json):
                                        explain_json["leftAggregates"],
                                        explain_json["rightExpressions"],
                                        explain_json["rightAggregates"])
-    elif operator_name == "leftsemijoin":
-        operator_class = leftsemijoinNode(explain_json["method"], explain_json["condition"])
-    elif operator_name == "leftantijoin":
-        operator_class = leftantijoinNode(explain_json["method"], explain_json["condition"])
-    elif operator_name == "rightsemijoin":
-        operator_class = rightsemijoinNode(explain_json["method"], explain_json["condition"])
-    elif operator_name == "rightantijoin":
-        operator_class = rightantijoinNode(explain_json["method"], explain_json["condition"])
+    elif operator_name == "join":
+        operator_class = joinNode("inner", explain_json["method"], explain_json["condition"])
+    elif operator_name in ["leftsemijoin", "leftantijoin", "rightsemijoin", "rightantijoin"]:
+        operator_class = joinNode(operator_name, explain_json["method"], explain_json["condition"])
     else:
         raise Exception(f"No Operator Class Creation has been defined for the {operator_name} operator.")
 
@@ -154,7 +146,7 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for explain_file in onlyfiles:
-        if explain_file.split("_")[0] not in ["3", "6"]:
+        if explain_file.split("_")[0] not in ["3", "6"]: #  
             continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
@@ -174,6 +166,7 @@ def parse_explain_plans():
             # v1: l_suppkey
             # v3: p_partkey
             # ...
+        # Also in this pass we should parse expressions (and similar things) into ExpressionOperators
     for tree in all_operator_trees:
         transform_hyper_iu_references(tree)
     # Task 2: ...
@@ -181,8 +174,63 @@ def parse_explain_plans():
     print("Hyper Tree Plans have been Transformed")
 
 from expression_operators import *
+import datetime
 
 def transform_hyper_iu_references(op_tree: HyperBaseNode):
+    def hyper_restriction_parsing(restriction, table_columns, iu_references):
+        current_restriction = None
+        # Preorder Traversal
+        if restriction["mode"] in ["<", ">", "="]:
+            if restriction["mode"] == "<":
+                current_restriction = LessThanOperator()
+            elif restriction["mode"] == ">":
+                current_restriction = GreaterThanOperator()
+            elif restriction["mode"] == "=":
+                current_restriction = EqualsOperator()
+            else:
+                raise Exception(f"Unknown supposedly binary mode: {restriction['mode']}")
+            
+            current_restriction.addLeft(table_columns[restriction["attribute"]])
+            if "value" not in restriction or "value2" in restriction:
+                raise Exception(f"Unexpected keys in the restriction object: {restriction.keys()}")
+            current_restriction.addRight(hyper_expression_parsing(restriction["value"], iu_references))
+        elif restriction["mode"] in IntervalNotionOperator.SUPPORTED_MODES:
+            # Using Interval Notion for the inequalities
+            current_restriction = IntervalNotionOperator(restriction["mode"], table_columns[restriction["attribute"]])
+            if "value" not in restriction or "value2" not in restriction or "value3" in restriction:
+                raise Exception(f"Unexpected keys in the restriction object: {restriction.keys()}")
+            current_restriction.addLeft(hyper_expression_parsing(restriction["value"], iu_references))
+            current_restriction.addRight(hyper_expression_parsing(restriction["value2"], iu_references))
+        else:
+            raise Exception(f"Unexpected mode for restriction: {restriction['mode']}")
+        
+        return current_restriction
+    
+    def parse_hyper_double(incoming_double_number):
+        print(f"We need to complete the parse_hyper_double method")
+        return None
+    
+    def parse_hyper_date(incoming_date_number):
+        confirmed_pairs = {
+            2449354: datetime.date(1994, 1, 1),
+            2449719: datetime.date(1995, 1, 1),
+            2449792: datetime.date(1995, 3, 15)
+        }
+        
+        # Start with top 1
+        base_date_number, base_dt = list(confirmed_pairs.items())[0]
+        date_number_difference = incoming_date_number - base_date_number
+        created_dt_object = base_dt + datetime.timedelta(date_number_difference)
+        
+        # Verify against all others in dict
+        assert created_dt_object - base_dt == datetime.timedelta(date_number_difference)
+        for date_key, date_value in confirmed_pairs.items():
+            date_value_difference = created_dt_object - date_value
+            date_key_difference = incoming_date_number - date_key
+            assert date_value_difference == datetime.timedelta(date_key_difference)
+            
+        return created_dt_object
+        
     def hyper_expression_parsing(expression, iu_references):
         current_op = None
         # Preorder Traversal
@@ -207,12 +255,21 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             current_op = ColumnValue(iu_references[expression["iu"]])
         elif expression["expression"] == "const":
             const_value = expression["value"]["value"]
-            # Parse the type
-            if expression["value"]["type"] == ["Integer"]:
+            const_type = None# Parse the type
+            if expression["value"]["type"][0] == "Integer":
                 const_value = int(const_value)
+                const_type = "Integer"
+            elif expression["value"]["type"][0] == "Date":
+                const_value = parse_hyper_date(const_value)
+                const_type = "Datetime"
+            elif expression["value"]["type"][0] == "Double":
+                const_value = parse_hyper_double(const_value)
+                const_type = "Float"
+            elif expression["value"]["type"][0] == "Varchar":
+                const_type = "String"
             else:
                 raise Exception(f"Unrecognised constant value type: {expression['value']['type']}")
-            current_op = ConstantValue(const_value)
+            current_op = ConstantValue(const_value, const_type)
         else:
             raise Exception(f"Unexpected Expression type discovered: {expression['expression']}")
         
@@ -277,9 +334,20 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
         
         # Children visited, now process current node
         if isinstance(op_node, tablescanNode):
+            newTableColumns = []
             for column in op_node.table_columns:
+                currentColumn = None
                 if column['iu'] != None:
-                    iu_references[column['iu'][0]] = ColumnValue(column['name'])
+                    currentColumn = ColumnValue(column['name'])
+                    iu_references[column['iu'][0]] = currentColumn
+                else:
+                    currentColumn = ColumnValue(column['name'])
+                newTableColumns.append(currentColumn)
+            op_node.table_columns = newTableColumns    
+            newTableRestrictions = []
+            for restriction in op_node.tableRestrictions:
+                newTableRestrictions.append(hyper_restriction_parsing(restriction, op_node.table_columns, iu_references))
+            op_node.tableRestrictions = newTableRestrictions
         elif isinstance(op_node, groupbyNode):
             newExpressionList = replace_expressions_using_iu_references(op_node.aggregateExpressions, iu_references)
             op_node.aggregateExpressions = newExpressionList

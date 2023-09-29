@@ -37,8 +37,11 @@ class ColumnValue(ValueNode):
         super().__init__(value)
 
 class ConstantValue(ValueNode):
-    def __init__(self, value):
+    SUPPORTED_TYPES = ["Integer", "Datetime", "Float", "String"]
+    def __init__(self, value, type):
         super().__init__(value)
+        assert type in self.SUPPORTED_TYPES
+        self.type = type
 
 # Unary Operators
 
@@ -54,6 +57,30 @@ class MulOperator(BinaryExpressionOperator):
 class EqualsOperator(BinaryExpressionOperator):
     def __init__(self):
         super().__init__()
+        
+class LessThanOperator(BinaryExpressionOperator):
+    def __init__(self):
+        super().__init__()
+        
+class GreaterThanOperator(BinaryExpressionOperator):
+    def __init__(self):
+        super().__init__()
+        
+class IntervalNotionOperator(BinaryExpressionOperator):
+    """
+    Inequality  | Interval Notion
+    a <= x <= b | [a, b]
+    a <  x <  b | (a, b)
+    a <= x <  b | [a, b)
+    a <  x <= b | (a, b]
+    """
+    SUPPORTED_MODES = ["[]", "()", "[)", "(]"]
+    def __init__(self, mode, value):
+        super().__init__()
+        assert mode in self.SUPPORTED_MODES
+        self.mode = mode
+        # The item that we want to compare to left and right
+        self.value = value
         
 # Aggregation Operators
 class SumAggrOperator(UnaryExpressionOperator):
