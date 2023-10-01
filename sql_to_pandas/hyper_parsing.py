@@ -146,15 +146,15 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for explain_file in onlyfiles:
-        if explain_file.split("_")[0] not in ["3", "6"]: #  
-            continue
+        # if explain_file.split("_")[0] not in ["3", "6"]: #  
+        #     continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
         with open(f'{explain_directory}/{explain_file}') as r:
             explain_content = json.loads(r.read())
         
         op_tree = create_operator_tree(explain_content)
-        all_operator_trees.append(op_tree)
+        all_operator_trees.append([explain_file, op_tree])
 
     #assert len(all_operator_trees) == 21
     print("All 21 HyperDB plans have been parsed into Hyper DB Class Trees")
@@ -168,7 +168,8 @@ def parse_explain_plans():
             # ...
         # Also in this pass we should parse expressions (and similar things) into ExpressionOperators
     for tree in all_operator_trees:
-        transform_hyper_iu_references(tree)
+        transform_hyper_iu_references(tree[1])
+        print(f"Transformed Plan {tree[0]} Hyper Tree")
     # Task 2: ...
     
     print("Hyper Tree Plans have been Transformed")
@@ -180,13 +181,15 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
     def hyper_restriction_parsing(restriction, table_columns, iu_references):
         current_restriction = None
         # Preorder Traversal
-        if restriction["mode"] in ["<", ">", "="]:
+        if restriction["mode"] in ["<", "<=", ">", "="]:
             if restriction["mode"] == "<":
                 current_restriction = LessThanOperator()
             elif restriction["mode"] == ">":
                 current_restriction = GreaterThanOperator()
             elif restriction["mode"] == "=":
                 current_restriction = EqualsOperator()
+            elif restriction["mode"] == "<=":
+                current_restriction = LessThanEqOperator()
             else:
                 raise Exception(f"Unknown supposedly binary mode: {restriction['mode']}")
             
@@ -201,6 +204,14 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                 raise Exception(f"Unexpected keys in the restriction object: {restriction.keys()}")
             current_restriction.addLeft(hyper_expression_parsing(restriction["value"], iu_references))
             current_restriction.addRight(hyper_expression_parsing(restriction["value2"], iu_references))
+        elif restriction["mode"] == "lambda":
+            assert restriction["value2"] is None
+            current_restriction = hyper_restriction_parsing(restriction["value"], table_columns, iu_references)
+        elif restriction["mode"] == "=some":
+            current_restriction = InSetOperator()
+            current_restriction.addChild(hyper_expression_parsing(restriction["value"], iu_references))
+            for value in restriction["set"]:
+                current_restriction.addToSet(hyper_expression_parsing(value, iu_references))
         else:
             raise Exception(f"Unexpected mode for restriction: {restriction['mode']}")
         
@@ -235,14 +246,18 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
         current_op = None
         # Preorder Traversal
         # Is it a binary operator
-        if expression["expression"] in ["mul", "comparison", "sub"]:
+        if expression["expression"] in ["mul", "comparison", "sub", "add"]:
             if expression["expression"] == "mul":
                 current_op = MulOperator()
             elif expression["expression"] == "sub":
                 current_op = SubOperator()
+            elif expression["expression"] == "add":
+                current_op = AddOperator()
             elif expression["expression"] == "comparison":
                 if expression["mode"] == "=":
                     current_op = EqualsOperator()
+                elif expression["mode"] == ">":
+                    current_op = GreaterThanOperator()
                 else:
                     raise Exception(f"Unknown operator that is allegedly a binary comparison one: {expression['expression']}")
             else:
@@ -252,7 +267,7 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
         elif expression["expression"] == "iuref":
             if expression["iu"] not in iu_references:
                 raise Exception(f"Trying to get a value ({expression['iu']}) from iu_references, that doesn't exist")
-            current_op = ColumnValue(iu_references[expression["iu"]])
+            current_op = iu_references[expression["iu"]]
         elif expression["expression"] == "const":
             const_value = expression["value"]["value"]
             const_type = None# Parse the type
@@ -267,9 +282,25 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                 const_type = "Float"
             elif expression["value"]["type"][0] == "Varchar":
                 const_type = "String"
+            elif expression["value"]["type"][0] == "Numeric":
+                const_value = const_value / int("1" + ("0"*expression["value"]["type"][2]))
+                const_type = "Float"
             else:
                 raise Exception(f"Unrecognised constant value type: {expression['value']['type']}")
             current_op = ConstantValue(const_value, const_type)
+        elif expression["expression"] in ["simplecase", "case"]:
+            current_op = CaseOperator()
+            if "value" in expression:
+                current_op.addChild(hyper_expression_parsing(expression["value"], iu_references))
+            for caseInstance in expression["cases"]:
+                # Make a case instance
+                currentCaseInstance = CaseInstance()
+                currentCaseInstance.setOutputValue(hyper_expression_parsing(caseInstance['value'], iu_references))
+                for subCase in caseInstance["cases"]:
+                    currentCaseInstance.addToCaseInstance(hyper_expression_parsing(subCase, iu_references))
+                
+                current_op.addToCases(currentCaseInstance)
+            current_op.addElse(hyper_expression_parsing(expression["else"], iu_references))
         else:
             raise Exception(f"Unexpected Expression type discovered: {expression['expression']}")
         
@@ -305,12 +336,25 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
         newAggregateOperations = []
         for aggr_op in aggregations_list:
             newAggrOp = None
-            if aggr_op['operation']['aggregate'] == "sum":
-                newAggrOp = SumAggrOperator()
+            if aggr_op['operation']['aggregate'] in ["avg", "sum", "count"]:
+                if aggr_op['operation']['aggregate'] == "sum":
+                    newAggrOp = SumAggrOperator()
+                elif aggr_op['operation']['aggregate'] == "avg":
+                    newAggrOp = AvgAggrOperator()
+                elif aggr_op['operation']['aggregate'] == "count":
+                    newAggrOp = CountAggrOperator()
+                else:
+                    raise Exception(f"Unrecognised Aggregation operator: {aggr_op['operation']['aggregate']}")
+                    
                 if aggr_op["source"] >= len(expressions_list):
-                    raise Exception(f"The source ({aggr_op['source']}) was too long for the expressions of length: {len(expressions_list)}")
-                newAggrOp.addChild(expressions_list[aggr_op["source"]])
+                    if aggr_op['operation']['aggregate'] == "count":
+                        newAggrOp.setCountAll()
+                    else:
+                        raise Exception(f"The source ({aggr_op['source']}) was too long for the expressions of length: {len(expressions_list)}")
+                else:
+                    newAggrOp.addChild(expressions_list[aggr_op["source"]])
                 # Save as a new iu
+                assert "v" in aggr_op["iu"][0]
                 iu_references[aggr_op["iu"][0]] = newAggrOp
                 # Store in list
                 newAggregateOperations.append(newAggrOp)
@@ -372,6 +416,15 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                 else:
                     raise Exception(f"Unexpected format for output columns")
             op_node.sortCriteria = newSortCriteria
+        elif isinstance(op_node, mapNode):
+            newMapValues = []
+            for mapValue in op_node.mapValues:
+                # Set iu into iu_references
+                assert mapValue['iu'][0] not in iu_references
+                parsedValue = hyper_expression_parsing(mapValue['value'], iu_references)
+                iu_references[mapValue['iu'][0]] = parsedValue
+                newMapValues.append(parsedValue)
+            op_node.mapValues = newMapValues
         else:
             raise Exception(f"Unsure how to deal with {op_node.__class__} node.")
         
