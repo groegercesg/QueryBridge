@@ -70,6 +70,9 @@ class groupjoinNode(JoinNode):
         self.leftAggregates = leftAggregates
         self.rightExpressions = rightExpressions
         self.rightAggregates = rightAggregates
+        
+        # To be added to later
+        self.groupKeys = []
 
 class joinNode(JoinNode):
     def __init__(self, joinType, joinMethod, joinCondition):

@@ -76,9 +76,6 @@ def inspect_explain_plans():
 
 from hyper_classes import *
 
-def str_to_class(classname):
-    return getattr(sys.modules[__name__], classname)
-
 def create_operator_tree(explain_json):
     operator_name = explain_json["operator"].lower()
     if operator_name not in SUPPORTED_HYPER_OPERATORS:
@@ -176,18 +173,21 @@ def parse_explain_plans():
 
 from expression_operators import *
 import datetime
+import struct
 
 def transform_hyper_iu_references(op_tree: HyperBaseNode):
     def hyper_restriction_parsing(restriction, table_columns, iu_references):
         current_restriction = None
         # Preorder Traversal
-        if restriction["mode"] in ["<", "<=", ">", "="]:
+        if restriction["mode"] in ["<", "<=", ">", "=", "<>"]:
             if restriction["mode"] == "<":
                 current_restriction = LessThanOperator()
             elif restriction["mode"] == ">":
                 current_restriction = GreaterThanOperator()
             elif restriction["mode"] == "=":
                 current_restriction = EqualsOperator()
+            elif restriction["mode"] == "<>":
+                current_restriction = NotEqualsOperator()
             elif restriction["mode"] == "<=":
                 current_restriction = LessThanEqOperator()
             else:
@@ -206,20 +206,18 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             current_restriction.addRight(hyper_expression_parsing(restriction["value2"], iu_references))
         elif restriction["mode"] == "lambda":
             assert restriction["value2"] is None
-            current_restriction = hyper_restriction_parsing(restriction["value"], table_columns, iu_references)
-        elif restriction["mode"] == "=some":
-            current_restriction = InSetOperator()
-            current_restriction.addChild(hyper_expression_parsing(restriction["value"], iu_references))
-            for value in restriction["set"]:
-                current_restriction.addToSet(hyper_expression_parsing(value, iu_references))
+            #if "mode" in restriction["value"] and "comparison" not in restriction["value"]["expression"]:
+            #    current_restriction = hyper_restriction_parsing(restriction["value"], table_columns, iu_references)
+            #else:
+            current_restriction = hyper_expression_parsing(restriction["value"], iu_references)
         else:
             raise Exception(f"Unexpected mode for restriction: {restriction['mode']}")
         
         return current_restriction
     
-    def parse_hyper_double(incoming_double_number):
-        print(f"We need to complete the parse_hyper_double method")
-        return None
+    def parse_hyper_double(long: int) -> float:
+        longint_binary = struct.pack('q', long)
+        return struct.unpack('d', longint_binary)[0]
     
     def parse_hyper_date(incoming_date_number):
         confirmed_pairs = {
@@ -241,66 +239,182 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             assert date_value_difference == datetime.timedelta(date_key_difference)
             
         return created_dt_object
+    
+    def parse_hyper_constant(expression) -> ConstantValue:
+            const_value = expression["value"]
+            const_type = None# Parse the type
+            if expression["type"][0] == "Integer":
+                const_value = int(const_value)
+                const_type = "Integer"
+            elif expression["type"][0] == "Date":
+                const_value = parse_hyper_date(const_value)
+                const_type = "Datetime"
+            elif expression["type"][0] == "Double":
+                const_value = parse_hyper_double(const_value)
+                const_type = "Float"
+            elif expression["type"][0] == "Varchar":
+                const_type = "String"
+            elif expression["type"][0] == "Numeric":
+                const_value = const_value / int("1" + ("0"*expression["type"][2]))
+                const_type = "Float"
+            else:
+                raise Exception(f"Unrecognised constant value type: {expression['type']}")
+            return ConstantValue(const_value, const_type)
+    
+    
+    def str_to_class(classname):
+        return getattr(sys.modules[__name__], classname)
+        
+    def join_statements_with_operator(statements: list[ExpressionBaseNode], join_operator: BinaryExpressionOperator) -> ExpressionBaseNode:
+        assert len(statements) >= 2
+        assert join_operator in ["OrOperator", "AndOperator"]
+        current_op = str_to_class(join_operator)()
+        current_node = current_op
+        
+        while len(statements) > 2:
+            current_node.addLeft(statements.pop())
+            # Decide operator to add
+            current_node.addRight(str_to_class(join_operator)())
+            current_node = current_node.right
+        current_node.addLeft(statements.pop())
+        current_node.addRight(statements.pop())
+        return current_op
         
     def hyper_expression_parsing(expression, iu_references):
         current_op = None
         # Preorder Traversal
         # Is it a binary operator
-        if expression["expression"] in ["mul", "comparison", "sub", "add"]:
+        if expression["expression"] in ["mul", "div", "comparison", "sub", "add"]:
             if expression["expression"] == "mul":
                 current_op = MulOperator()
+            elif expression["expression"] == "div":
+                current_op = DivOperator()
             elif expression["expression"] == "sub":
                 current_op = SubOperator()
             elif expression["expression"] == "add":
                 current_op = AddOperator()
             elif expression["expression"] == "comparison":
-                if expression["mode"] == "=":
+                if expression["mode"] in ["=", "is"]:
                     current_op = EqualsOperator()
                 elif expression["mode"] == ">":
                     current_op = GreaterThanOperator()
+                elif expression["mode"] == "<":
+                    current_op = LessThanOperator()
+                elif expression["mode"] == "<>":
+                    current_op = NotEqualsOperator()
                 else:
                     raise Exception(f"Unknown operator that is allegedly a binary comparison one: {expression['expression']}")
             else:
                 raise Exception(f"Unknown operator that is allegedly binary: {expression['expression']}")
             current_op.addLeft(hyper_expression_parsing(expression['left'], iu_references))
             current_op.addRight(hyper_expression_parsing(expression['right'], iu_references))
+        # Is it a unary operator
+        elif expression["expression"] in ["not", "extractyear"]:
+            if expression["expression"] == "not":
+                current_op = NotOperator()
+            elif expression["expression"] == "extractyear":
+                current_op = ExtractYearOperator()
+            else:
+                raise Exception(f"Unknown operator that is allegedly unary: {expression['expression']}")
+            
+            current_op.addChild(hyper_expression_parsing(expression["input"], iu_references))
+        elif expression["expression"] == "quantor":
+            if expression["mode"] == "=some":
+                current_op = InSetOperator()
+                current_op.addChild(hyper_expression_parsing(expression["value"], iu_references))
+                for value in expression["set"]:
+                    current_op.addToSet(hyper_expression_parsing(value, iu_references))
+            else:
+                raise Exception(f"Unrecognised mode for quantor expression: {expression['mode']}")
+        elif expression["expression"] in ["and", "or"]:
+            assert len(expression['arguments']) >= 2
+            joinExpression = None
+            if expression["expression"] == "and":
+                joinExpression = "AndOperator"
+            elif expression["expression"] == "or":
+                joinExpression = "OrOperator"
+            else:
+                raise Exception(f"Unrecognised expression with many arguments: {expression['expression']}")
+            remainingNodeArguments = [hyper_expression_parsing(exp, iu_references) for exp in expression["arguments"]]
+            current_op = join_statements_with_operator(remainingNodeArguments, joinExpression)
         elif expression["expression"] == "iuref":
             if expression["iu"] not in iu_references:
                 raise Exception(f"Trying to get a value ({expression['iu']}) from iu_references, that doesn't exist")
             current_op = iu_references[expression["iu"]]
         elif expression["expression"] == "const":
-            const_value = expression["value"]["value"]
-            const_type = None# Parse the type
-            if expression["value"]["type"][0] == "Integer":
-                const_value = int(const_value)
-                const_type = "Integer"
-            elif expression["value"]["type"][0] == "Date":
-                const_value = parse_hyper_date(const_value)
-                const_type = "Datetime"
-            elif expression["value"]["type"][0] == "Double":
-                const_value = parse_hyper_double(const_value)
-                const_type = "Float"
-            elif expression["value"]["type"][0] == "Varchar":
-                const_type = "String"
-            elif expression["value"]["type"][0] == "Numeric":
-                const_value = const_value / int("1" + ("0"*expression["value"]["type"][2]))
-                const_type = "Float"
-            else:
-                raise Exception(f"Unrecognised constant value type: {expression['value']['type']}")
-            current_op = ConstantValue(const_value, const_type)
-        elif expression["expression"] in ["simplecase", "case"]:
+            current_op = parse_hyper_constant(expression["value"])
+        elif expression["expression"] == "simplecase":
             current_op = CaseOperator()
-            if "value" in expression:
-                current_op.addChild(hyper_expression_parsing(expression["value"], iu_references))
+            specifiedValue = hyper_expression_parsing(expression["value"], iu_references)
+            for caseInstance in expression["cases"]:
+                equalledCases = []
+                for case in caseInstance["cases"]:
+                    localEqOperator = EqualsOperator()
+                    localEqOperator.addLeft(specifiedValue)
+                    localEqOperator.addRight(hyper_expression_parsing(case, iu_references))
+                    equalledCases.append(localEqOperator)
+                
+                if len(equalledCases) == 1:
+                    constructCases = equalledCases[0]
+                elif len(equalledCases) >= 2:
+                    constructCases = join_statements_with_operator(equalledCases, "OrOperator")
+                else:
+                    raise Exception(f"Unacceptable")
+                
+                caseInstanceObject = CaseInstance()
+                caseInstanceObject.setCase(constructCases)
+                caseInstanceObject.setOutputValue(hyper_expression_parsing(caseInstance["value"], iu_references))
+                
+                current_op.addToCase(caseInstanceObject)
+            
+            current_op.addElse(hyper_expression_parsing(expression["else"], iu_references))
+        elif expression["expression"] == "case":
+            current_op = CaseOperator()
             for caseInstance in expression["cases"]:
                 # Make a case instance
                 currentCaseInstance = CaseInstance()
                 currentCaseInstance.setOutputValue(hyper_expression_parsing(caseInstance['value'], iu_references))
-                for subCase in caseInstance["cases"]:
-                    currentCaseInstance.addToCaseInstance(hyper_expression_parsing(subCase, iu_references))
+                currentCaseInstance.setCase(hyper_expression_parsing(caseInstance['case'], iu_references))
                 
-                current_op.addToCases(currentCaseInstance)
+                current_op.addToCase(currentCaseInstance)
             current_op.addElse(hyper_expression_parsing(expression["else"], iu_references))
+        elif expression["expression"] == "like":
+            assert len(expression["arguments"]) == 3
+            likeExtraValue = hyper_expression_parsing(expression["arguments"][2], iu_references)
+            targetLikeExtraValue = ConstantValue("\\", "String")
+            assert likeExtraValue == targetLikeExtraValue
+            current_op = LikeOperator(
+                # Value
+                hyper_expression_parsing(expression["arguments"][0], iu_references),
+                # Comparator
+                hyper_expression_parsing(expression["arguments"][1], iu_references)
+            )
+        elif expression["expression"] == "between":
+            assert len(expression["arguments"]) == 3
+            value = hyper_expression_parsing(expression["arguments"][0], iu_references)
+            current_op = IntervalNotionOperator("[]", value)
+            current_op.addLeft(hyper_expression_parsing(expression["arguments"][1], iu_references))
+            current_op.addRight(hyper_expression_parsing(expression["arguments"][2], iu_references))
+        elif expression["expression"] == "substring":
+            assert len(expression["arguments"]) == 3
+            value = hyper_expression_parsing(expression["arguments"][0], iu_references)
+            startPos = hyper_expression_parsing(expression["arguments"][1], iu_references)
+            length = hyper_expression_parsing(expression["arguments"][1], iu_references)
+            current_op = SubstringOperator(value, startPos, length)
+        elif expression["expression"] == "lookup":
+            inputValues = []
+            for val in expression["input"]:
+                inputValues.append(hyper_expression_parsing(val, iu_references))
+            inputComparisons = []
+            for comp in expression["values"]:
+                inputComparisons.append(parse_hyper_constant(comp))
+            inputModes = []
+            for mode in expression["modes"]:
+                if mode == "is":
+                    inputModes.append(EqualsOperator)
+                else:
+                    raise Exception(f"Unknown comparison mode for lookup operator: {mode}")
+            current_op = LookupOperator(inputValues, inputComparisons, inputModes)
         else:
             raise Exception(f"Unexpected Expression type discovered: {expression['expression']}")
         
@@ -327,6 +441,8 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
         for expression in expressions_list:
             if "value" in expression:
                 newExpressionList.append(hyper_expression_parsing(expression["value"], iu_references))
+            elif "expression" in expression:
+                newExpressionList.append(hyper_expression_parsing(expression, iu_references))
             else:
                 raise Exception("Unknown expression list format")
             
@@ -336,9 +452,11 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
         newAggregateOperations = []
         for aggr_op in aggregations_list:
             newAggrOp = None
-            if aggr_op['operation']['aggregate'] in ["avg", "sum", "count"]:
+            if aggr_op['operation']['aggregate'] in ["avg", "sum", "count", "min"]:
                 if aggr_op['operation']['aggregate'] == "sum":
                     newAggrOp = SumAggrOperator()
+                elif aggr_op['operation']['aggregate'] == "min":
+                    newAggrOp = MinAggrOperator()
                 elif aggr_op['operation']['aggregate'] == "avg":
                     newAggrOp = AvgAggrOperator()
                 elif aggr_op['operation']['aggregate'] == "count":
@@ -425,6 +543,48 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                 iu_references[mapValue['iu'][0]] = parsedValue
                 newMapValues.append(parsedValue)
             op_node.mapValues = newMapValues
+        elif isinstance(op_node, groupjoinNode):
+            # leftKey, rightKey
+            newLeftKeys = []
+            for leftEntry in op_node.leftKey:
+                if "expression" and "iu" in leftEntry:
+                    # Have to do replace in iu_references
+                    assert leftEntry['iu'][0] not in iu_references
+                    parsedValue = hyper_expression_parsing(leftEntry['expression']['value'], iu_references)
+                    iu_references[leftEntry['iu'][0]] = parsedValue
+                    op_node.groupKeys.append(parsedValue)
+                else:
+                    assert leftEntry['value']['iu'] in iu_references
+                    parsedValue = iu_references[leftEntry['value']['iu']]
+                newLeftKeys.append(parsedValue)
+            op_node.leftKey = newLeftKeys
+            newRightKeys = []
+            for rightEntry in op_node.rightKey:
+                if "expression" and "iu" in rightEntry:
+                    # Have to do replace in iu_references
+                    assert rightEntry['iu'][0] not in iu_references
+                    parsedValue = hyper_expression_parsing(rightEntry['value'], iu_references)
+                    iu_references[rightEntry['iu'][0]] = parsedValue
+                    op_node.groupKeys.append(parsedValue)
+                else:
+                    assert rightEntry['value']['iu'] in iu_references
+                    parsedValue = iu_references[rightEntry['value']['iu']]
+                newRightKeys.append(parsedValue)
+            op_node.rightKey = newRightKeys
+            # Expressions
+            newLeftExpressionList = replace_expressions_using_iu_references(op_node.leftExpressions, iu_references)
+            op_node.leftExpressions = newLeftExpressionList
+            newRightExpressionList = replace_expressions_using_iu_references(op_node.rightExpressions, iu_references)
+            op_node.rightExpressions = newRightExpressionList
+            # Aggregates
+            newOverallExpressionsList = op_node.groupKeys + newLeftExpressionList + newRightExpressionList
+            newLeftAggregateOperations = replace_aggregations_using_iu_and_expressions(op_node.leftAggregates, iu_references, newOverallExpressionsList)
+            op_node.leftAggregates = newLeftAggregateOperations
+            newRightAggregateOperations = replace_aggregations_using_iu_and_expressions(op_node.rightAggregates, iu_references, newOverallExpressionsList)
+            op_node.rightAggregates = newRightAggregateOperations
+        elif isinstance(op_node, selectNode):
+            newSelectCondition = hyper_expression_parsing(op_node.selectCondition, iu_references)
+            op_node.selectCondition = newSelectCondition
         else:
             raise Exception(f"Unsure how to deal with {op_node.__class__} node.")
         
@@ -434,7 +594,9 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
     iu_references = dict()
     visit_solve_iu_references(op_tree, iu_references)
     
-    
+# TODO:
+#   - Can we get rid of: 'hyper_restriction_parsing'
+#   - Audit 'setCountAll()' to make sure they all lineup
 
 #generate_hyperdb_explains()
 #inspect_explain_plans()
