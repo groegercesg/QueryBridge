@@ -167,9 +167,118 @@ def parse_explain_plans():
     for tree in all_operator_trees:
         transform_hyper_iu_references(tree[1])
         print(f"Transformed Plan {tree[0]} Hyper Tree")
-    # Task 2: ...
+    # Task 2: Convert Hyper DB Nodes into Universal Plan Nodes
+    for tree in all_operator_trees:
+        tree[1] = transform_hyper_to_universal_plan(tree[1])
+        print(f"Transformed Plan {tree[0]} Hyper Tree into Universal Plan")
     
     print("Hyper Tree Plans have been Transformed")
+    
+    # Audit Universal Plan Trees
+    for tree in all_operator_trees:
+        # Test 1: top node should be OutputNode
+        assert audit_universal_plan_tree_outputnode(tree[1])
+        # Test 2: all leaf nodes should be ScanNode
+        assert audit_universal_plan_tree_scannode(tree[1])
+        
+    print("Universal Plan Trees have been Audited")
+    
+    # Convert Universal Plan Tree to Pandas Tree
+    for tree in all_operator_trees:
+        tree[1] = convert_universal_to_pandas(tree[1])
+        print(f"Converted Universal Plan Tree of {tree[0]} into Pandas Tree")
+
+    print("Universal Plan Trees have been converted into Pandas Trees")
+
+    # Transform Pandas Tree in ways that are required
+    for tree in all_operator_trees:
+        pass
+
+    # Unparse Pandas Trees to list
+    for tree in all_operator_trees:
+        pandas_content = UnparsePandasTree(tree[1]).getPandasContent()
+        print(pandas_content)
+        
+    print("Unparsed Pandas Tree into Pandas Content")
+    
+from pandas_unparser_v2 import *
+from universal_plan_nodes import *
+
+def audit_universal_plan_tree_outputnode(op_tree: UniversalBaseNode) -> bool:
+    return isinstance(op_tree, OutputNode)
+
+def audit_universal_plan_tree_scannode(op_tree: UniversalBaseNode) -> bool:
+    def get_leaf_nodes(op_tree: UniversalBaseNode) -> list[UniversalBaseNode]:
+        leafs = []
+        def _get_leaf_nodes(op_node: UniversalBaseNode):
+            match op_node:
+                case BinaryBaseNode():
+                    _get_leaf_nodes(op_node.left)
+                    _get_leaf_nodes(op_node.right)
+                case UnaryBaseNode():
+                    _get_leaf_nodes(op_node.child)
+                case UniversalBaseNode():
+                    leafs.append(op_node)
+                case _:
+                    raise Exception(f"We are auditing a universal plan tree, all nodes should be at minimum a UniversalBaseNode, not: {op_node.__class__}") 
+        _get_leaf_nodes(op_tree)
+        return leafs
+    
+    # Get all leaves, make sure they're all ScanNode
+    all_leaves = get_leaf_nodes(op_tree)
+    return all(isinstance(leaf, ScanNode) for leaf in all_leaves)
+
+def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNode:
+    def visit_hyper_nodes(op_node: HyperBaseNode):
+        # Visit Children
+        if isinstance(op_node, JoinNode) and op_node.isJoinNode == True:
+            leftNode = visit_hyper_nodes(op_node.left)
+            rightNode = visit_hyper_nodes(op_node.right)
+        elif op_node.child != None:
+            childNode = visit_hyper_nodes(op_node.child)
+        else:
+            # A leaf node
+            pass
+        
+        # Create a 'new_op_node' from an existing 'op_node'
+        match op_node:
+            case tablescanNode():
+                new_op_node = ScanNode(
+                    op_node.table_name,
+                    op_node.table_columns,
+                    op_node.tableRestrictions
+                )
+            case groupbyNode():
+                new_op_node = GroupNode(
+                    op_node.keyExpressions,
+                    op_node.aggregateExpressions,
+                    op_node.aggregateOperations
+                )
+            case executiontargetNode():
+                new_op_node = OutputNode(
+                    op_node.output_columns,
+                    op_node.output_names
+                )
+            case _:
+                raise Exception(f"Unexpected op_node, it was of class: {op_node.__class__}")
+
+        # Overwrite the existing OpNode
+        op_node = new_op_node
+        
+        # Add in the children
+        match op_node:
+            case UnaryBaseNode():
+                op_node.addChild(childNode)
+            case BinaryBaseNode():
+                op_node.addLeft(leftNode)
+                op_node.addRight(rightNode)
+            case _:
+                # ScanNode
+                assert isinstance(op_node, ScanNode)
+        
+        return op_node
+
+    return visit_hyper_nodes(op_tree)
 
 from expression_operators import *
 import datetime
