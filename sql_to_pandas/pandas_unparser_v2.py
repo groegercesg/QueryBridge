@@ -1,4 +1,55 @@
+from collections import defaultdict
+
 from universal_plan_nodes import *
+from expression_operators import *
+
+def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFrameName: str) -> str:
+    def handleConstantValue(expr: ExpressionBaseNode):
+        if expr.type == "Datetime":
+            return expr.value.strftime("%Y-%m-%d")
+        else:
+            return expr.value
+        
+    def handleIntervalNotion(expr: ExpressionBaseNode, leftNode, rightNode, dataFrameName):
+        convertedExpression = None
+        match expr.mode:
+            case "[]":
+                # TODO: (li.l_discount>=0.050) & (li.l_discount<=0.070)
+                pass
+            case _:
+                raise Exception(f"Unknown Internal Notion operator: {expr.mode}")
+
+        return convert_expression_operator_to_pandas(convertedExpression, dataFrameName)
+    
+    # Visit Children
+    if isinstance(expr_tree, BinaryExpressionOperator):
+        leftNode = convert_expression_operator_to_pandas(expr_tree.left, dataFrameName)
+        rightNode = convert_expression_operator_to_pandas(expr_tree.right, dataFrameName)
+    elif isinstance(expr_tree, UnaryExpressionOperator):
+        childNode = convert_expression_operator_to_pandas(expr_tree.child, dataFrameName)
+    else:
+        # A value node
+        assert isinstance(expr_tree, ValueNode)
+        pass
+    
+    expression_output = None
+    match expr_tree:
+        case ColumnValue():
+            expression_output = f"{dataFrameName}.{expr_tree.value}"
+        case ConstantValue():
+            expression_output = handleConstantValue(expr_tree)
+        case AndOperator():
+            pass
+        case LessThanOperator():
+            expression_output = f"{leftNode} < {rightNode}"
+        case IntervalNotionOperator():
+            expression_output = handleIntervalNotion(expr_tree, leftNode, rightNode, dataFrameName)
+        case _: 
+            raise Exception(f"Unrecognised expression operator: {expr_tree}")
+        
+    
+    return expression_output
+    
 
 def convert_universal_to_pandas(op_tree: UniversalBaseNode):
     # Visit Children
@@ -79,12 +130,19 @@ class BinaryPandasNode(PandasBaseNode):
         
 # Classes for Nodes
 class PandasScanNode(PandasBaseNode):
-    def __init__(self, tableName, tableColumns, tableRestrictions):
+    def __init__(self, tableName, tableColumns, tableRestriction):
         super().__init__()
         self.tableName = tableName
         self.tableColumns = tableColumns
-        self.tableRestrictions = tableRestrictions
+        self.tableRestriction = tableRestriction
         
+    def getTableColumns(self) -> list[str]:
+        outputColumns = []
+        for col in self.tableColumns:
+            assert isinstance(col, ColumnValue)
+            outputColumns.append(col.value)
+        return outputColumns
+    
 class PandasOutputNode(UnaryPandasNode):
     def __init__(self, outputColumns, outputNames):
         super().__init__()
@@ -103,9 +161,13 @@ class PandasGroupNode(UnaryPandasNode):
 class UnparsePandasTree():
     def __init__(self, pandas_tree: PandasBaseNode) -> None:
         self.pandas_content = []
+        self.nodesCounter = defaultdict(int)
         self.pandas_tree = pandas_tree
         
         self.__walk_tree(self.pandas_tree)
+        
+    def writeContent(self, content: str) -> None:
+        self.pandas_content.append(content)
     
     def getPandasContent(self) -> list[str]:
         return self.pandas_content
@@ -129,4 +191,34 @@ class UnparsePandasTree():
             raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
     
     def visitPandasScanNode(self, node):
-        print(f"At the unparser for Pandas Scan Node: {node}")
+        self.nodesCounter[PandasScanNode] += 1
+        nodeNumber = self.nodesCounter[PandasScanNode]
+        createdDataFrameName = f"df_scan_{nodeNumber}"
+        previousTableName = node.tableName
+        
+        # Use restrictions
+        if node.tableRestriction != None:
+            # Convert tableRestriction
+            tableRestriction = convert_expression_operator_to_pandas(node.tableRestriction, previousTableName)
+            print("a")
+            # Update previousTableName
+            previousTableName = createdDataFrameName
+            
+        # Limit by table columns
+        self.writeContent(
+            f"{createdDataFrameName} = {previousTableName}[{node.getTableColumns()}]"
+        )
+        
+        # Set the tableName
+        node.tableName = createdDataFrameName
+        
+        
+    def visitPandasOutputNode(self, node):
+        self.nodesCounter[PandasOutputNode] += 1
+        nodeNumber = self.nodesCounter[PandasOutputNode]
+        print(f"At the unparser for Pandas Output Node: {node}")
+        
+    def visitPandasGroupNode(self, node):
+        self.nodesCounter[PandasGroupNode] += 1
+        nodeNumber = self.nodesCounter[PandasGroupNode]
+        print(f"At the unparser for Pandas Group Node: {node}")

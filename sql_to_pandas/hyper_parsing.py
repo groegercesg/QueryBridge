@@ -614,7 +614,8 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             newTableRestrictions = []
             for restriction in op_node.tableRestrictions:
                 newTableRestrictions.append(hyper_restriction_parsing(restriction, op_node.table_columns, iu_references))
-            op_node.tableRestrictions = newTableRestrictions
+            # Join all the restrictions together
+            op_node.tableRestrictions = join_statements_with_operator(newTableRestrictions, "AndOperator")
         elif isinstance(op_node, groupbyNode):
             newExpressionList = replace_expressions_using_iu_references(op_node.aggregateExpressions, iu_references)
             op_node.aggregateExpressions = newExpressionList
