@@ -143,8 +143,8 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for explain_file in onlyfiles:
-        # if explain_file.split("_")[0] not in ["3", "6"]: #  
-        #     continue
+        if explain_file.split("_")[0] not in ["6"]:
+            continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
         with open(f'{explain_directory}/{explain_file}') as r:
@@ -206,9 +206,6 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             current_restriction.addRight(hyper_expression_parsing(restriction["value2"], iu_references))
         elif restriction["mode"] == "lambda":
             assert restriction["value2"] is None
-            #if "mode" in restriction["value"] and "comparison" not in restriction["value"]["expression"]:
-            #    current_restriction = hyper_restriction_parsing(restriction["value"], table_columns, iu_references)
-            #else:
             current_restriction = hyper_expression_parsing(restriction["value"], iu_references)
         else:
             raise Exception(f"Unexpected mode for restriction: {restriction['mode']}")
@@ -260,7 +257,6 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             else:
                 raise Exception(f"Unrecognised constant value type: {expression['type']}")
             return ConstantValue(const_value, const_type)
-    
     
     def str_to_class(classname):
         return getattr(sys.modules[__name__], classname)
@@ -589,14 +585,9 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             raise Exception(f"Unsure how to deal with {op_node.__class__} node.")
         
         return iu_references
-        
-        
+    
     iu_references = dict()
     visit_solve_iu_references(op_tree, iu_references)
-    
-# TODO:
-#   - Can we get rid of: 'hyper_restriction_parsing'
-#   - Audit 'setCountAll()' to make sure they all lineup
 
 #generate_hyperdb_explains()
 #inspect_explain_plans()
