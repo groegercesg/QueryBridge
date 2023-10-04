@@ -197,7 +197,10 @@ def parse_explain_plans():
     # Unparse Pandas Trees to list
     for tree in all_operator_trees:
         pandas_content = UnparsePandasTree(tree[1]).getPandasContent()
-        print(pandas_content)
+        print(f"Pandas Content for Plan '{tree[0]}':")
+        for line in pandas_content:
+            print(line)
+        print("-" * 15)
         
     print("Unparsed Pandas Tree into Pandas Content")
     

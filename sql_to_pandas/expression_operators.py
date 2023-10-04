@@ -1,6 +1,10 @@
 class ExpressionBaseNode():
     def __init__(self):
-        pass
+        self.codeName = ""
+        
+    def setCodeName(self, inName):
+        assert self.codeName == ""
+        self.codeName = inName
 
 class UnaryExpressionOperator(ExpressionBaseNode):
     def __init__(self):
@@ -121,15 +125,19 @@ class IntervalNotionOperator(BinaryExpressionOperator):
         self.value = value
 
 # Aggregation Operators
-class SumAggrOperator(UnaryExpressionOperator):
-    def __init__(self):
-        super().__init__()
-        
-class MinAggrOperator(UnaryExpressionOperator):
+class AggregationOperators(UnaryExpressionOperator):
     def __init__(self):
         super().__init__()
 
-class AvgAggrOperator(UnaryExpressionOperator):
+class SumAggrOperator(AggregationOperators):
+    def __init__(self):
+        super().__init__()
+        
+class MinAggrOperator(AggregationOperators):
+    def __init__(self):
+        super().__init__()
+
+class AvgAggrOperator(AggregationOperators):
     def __init__(self):
         super().__init__()
         

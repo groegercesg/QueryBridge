@@ -3,23 +3,78 @@ from collections import defaultdict
 from universal_plan_nodes import *
 from expression_operators import *
 
+def convert_aggregation_tree_to_pandas(aggr_tree: ExpressionBaseNode, dataFrameName: str) -> str:
+    # Visit Children
+    if isinstance(aggr_tree, AggregationOperators):
+        childNode = convert_aggregation_tree_to_pandas(aggr_tree.child, dataFrameName)
+    else:
+        # Should have a completed Code Name
+        assert aggr_tree.codeName != ""
+        return f"{dataFrameName}.{aggr_tree.codeName}"
+    
+    expression_output = ""
+    match aggr_tree:
+        case SumAggrOperator():
+            expression_output = f"{childNode}.sum()"
+        case _:
+            raise Exception(f"Unknown Aggregation Operator: {aggr_tree}")
+        
+    return expression_output
+
+def convert_expression_operator_to_column_name(expr_tree: ExpressionBaseNode):
+    # Visit Children
+    expression_output = []
+    if isinstance(expr_tree, BinaryExpressionOperator):
+        expression_output.extend(convert_expression_operator_to_column_name(expr_tree.left))
+        expression_output.extend(convert_expression_operator_to_column_name(expr_tree.right))
+    elif isinstance(expr_tree, UnaryExpressionOperator):
+        expression_output.extend(convert_expression_operator_to_column_name(expr_tree.child))
+    else:
+        # A value node
+        assert isinstance(expr_tree, ValueNode)
+        pass
+    
+    match expr_tree:
+        case ColumnValue():
+            expression_output.append(f"{expr_tree.value}")
+        case SumAggrOperator():
+            expression_output.append("sum")
+        case MinAggrOperator():
+            expression_output.append("min")
+        case AvgAggrOperator():
+            expression_output.append("avg")
+        case CountAggrOperator():
+            expression_output.append("count")
+        case AggregationOperators():
+            raise Exception(f"We have an aggregation operator, but don't have a case for it: {expr_tree}")
+    
+    return expression_output
+
 def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFrameName: str) -> str:
     def handleConstantValue(expr: ExpressionBaseNode):
         if expr.type == "Datetime":
-            return expr.value.strftime("%Y-%m-%d")
+            return f"'{expr.value.strftime('%Y-%m-%d')}'"
         else:
             return expr.value
         
     def handleIntervalNotion(expr: ExpressionBaseNode, leftNode, rightNode, dataFrameName):
-        convertedExpression = None
+        pandasValue = convert_expression_operator_to_pandas(expr.value, dataFrameName)
+        inclusiveOption = None
         match expr.mode:
             case "[]":
-                # TODO: (li.l_discount>=0.050) & (li.l_discount<=0.070)
-                pass
+                inclusiveOption = "both"
+            case "()":
+                inclusiveOption = "neither"
+            case "[)":
+                inclusiveOption = "left"
+            case "(]":
+                inclusiveOption = "right"
             case _:
                 raise Exception(f"Unknown Internal Notion operator: {expr.mode}")
-
-        return convert_expression_operator_to_pandas(convertedExpression, dataFrameName)
+        
+        assert inclusiveOption in ["both", "neither", "left", "right"]
+        convertedExpression = f"{pandasValue}.between({leftNode}, {rightNode}, inclusive='{inclusiveOption}')"
+        return convertedExpression
     
     # Visit Children
     if isinstance(expr_tree, BinaryExpressionOperator):
@@ -39,14 +94,15 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
         case ConstantValue():
             expression_output = handleConstantValue(expr_tree)
         case AndOperator():
-            pass
+            expression_output = f"({leftNode}) & ({rightNode})"
+        case MulOperator():
+            expression_output = f"{leftNode} * {rightNode}"
         case LessThanOperator():
             expression_output = f"{leftNode} < {rightNode}"
         case IntervalNotionOperator():
             expression_output = handleIntervalNotion(expr_tree, leftNode, rightNode, dataFrameName)
         case _: 
             raise Exception(f"Unrecognised expression operator: {expr_tree}")
-        
     
     return expression_output
     
@@ -103,7 +159,32 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
 # Classes for the Pandas Tree
 class PandasBaseNode():
     def __init__(self):
-        pass
+        # The columns, as strs
+        self.columns = set()
+        
+    def addToTableColumns(self, incomingColumns):
+        localColumns = set()
+        if isinstance(incomingColumns, list):
+            localColumns.update(incomingColumns)
+        elif isinstance(incomingColumns, str):
+            localColumns.add(incomingColumns)
+        else:
+            raise Exception(f"Unexpected format of incoming columns, {type(incomingColumns)}")
+    
+        self.columns.update(localColumns)
+        
+    def __updateTableColumns(self):
+        # get from children
+        if hasattr(self, "left"):
+            self.columns.update(self.left.getTableColumns())
+        if hasattr(self, "right"):
+            self.columns.update(self.right.getTableColumns())
+        if hasattr(self, "child"):
+            self.columns.update(self.child.getTableColumns())
+        
+    def getTableColumns(self) -> set():
+        self.__updateTableColumns()
+        return self.columns
     
 class UnaryPandasNode(PandasBaseNode):
     def __init__(self):
@@ -136,7 +217,7 @@ class PandasScanNode(PandasBaseNode):
         self.tableColumns = tableColumns
         self.tableRestriction = tableRestriction
         
-    def getTableColumns(self) -> list[str]:
+    def getTableColumnsForDF(self) -> list[str]:
         outputColumns = []
         for col in self.tableColumns:
             assert isinstance(col, ColumnValue)
@@ -156,6 +237,8 @@ class PandasGroupNode(UnaryPandasNode):
         self.preAggregateExpressions = preAggregateExpressions
         self.postAggregateOperations = postAggregateOperations
 
+import random
+
 # Unparser
 
 class UnparsePandasTree():
@@ -165,6 +248,35 @@ class UnparsePandasTree():
         self.pandas_tree = pandas_tree
         
         self.__walk_tree(self.pandas_tree)
+        
+    def getChildTableNames(self, current: PandasBaseNode) -> list[str]:
+        childTables = []
+        if isinstance(current, BinaryPandasNode):
+            childTables.append(current.left.tableName)
+            childTables.append(current.right.tableName)
+        elif isinstance(current, UnaryPandasNode):
+            childTables.append(current.child.tableName)
+        else:
+            # A leaf node
+            pass
+        
+        return childTables
+    
+    """
+    We need to track new columns, surface previous
+    Create new ones from just ColumnValues, make sure isn't in set
+        If is, add randomness and try again
+    Add to set, return new name in method
+    Store this in the preAggrExpr
+    """
+    def getNewColumnName(self, expr: ExpressionBaseNode, current: PandasBaseNode):
+        currentNodeColumns = current.getTableColumns()
+        processedName = "".join(convert_expression_operator_to_column_name(expr))
+        while processedName in currentNodeColumns:
+            processedName = f"{processedName}{random.randint(0,9)}"
+        current.addToTableColumns(processedName)
+        expr.setCodeName(processedName)
+        return processedName
         
     def writeContent(self, content: str) -> None:
         self.pandas_content.append(content)
@@ -200,25 +312,89 @@ class UnparsePandasTree():
         if node.tableRestriction != None:
             # Convert tableRestriction
             tableRestriction = convert_expression_operator_to_pandas(node.tableRestriction, previousTableName)
-            print("a")
+            self.writeContent(
+                f"{createdDataFrameName} = {previousTableName}[{tableRestriction}]"
+            )
             # Update previousTableName
             previousTableName = createdDataFrameName
             
         # Limit by table columns
         self.writeContent(
-            f"{createdDataFrameName} = {previousTableName}[{node.getTableColumns()}]"
+            f"{createdDataFrameName} = {previousTableName}[{node.getTableColumnsForDF()}]"
         )
         
         # Set the tableName
         node.tableName = createdDataFrameName
-        
-        
-    def visitPandasOutputNode(self, node):
-        self.nodesCounter[PandasOutputNode] += 1
-        nodeNumber = self.nodesCounter[PandasOutputNode]
-        print(f"At the unparser for Pandas Output Node: {node}")
+        # Set the tableColumns
+        node.addToTableColumns(node.getTableColumnsForDF())
         
     def visitPandasGroupNode(self, node):
         self.nodesCounter[PandasGroupNode] += 1
         nodeNumber = self.nodesCounter[PandasGroupNode]
-        print(f"At the unparser for Pandas Group Node: {node}")
+        
+        # Get child name
+        childTableList = self.getChildTableNames(node)
+        assert len(childTableList) == 1
+        childTable = childTableList[0]
+        
+        # Do preAggregateExpressions first
+        if node.preAggregateExpressions != []:
+            # Create the new column(s) in the childTable
+            for preAggrExpr in node.preAggregateExpressions:
+                newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable)
+                newColumnName = self.getNewColumnName(preAggrExpr, node.child)
+                self.writeContent(
+                    f"{childTable}['{newColumnName}'] = {newColumnExpression}"
+                )
+            
+        # Key Expressions
+        if node.keyExpressions != []:
+            raise Exception("Need to write code for grouping on keys")
+
+        # Create the new dataFrame, do the postAggregateOperations here
+        createdDataFrameName = f"df_group_{nodeNumber}"
+        self.writeContent(
+            f"{createdDataFrameName} = pd.DataFrame()"
+        )
+        
+        # Post Aggregate Expressions
+        if node.postAggregateOperations != []:
+            for postAggrOp in node.postAggregateOperations:
+                # TODO: Work out how to calculate these correctly
+                newColumnExpression = convert_aggregation_tree_to_pandas(postAggrOp, childTable)
+                newColumnName = self.getNewColumnName(postAggrOp, node)
+                self.writeContent(
+                    f"{createdDataFrameName}['{newColumnName}'] = [{newColumnExpression}]"
+                )
+        
+        # Set the tableName
+        node.tableName = createdDataFrameName
+        
+    def visitPandasOutputNode(self, node):
+        self.nodesCounter[PandasOutputNode] += 1
+        nodeNumber = self.nodesCounter[PandasOutputNode]
+        
+        # Get child name
+        childTableList = self.getChildTableNames(node)
+        assert len(childTableList) == 1
+        childTable = childTableList[0]
+        
+        # Create the new dataFrame
+        createdDataFrameName = f"df_output_{nodeNumber}"
+        self.writeContent(
+            f"{createdDataFrameName} = {childTable}"
+        )
+        
+        # Rename the columns
+        assert len(node.outputNames) == len(node.outputColumns)
+        currentNewNameDict = {node.outputColumns[i].codeName: node.outputNames[i] for i in range(len(node.outputNames))}
+        
+        self.writeContent(
+            f"{createdDataFrameName} = {createdDataFrameName}.rename(columns={currentNewNameDict})"
+        )
+            
+        # Limit by node.outputNames
+        # Limit by table columns
+        self.writeContent(
+            f"{createdDataFrameName} = {createdDataFrameName}[{node.outputNames}]"
+        )
