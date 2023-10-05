@@ -1,3 +1,5 @@
+from expression_operators import *
+
 class UniversalBaseNode():
     def __init__(self):
         pass
@@ -28,12 +30,22 @@ class BinaryBaseNode(UniversalBaseNode):
 # Classes for Nodes
 
 class JoinNode(BinaryBaseNode):
-    def __init__(self):
+    KNOWN_JOIN_METHODS = set(['hash'])
+    KNOWN_JOIN_TYPES = set(['inner'])
+    def __init__(self, joinMethod, joinType, joinCondition):
         super().__init__()
+        assert joinMethod in self.KNOWN_JOIN_METHODS, f"{joinMethod} is not in the known join methods"
+        self.joinMethod = joinMethod
+        assert joinType in self.KNOWN_JOIN_TYPES, f"{joinType} is not in the known join types"
+        self.joinType = joinType
+        self.joinCondition = joinCondition
         
 class SortNode(UnaryBaseNode):
-    def __init__(self):
+    def __init__(self, sortCriteria):
         super().__init__()
+        assert isinstance(sortCriteria, list)
+        assert all(isinstance(x, SortOperator) for x in sortCriteria)
+        self.sortCriteria = sortCriteria
         
 class GroupNode(UnaryBaseNode):
     def __init__(self, keyExpressions, preAggregateExpressions, postAggregateOperations):

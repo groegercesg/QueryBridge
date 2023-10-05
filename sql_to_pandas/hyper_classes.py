@@ -44,7 +44,7 @@ class selectNode(HyperBaseNode):
         super().__init__()
         self.selectCondition = selectCondition
   
-class JoinNode(HyperBaseNode):
+class JoinBaseNode(HyperBaseNode):
     def __init__(self, joinType):
         super().__init__()
         self.isJoinNode = True
@@ -60,7 +60,7 @@ class JoinNode(HyperBaseNode):
         assert self.right == None
         self.right = right
 
-class groupjoinNode(JoinNode):
+class groupjoinNode(JoinBaseNode):
     def __init__(self, joinType, leftKey, rightKey, leftExpressions, leftAggregates, rightExpressions, rightAggregates):
         super().__init__("groupjoin")
         self.joinType = joinType
@@ -74,7 +74,7 @@ class groupjoinNode(JoinNode):
         # To be added to later
         self.groupKeys = []
 
-class joinNode(JoinNode):
+class joinNode(JoinBaseNode):
     def __init__(self, joinType, joinMethod, joinCondition):
         super().__init__(joinType)
         self.joinMethod = joinMethod

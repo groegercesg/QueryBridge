@@ -127,7 +127,7 @@ def create_operator_tree(explain_json):
         operator_class.addChild(create_operator_tree(explain_json["input"]))
     elif any(x in explain_json for x in ["left", "right"]):
         # It should be an operator type if we're here
-        assert isinstance(operator_class, JoinNode) and hasattr(operator_class, "isJoinNode") and operator_class.isJoinNode == True
+        assert isinstance(operator_class, JoinBaseNode) and hasattr(operator_class, "isJoinNode") and operator_class.isJoinNode == True
         operator_class.addLeft(create_operator_tree(explain_json["left"]))
         operator_class.addRight(create_operator_tree(explain_json["right"]))
     else:
@@ -143,8 +143,8 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for explain_file in onlyfiles:
-        if explain_file.split("_")[0] not in ["6"]:
-            continue
+        # if explain_file.split("_")[0] not in ["3", "6"]:
+        #    continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
         with open(f'{explain_directory}/{explain_file}') as r:
@@ -234,7 +234,7 @@ def audit_universal_plan_tree_scannode(op_tree: UniversalBaseNode) -> bool:
 def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNode:
     def visit_hyper_nodes(op_node: HyperBaseNode):
         # Visit Children
-        if isinstance(op_node, JoinNode) and op_node.isJoinNode == True:
+        if isinstance(op_node, JoinBaseNode) and op_node.isJoinNode == True:
             leftNode = visit_hyper_nodes(op_node.left)
             rightNode = visit_hyper_nodes(op_node.right)
         elif op_node.child != None:
@@ -261,6 +261,16 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
                 new_op_node = OutputNode(
                     op_node.output_columns,
                     op_node.output_names
+                )
+            case joinNode():
+                new_op_node = JoinNode(
+                    op_node.joinMethod,
+                    op_node.joinType,
+                    op_node.joinCondition
+                )
+            case sortNode():
+                new_op_node = SortNode(
+                    op_node.sortCriteria
                 )
             case _:
                 raise Exception(f"Unexpected op_node, it was of class: {op_node.__class__}")
@@ -590,7 +600,7 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
     
     def visit_solve_iu_references(op_node: HyperBaseNode , iu_references: dict):
         # Visit Children
-        if isinstance(op_node, JoinNode) and op_node.isJoinNode == True:
+        if isinstance(op_node, JoinBaseNode) and op_node.isJoinNode == True:
             left_dict = visit_solve_iu_references(op_node.left, {})
             right_dict = visit_solve_iu_references(op_node.right, {})
             iu_references.update(left_dict)
@@ -618,7 +628,10 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             for restriction in op_node.tableRestrictions:
                 newTableRestrictions.append(hyper_restriction_parsing(restriction, op_node.table_columns, iu_references))
             # Join all the restrictions together
-            op_node.tableRestrictions = join_statements_with_operator(newTableRestrictions, "AndOperator")
+            if len(newTableRestrictions) >= 2:
+                op_node.tableRestrictions = join_statements_with_operator(newTableRestrictions, "AndOperator")
+            else:
+                op_node.tableRestrictions = newTableRestrictions[0]
         elif isinstance(op_node, groupbyNode):
             newExpressionList = replace_expressions_using_iu_references(op_node.aggregateExpressions, iu_references)
             op_node.aggregateExpressions = newExpressionList

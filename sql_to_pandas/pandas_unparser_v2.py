@@ -127,11 +127,17 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
                 op_tree.tableRestrictions
             )
         case GroupNode():
-            new_op_tree = PandasGroupNode(
-                op_tree.keyExpressions,
-                op_tree.preAggregateExpressions,
-                op_tree.postAggregateOperations
-            )
+            if op_tree.keyExpressions == []:
+                new_op_tree = PandasAggrNode(
+                    op_tree.preAggregateExpressions,
+                    op_tree.postAggregateOperations
+                )
+            else:
+                new_op_tree = PandasGroupNode(
+                    op_tree.keyExpressions,
+                    op_tree.preAggregateExpressions,
+                    op_tree.postAggregateOperations
+                )
         case OutputNode():
             new_op_tree = PandasOutputNode(
                 op_tree.outputColumns,
@@ -229,6 +235,12 @@ class PandasOutputNode(UnaryPandasNode):
         super().__init__()
         self.outputColumns = outputColumns
         self.outputNames = outputNames
+        
+class PandasAggrNode(UnaryPandasNode):
+    def __init__(self, preAggregateExpressions, postAggregateOperations):
+        super().__init__()
+        self.preAggregateExpressions = preAggregateExpressions
+        self.postAggregateOperations = postAggregateOperations
 
 class PandasGroupNode(UnaryPandasNode):
     def __init__(self, keyExpressions, preAggregateExpressions, postAggregateOperations):
@@ -328,7 +340,7 @@ class UnparsePandasTree():
         # Set the tableColumns
         node.addToTableColumns(node.getTableColumnsForDF())
         
-    def visitPandasGroupNode(self, node):
+    def visitPandasAggrNode(self, node):        
         self.nodesCounter[PandasGroupNode] += 1
         nodeNumber = self.nodesCounter[PandasGroupNode]
         
@@ -346,13 +358,9 @@ class UnparsePandasTree():
                 self.writeContent(
                     f"{childTable}['{newColumnName}'] = {newColumnExpression}"
                 )
-            
-        # Key Expressions
-        if node.keyExpressions != []:
-            raise Exception("Need to write code for grouping on keys")
 
         # Create the new dataFrame, do the postAggregateOperations here
-        createdDataFrameName = f"df_group_{nodeNumber}"
+        createdDataFrameName = f"df_aggr_{nodeNumber}"
         self.writeContent(
             f"{createdDataFrameName} = pd.DataFrame()"
         )
@@ -360,7 +368,6 @@ class UnparsePandasTree():
         # Post Aggregate Expressions
         if node.postAggregateOperations != []:
             for postAggrOp in node.postAggregateOperations:
-                # TODO: Work out how to calculate these correctly
                 newColumnExpression = convert_aggregation_tree_to_pandas(postAggrOp, childTable)
                 newColumnName = self.getNewColumnName(postAggrOp, node)
                 self.writeContent(
