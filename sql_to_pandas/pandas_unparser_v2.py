@@ -353,6 +353,7 @@ class UnparsePandasTree():
         if node.preAggregateExpressions != []:
             # Create the new column(s) in the childTable
             for preAggrExpr in node.preAggregateExpressions:
+                assert not isinstance(preAggrExpr, ColumnValue)
                 newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable)
                 newColumnName = self.getNewColumnName(preAggrExpr, node.child)
                 self.writeContent(

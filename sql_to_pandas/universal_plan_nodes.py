@@ -30,8 +30,12 @@ class BinaryBaseNode(UniversalBaseNode):
 # Classes for Nodes
 
 class JoinNode(BinaryBaseNode):
-    KNOWN_JOIN_METHODS = set(['hash'])
-    KNOWN_JOIN_TYPES = set(['inner'])
+    KNOWN_JOIN_METHODS = set(['hash', None, 'bnl'])
+    KNOWN_JOIN_TYPES = set([
+        'inner', 'outer', 
+        'leftsemijoin', 'rightsemijoin',
+        'leftantijoin', 'rightantijoin'
+    ])
     def __init__(self, joinMethod, joinType, joinCondition):
         super().__init__()
         assert joinMethod in self.KNOWN_JOIN_METHODS, f"{joinMethod} is not in the known join methods"
@@ -53,7 +57,7 @@ class GroupNode(UnaryBaseNode):
         self.keyExpressions = keyExpressions
         self.preAggregateExpressions = preAggregateExpressions
         self.postAggregateOperations = postAggregateOperations
-        
+
 class ScanNode(UniversalBaseNode):
     def __init__(self, tableName, tableColumns, tableRestrictions):
         super().__init__()
@@ -67,6 +71,12 @@ class OutputNode(UnaryBaseNode):
         self.outputColumns = outputColumns
         self.outputNames = outputNames
         
-class FilterNode(UnaryBaseNode):
-    def __init__(self):
+class NewColumnNode(UnaryBaseNode):
+    def __init__(self, valuesToCreate):
         super().__init__()
+        self.values = valuesToCreate
+
+class FilterNode(UnaryBaseNode):
+    def __init__(self, condition):
+        super().__init__()
+        self.condition = condition

@@ -172,7 +172,7 @@ def parse_explain_plans():
         tree[1] = transform_hyper_to_universal_plan(tree[1])
         print(f"Transformed Plan {tree[0]} Hyper Tree into Universal Plan")
     
-    print("Hyper Tree Plans have been Transformed")
+    print("Hyper Tree Plans have been Transformed into Universal Plan Trees")
     
     # Audit Universal Plan Trees
     for tree in all_operator_trees:
@@ -232,6 +232,22 @@ def audit_universal_plan_tree_scannode(op_tree: UniversalBaseNode) -> bool:
     return all(isinstance(leaf, ScanNode) for leaf in all_leaves)
 
 def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNode:
+    def equal_left_right_keys(left_keys: list[ExpressionBaseNode], right_keys: list[ExpressionBaseNode]) -> list[EqualsOperator]:
+        assert len(left_keys) == len(right_keys)
+        equate_keys = []
+        for i in range(len(left_keys)):
+            newEqualsOperator = EqualsOperator()
+            newEqualsOperator.addLeft(
+                left_keys[i]
+            )
+            newEqualsOperator.addRight(
+                right_keys[i]
+            )
+            equate_keys.append(
+                newEqualsOperator
+            )
+        return equate_keys
+    
     def visit_hyper_nodes(op_node: HyperBaseNode):
         # Visit Children
         if isinstance(op_node, JoinBaseNode) and op_node.isJoinNode == True:
@@ -272,24 +288,58 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
                 new_op_node = SortNode(
                     op_node.sortCriteria
                 )
+            case mapNode():
+                new_op_node = NewColumnNode(
+                    op_node.mapValues
+                )
+            case groupjoinNode():
+                # Split and convert into 2 nodes:
+                #       Group after Join
+                new_op_node = GroupNode(
+                    op_node.groupKeys,
+                    op_node.leftExpressions + op_node.rightExpressions,
+                    op_node.leftAggregates + op_node.rightAggregates
+                )
+                new_op_node.addChild(
+                    JoinNode(
+                        None,
+                        op_node.joinType,
+                        equal_left_right_keys(op_node.leftKey, op_node.rightKey)
+                    )
+                )
+            case selectNode():
+                new_op_node = FilterNode(
+                    op_node.selectCondition
+                )
             case _:
                 raise Exception(f"Unexpected op_node, it was of class: {op_node.__class__}")
 
         # Overwrite the existing OpNode
-        op_node = new_op_node
+        lowest_node_pointer = new_op_node
+        # Find the lowest node
+        searching = True
+        while searching == True:
+            match lowest_node_pointer:
+                case UnaryBaseNode():
+                    if lowest_node_pointer.child != None:
+                        lowest_node_pointer = lowest_node_pointer.child
+                    else:
+                        searching = False
+                case _:
+                    searching = False
         
         # Add in the children
-        match op_node:
+        match lowest_node_pointer:
             case UnaryBaseNode():
-                op_node.addChild(childNode)
+                lowest_node_pointer.addChild(childNode)
             case BinaryBaseNode():
-                op_node.addLeft(leftNode)
-                op_node.addRight(rightNode)
+                lowest_node_pointer.addLeft(leftNode)
+                lowest_node_pointer.addRight(rightNode)
             case _:
                 # ScanNode
-                assert isinstance(op_node, ScanNode)
+                assert isinstance(lowest_node_pointer, ScanNode)
         
-        return op_node
+        return new_op_node
 
     return visit_hyper_nodes(op_tree)
 
@@ -630,8 +680,10 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             # Join all the restrictions together
             if len(newTableRestrictions) >= 2:
                 op_node.tableRestrictions = join_statements_with_operator(newTableRestrictions, "AndOperator")
-            else:
+            elif len(newTableRestrictions) == 1:
                 op_node.tableRestrictions = newTableRestrictions[0]
+            else:
+                op_node.tableRestrictions = newTableRestrictions
         elif isinstance(op_node, groupbyNode):
             newExpressionList = replace_expressions_using_iu_references(op_node.aggregateExpressions, iu_references)
             op_node.aggregateExpressions = newExpressionList
