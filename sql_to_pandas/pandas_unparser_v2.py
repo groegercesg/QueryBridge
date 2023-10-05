@@ -1,7 +1,10 @@
 from collections import defaultdict
+import random
 
 from universal_plan_nodes import *
 from expression_operators import *
+
+TAB = "    "
 
 def convert_aggregation_tree_to_pandas(aggr_tree: ExpressionBaseNode, dataFrameName: str) -> str:
     # Visit Children
@@ -19,6 +22,22 @@ def convert_aggregation_tree_to_pandas(aggr_tree: ExpressionBaseNode, dataFrameN
         case _:
             raise Exception(f"Unknown Aggregation Operator: {aggr_tree}")
         
+    return expression_output
+
+def convert_expression_operator_to_aggr(expr_tree: ExpressionBaseNode) -> str:
+    expression_output = ""
+    match expr_tree:
+        case SumAggrOperator():
+            expression_output = "sum"
+        case MinAggrOperator():
+            expression_output = "min"
+        case AvgAggrOperator():
+            expression_output = "avg"
+        case CountAggrOperator():
+            expression_output = "count"
+        case AggregationOperators():
+            raise Exception(f"We have an aggregation operator, but don't have a case for it: {expr_tree}")
+    
     return expression_output
 
 def convert_expression_operator_to_column_name(expr_tree: ExpressionBaseNode):
@@ -54,6 +73,8 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
     def handleConstantValue(expr: ExpressionBaseNode):
         if expr.type == "Datetime":
             return f"'{expr.value.strftime('%Y-%m-%d')}'"
+        if expr.type == "String":
+            return f"'{expr.value}'"
         else:
             return expr.value
         
@@ -94,13 +115,19 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
         case ConstantValue():
             expression_output = handleConstantValue(expr_tree)
         case AndOperator():
-            expression_output = f"({leftNode}) & ({rightNode})"
+            expression_output = f"{leftNode} & {rightNode}"
         case MulOperator():
             expression_output = f"{leftNode} * {rightNode}"
         case LessThanOperator():
-            expression_output = f"{leftNode} < {rightNode}"
+            expression_output = f"({leftNode} < {rightNode})"
+        case EqualsOperator():
+            expression_output = f"({leftNode} == {rightNode})"
+        case GreaterThanOperator():
+            expression_output = f"({leftNode} > {rightNode})"
         case IntervalNotionOperator():
             expression_output = handleIntervalNotion(expr_tree, leftNode, rightNode, dataFrameName)
+        case SubOperator():
+            expression_output = f"({leftNode} - {rightNode})"
         case _: 
             raise Exception(f"Unrecognised expression operator: {expr_tree}")
     
@@ -142,6 +169,16 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
             new_op_tree = PandasOutputNode(
                 op_tree.outputColumns,
                 op_tree.outputNames
+            )
+        case JoinNode():
+            new_op_tree = PandasJoinNode(
+                op_tree.joinMethod,
+                op_tree.joinType,
+                op_tree.joinCondition
+            )
+        case SortNode():
+            new_op_tree = PandasSortNode(
+                op_tree.sortCriteria
             )
         case _:
             raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
@@ -248,11 +285,40 @@ class PandasGroupNode(UnaryPandasNode):
         self.keyExpressions = keyExpressions
         self.preAggregateExpressions = preAggregateExpressions
         self.postAggregateOperations = postAggregateOperations
-
-import random
+        
+class PandasSortNode(UnaryPandasNode):
+    def __init__(self, sortCriteria):
+        super().__init__()
+        self.sortCriteria = sortCriteria
+     
+class PandasJoinNode(BinaryPandasNode):
+    KNOWN_JOIN_METHODS = set([
+        'hash'
+    ])
+    KNOWN_JOIN_TYPES = set([
+        'inner'
+    ])
+    def __init__(self, joinMethod, joinType, joinCondition):
+        super().__init__()
+        assert joinMethod in self.KNOWN_JOIN_METHODS, f"{joinMethod} is not in the known join methods"
+        self.joinMethod = joinMethod
+        assert joinType in self.KNOWN_JOIN_TYPES, f"{joinType} is not in the known join types"
+        self.joinType = joinType
+        joinCondition = self.__splitConditionsIntoList(joinCondition)
+        assert isinstance(joinCondition, list)
+        self.joinCondition = joinCondition
+        
+    def __splitConditionsIntoList(self, joinCondition: ExpressionBaseNode) -> list[ExpressionBaseNode]:
+        newConditions = []
+        joiningNodes = [OrOperator, AndOperator]
+        currentJoinCondition = joinCondition
+        while any(isinstance(currentJoinCondition, x) for x in joiningNodes):
+            newConditions.append(currentJoinCondition.left)
+            currentJoinCondition = currentJoinCondition.right
+        newConditions.append(currentJoinCondition)
+        return newConditions
 
 # Unparser
-
 class UnparsePandasTree():
     def __init__(self, pandas_tree: PandasBaseNode) -> None:
         self.pandas_content = []
@@ -314,6 +380,118 @@ class UnparsePandasTree():
         else:
             raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
     
+    def __getPandasRepresentationForColumn(self, column: ColumnValue):
+        if column.codeName == '':
+            assert isinstance(column, ColumnValue)
+            return column.value
+        else:
+            return column.codeName
+    
+    def visitPandasSortNode(self, node):
+        self.nodesCounter[PandasSortNode] += 1
+        nodeNumber = self.nodesCounter[PandasSortNode]
+        createdDataFrameName = f"df_sort_{nodeNumber}"
+        
+        # Get child name
+        childTableList = self.getChildTableNames(node)
+        assert len(childTableList) == 1
+        childTable = childTableList[0]
+        
+        assert len(node.sortCriteria) > 0
+        processedSortKeys = [self.__getPandasRepresentationForColumn(x.value) for x in node.sortCriteria]
+        processedSortDirections = [(not x.descending) for x in node.sortCriteria]
+        self.writeContent(
+            f"{createdDataFrameName} = {childTable}.sort_values(\n"
+            f"{TAB}by={processedSortKeys},\n"
+            f"{TAB}ascending={processedSortDirections}\n"
+            f")"
+        )
+        
+        # Set the tableName
+        node.tableName = createdDataFrameName
+    
+    def visitPandasGroupNode(self, node):
+        self.nodesCounter[PandasGroupNode] += 1
+        nodeNumber = self.nodesCounter[PandasGroupNode]
+        createdDataFrameName = f"df_group_{nodeNumber}"
+        
+        # Get child name
+        childTableList = self.getChildTableNames(node)
+        assert len(childTableList) == 1
+        childTable = childTableList[0]
+        
+        # preAggregateExpressions, do these in the childTable
+        for preAggrExpr in node.preAggregateExpressions:
+            assert not isinstance(preAggrExpr, ColumnValue)
+            newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable)
+            newColumnName = self.getNewColumnName(preAggrExpr, node.child)
+            self.writeContent(
+                f"{childTable}['{newColumnName}'] = {newColumnExpression}"
+            )
+        
+        # KeyExpressions
+        assert len(node.keyExpressions) > 0
+        assert len(node.postAggregateOperations) > 0, "We can't have a Group By without aggregations"
+        processedKeys = [self.__getPandasRepresentationForColumn(x) for x in node.keyExpressions]
+        self.writeContent(
+            f"{createdDataFrameName} = {childTable} \\\n"
+            f"{TAB}.groupby({processedKeys}, sort=False, as_index=False) \\\n"
+            f"{TAB}.agg("
+        )
+        
+        # postAggregateOperations
+        for postAggrOp in node.postAggregateOperations:
+            # Write each one
+            newColumnName = self.getNewColumnName(postAggrOp, node)
+            assert not isinstance(postAggrOp.child, AggregationOperators), "There should be only 1 aggregation, as one can't nest them in SQL"
+            previousColumnName = postAggrOp.child.codeName
+            columnAggregation = convert_expression_operator_to_aggr(postAggrOp)
+            self.writeContent(
+                f"{TAB}{TAB}{newColumnName}=('{previousColumnName}', '{columnAggregation}')"
+            )
+            
+        # Write the aggregation closing
+        self.writeContent(
+            f"{TAB})"
+        )
+        
+        # Set the tableName
+        node.tableName = createdDataFrameName
+        
+    def visitPandasJoinNode(self, node):
+        self.nodesCounter[PandasJoinNode] += 1
+        nodeNumber = self.nodesCounter[PandasJoinNode]
+        createdDataFrameName = f"df_join_{nodeNumber}"
+        
+        # Get child name
+        childTableList = self.getChildTableNames(node)
+        assert len(childTableList) == 2
+    
+        assert all(isinstance(x, EqualsOperator) for x in node.joinCondition)
+        leftKeys = [self.__getPandasRepresentationForColumn(x.left) for x in node.joinCondition]
+        rightKeys = [self.__getPandasRepresentationForColumn(x.right) for x in node.joinCondition]
+        joinMethod = None
+        
+        match node.joinMethod:
+            case "hash":
+                # If you set 'merge(Sort=False)', then it's a Hash Join
+                joinMethod = False
+            case _:
+                raise Exception(f"Unknown Join Method provided: {node.joinMethod}")
+        
+        assert joinMethod != None
+        
+        match node.joinType:
+            case "inner":
+                self.writeContent(
+                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'inner'}', sort={joinMethod})"
+                )
+            case _:
+                raise Exception(f"Unexpected Join Type supplied: {node.joinType}")
+        
+        # Set the tableName
+        node.tableName = createdDataFrameName
+
     def visitPandasScanNode(self, node):
         self.nodesCounter[PandasScanNode] += 1
         nodeNumber = self.nodesCounter[PandasScanNode]
@@ -389,16 +567,18 @@ class UnparsePandasTree():
         
         # Create the new dataFrame
         createdDataFrameName = f"df_output_{nodeNumber}"
-        self.writeContent(
-            f"{createdDataFrameName} = {childTable}"
-        )
         
         # Rename the columns
         assert len(node.outputNames) == len(node.outputColumns)
-        currentNewNameDict = {node.outputColumns[i].codeName: node.outputNames[i] for i in range(len(node.outputNames))}
+        # Only create new names, if they'd be different
+        currentNewNameDict = {
+            self.__getPandasRepresentationForColumn(node.outputColumns[i]): node.outputNames[i]
+            for i in range(len(node.outputNames))
+            if self.__getPandasRepresentationForColumn(node.outputColumns[i]) != node.outputNames[i]
+        }
         
         self.writeContent(
-            f"{createdDataFrameName} = {createdDataFrameName}.rename(columns={currentNewNameDict})"
+            f"{createdDataFrameName} = {childTable}.rename(columns={currentNewNameDict})"
         )
             
         # Limit by node.outputNames

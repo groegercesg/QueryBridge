@@ -143,8 +143,8 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for explain_file in onlyfiles:
-        # if explain_file.split("_")[0] not in ["3", "6"]:
-        #    continue
+        if explain_file.split("_")[0] not in ["3", "6"]:
+           continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
         with open(f'{explain_directory}/{explain_file}') as r:
