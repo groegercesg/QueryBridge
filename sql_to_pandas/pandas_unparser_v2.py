@@ -317,6 +317,11 @@ class PandasJoinNode(BinaryPandasNode):
             currentJoinCondition = currentJoinCondition.right
         newConditions.append(currentJoinCondition)
         return newConditions
+    
+    def checkLeftRightKeysValid(self, left: list[str], right: list[str]) -> bool:
+        allLeftValid = all(aLeft in self.left.getTableColumns() for aLeft in left)
+        allRightValid = all(aRight in self.right.getTableColumns() for aRight in right)
+        return allLeftValid and allRightValid
 
 # Unparser
 class UnparsePandasTree():
@@ -471,6 +476,16 @@ class UnparsePandasTree():
         leftKeys = [self.__getPandasRepresentationForColumn(x.left) for x in node.joinCondition]
         rightKeys = [self.__getPandasRepresentationForColumn(x.right) for x in node.joinCondition]
         joinMethod = None
+        
+        # TODO: Fix this upstream, as a Hyper Tree transformation
+        # Sometimes, the keys (direct from the Hyper plan)
+        # Aren't this correct way round
+        if node.checkLeftRightKeysValid(leftKeys, rightKeys) == False:
+            # Swap, then assert if true
+            oldLeft = leftKeys
+            leftKeys = rightKeys
+            rightKeys = oldLeft
+            assert node.checkLeftRightKeysValid(leftKeys, rightKeys) 
         
         match node.joinMethod:
             case "hash":
