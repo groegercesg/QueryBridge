@@ -143,9 +143,9 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for explain_file in onlyfiles:
-        # Next queries: 10, 19, 18, 4, 14, 15, 16, 5, 8, 9, 11
+        # Next queries: 19, 18, 4, 14, 15, 16, 5, 8, 9, 11
         #               12, 13, 7, then the rest
-        if explain_file.split("_")[0] not in ["1", "3", "6"]:
+        if explain_file.split("_")[0] not in ["1", "3", "6", "10"]:
            continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")

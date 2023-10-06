@@ -526,7 +526,7 @@ class UnparsePandasTree():
         previousTableName = node.tableName
         
         # Use restrictions
-        if node.tableRestriction != None:
+        if node.tableRestriction != []:
             # Convert tableRestriction
             tableRestriction = convert_expression_operator_to_pandas(node.tableRestriction, previousTableName)
             self.writeContent(
