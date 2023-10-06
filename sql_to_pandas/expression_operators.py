@@ -29,8 +29,13 @@ class BinaryExpressionOperator(ExpressionBaseNode):
         assert self.right == None
         self.right = right
 
+class LeafNode(ExpressionBaseNode):
+    # Node has no children
+    def __init__(self,):
+        super().__init__()
+
 # Values
-class ValueNode(ExpressionBaseNode):
+class ValueNode(LeafNode):
     def __init__(self, value):
         super().__init__()
         self.value = value
@@ -57,11 +62,10 @@ class ConstantValue(ValueNode):
 class NotOperator(UnaryExpressionOperator):
     def __init__(self):
         super().__init__()
-        
+
 class ExtractYearOperator(UnaryExpressionOperator):
     def __init__(self):
         super().__init__()
-
 
 # Binary Operators
 class OrOperator(BinaryExpressionOperator):
@@ -144,10 +148,10 @@ class AvgAggrOperator(AggregationOperators):
 class CountAggrOperator(UnaryExpressionOperator):
     def __init__(self):
         super().__init__()
-        self.countAll = False
-        
-    def setCountAll(self):
-        self.countAll = True
+
+class CountAllOperator(LeafNode):
+    def __init__(self):
+        super().__init__()
 
 class InSetOperator(UnaryExpressionOperator):
     def __init__(self):
@@ -170,7 +174,7 @@ class CaseInstance():
         assert self.case is None
         self.case = inExpr
         
-class CaseOperator(ExpressionBaseNode):
+class CaseOperator(LeafNode):
     def __init__(self):
         self.caseInstances = []
         self.elseExpr = []
@@ -182,25 +186,25 @@ class CaseOperator(ExpressionBaseNode):
         assert self.elseExpr == []
         self.elseExpr = elseExpr
 
-class SubstringOperator(ExpressionBaseNode):
+class SubstringOperator(LeafNode):
     def __init__(self, value, startPosition, length):
         self.value = value
         self.startPosition = startPosition
         self.length = length
    
-class LikeOperator(ExpressionBaseNode):
+class LikeOperator(LeafNode):
     def __init__(self, value, comparator):
         self.value = value
         self.comparator = comparator
     
-class LookupOperator(ExpressionBaseNode):
+class LookupOperator(LeafNode):
     def __init__(self, values, comparisons, modes):
         self.values = values
         self.comparisons = comparisons
         self.modes = modes
 
 # Sort Operator
-class SortOperator(ExpressionBaseNode):
+class SortOperator(LeafNode):
     def __init__(self, value, descending):
         super().__init__()
         self.value = value

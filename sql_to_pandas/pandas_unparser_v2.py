@@ -32,8 +32,8 @@ def convert_expression_operator_to_aggr(expr_tree: ExpressionBaseNode) -> str:
         case MinAggrOperator():
             expression_output = "min"
         case AvgAggrOperator():
-            expression_output = "avg"
-        case CountAggrOperator():
+            expression_output = "mean"
+        case CountAggrOperator() | CountAllOperator():
             expression_output = "count"
         case AggregationOperators():
             raise Exception(f"We have an aggregation operator, but don't have a case for it: {expr_tree}")
@@ -50,7 +50,7 @@ def convert_expression_operator_to_column_name(expr_tree: ExpressionBaseNode):
         expression_output.extend(convert_expression_operator_to_column_name(expr_tree.child))
     else:
         # A value node
-        assert isinstance(expr_tree, ValueNode)
+        assert isinstance(expr_tree, LeafNode)
         pass
     
     match expr_tree:
@@ -61,8 +61,8 @@ def convert_expression_operator_to_column_name(expr_tree: ExpressionBaseNode):
         case MinAggrOperator():
             expression_output.append("min")
         case AvgAggrOperator():
-            expression_output.append("avg")
-        case CountAggrOperator():
+            expression_output.append("mean")
+        case CountAggrOperator() | CountAllOperator():
             expression_output.append("count")
         case AggregationOperators():
             raise Exception(f"We have an aggregation operator, but don't have a case for it: {expr_tree}")
@@ -105,7 +105,7 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
         childNode = convert_expression_operator_to_pandas(expr_tree.child, dataFrameName)
     else:
         # A value node
-        assert isinstance(expr_tree, ValueNode)
+        assert isinstance(expr_tree, LeafNode)
         pass
     
     expression_output = None
@@ -120,6 +120,8 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
             expression_output = f"{leftNode} * {rightNode}"
         case LessThanOperator():
             expression_output = f"({leftNode} < {rightNode})"
+        case LessThanEqOperator():
+            expression_output = f"({leftNode} <= {rightNode})"
         case EqualsOperator():
             expression_output = f"({leftNode} == {rightNode})"
         case GreaterThanOperator():
@@ -128,6 +130,8 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
             expression_output = handleIntervalNotion(expr_tree, leftNode, rightNode, dataFrameName)
         case SubOperator():
             expression_output = f"({leftNode} - {rightNode})"
+        case AddOperator():
+            expression_output = f"({leftNode} + {rightNode})"
         case _: 
             raise Exception(f"Unrecognised expression operator: {expr_tree}")
     
@@ -427,12 +431,15 @@ class UnparsePandasTree():
         
         # preAggregateExpressions, do these in the childTable
         for preAggrExpr in node.preAggregateExpressions:
-            assert not isinstance(preAggrExpr, ColumnValue)
-            newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable)
-            newColumnName = self.getNewColumnName(preAggrExpr, node.child)
-            self.writeContent(
-                f"{childTable}['{newColumnName}'] = {newColumnExpression}"
-            )
+            if isinstance(preAggrExpr, ColumnValue):
+                # Check this column is in the child, for safety
+                assert preAggrExpr.value in node.child.getTableColumns()
+            else:
+                newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable)
+                newColumnName = self.getNewColumnName(preAggrExpr, node.child)
+                self.writeContent(
+                    f"{childTable}['{newColumnName}'] = {newColumnExpression}"
+                )
         
         # KeyExpressions
         assert len(node.keyExpressions) > 0
@@ -448,11 +455,16 @@ class UnparsePandasTree():
         for postAggrOp in node.postAggregateOperations:
             # Write each one
             newColumnName = self.getNewColumnName(postAggrOp, node)
-            assert not isinstance(postAggrOp.child, AggregationOperators), "There should be only 1 aggregation, as one can't nest them in SQL"
-            previousColumnName = postAggrOp.child.codeName
+            if isinstance(postAggrOp, CountAllOperator):
+                # Select column name from child columns, choose random (ish) column
+                previousColumnName = list(node.child.getTableColumns() - set(processedKeys))[0]
+            else:
+                assert not isinstance(postAggrOp.child, AggregationOperators), "There should be only 1 aggregation, as one can't nest them in SQL"
+                previousColumnName = self.__getPandasRepresentationForColumn(postAggrOp.child)
             columnAggregation = convert_expression_operator_to_aggr(postAggrOp)
+            assert not any(x == "" for x in [newColumnName, previousColumnName, columnAggregation])
             self.writeContent(
-                f"{TAB}{TAB}{newColumnName}=('{previousColumnName}', '{columnAggregation}')"
+                f"{TAB}{TAB}{newColumnName}=('{previousColumnName}', '{columnAggregation}'),"
             )
             
         # Write the aggregation closing
@@ -479,7 +491,7 @@ class UnparsePandasTree():
         
         # TODO: Fix this upstream, as a Hyper Tree transformation
         # Sometimes, the keys (direct from the Hyper plan)
-        # Aren't this correct way round
+        # Aren't actually the correct way round
         if node.checkLeftRightKeysValid(leftKeys, rightKeys) == False:
             # Swap, then assert if true
             oldLeft = leftKeys

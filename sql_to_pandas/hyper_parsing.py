@@ -143,7 +143,9 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for explain_file in onlyfiles:
-        if explain_file.split("_")[0] not in ["3", "6"]:
+        # Next queries: 10, 19, 18, 4, 14, 15, 16, 5, 8, 9, 11
+        #               12, 13, 7, then the rest
+        if explain_file.split("_")[0] not in ["1", "3", "6"]:
            continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
@@ -634,7 +636,7 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                     
                 if aggr_op["source"] >= len(expressions_list):
                     if aggr_op['operation']['aggregate'] == "count":
-                        newAggrOp.setCountAll()
+                        newAggrOp = CountAllOperator()
                     else:
                         raise Exception(f"The source ({aggr_op['source']}) was too long for the expressions of length: {len(expressions_list)}")
                 else:
