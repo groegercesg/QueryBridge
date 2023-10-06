@@ -70,7 +70,7 @@ def convert_expression_operator_to_column_name(expr_tree: ExpressionBaseNode):
     return expression_output
 
 def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFrameName: str) -> str:
-    def handleConstantValue(expr: ExpressionBaseNode):
+    def handleConstantValue(expr: ConstantValue):
         if expr.type == "Datetime":
             return f"'{expr.value.strftime('%Y-%m-%d')}'"
         if expr.type == "String":
@@ -78,7 +78,7 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
         else:
             return expr.value
         
-    def handleIntervalNotion(expr: ExpressionBaseNode, leftNode, rightNode, dataFrameName):
+    def handleIntervalNotion(expr: IntervalNotionOperator, leftNode, rightNode, dataFrameName):
         pandasValue = convert_expression_operator_to_pandas(expr.value, dataFrameName)
         inclusiveOption = None
         match expr.mode:
@@ -96,6 +96,13 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
         assert inclusiveOption in ["both", "neither", "left", "right"]
         convertedExpression = f"{pandasValue}.between({leftNode}, {rightNode}, inclusive='{inclusiveOption}')"
         return convertedExpression
+    
+    def handleInSetOperator(expr: InSetOperator, childNode: str) -> str:
+        listElements = []
+        for element in expr.set:
+            assert isinstance(element, ConstantValue)
+            listElements.append(element.value)
+        return f"{childNode}.isin({listElements})"
     
     # Visit Children
     if isinstance(expr_tree, BinaryExpressionOperator):
@@ -132,6 +139,10 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
             expression_output = f"({leftNode} - {rightNode})"
         case AddOperator():
             expression_output = f"({leftNode} + {rightNode})"
+        case InSetOperator():
+            expression_output = handleInSetOperator(expr_tree, childNode)
+        case OrOperator():
+            expression_output = f"{leftNode} | {rightNode}"
         case _: 
             raise Exception(f"Unrecognised expression operator: {expr_tree}")
     
@@ -180,6 +191,16 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
                 op_tree.joinType,
                 op_tree.joinCondition
             )
+            # Handle join, filters
+            if new_op_tree.postJoinFilters != []:
+                join_node = new_op_tree
+                # We need to insert a filter node above this one
+                new_op_tree = PandasFilterNode(
+                    join_node.postJoinFilters
+                )
+                # Reset postJoinFilters
+                join_node.postJoinFilters = []
+                new_op_tree.addChild(join_node)
         case SortNode():
             new_op_tree = PandasSortNode(
                 op_tree.sortCriteria
@@ -188,20 +209,31 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
             raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
     # Overwrite the existing OpNode
-    op_tree = new_op_tree
+    lowest_node_pointer = new_op_tree
+     # Find the lowest node
+    searching = True
+    while searching == True:
+        match lowest_node_pointer:
+            case UnaryPandasNode():
+                if lowest_node_pointer.child != None:
+                    lowest_node_pointer = lowest_node_pointer.child
+                else:
+                    searching = False
+            case _:
+                searching = False
     
     # Add in the children
-    match op_tree:
+    match lowest_node_pointer:
         case UnaryPandasNode():
-            op_tree.addChild(childNode)
+            lowest_node_pointer.addChild(childNode)
         case BinaryPandasNode():
-            op_tree.addLeft(leftNode)
-            op_tree.addRight(rightNode)
+            lowest_node_pointer.addLeft(leftNode)
+            lowest_node_pointer.addRight(rightNode)
         case _:
             # PandasScanNode
-            assert isinstance(op_tree, PandasScanNode)
+            assert isinstance(lowest_node_pointer, PandasScanNode)
     
-    return op_tree
+    return new_op_tree
 
 # Classes for the Pandas Tree
 class PandasBaseNode():
@@ -276,7 +308,12 @@ class PandasOutputNode(UnaryPandasNode):
         super().__init__()
         self.outputColumns = outputColumns
         self.outputNames = outputNames
-        
+
+class PandasFilterNode(UnaryPandasNode):
+    def __init__(self, conditions):
+        super().__init__()
+        self.conditions = conditions
+
 class PandasAggrNode(UnaryPandasNode):
     def __init__(self, preAggregateExpressions, postAggregateOperations):
         super().__init__()
@@ -304,6 +341,7 @@ class PandasJoinNode(BinaryPandasNode):
     ])
     def __init__(self, joinMethod, joinType, joinCondition):
         super().__init__()
+        self.postJoinFilters = []
         assert joinMethod in self.KNOWN_JOIN_METHODS, f"{joinMethod} is not in the known join methods"
         self.joinMethod = joinMethod
         assert joinType in self.KNOWN_JOIN_TYPES, f"{joinType} is not in the known join types"
@@ -314,13 +352,16 @@ class PandasJoinNode(BinaryPandasNode):
         
     def __splitConditionsIntoList(self, joinCondition: ExpressionBaseNode) -> list[ExpressionBaseNode]:
         newConditions = []
-        joiningNodes = [OrOperator, AndOperator]
+        joiningNodes = [AndOperator]
         currentJoinCondition = joinCondition
         while any(isinstance(currentJoinCondition, x) for x in joiningNodes):
             newConditions.append(currentJoinCondition.left)
             currentJoinCondition = currentJoinCondition.right
         newConditions.append(currentJoinCondition)
-        return newConditions
+        # At this stage, we should scoop up any postJoinFilters
+        self.postJoinFilters = list(filter(lambda x: isinstance(x, OrOperator), newConditions))
+        realNewConditions = list(filter(lambda x: not isinstance(x, OrOperator), newConditions))
+        return realNewConditions
     
     def checkLeftRightKeysValid(self, left: list[str], right: list[str]) -> bool:
         allLeftValid = all(aLeft in self.left.getTableColumns() for aLeft in left)
@@ -395,6 +436,25 @@ class UnparsePandasTree():
             return column.value
         else:
             return column.codeName
+        
+    def visitPandasFilterNode(self, node):
+        self.nodesCounter[PandasFilterNode] += 1
+        nodeNumber = self.nodesCounter[PandasFilterNode]
+        createdDataFrameName = f"df_filter_{nodeNumber}"
+        
+        # Get child name
+        childTableList = self.getChildTableNames(node)
+        assert len(childTableList) == 1
+        childTable = childTableList[0]
+
+        assert len(node.conditions) == 1
+        filterConditions = convert_expression_operator_to_pandas(node.conditions[0], childTable)
+        self.writeContent(
+            f"{createdDataFrameName} = {childTable}[{filterConditions}]"
+        )
+
+        # Set the tableName
+        node.tableName = createdDataFrameName
     
     def visitPandasSortNode(self, node):
         self.nodesCounter[PandasSortNode] += 1
