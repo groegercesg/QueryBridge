@@ -115,6 +115,12 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
         assert isinstance(expr_tree, LeafNode)
         pass
     
+    # If an expression has a non-blank codeName, then
+    # it has already been created and so should be done
+    # again.
+    if expr_tree.codeName != '':
+        return f"{dataFrameName}.{expr_tree.codeName}"
+    
     expression_output = None
     match expr_tree:
         case ColumnValue():
@@ -193,10 +199,11 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
             )
             # Handle join, filters
             if new_op_tree.postJoinFilters != []:
+                assert len(new_op_tree.postJoinFilters) == 1
                 join_node = new_op_tree
                 # We need to insert a filter node above this one
                 new_op_tree = PandasFilterNode(
-                    join_node.postJoinFilters
+                    join_node.postJoinFilters[0]
                 )
                 # Reset postJoinFilters
                 join_node.postJoinFilters = []
@@ -204,6 +211,10 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
         case SortNode():
             new_op_tree = PandasSortNode(
                 op_tree.sortCriteria
+            )
+        case FilterNode():
+            new_op_tree = PandasFilterNode(
+                op_tree.condition
             )
         case _:
             raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
@@ -310,9 +321,9 @@ class PandasOutputNode(UnaryPandasNode):
         self.outputNames = outputNames
 
 class PandasFilterNode(UnaryPandasNode):
-    def __init__(self, conditions):
+    def __init__(self, condition):
         super().__init__()
-        self.conditions = conditions
+        self.condition = condition
 
 class PandasAggrNode(UnaryPandasNode):
     def __init__(self, preAggregateExpressions, postAggregateOperations):
@@ -337,7 +348,7 @@ class PandasJoinNode(BinaryPandasNode):
         'hash'
     ])
     KNOWN_JOIN_TYPES = set([
-        'inner'
+        'inner', 'rightsemijoin'
     ])
     def __init__(self, joinMethod, joinType, joinCondition):
         super().__init__()
@@ -447,8 +458,7 @@ class UnparsePandasTree():
         assert len(childTableList) == 1
         childTable = childTableList[0]
 
-        assert len(node.conditions) == 1
-        filterConditions = convert_expression_operator_to_pandas(node.conditions[0], childTable)
+        filterConditions = convert_expression_operator_to_pandas(node.condition, childTable)
         self.writeContent(
             f"{createdDataFrameName} = {childTable}[{filterConditions}]"
         )
@@ -572,6 +582,13 @@ class UnparsePandasTree():
             case "inner":
                 self.writeContent(
                     f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'inner'}', sort={joinMethod})"
+                )
+            case "rightsemijoin":
+                # An inner join will behave just like a right semi join, if the left DataFrame consists only of the key columns:                
+                # df_join_1 = df_scan_2.merge(df_filter_1['l_orderkey'], how="inner", left_on='o_orderkey', right_on='l_orderkey', sort=False)
+
+                self.writeContent(
+                    f"{createdDataFrameName} = {childTableList[1]}.merge({childTableList[0]}[{leftKeys}], how='inner', left_on={rightKeys}, right_on={leftKeys}, sort={joinMethod})"
                 )
             case _:
                 raise Exception(f"Unexpected Join Type supplied: {node.joinType}")
