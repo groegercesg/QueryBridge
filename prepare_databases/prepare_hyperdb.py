@@ -152,7 +152,7 @@ class PrepareHyperDB(PrepareDatabase):
                 partsupp_ps_suppkey,
                 TableDefinition.Column('ps_availqty', SqlType.int(), nullability=NOT_NULLABLE),
                 TableDefinition.Column('ps_supplycost', SqlType.double(), nullability=NOT_NULLABLE),
-                TableDefinition.Column('ps_coment', SqlType.varchar(199), nullability=NOT_NULLABLE)
+                TableDefinition.Column('ps_comment', SqlType.varchar(199), nullability=NOT_NULLABLE)
             ])
             ORDERS = TableDefinition('orders', [
                 orders_o_orderkey,

@@ -176,6 +176,8 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
             expression_output = f"({leftNode} <= {rightNode})"
         case EqualsOperator():
             expression_output = f"({leftNode} == {rightNode})"
+        case NotEqualsOperator():
+            expression_output = f"({leftNode} != {rightNode})"
         case GreaterThanOperator():
             expression_output = f"({leftNode} > {rightNode})"
         case IntervalNotionOperator():
@@ -194,6 +196,8 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
             expression_output = handleCaseOperator(expr_tree, dataFrameName, columnName)
         case LikeOperator():
             expression_output = handleLikeOperator(expr_tree, dataFrameName)
+        case NotOperator():
+            expression_output = f"({childNode} == False)"
         case _: 
             raise Exception(f"Unrecognised expression operator: {expr_tree}")
     
@@ -414,7 +418,9 @@ class PandasJoinNode(BinaryPandasNode):
         'hash'
     ])
     KNOWN_JOIN_TYPES = set([
-        'inner', 'rightsemijoin', 'leftsemijoin'
+        'inner', 
+        'leftsemijoin', 'rightsemijoin', 
+        'rightantijoin'
     ])
     def __init__(self, joinMethod, joinType, joinCondition):
         super().__init__()
@@ -695,6 +701,25 @@ class UnparsePandasTree():
                         f"{createdDataFrameName} = {childTableList[0]}[{childTableList[0]}[{leftKeys}].isin({childTableList[1]}.set_index([{rightKeys}]).index)]"
                     )
                 node.columns = node.left.getTableColumns()
+            case "leftantijoin" | "rightantijoin":
+                self.writeContent(
+                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'outer'}', sort={joinMethod}, indicator=True)"
+                )
+                
+                # Set the joinKeep
+                if node.joinType == "leftantijoin":
+                    joinKeep = 'left_only'
+                    node.columns = node.left.getTableColumns()
+                elif node.joinType == "rightantijoin":
+                    joinKeep = 'right_only'
+                    node.columns = node.right.getTableColumns()
+                else:
+                    raise Exception(f"Unknown type of antijoin: {node.joinType}")
+                
+                self.writeContent(
+                    f"{createdDataFrameName} = {createdDataFrameName}[{createdDataFrameName}._merge == '{joinKeep}'].drop('_merge', axis = 1)"
+                )
+
             case _:
                 raise Exception(f"Unexpected Join Type supplied: {node.joinType}")
         
