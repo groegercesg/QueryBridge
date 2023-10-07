@@ -64,12 +64,14 @@ def convert_expression_operator_to_column_name(expr_tree: ExpressionBaseNode):
             expression_output.append("mean")
         case CountAggrOperator() | CountAllOperator():
             expression_output.append("count")
+        case CaseOperator():
+            expression_output.append("case")
         case AggregationOperators():
             raise Exception(f"We have an aggregation operator, but don't have a case for it: {expr_tree}")
     
     return expression_output
 
-def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFrameName: str) -> str:
+def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFrameName: str, columnName: str = None) -> str:
     def handleConstantValue(expr: ConstantValue):
         if expr.type == "Datetime":
             return f"'{expr.value.strftime('%Y-%m-%d')}'"
@@ -103,6 +105,43 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
             assert isinstance(element, ConstantValue)
             listElements.append(element.value)
         return f"{childNode}.isin({listElements})"
+    
+    def handleCaseOperator(expr: CaseOperator, dataFrameName: str, columnName: str) -> list[str]:
+        # Use '.loc' for the case expression
+        # Return a list of the lines required
+        caseLines = []
+        # Default
+        defaultValue = convert_expression_operator_to_pandas(expr.elseExpr, dataFrameName)
+        caseLines.append(
+            f"{dataFrameName}['{columnName}'] = {defaultValue}"
+        )
+        for caseInst in expr.caseInstances:
+            caseValue = convert_expression_operator_to_pandas(caseInst.case, dataFrameName)
+            outputValue = convert_expression_operator_to_pandas(caseInst.outputValue, dataFrameName)
+            caseLines.append(
+                f"{dataFrameName}.loc[({caseValue}), '{columnName}'] = {outputValue}"
+            )
+        return caseLines
+    
+    def handleLikeOperator(expr: LikeOperator, dataFrameName: str) -> str:
+        _special_regex_chars = {
+            ch : '\\'+ch
+            for ch in '.^$*+?{}[]|()\\'
+        }
+
+        def sql_like_fragment_to_regex_string(fragment):
+            safe_fragment = ''.join([
+                _special_regex_chars.get(ch, ch)
+                for ch in fragment
+            ])
+            return '^' + safe_fragment.replace('%', '.*?').replace('_', '.') + '$'
+        
+        targetColumn = convert_expression_operator_to_pandas(expr.value, dataFrameName)
+        assert isinstance(expr.comparator, ConstantValue)
+        regex_cmd = sql_like_fragment_to_regex_string(expr.comparator.value)
+        
+        # Assemble the line
+        return f"{targetColumn}.str.contains('{regex_cmd}', regex=True)"
     
     # Visit Children
     if isinstance(expr_tree, BinaryExpressionOperator):
@@ -145,10 +184,16 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
             expression_output = f"({leftNode} - {rightNode})"
         case AddOperator():
             expression_output = f"({leftNode} + {rightNode})"
+        case DivOperator():
+            expression_output = f"({leftNode} / {rightNode})"
         case InSetOperator():
             expression_output = handleInSetOperator(expr_tree, childNode)
         case OrOperator():
             expression_output = f"{leftNode} | {rightNode}"
+        case CaseOperator():
+            expression_output = handleCaseOperator(expr_tree, dataFrameName, columnName)
+        case LikeOperator():
+            expression_output = handleLikeOperator(expr_tree, dataFrameName)
         case _: 
             raise Exception(f"Unrecognised expression operator: {expr_tree}")
     
@@ -216,6 +261,10 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
             new_op_tree = PandasFilterNode(
                 op_tree.condition
             )
+        case NewColumnNode():
+            new_op_tree = PandasAddColumnsNode(
+                op_tree.values
+            )
         case _:
             raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
@@ -264,7 +313,7 @@ class PandasBaseNode():
         self.columns.update(localColumns)
         
     def __updateTableColumns(self):
-        if self.columns != {}:
+        if len(self.columns) > 0:
             pass
         else:
             # get from children
@@ -336,6 +385,11 @@ class PandasFilterNode(UnaryPandasNode):
     def __init__(self, condition):
         super().__init__()
         self.condition = condition
+
+class PandasAddColumnsNode(UnaryPandasNode):
+    def __init__(self, columns):
+        super().__init__()
+        self.columns = columns
 
 class PandasAggrNode(UnaryPandasNode):
     def __init__(self, preAggregateExpressions, postAggregateOperations):
@@ -426,7 +480,6 @@ class UnparsePandasTree():
         while processedName in currentNodeColumns:
             processedName = f"{processedName}{random.randint(0,9)}"
         current.addToTableColumns(processedName)
-        expr.setCodeName(processedName)
         return processedName
         
     def writeContent(self, content: str) -> None:
@@ -459,6 +512,25 @@ class UnparsePandasTree():
             return column.value
         else:
             return column.codeName
+        
+    def visitPandasAddColumnsNode(self, node):
+        # We will add columns into the childtable
+        # Get child name
+        childTableList = self.getChildTableNames(node)
+        assert len(childTableList) == 1
+        childTable = childTableList[0]
+        
+        for newColumn in node.columns:
+            newColumnExpression = convert_expression_operator_to_pandas(newColumn, childTable)
+            newColumnName = self.getNewColumnName(newColumn, node.child)
+            # Set the new name
+            newColumn.setCodeName(newColumnName)
+            self.writeContent(
+                f"{childTable}['{newColumnName}'] = {newColumnExpression}"
+            )
+
+        # Set the tableName, to the child table, as we never really existed!
+        node.tableName = childTable
         
     def visitPandasFilterNode(self, node):
         self.nodesCounter[PandasFilterNode] += 1
@@ -519,6 +591,8 @@ class UnparsePandasTree():
             else:
                 newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable)
                 newColumnName = self.getNewColumnName(preAggrExpr, node.child)
+                # Set the new name
+                preAggrExpr.setCodeName(newColumnName)
                 self.writeContent(
                     f"{childTable}['{newColumnName}'] = {newColumnExpression}"
                 )
@@ -537,6 +611,8 @@ class UnparsePandasTree():
         for postAggrOp in node.postAggregateOperations:
             # Write each one
             newColumnName = self.getNewColumnName(postAggrOp, node)
+            # Set the new name
+            postAggrOp.setCodeName(newColumnName)
             if isinstance(postAggrOp, CountAllOperator):
                 # Select column name from child columns, choose random (ish) column
                 previousColumnName = list(node.child.getTableColumns() - set(processedKeys))[0]
@@ -666,11 +742,19 @@ class UnparsePandasTree():
             # Create the new column(s) in the childTable
             for preAggrExpr in node.preAggregateExpressions:
                 assert not isinstance(preAggrExpr, ColumnValue)
-                newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable)
                 newColumnName = self.getNewColumnName(preAggrExpr, node.child)
-                self.writeContent(
-                    f"{childTable}['{newColumnName}'] = {newColumnExpression}"
-                )
+                newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable, newColumnName)
+                # Set the new name
+                preAggrExpr.setCodeName(newColumnName)
+                if isinstance(newColumnExpression, str):
+                    self.writeContent(
+                        f"{childTable}['{newColumnName}'] = {newColumnExpression}"
+                    )
+                elif isinstance(newColumnExpression, list):
+                    for line in newColumnExpression:
+                        self.writeContent(line)
+                else:
+                    raise Exception(f"Unexpected format of newColumnExpression: {type(newColumnExpression)}")
 
         # Create the new dataFrame, do the postAggregateOperations here
         createdDataFrameName = f"df_aggr_{nodeNumber}"
@@ -683,6 +767,8 @@ class UnparsePandasTree():
             for postAggrOp in node.postAggregateOperations:
                 newColumnExpression = convert_aggregation_tree_to_pandas(postAggrOp, childTable)
                 newColumnName = self.getNewColumnName(postAggrOp, node)
+                # Set the new name
+                postAggrOp.setCodeName(newColumnName)
                 self.writeContent(
                     f"{createdDataFrameName}['{newColumnName}'] = [{newColumnExpression}]"
                 )

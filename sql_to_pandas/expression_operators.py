@@ -31,7 +31,7 @@ class BinaryExpressionOperator(ExpressionBaseNode):
 
 class LeafNode(ExpressionBaseNode):
     # Node has no children
-    def __init__(self,):
+    def __init__(self):
         super().__init__()
 
 # Values
@@ -176,6 +176,7 @@ class CaseInstance():
         
 class CaseOperator(LeafNode):
     def __init__(self):
+        super().__init__()
         self.caseInstances = []
         self.elseExpr = []
         
@@ -188,17 +189,20 @@ class CaseOperator(LeafNode):
 
 class SubstringOperator(LeafNode):
     def __init__(self, value, startPosition, length):
+        super().__init__()
         self.value = value
         self.startPosition = startPosition
         self.length = length
    
 class LikeOperator(LeafNode):
     def __init__(self, value, comparator):
+        super().__init__()
         self.value = value
         self.comparator = comparator
     
 class LookupOperator(LeafNode):
     def __init__(self, values, comparisons, modes):
+        super().__init__()
         self.values = values
         self.comparisons = comparisons
         self.modes = modes
