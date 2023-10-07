@@ -94,8 +94,13 @@ def create_operator_tree(explain_json):
         operator_class = groupbyNode(keyExpressions, aggExpressions, explain_json["aggregates"])
     elif operator_name == "tablescan":
         tableRestrictions = []
+        assert not (("restrictions" in explain_json) and ("residuals" in explain_json))
         if "restrictions" in explain_json:
-            tableRestrictions = explain_json["restrictions"]
+            assert isinstance(explain_json["restrictions"], list)
+            tableRestrictions.extend(explain_json["restrictions"])
+        if "residuals" in explain_json:
+            assert isinstance(explain_json["residuals"], list)
+            tableRestrictions.extend(explain_json["residuals"])
         operator_class = tablescanNode(explain_json["debugName"]["value"], explain_json["values"], tableRestrictions)
     elif operator_name == "sort":
         operator_class = sortNode(explain_json["criterion"])
@@ -143,9 +148,9 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for explain_file in onlyfiles:
-        # Next queries: 18, 4, 14, 15, 16, 5, 8, 9, 11
+        # Next queries: 15, 16, 5, 8, 9, 11
         #               12, 13, 7, then the rest
-        if explain_file.split("_")[0] not in ["19", "18"]: # "1", "3", "6", "10", 
+        if explain_file.split("_")[0] not in ["14"]: # "1", "3", "6", "10", "19", "18", "4"
            continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
@@ -367,10 +372,14 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             else:
                 raise Exception(f"Unknown supposedly binary mode: {restriction['mode']}")
             
-            current_restriction.addLeft(table_columns[restriction["attribute"]])
-            if "value" not in restriction or "value2" in restriction:
-                raise Exception(f"Unexpected keys in the restriction object: {restriction.keys()}")
-            current_restriction.addRight(hyper_expression_parsing(restriction["value"], iu_references))
+            if "left" in restriction and "right" in restriction:
+                current_restriction.addLeft(hyper_expression_parsing(restriction['left'], iu_references))
+                current_restriction.addRight(hyper_expression_parsing(restriction['right'], iu_references))
+            else:
+                current_restriction.addLeft(table_columns[restriction["attribute"]])
+                if "value" not in restriction or "value2" in restriction:
+                    raise Exception(f"Unexpected keys in the restriction object: {restriction.keys()}")
+                current_restriction.addRight(hyper_expression_parsing(restriction["value"], iu_references))
         elif restriction["mode"] in IntervalNotionOperator.SUPPORTED_MODES:
             # Using Interval Notion for the inequalities
             current_restriction = IntervalNotionOperator(restriction["mode"], table_columns[restriction["attribute"]])

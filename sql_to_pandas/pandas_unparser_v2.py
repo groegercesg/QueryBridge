@@ -264,13 +264,25 @@ class PandasBaseNode():
         self.columns.update(localColumns)
         
     def __updateTableColumns(self):
-        # get from children
-        if hasattr(self, "left"):
-            self.columns.update(self.left.getTableColumns())
-        if hasattr(self, "right"):
-            self.columns.update(self.right.getTableColumns())
-        if hasattr(self, "child"):
-            self.columns.update(self.child.getTableColumns())
+        if self.columns != {}:
+            pass
+        else:
+            # get from children
+            if hasattr(self, "left"):
+                #if self.left.columns:
+                #    self.columns.update(self.left.columns)
+                #else:
+                self.columns.update(self.left.getTableColumns())
+            if hasattr(self, "right"):
+                # if self.right.columns:
+                #     self.columns.update(self.right.columns)
+                # else:
+                self.columns.update(self.right.getTableColumns())
+            if hasattr(self, "child"):
+                # if self.child.columns:
+                #     self.columns.update(self.child.columns)
+                # else:
+                self.columns.update(self.child.getTableColumns())
         
     def getTableColumns(self) -> set():
         self.__updateTableColumns()
@@ -348,7 +360,7 @@ class PandasJoinNode(BinaryPandasNode):
         'hash'
     ])
     KNOWN_JOIN_TYPES = set([
-        'inner', 'rightsemijoin'
+        'inner', 'rightsemijoin', 'leftsemijoin'
     ])
     def __init__(self, joinMethod, joinType, joinCondition):
         super().__init__()
@@ -578,21 +590,39 @@ class UnparsePandasTree():
         
         assert joinMethod != None
         
+        # And set the table columns
         match node.joinType:
             case "inner":
                 self.writeContent(
                     f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'inner'}', sort={joinMethod})"
                 )
+                node.columns = node.left.getTableColumns().union(node.right.getTableColumns())
             case "rightsemijoin":
-                # An inner join will behave just like a right semi join, if the left DataFrame consists only of the key columns:                
-                # df_join_1 = df_scan_2.merge(df_filter_1['l_orderkey'], how="inner", left_on='o_orderkey', right_on='l_orderkey', sort=False)
-
-                self.writeContent(
-                    f"{createdDataFrameName} = {childTableList[1]}.merge({childTableList[0]}[{leftKeys}], how='inner', left_on={rightKeys}, right_on={leftKeys}, sort={joinMethod})"
-                )
+                if len(leftKeys) == 1 and len(rightKeys) == 1:
+                    self.writeContent(
+                        f"{createdDataFrameName} = {childTableList[1]}[{childTableList[1]}['{rightKeys[0]}'].isin({childTableList[0]}['{leftKeys[0]}'])]"
+                    )
+                else:
+                    self.writeContent(
+                        f"{createdDataFrameName} = {childTableList[1]}[{childTableList[1]}[{rightKeys}].isin({childTableList[0]}.set_index([{leftKeys}]).index)]"
+                    )
+                node.columns = node.right.getTableColumns()
+            case "leftsemijoin":
+                if len(leftKeys) == 1 and len(rightKeys) == 1:
+                    self.writeContent(
+                        # df_join_1 = df_scan_1[df_scan_1['o_orderkey'].isin(df_scan_2["l_orderkey"])]
+                        f"{createdDataFrameName} = {childTableList[0]}[{childTableList[0]}['{leftKeys[0]}'].isin({childTableList[1]}['{rightKeys[0]}'])]"
+                    )
+                else:
+                    self.writeContent(
+                        # df_join_1 = df_scan_1[df_scan_1[['o_orderkey']].isin(df_scan_2.set_index(["l_orderkey"]).index)]
+                        f"{createdDataFrameName} = {childTableList[0]}[{childTableList[0]}[{leftKeys}].isin({childTableList[1]}.set_index([{rightKeys}]).index)]"
+                    )
+                node.columns = node.left.getTableColumns()
             case _:
                 raise Exception(f"Unexpected Join Type supplied: {node.joinType}")
         
+        # 
         # Set the tableName
         node.tableName = createdDataFrameName
 
