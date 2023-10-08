@@ -33,11 +33,12 @@ class executiontargetNode(HyperBaseNode):
         self.output_names = output_names
 
 class tablescanNode(HyperBaseNode):
-    def __init__(self, table_name, table_columns, tableRestrictions):
+    def __init__(self, table_name, table_columns, tableRestrictions, tableFilters):
         super().__init__()
         self.table_name = table_name
         self.table_columns = table_columns
         self.tableRestrictions = tableRestrictions
+        self.tableFilters = tableFilters
 
 class selectNode(HyperBaseNode):
     def __init__(self, selectCondition):

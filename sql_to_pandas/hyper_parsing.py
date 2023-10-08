@@ -94,14 +94,14 @@ def create_operator_tree(explain_json):
         operator_class = groupbyNode(keyExpressions, aggExpressions, explain_json["aggregates"])
     elif operator_name == "tablescan":
         tableRestrictions = []
-        assert not (("restrictions" in explain_json) and ("residuals" in explain_json))
+        tableFilters = []
         if "restrictions" in explain_json:
             assert isinstance(explain_json["restrictions"], list)
-            tableRestrictions.extend(explain_json["restrictions"])
+            tableRestrictions = explain_json["restrictions"]
         if "residuals" in explain_json:
             assert isinstance(explain_json["residuals"], list)
-            tableRestrictions.extend(explain_json["residuals"])
-        operator_class = tablescanNode(explain_json["debugName"]["value"], explain_json["values"], tableRestrictions)
+            tableFilters = explain_json["residuals"]
+        operator_class = tablescanNode(explain_json["debugName"]["value"], explain_json["values"], tableRestrictions, tableFilters)
     elif operator_name == "sort":
         operator_class = sortNode(explain_json["criterion"])
     elif operator_name == "map":
@@ -153,9 +153,8 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for sql_file, explain_file in combined_sql_content:
-        # Next queries: 9, 11
-        #               12, 13, 7, then the rest
-        if explain_file.split("_")[0] not in ["8"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5"
+        # Next queries: 9, 11, 12, 13, 7, then the rest
+        if explain_file.split("_")[0] not in ["9"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8"
            continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
@@ -313,7 +312,8 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
                 new_op_node = ScanNode(
                     op_node.table_name,
                     op_node.table_columns,
-                    op_node.tableRestrictions
+                    op_node.tableRestrictions,
+                    op_node.tableFilters
                 )
             case groupbyNode():
                 new_op_node = GroupNode(
@@ -413,14 +413,10 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             else:
                 raise Exception(f"Unknown supposedly binary mode: {restriction['mode']}")
             
-            if "left" in restriction and "right" in restriction:
-                current_restriction.addLeft(hyper_expression_parsing(restriction['left'], iu_references))
-                current_restriction.addRight(hyper_expression_parsing(restriction['right'], iu_references))
-            else:
-                current_restriction.addLeft(table_columns[restriction["attribute"]])
-                if "value" not in restriction or "value2" in restriction:
-                    raise Exception(f"Unexpected keys in the restriction object: {restriction.keys()}")
-                current_restriction.addRight(hyper_expression_parsing(restriction["value"], iu_references))
+            current_restriction.addLeft(table_columns[restriction["attribute"]])
+            if "value" not in restriction or "value2" in restriction:
+                raise Exception(f"Unexpected keys in the restriction object: {restriction.keys()}")
+            current_restriction.addRight(hyper_expression_parsing(restriction["value"], iu_references))
         elif restriction["mode"] in IntervalNotionOperator.SUPPORTED_MODES:
             # Using Interval Notion for the inequalities
             current_restriction = IntervalNotionOperator(restriction["mode"], table_columns[restriction["attribute"]])
@@ -478,6 +474,9 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             elif expression["type"][0] == "Numeric":
                 const_value = const_value / int("1" + ("0"*expression["type"][2]))
                 const_type = "Float"
+            elif expression["type"][0] == "Bool":
+                const_value = const_value
+                const_type = "Bool"
             else:
                 raise Exception(f"Unrecognised constant value type: {expression['type']}")
             return ConstantValue(const_value, const_type)
@@ -738,6 +737,16 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                 op_node.tableRestrictions = newTableRestrictions[0]
             else:
                 op_node.tableRestrictions = newTableRestrictions
+            newTableFilters = []
+            for filter in op_node.tableFilters:
+                newTableFilters.append(hyper_expression_parsing(filter, iu_references))
+            # Join all the restrictions together
+            if len(newTableFilters) >= 2:
+                op_node.tableFilters = join_statements_with_operator(newTableFilters, "AndOperator")
+            elif len(newTableFilters) == 1:
+                op_node.tableFilters = newTableFilters[0]
+            else:
+                op_node.tableFilters = newTableFilters
         elif isinstance(op_node, groupbyNode):
             newExpressionList = replace_expressions_using_iu_references(op_node.aggregateExpressions, iu_references)
             op_node.aggregateExpressions = newExpressionList

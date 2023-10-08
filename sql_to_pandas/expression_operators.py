@@ -49,7 +49,7 @@ class ColumnValue(ValueNode):
         self.essential = target
 
 class ConstantValue(ValueNode):
-    SUPPORTED_TYPES = ["Integer", "Datetime", "Float", "String"]
+    SUPPORTED_TYPES = ["Integer", "Datetime", "Float", "String", "Bool"]
     def __init__(self, value, type):
         super().__init__(value)
         assert type in self.SUPPORTED_TYPES

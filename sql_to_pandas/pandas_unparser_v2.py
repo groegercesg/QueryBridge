@@ -226,6 +226,14 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
                 op_tree.tableColumns,
                 op_tree.tableRestrictions
             )
+            # Handle scan, filters
+            if op_tree.tableFilters != []:
+                scan_node = new_op_tree
+                # We need to insert a filter node above this one
+                new_op_tree = PandasFilterNode(
+                    op_tree.tableFilters
+                )
+                new_op_tree.addChild(scan_node)
         case GroupNode():
             if op_tree.keyExpressions == []:
                 new_op_tree = PandasAggrNode(
@@ -244,8 +252,11 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
                 op_tree.outputNames
             )
         case JoinNode():
+            updateJoinMethod = op_tree.joinMethod
+            if updateJoinMethod == None:
+                updateJoinMethod = "merge"
             new_op_tree = PandasJoinNode(
-                op_tree.joinMethod,
+                updateJoinMethod,
                 op_tree.joinType,
                 op_tree.joinCondition
             )
@@ -419,15 +430,19 @@ class PandasSortNode(UnaryPandasNode):
      
 class PandasJoinNode(BinaryPandasNode):
     KNOWN_JOIN_METHODS = set([
-        'hash'
+        'hash',
+        'merge',
+        'bnl'
     ])
     KNOWN_JOIN_TYPES = set([
-        'inner', 
+        'inner', 'outer',
         'leftsemijoin', 'rightsemijoin', 
-        'rightantijoin'
+        'leftantijoin', 'rightantijoin'
     ])
     def __init__(self, joinMethod, joinType, joinCondition):
         super().__init__()
+        if (joinMethod == 'bnl') and (joinType != 'inner'):
+            raise Exception("Trying to do a BNL ('Block-nested loop) join that's not an inner")
         self.postJoinFilters = []
         assert joinMethod in self.KNOWN_JOIN_METHODS, f"{joinMethod} is not in the known join methods"
         self.joinMethod = joinMethod

@@ -59,11 +59,12 @@ class GroupNode(UnaryBaseNode):
         self.postAggregateOperations = postAggregateOperations
 
 class ScanNode(UniversalBaseNode):
-    def __init__(self, tableName, tableColumns, tableRestrictions):
+    def __init__(self, tableName, tableColumns, tableRestrictions, tableFilters):
         super().__init__()
         self.tableName = tableName
         self.tableColumns = tableColumns
         self.tableRestrictions = tableRestrictions
+        self.tableFilters = tableFilters
 
 class OutputNode(UnaryBaseNode):
     def __init__(self, outputColumns, outputNames):
