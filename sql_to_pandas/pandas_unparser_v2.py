@@ -476,6 +476,7 @@ class UnparsePandasTree():
         self.pandas_content = []
         self.nodesCounter = defaultdict(int)
         self.pandas_tree = pandas_tree
+        self.usedColumns = set()
         
         self.__walk_tree(self.pandas_tree)
         
@@ -504,7 +505,10 @@ class UnparsePandasTree():
         processedName = "".join(convert_expression_operator_to_column_name(expr))
         while processedName in currentNodeColumns:
             processedName = f"{processedName}{random.randint(0,9)}"
+        while processedName in self.usedColumns:
+            processedName = f"{processedName}{random.randint(0,9)}"
         current.addToTableColumns(processedName)
+        self.usedColumns.add(processedName)
         return processedName
         
     def writeContent(self, content: str) -> None:
@@ -676,7 +680,11 @@ class UnparsePandasTree():
         childTableList = self.getChildTableNames(node)
         assert len(childTableList) == 2
     
-        assert all(isinstance(x, EqualsOperator) for x in node.joinCondition)
+        if not all(isinstance(x, EqualsOperator) for x in node.joinCondition):
+            # This is a non-equi join situation
+            assert node.joinType == "inner"
+            node.joinType = "non-equi"
+            
         leftKeys = [self.__getPandasRepresentationForColumn(x.left) for x in node.joinCondition]
         rightKeys = [self.__getPandasRepresentationForColumn(x.right) for x in node.joinCondition]
         joinMethod = None
@@ -747,7 +755,15 @@ class UnparsePandasTree():
                 self.writeContent(
                     f"{createdDataFrameName} = {createdDataFrameName}[{createdDataFrameName}._merge == '{joinKeep}'].drop('_merge', axis = 1)"
                 )
-
+            case "non-equi":
+                assert len(node.joinCondition) == 1
+                joinCondition = convert_expression_operator_to_pandas(node.joinCondition[0], createdDataFrameName)
+                self.writeContent(
+                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, how='{'cross'}', sort={joinMethod})"
+                )
+                self.writeContent(
+                    f"{createdDataFrameName} = {createdDataFrameName}[{joinCondition}]"
+                )
             case _:
                 raise Exception(f"Unexpected Join Type supplied: {node.joinType}")
         
@@ -786,6 +802,8 @@ class UnparsePandasTree():
         node.tableName = createdDataFrameName
         # Set the tableColumns
         node.addToTableColumns(node.getTableColumnsForDF())
+        # Add to inuseColumns
+        self.usedColumns.update(node.getTableColumnsForDF())
         
     def visitPandasAggrNode(self, node):        
         self.nodesCounter[PandasGroupNode] += 1
