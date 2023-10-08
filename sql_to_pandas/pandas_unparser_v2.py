@@ -350,8 +350,9 @@ class PandasBaseNode():
     def addToTableColumns(self, incomingColumns):
         localColumns = set()
         if isinstance(incomingColumns, list):
+            assert all(isinstance(x, ExpressionBaseNode) for x in incomingColumns)
             localColumns.update(incomingColumns)
-        elif isinstance(incomingColumns, str):
+        elif isinstance(incomingColumns, ExpressionBaseNode):
             localColumns.add(incomingColumns)
         else:
             raise Exception(f"Unexpected format of incoming columns, {type(incomingColumns)}")
@@ -367,19 +368,23 @@ class PandasBaseNode():
                 #if self.left.columns:
                 #    self.columns.update(self.left.columns)
                 #else:
-                self.columns.update(self.left.getTableColumns())
+                self.columns.update(self.left.getTableColumnsInternal())
             if hasattr(self, "right"):
-                # if self.right.columns:
-                #     self.columns.update(self.right.columns)
-                # else:
-                self.columns.update(self.right.getTableColumns())
+                self.columns.update(self.right.getTableColumnsInternal())
             if hasattr(self, "child"):
-                # if self.child.columns:
-                #     self.columns.update(self.child.columns)
-                # else:
-                self.columns.update(self.child.getTableColumns())
+                self.columns.update(self.child.getTableColumnsInternal())
         
-    def getTableColumns(self) -> set():
+    def getTableColumnsString(self) -> set():
+        self.__updateTableColumns()
+        outputNames = set()
+        for col in self.columns:
+            if col.codeName != '':
+                outputNames.add(col.codeName)
+            else:
+                outputNames.add(col.value)
+        return outputNames
+
+    def getTableColumnsInternal(self) -> set():
         self.__updateTableColumns()
         return self.columns
     
@@ -504,9 +509,21 @@ class PandasJoinNode(BinaryPandasNode):
         return realNewConditions
     
     def checkLeftRightKeysValid(self, left: list[str], right: list[str]) -> bool:
-        allLeftValid = all(aLeft in self.left.getTableColumns() for aLeft in left)
-        allRightValid = all(aRight in self.right.getTableColumns() for aRight in right)
+        allLeftValid = all(aLeft in self.left.getTableColumnsString() for aLeft in left)
+        allRightValid = all(aRight in self.right.getTableColumnsString() for aRight in right)
         return allLeftValid and allRightValid
+
+def join_overlap_column_renaming(node: JoinNode, columnOverlap: set):
+    # There was column overlap between the tables
+    # so '_x' and '_y' versions have been created.
+    #node.overlapColumns = columnOverlap
+    # Set them to be _x and _y
+    for col in node.left.columns:
+        if col.codeName in [x.codeName for x in columnOverlap]:
+            col.codeName = f"{col.codeName}_x"
+    for col in node.right.columns:
+        if col.codeName in [x.codeName for x in columnOverlap]:
+            col.codeName = f"{col.codeName}_y"
 
 # Unparser
 class UnparsePandasTree():
@@ -539,14 +556,14 @@ class UnparsePandasTree():
     Store this in the preAggrExpr
     """
     def getNewColumnName(self, expr: ExpressionBaseNode, current: PandasBaseNode):
-        currentNodeColumns = current.getTableColumns()
+        currentNodeColumns = current.getTableColumnsString()
         processedName = "".join(convert_expression_operator_to_column_name(expr))
         while processedName in currentNodeColumns:
             processedName = f"{processedName}{random.randint(0,9)}"
-        while processedName in self.usedColumns:
-            processedName = f"{processedName}{random.randint(0,9)}"
-        current.addToTableColumns(processedName)
-        self.usedColumns.add(processedName)
+        #while processedName in self.usedColumns:
+        #    processedName = f"{processedName}{random.randint(0,9)}"
+        current.addToTableColumns(expr)
+        #self.usedColumns.add(processedName)
         return processedName
         
     def writeContent(self, content: str) -> None:
@@ -654,7 +671,7 @@ class UnparsePandasTree():
         for preAggrExpr in node.preAggregateExpressions:
             if isinstance(preAggrExpr, ColumnValue):
                 # Check this column is in the child, for safety
-                assert preAggrExpr.value in node.child.getTableColumns()
+                assert preAggrExpr in node.child.columns
             elif preAggrExpr.codeName != '':
                 # "Already been created, don't do it again
                 pass
@@ -691,7 +708,8 @@ class UnparsePandasTree():
             postAggrOp.setCodeName(newColumnName)
             if isinstance(postAggrOp, CountAllOperator):
                 # Select column name from child columns, choose random (ish) column
-                previousColumnName = list(node.child.getTableColumns() - set(processedKeys))[0]
+                previousColumnName = list(node.child.getTableColumnsString() - set(processedKeys))[0]
+                assert previousColumnName != ''
             else:
                 assert not isinstance(postAggrOp.child, AggregationOperators), "There should be only 1 aggregation, as one can't nest them in SQL"
                 previousColumnName = self.__getPandasRepresentationForColumn(postAggrOp.child)
@@ -760,10 +778,16 @@ class UnparsePandasTree():
         # And set the table columns
         match node.joinType:
             case "inner":
+                # Check for column overlap at the start
+                columnOverlap = node.left.columns.intersection(node.right.columns)
+                if columnOverlap:
+                    join_overlap_column_renaming(node, columnOverlap)
+                    assert len(node.left.columns.intersection(node.right.columns)) == 0
+                    
                 self.writeContent(
                     f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'inner'}', sort={joinMethod})"
                 )
-                node.columns = node.left.getTableColumns().union(node.right.getTableColumns())
+                node.columns = node.left.columns.union(node.right.columns)
             case "rightsemijoin":
                 if len(leftKeys) == 1 and len(rightKeys) == 1:
                     self.writeContent(
@@ -773,7 +797,7 @@ class UnparsePandasTree():
                     self.writeContent(
                         f"{createdDataFrameName} = {childTableList[1]}[{childTableList[1]}[{rightKeys}].isin({childTableList[0]}.set_index([{leftKeys}]).index)]"
                     )
-                node.columns = node.right.getTableColumns()
+                node.columns = node.right.columns
             case "leftsemijoin":
                 if len(leftKeys) == 1 and len(rightKeys) == 1:
                     self.writeContent(
@@ -785,7 +809,7 @@ class UnparsePandasTree():
                         # df_join_1 = df_scan_1[df_scan_1[['o_orderkey']].isin(df_scan_2.set_index(["l_orderkey"]).index)]
                         f"{createdDataFrameName} = {childTableList[0]}[{childTableList[0]}[{leftKeys}].isin({childTableList[1]}.set_index([{rightKeys}]).index)]"
                     )
-                node.columns = node.left.getTableColumns()
+                node.columns = node.left.columns
             case "leftantijoin" | "rightantijoin":
                 self.writeContent(
                     f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'outer'}', sort={joinMethod}, indicator=True)"
@@ -794,10 +818,10 @@ class UnparsePandasTree():
                 # Set the joinKeep
                 if node.joinType == "leftantijoin":
                     joinKeep = 'left_only'
-                    node.columns = node.left.getTableColumns()
+                    node.columns = node.left.columns
                 elif node.joinType == "rightantijoin":
                     joinKeep = 'right_only'
-                    node.columns = node.right.getTableColumns()
+                    node.columns = node.right.columns
                 else:
                     raise Exception(f"Unknown type of antijoin: {node.joinType}")
                 
@@ -806,6 +830,13 @@ class UnparsePandasTree():
                 )
             case "non-equi":
                 assert len(node.joinCondition) == 1
+                
+                # Check for column overlap at the start
+                columnOverlap = node.left.columns.intersection(node.right.columns)
+                if columnOverlap:
+                    join_overlap_column_renaming(node, columnOverlap)
+                    assert len(node.left.columns.intersection(node.right.columns)) == 0
+                
                 joinCondition = convert_expression_operator_to_pandas(node.joinCondition[0], createdDataFrameName)
                 self.writeContent(
                     f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, how='{'cross'}', sort={joinMethod})"
@@ -813,28 +844,24 @@ class UnparsePandasTree():
                 self.writeContent(
                     f"{createdDataFrameName} = {createdDataFrameName}[{joinCondition}]"
                 )
-                node.columns = node.left.getTableColumns().union(node.right.getTableColumns())
+                node.columns = node.left.columns.union(node.right.columns)
             case "outer":
+                # Check for column overlap at the start
+                columnOverlap = node.left.columns.intersection(node.right.columns)
+                if columnOverlap:
+                    join_overlap_column_renaming(node, columnOverlap)
+                    assert len(node.left.columns.intersection(node.right.columns)) == 0
+                
                 self.writeContent(
                     f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'outer'}', sort={joinMethod})"
                 )
-                node.columns = node.left.getTableColumns().union(node.right.getTableColumns())
+                node.columns = node.left.columns.union(node.right.columns)
             case "bnl":
                 # Check for column overlap at the start
-                columnOverlap = node.left.getTableColumns().intersection(node.right.getTableColumns())
+                columnOverlap = node.left.columns.intersection(node.right.columns)
                 if columnOverlap:
-                    # There was column overlap between the tables
-                    # so '_x' and '_y' versions have been created.
-                    node.overlapColumns = columnOverlap
-                    # Set them to be _x and _y
-                    for col in node.left.tableColumns:
-                        if col.value in columnOverlap:
-                            col.codeName = f"{col.value}_x"
-                    node.left.refreshTableColumns()
-                    for col in node.right.tableColumns:
-                        if col.value in columnOverlap:
-                            col.codeName = f"{col.value}_y"
-                    node.right.refreshTableColumns()
+                    join_overlap_column_renaming(node, columnOverlap)
+                    assert len(node.left.columns.intersection(node.right.columns)) == 0
                 
                 leftDF = childTableList[0]
                 rightDF = childTableList[1]
@@ -854,17 +881,14 @@ class UnparsePandasTree():
                 )
                 
                 # Set node columns
-                node.columns = node.left.getTableColumns().union(node.right.getTableColumns())
+                node.columns = node.left.columns.union(node.right.columns)
             case _:
                 raise Exception(f"Unexpected Join Type supplied: {node.joinType}")
         
         # Look for duplicate columns
-        columnOverlap = node.left.getTableColumns().intersection(node.right.getTableColumns())
+        columnOverlap = node.left.columns.intersection(node.right.columns)
         if columnOverlap:
-            # There was column overlap between the tables
-            # so '_x' and '_y' versions have been created.
-            node.overlapColumns = columnOverlap
-            raise Exception("We have column overlap, we need to do our super fancy renaming here")
+            raise Exception("We have column overlap, we should be resolving this elsewhere")
         
         # Set the tableName
         node.tableName = createdDataFrameName
@@ -893,9 +917,9 @@ class UnparsePandasTree():
         # Set the tableName
         node.tableName = createdDataFrameName
         # Set the tableColumns
-        node.addToTableColumns(node.getTableColumnsForDF())
+        node.addToTableColumns(node.tableColumns)
         # Add to inuseColumns
-        self.usedColumns.update(node.getTableColumnsForDF())
+        #self.usedColumns.update(node.getTableColumnsForDF())
         
     def visitPandasAggrNode(self, node):        
         self.nodesCounter[PandasGroupNode] += 1

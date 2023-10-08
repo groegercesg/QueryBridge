@@ -5,6 +5,18 @@ class ExpressionBaseNode():
     def setCodeName(self, inName):
         assert self.codeName == ""
         self.codeName = inName
+        
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.codeName == other.codeName
+        else:
+            return NotImplemented
+    
+    def __hash__(self):
+        return hash(self.codeName)
+    
+    def __str__(self):
+        return self.codeName
 
 class UnaryExpressionOperator(ExpressionBaseNode):
     def __init__(self):
@@ -39,11 +51,25 @@ class ValueNode(LeafNode):
     def __init__(self, value):
         super().__init__()
         self.value = value
+        
+    def __eq__(self, other):
+        if not isinstance(other, ValueNode):
+            # don't attempt to compare against unrelated objects
+            return NotImplemented
+        
+        return isinstance(other, self.__class__) and (self.value == other.value) and (self.codeName == other.codeName)
+    
+    def __hash__(self):
+        return hash(self.value)
+    
+    def __str__(self):
+        return self.value
 
 class ColumnValue(ValueNode):
     def __init__(self, value):
         super().__init__(value)
         self.essential = False
+        self.codeName = value
         
     def setEssential(self, target):
         self.essential = target
@@ -60,7 +86,8 @@ class ConstantValue(ValueNode):
             # don't attempt to compare against unrelated objects
             return NotImplemented
 
-        return self.value == other.value and self.type == other.type
+        return (isinstance(other, self.__class__) and self.value == other.value 
+                and self.type == other.type and self.codeName == other.codeName)
 
 # Unary Operators
 class NotOperator(UnaryExpressionOperator):
