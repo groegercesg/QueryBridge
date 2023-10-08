@@ -682,6 +682,7 @@ class UnparsePandasTree():
     
         if not all(isinstance(x, EqualsOperator) for x in node.joinCondition):
             # This is a non-equi join situation
+            print([isinstance(x, EqualsOperator) for x in node.joinCondition])
             assert node.joinType == "inner"
             node.joinType = "non-equi"
             
@@ -703,6 +704,8 @@ class UnparsePandasTree():
             case "hash":
                 # If you set 'merge(Sort=False)', then it's a Hash Join
                 joinMethod = False
+            case "merge":
+                joinMethod = True
             case _:
                 raise Exception(f"Unknown Join Method provided: {node.joinMethod}")
         
@@ -764,6 +767,12 @@ class UnparsePandasTree():
                 self.writeContent(
                     f"{createdDataFrameName} = {createdDataFrameName}[{joinCondition}]"
                 )
+                node.columns = node.left.getTableColumns().union(node.right.getTableColumns())
+            case "outer":
+                self.writeContent(
+                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'outer'}', sort={joinMethod})"
+                )
+                node.columns = node.left.getTableColumns().union(node.right.getTableColumns())
             case _:
                 raise Exception(f"Unexpected Join Type supplied: {node.joinType}")
         

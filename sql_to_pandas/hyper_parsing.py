@@ -153,8 +153,8 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for sql_file, explain_file in combined_sql_content:
-        # Next queries: 11, 12, 13, 7, then the rest
-        if explain_file.split("_")[0] not in ["12"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11"
+        # Next queries: 7, then the rest
+        if explain_file.split("_")[0] not in ["13"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12"
            continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
@@ -293,6 +293,11 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
             equate_keys.append(
                 newEqualsOperator
             )
+        # Parse into a single object
+        if len(equate_keys) >= 2:
+            equate_keys = join_statements_with_operator(equate_keys, "AndOperator")
+        else:
+            equate_keys = equate_keys[0]
         return equate_keys
     
     def visit_hyper_nodes(op_node: HyperBaseNode):
@@ -394,6 +399,24 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
 from expression_operators import *
 import datetime
 import struct
+    
+def str_to_class(classname):
+    return getattr(sys.modules[__name__], classname)
+    
+def join_statements_with_operator(statements: list[ExpressionBaseNode], join_operator: BinaryExpressionOperator) -> ExpressionBaseNode:
+    assert len(statements) >= 2
+    assert join_operator in ["OrOperator", "AndOperator"]
+    current_op = str_to_class(join_operator)()
+    current_node = current_op
+    
+    while len(statements) > 2:
+        current_node.addLeft(statements.pop())
+        # Decide operator to add
+        current_node.addRight(str_to_class(join_operator)())
+        current_node = current_node.right
+    current_node.addLeft(statements.pop())
+    current_node.addRight(statements.pop())
+    return current_op
 
 def transform_hyper_iu_references(op_tree: HyperBaseNode):
     def hyper_restriction_parsing(restriction, table_columns, iu_references):
@@ -480,24 +503,6 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             else:
                 raise Exception(f"Unrecognised constant value type: {expression['type']}")
             return ConstantValue(const_value, const_type)
-    
-    def str_to_class(classname):
-        return getattr(sys.modules[__name__], classname)
-        
-    def join_statements_with_operator(statements: list[ExpressionBaseNode], join_operator: BinaryExpressionOperator) -> ExpressionBaseNode:
-        assert len(statements) >= 2
-        assert join_operator in ["OrOperator", "AndOperator"]
-        current_op = str_to_class(join_operator)()
-        current_node = current_op
-        
-        while len(statements) > 2:
-            current_node.addLeft(statements.pop())
-            # Decide operator to add
-            current_node.addRight(str_to_class(join_operator)())
-            current_node = current_node.right
-        current_node.addLeft(statements.pop())
-        current_node.addRight(statements.pop())
-        return current_op
         
     def hyper_expression_parsing(expression, iu_references):
         current_op = None
