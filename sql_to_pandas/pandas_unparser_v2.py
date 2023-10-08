@@ -516,7 +516,6 @@ class PandasJoinNode(BinaryPandasNode):
 def join_overlap_column_renaming(node: JoinNode, columnOverlap: set):
     # There was column overlap between the tables
     # so '_x' and '_y' versions have been created.
-    #node.overlapColumns = columnOverlap
     # Set them to be _x and _y
     for col in node.left.columns:
         if col.codeName in [x.codeName for x in columnOverlap]:
@@ -531,7 +530,6 @@ class UnparsePandasTree():
         self.pandas_content = []
         self.nodesCounter = defaultdict(int)
         self.pandas_tree = pandas_tree
-        self.usedColumns = set()
         
         self.__walk_tree(self.pandas_tree)
         
@@ -560,10 +558,7 @@ class UnparsePandasTree():
         processedName = "".join(convert_expression_operator_to_column_name(expr))
         while processedName in currentNodeColumns:
             processedName = f"{processedName}{random.randint(0,9)}"
-        #while processedName in self.usedColumns:
-        #    processedName = f"{processedName}{random.randint(0,9)}"
         current.addToTableColumns(expr)
-        #self.usedColumns.add(processedName)
         return processedName
         
     def writeContent(self, content: str) -> None:
@@ -918,8 +913,6 @@ class UnparsePandasTree():
         node.tableName = createdDataFrameName
         # Set the tableColumns
         node.addToTableColumns(node.tableColumns)
-        # Add to inuseColumns
-        #self.usedColumns.update(node.getTableColumnsForDF())
         
     def visitPandasAggrNode(self, node):        
         self.nodesCounter[PandasGroupNode] += 1
