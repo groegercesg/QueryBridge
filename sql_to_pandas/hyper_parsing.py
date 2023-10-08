@@ -153,8 +153,8 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for sql_file, explain_file in combined_sql_content:
-        # Next queries: 7, then the rest
-        if explain_file.split("_")[0] not in ["13"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12"
+        # Next queries: The rest
+        if explain_file.split("_")[0] not in ["7"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13"
            continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
@@ -635,7 +635,7 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             inputModes = []
             for mode in expression["modes"]:
                 if mode == "is":
-                    inputModes.append(EqualsOperator)
+                    inputModes.append(EqualsOperator())
                 else:
                     raise Exception(f"Unknown comparison mode for lookup operator: {mode}")
             current_op = LookupOperator(inputValues, inputComparisons, inputModes)
