@@ -107,6 +107,7 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
         return f"{childNode}.isin({listElements})"
     
     def handleCaseOperator(expr: CaseOperator, dataFrameName: str, columnName: str) -> list[str]:
+        assert columnName != None
         # Use '.loc' for the case expression
         # Return a list of the lines required
         caseLines = []
@@ -198,6 +199,8 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
             expression_output = handleLikeOperator(expr_tree, dataFrameName)
         case NotOperator():
             expression_output = f"({childNode} == False)"
+        case ExtractYearOperator():
+            expression_output = f"{childNode}.dt.year"
         case _: 
             raise Exception(f"Unrecognised expression operator: {expr_tree}")
     
@@ -369,7 +372,8 @@ class PandasScanNode(PandasBaseNode):
     def __init__(self, tableName, tableColumns, tableRestriction):
         super().__init__()
         self.tableName = tableName
-        self.tableColumns = tableColumns
+        # Filter for only essential columns
+        self.tableColumns = [x for x in tableColumns if x.essential == True]
         self.tableRestriction = tableRestriction
         
     def getTableColumnsForDF(self) -> list[str]:
@@ -393,7 +397,7 @@ class PandasFilterNode(UnaryPandasNode):
 class PandasAddColumnsNode(UnaryPandasNode):
     def __init__(self, columns):
         super().__init__()
-        self.columns = columns
+        self.addColumns = columns
 
 class PandasAggrNode(UnaryPandasNode):
     def __init__(self, preAggregateExpressions, postAggregateOperations):
@@ -526,7 +530,7 @@ class UnparsePandasTree():
         assert len(childTableList) == 1
         childTable = childTableList[0]
         
-        for newColumn in node.columns:
+        for newColumn in node.addColumns:
             newColumnExpression = convert_expression_operator_to_pandas(newColumn, childTable)
             newColumnName = self.getNewColumnName(newColumn, node.child)
             # Set the new name
@@ -594,14 +598,23 @@ class UnparsePandasTree():
             if isinstance(preAggrExpr, ColumnValue):
                 # Check this column is in the child, for safety
                 assert preAggrExpr.value in node.child.getTableColumns()
+            elif preAggrExpr.codeName != '':
+                # "Already been created, don't do it again
+                pass
             else:
-                newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable)
                 newColumnName = self.getNewColumnName(preAggrExpr, node.child)
+                newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable, newColumnName)
                 # Set the new name
                 preAggrExpr.setCodeName(newColumnName)
-                self.writeContent(
-                    f"{childTable}['{newColumnName}'] = {newColumnExpression}"
-                )
+                if isinstance(newColumnExpression, str):
+                    self.writeContent(
+                        f"{childTable}['{newColumnName}'] = {newColumnExpression}"
+                    )
+                elif isinstance(newColumnExpression, list):
+                    for line in newColumnExpression:
+                        self.writeContent(line)
+                else:
+                    raise Exception(f"Unexpected format of newColumnExpression: {type(newColumnExpression)}")
         
         # KeyExpressions
         assert len(node.keyExpressions) > 0
@@ -723,7 +736,13 @@ class UnparsePandasTree():
             case _:
                 raise Exception(f"Unexpected Join Type supplied: {node.joinType}")
         
-        # 
+        # Look for duplicate columns
+        columnOverlap = node.left.getTableColumns().intersection(node.right.getTableColumns())
+        if columnOverlap:
+            # There was column overlap between the tables
+            # so '_x' and '_y' versions have been created.
+            node.overlapColumns = columnOverlap
+        
         # Set the tableName
         node.tableName = createdDataFrameName
 

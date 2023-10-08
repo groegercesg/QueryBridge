@@ -43,6 +43,10 @@ class ValueNode(LeafNode):
 class ColumnValue(ValueNode):
     def __init__(self, value):
         super().__init__(value)
+        self.essential = False
+        
+    def setEssential(self, target):
+        self.essential = target
 
 class ConstantValue(ValueNode):
     SUPPORTED_TYPES = ["Integer", "Datetime", "Float", "String"]

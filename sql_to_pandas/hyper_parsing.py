@@ -142,15 +142,20 @@ def create_operator_tree(explain_json):
     return operator_class
     
 def parse_explain_plans():
+    query_directory = 'sql_to_pandas/tpch_queries'
     explain_directory = 'sql_to_pandas/hyperdb_tpch_explain'
     
-    onlyfiles = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
+    # Ignore Query 15 for now
+    query_files = [f for f in listdir(query_directory) if isfile(join(query_directory, f)) and str(f).split(".")[0] != "15"]
+    explain_files = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
+    
+    combined_sql_content = list(zip(query_files, explain_files))
     
     all_operator_trees = []
-    for explain_file in onlyfiles:
-        # Next queries: 5, 8, 9, 11
+    for sql_file, explain_file in combined_sql_content:
+        # Next queries: 9, 11
         #               12, 13, 7, then the rest
-        if explain_file.split("_")[0] not in ["5"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16"
+        if explain_file.split("_")[0] not in ["8"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5"
            continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
@@ -158,7 +163,7 @@ def parse_explain_plans():
             explain_content = json.loads(r.read())
         
         op_tree = create_operator_tree(explain_content)
-        all_operator_trees.append([explain_file, op_tree])
+        all_operator_trees.append([sql_file, op_tree])
 
     #assert len(all_operator_trees) == 21
     print("All 21 HyperDB plans have been parsed into Hyper DB Class Trees")
@@ -178,6 +183,9 @@ def parse_explain_plans():
     for tree in all_operator_trees:
         tree[1] = transform_hyper_to_universal_plan(tree[1])
         print(f"Transformed Plan {tree[0]} Hyper Tree into Universal Plan")
+    # Task 3: Fix sql table aliases in tablescans
+    for tree in all_operator_trees:
+        transform_sql_table_aliases(tree[0], tree[1])
     
     print("Hyper Tree Plans have been Transformed into Universal Plan Trees")
     
@@ -213,6 +221,39 @@ def parse_explain_plans():
     
 from pandas_unparser_v2 import *
 from universal_plan_nodes import *
+from sqlglot import parse_one, exp
+
+def transform_sql_table_aliases(sql_file: str, op_tree: HyperBaseNode):
+    def get_table_aliases(sql_file: str) -> dict:
+        query_directory = 'sql_to_pandas/tpch_queries'
+        with open(f'{query_directory}/{sql_file}') as f:
+            sql_content = f.read()
+        
+        table_aliases = dict()
+        for table in parse_one(sql_content).find_all(exp.Table):
+            if table.alias != '':
+                table_aliases[table.alias] = table.name
+        
+        return table_aliases
+
+    def walk_universal_tree(op_tree: UniversalBaseNode, aliases: dict):
+        match op_tree:
+            case BinaryBaseNode():
+                walk_universal_tree(op_tree.left, aliases)
+                walk_universal_tree(op_tree.right, aliases)
+            case UnaryBaseNode():
+                walk_universal_tree(op_tree.child, aliases)
+            case UniversalBaseNode():
+                if isinstance(op_tree, ScanNode):
+                    # Check aliases
+                    if op_tree.tableName in aliases:
+                        op_tree.tableName = aliases[op_tree.tableName]
+            case _:
+                raise Exception(f"We are walking a universal plan tree, unknown type: {op_tree.__class__}") 
+    
+    aliases = get_table_aliases(sql_file)
+    walk_universal_tree(op_tree, aliases)
+    
 
 def audit_universal_plan_tree_outputnode(op_tree: UniversalBaseNode) -> bool:
     return isinstance(op_tree, OutputNode)
@@ -681,6 +722,8 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                 if column['iu'] != None:
                     currentColumn = ColumnValue(column['name'])
                     iu_references[column['iu'][0]] = currentColumn
+                    # Has an iu reference, so it's essential
+                    currentColumn.setEssential(True)
                 else:
                     currentColumn = ColumnValue(column['name'])
                 newTableColumns.append(currentColumn)
