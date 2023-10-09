@@ -524,6 +524,27 @@ def join_overlap_column_renaming(node: JoinNode, columnOverlap: set):
         if col.codeName in [x.codeName for x in columnOverlap]:
             col.codeName = f"{col.codeName}_y"
 
+def do_join_key_separation(node: JoinNode):
+    leftValues = []
+    rightValues = []
+    for x in node.joinCondition:
+        if id(x.left) in [id(col) for col in node.left.columns]:
+            leftValues.append(x.left)
+        elif id(x.left) in [id(col) for col in node.right.columns]:
+            rightValues.append(x.left)
+        else:
+            raise Exception(f"Couldn't find the x.left value in either of the left and right tables!")
+        
+        if id(x.right) in [id(col) for col in node.left.columns]:
+            leftValues.append(x.right)
+        elif id(x.right) in [id(col) for col in node.right.columns]:
+            rightValues.append(x.right)
+        else:
+            raise Exception(f"Couldn't find the x.right value in either of the left and right tables!")
+        
+    assert len(leftValues) == len(rightValues) == len(node.joinCondition)
+    return (leftValues, rightValues)
+
 # Unparser
 class UnparsePandasTree():
     def __init__(self, pandas_tree: PandasBaseNode) -> None:
@@ -584,6 +605,7 @@ class UnparsePandasTree():
             getattr(self, targetVisitorMethod)(current_node)
         else:
             raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
+        assert len(current_node.columns) > 0
     
     def __getPandasRepresentationForColumn(self, column: ColumnValue):
         if column.codeName == '':
@@ -610,6 +632,8 @@ class UnparsePandasTree():
 
         # Set the tableName, to the child table, as we never really existed!
         node.tableName = childTable
+        # Add to node.columns
+        node.columns = set(node.child.columns) | set(node.addColumns)
         
     def visitPandasFilterNode(self, node):
         self.nodesCounter[PandasFilterNode] += 1
@@ -628,6 +652,8 @@ class UnparsePandasTree():
 
         # Set the tableName
         node.tableName = createdDataFrameName
+        # Add to node.columns
+        node.columns = set(node.child.columns)
     
     def visitPandasSortNode(self, node):
         self.nodesCounter[PandasSortNode] += 1
@@ -651,6 +677,8 @@ class UnparsePandasTree():
         
         # Set the tableName
         node.tableName = createdDataFrameName
+        # Add to node.columns
+        node.columns = set(node.child.columns)
     
     def visitPandasGroupNode(self, node):
         self.nodesCounter[PandasGroupNode] += 1
@@ -721,6 +749,8 @@ class UnparsePandasTree():
         
         # Set the tableName
         node.tableName = createdDataFrameName
+        # Set the table columns
+        node.columns = set(node.keyExpressions) | set(node.postAggregateOperations)
         
     def visitPandasJoinNode(self, node):
         self.nodesCounter[PandasJoinNode] += 1
@@ -740,19 +770,16 @@ class UnparsePandasTree():
             assert node.joinType == "inner"
             node.joinType = "non-equi"
             
-        if node.joinMethod != "bnl":
-            leftKeys = [self.__getPandasRepresentationForColumn(x.left) for x in node.joinCondition]
-            rightKeys = [self.__getPandasRepresentationForColumn(x.right) for x in node.joinCondition]
+        if node.joinMethod != "bnl":                
+            leftKeys, rightKeys = do_join_key_separation(node)
             
-            # TODO: Fix this upstream, as a Hyper Tree transformation
-            # Sometimes, the keys (direct from the Hyper plan)
-            # Aren't actually the correct way round
-            if node.checkLeftRightKeysValid(leftKeys, rightKeys) == False:
-                # Swap, then assert if true
-                oldLeft = leftKeys
-                leftKeys = rightKeys
-                rightKeys = oldLeft
-                assert node.checkLeftRightKeysValid(leftKeys, rightKeys)
+            leftKeysString = [self.__getPandasRepresentationForColumn(x) for x in leftKeys]
+            rightKeysString = [self.__getPandasRepresentationForColumn(x) for x in rightKeys]
+            
+            assert node.checkLeftRightKeysValid(leftKeysString, rightKeysString)
+        else:
+            # Initialise as sets for proper form
+            leftKeys, rightKeys = set(), set()
         
         joinMethod = None
         
@@ -774,40 +801,40 @@ class UnparsePandasTree():
         match node.joinType:
             case "inner":
                 # Check for column overlap at the start
-                columnOverlap = node.left.columns.intersection(node.right.columns)
+                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))
                 if columnOverlap:
                     join_overlap_column_renaming(node, columnOverlap)
-                    assert len(node.left.columns.intersection(node.right.columns)) == 0
+                    assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
                     
                 self.writeContent(
-                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'inner'}', sort={joinMethod})"
+                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'inner'}', sort={joinMethod})"
                 )
                 node.columns = node.left.columns.union(node.right.columns)
             case "rightsemijoin":
-                if len(leftKeys) == 1 and len(rightKeys) == 1:
+                if len(leftKeysString) == 1 and len(rightKeysString) == 1:
                     self.writeContent(
-                        f"{createdDataFrameName} = {childTableList[1]}[{childTableList[1]}['{rightKeys[0]}'].isin({childTableList[0]}['{leftKeys[0]}'])]"
+                        f"{createdDataFrameName} = {childTableList[1]}[{childTableList[1]}['{rightKeysString[0]}'].isin({childTableList[0]}['{leftKeysString[0]}'])]"
                     )
                 else:
                     self.writeContent(
-                        f"{createdDataFrameName} = {childTableList[1]}[{childTableList[1]}[{rightKeys}].isin({childTableList[0]}.set_index([{leftKeys}]).index)]"
+                        f"{createdDataFrameName} = {childTableList[1]}[{childTableList[1]}[{rightKeysString}].isin({childTableList[0]}.set_index([{leftKeysString}]).index)]"
                     )
                 node.columns = node.right.columns
             case "leftsemijoin":
-                if len(leftKeys) == 1 and len(rightKeys) == 1:
+                if len(leftKeysString) == 1 and len(rightKeysString) == 1:
                     self.writeContent(
                         # df_join_1 = df_scan_1[df_scan_1['o_orderkey'].isin(df_scan_2["l_orderkey"])]
-                        f"{createdDataFrameName} = {childTableList[0]}[{childTableList[0]}['{leftKeys[0]}'].isin({childTableList[1]}['{rightKeys[0]}'])]"
+                        f"{createdDataFrameName} = {childTableList[0]}[{childTableList[0]}['{leftKeysString[0]}'].isin({childTableList[1]}['{rightKeysString[0]}'])]"
                     )
                 else:
                     self.writeContent(
                         # df_join_1 = df_scan_1[df_scan_1[['o_orderkey']].isin(df_scan_2.set_index(["l_orderkey"]).index)]
-                        f"{createdDataFrameName} = {childTableList[0]}[{childTableList[0]}[{leftKeys}].isin({childTableList[1]}.set_index([{rightKeys}]).index)]"
+                        f"{createdDataFrameName} = {childTableList[0]}[{childTableList[0]}[{leftKeysString}].isin({childTableList[1]}.set_index([{rightKeysString}]).index)]"
                     )
                 node.columns = node.left.columns
             case "leftantijoin" | "rightantijoin":
                 self.writeContent(
-                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'outer'}', sort={joinMethod}, indicator=True)"
+                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'outer'}', sort={joinMethod}, indicator=True)"
                 )
                 
                 # Set the joinKeep
@@ -827,10 +854,10 @@ class UnparsePandasTree():
                 assert len(node.joinCondition) == 1
                 
                 # Check for column overlap at the start
-                columnOverlap = node.left.columns.intersection(node.right.columns)
+                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))
                 if columnOverlap:
                     join_overlap_column_renaming(node, columnOverlap)
-                    assert len(node.left.columns.intersection(node.right.columns)) == 0
+                    assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
                 
                 joinCondition = convert_expression_operator_to_pandas(node.joinCondition[0], createdDataFrameName)
                 self.writeContent(
@@ -842,21 +869,21 @@ class UnparsePandasTree():
                 node.columns = node.left.columns.union(node.right.columns)
             case "outer":
                 # Check for column overlap at the start
-                columnOverlap = node.left.columns.intersection(node.right.columns)
+                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))
                 if columnOverlap:
                     join_overlap_column_renaming(node, columnOverlap)
-                    assert len(node.left.columns.intersection(node.right.columns)) == 0
+                    assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
                 
                 self.writeContent(
-                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeys}, right_on={rightKeys}, how='{'outer'}', sort={joinMethod})"
+                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'outer'}', sort={joinMethod})"
                 )
                 node.columns = node.left.columns.union(node.right.columns)
             case "bnl":
                 # Check for column overlap at the start
-                columnOverlap = node.left.columns.intersection(node.right.columns)
+                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))
                 if columnOverlap:
                     join_overlap_column_renaming(node, columnOverlap)
-                    assert len(node.left.columns.intersection(node.right.columns)) == 0
+                    assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
                 
                 leftDF = childTableList[0]
                 rightDF = childTableList[1]
@@ -881,7 +908,7 @@ class UnparsePandasTree():
                 raise Exception(f"Unexpected Join Type supplied: {node.joinType}")
         
         # Look for duplicate columns
-        columnOverlap = node.left.columns.intersection(node.right.columns)
+        columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))
         if columnOverlap:
             raise Exception("We have column overlap, we should be resolving this elsewhere")
         
@@ -961,6 +988,8 @@ class UnparsePandasTree():
         
         # Set the tableName
         node.tableName = createdDataFrameName
+        # Set node.columns
+        node.columns = set(node.postAggregateOperations)
         
     def visitPandasOutputNode(self, node):
         self.nodesCounter[PandasOutputNode] += 1
@@ -983,12 +1012,22 @@ class UnparsePandasTree():
             if self.__getPandasRepresentationForColumn(node.outputColumns[i]) != node.outputNames[i]
         }
         
-        self.writeContent(
-            f"{createdDataFrameName} = {childTable}.rename(columns={currentNewNameDict})"
-        )
+        previousTableName = childTable
+        
+        if currentNewNameDict != {}:
+            self.writeContent(
+                f"{createdDataFrameName} = {previousTableName}.rename(columns={currentNewNameDict})"
+            )
+            # Update previousTableName
+            previousTableName = createdDataFrameName
             
         # Limit by node.outputNames
         # Limit by table columns
         self.writeContent(
-            f"{createdDataFrameName} = {createdDataFrameName}[{node.outputNames}]"
+            f"{createdDataFrameName} = {previousTableName}[{node.outputNames}]"
         )
+        
+        # Set the tableName
+        node.tableName = createdDataFrameName
+        # Add to node.columns
+        node.columns = set(node.outputColumns)
