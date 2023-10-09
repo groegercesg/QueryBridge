@@ -19,6 +19,8 @@ def convert_aggregation_tree_to_pandas(aggr_tree: ExpressionBaseNode, dataFrameN
     match aggr_tree:
         case SumAggrOperator():
             expression_output = f"{childNode}.sum()"
+        case AvgAggrOperator():
+            expression_output = f"{childNode}.mean()"
         case _:
             raise Exception(f"Unknown Aggregation Operator: {aggr_tree}")
         
@@ -66,6 +68,8 @@ def convert_expression_operator_to_column_name(expr_tree: ExpressionBaseNode):
             expression_output.append("count")
         case CaseOperator():
             expression_output.append("case")
+        case SubstringOperator():
+            expression_output.append("substr")
         case AggregationOperators():
             raise Exception(f"We have an aggregation operator, but don't have a case for it: {expr_tree}")
     
@@ -170,6 +174,12 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
         lookup.addRight(rightAnd)
         return convert_expression_operator_to_pandas(lookup, dataFrameName)
     
+    def handleSubstringOperator(expr_tree: SubstringOperator, dataFrameName: str) -> str:
+        column = convert_expression_operator_to_pandas(expr_tree.value, dataFrameName)
+        startPos = convert_expression_operator_to_pandas(expr_tree.startPosition, dataFrameName)
+        endPos = convert_expression_operator_to_pandas(expr_tree.length, dataFrameName)
+        return f"{column}.str.slice({startPos}, {startPos + endPos})"
+    
     # Visit Children
     if isinstance(expr_tree, BinaryExpressionOperator):
         leftNode = convert_expression_operator_to_pandas(expr_tree.left, dataFrameName)
@@ -229,6 +239,8 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
             expression_output = f"{childNode}.dt.year"
         case LookupOperator():
             expression_output = handleLookupOperator(expr_tree, dataFrameName)
+        case SubstringOperator():
+            expression_output = handleSubstringOperator(expr_tree, dataFrameName)
         case _: 
             raise Exception(f"Unrecognised expression operator: {expr_tree}")
     

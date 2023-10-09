@@ -154,7 +154,7 @@ def parse_explain_plans():
     all_operator_trees = []
     for sql_file, explain_file in combined_sql_content:
         # Next queries: The rest
-        if explain_file.split("_")[0] not in ["20"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
+        if explain_file.split("_")[0] not in ["22"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
            continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
@@ -633,7 +633,9 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             assert len(expression["arguments"]) == 3
             value = hyper_expression_parsing(expression["arguments"][0], iu_references)
             startPos = hyper_expression_parsing(expression["arguments"][1], iu_references)
-            length = hyper_expression_parsing(expression["arguments"][1], iu_references)
+            # startPos is 1-indexed, we will use 0 throughout
+            startPos.value = startPos.value - 1
+            length = hyper_expression_parsing(expression["arguments"][2], iu_references)
             current_op = SubstringOperator(value, startPos, length)
         elif expression["expression"] == "lookup":
             inputValues = []
