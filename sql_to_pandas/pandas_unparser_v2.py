@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, Counter
 import random
 
 from universal_plan_nodes import *
@@ -283,11 +283,13 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
             updateJoinMethod = op_tree.joinMethod
             if updateJoinMethod == None:
                 updateJoinMethod = "merge"
+            
             new_op_tree = PandasJoinNode(
                 updateJoinMethod,
                 op_tree.joinType,
                 op_tree.joinCondition
             )
+            
             # Handle join, filters
             if new_op_tree.postJoinFilters != []:
                 assert len(new_op_tree.postJoinFilters) == 1
@@ -506,6 +508,16 @@ class PandasJoinNode(BinaryPandasNode):
         # At this stage, we should scoop up any postJoinFilters
         self.postJoinFilters = list(filter(lambda x: isinstance(x, OrOperator), newConditions))
         realNewConditions = list(filter(lambda x: not isinstance(x, OrOperator), newConditions))
+        
+        # Extract a 'LessThanOperator' from a list of >= 1 EqualsOperator
+        operatorCount = Counter(realNewConditions)
+        non_equi_join_operators = [LessThanOperator(), LessThanEqOperator(), GreaterThanOperator()]
+        non_equi_join_operator_types = [LessThanOperator, LessThanEqOperator, GreaterThanOperator]
+        if (operatorCount[EqualsOperator()] > 0) and any(operatorCount[x] > 0 for x in non_equi_join_operators):
+            self.postJoinFilters.extend(list(filter(lambda x: any(isinstance(x, op) for op in non_equi_join_operator_types), realNewConditions)))
+            realNewConditions = list(filter(lambda x: not any(isinstance(x, op) for op in non_equi_join_operator_types), realNewConditions))
+            assert len(realNewConditions) > 0
+        
         return realNewConditions
     
     def checkLeftRightKeysValid(self, left: list[str], right: list[str]) -> bool:
@@ -942,8 +954,8 @@ class UnparsePandasTree():
         node.addToTableColumns(node.tableColumns)
         
     def visitPandasAggrNode(self, node):        
-        self.nodesCounter[PandasGroupNode] += 1
-        nodeNumber = self.nodesCounter[PandasGroupNode]
+        self.nodesCounter[PandasAggrNode] += 1
+        nodeNumber = self.nodesCounter[PandasAggrNode]
         
         # Get child name
         childTableList = self.getChildTableNames(node)
@@ -954,20 +966,23 @@ class UnparsePandasTree():
         if node.preAggregateExpressions != []:
             # Create the new column(s) in the childTable
             for preAggrExpr in node.preAggregateExpressions:
-                assert not isinstance(preAggrExpr, ColumnValue)
-                newColumnName = self.getNewColumnName(preAggrExpr, node.child)
-                newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable, newColumnName)
-                # Set the new name
-                preAggrExpr.setCodeName(newColumnName)
-                if isinstance(newColumnExpression, str):
-                    self.writeContent(
-                        f"{childTable}['{newColumnName}'] = {newColumnExpression}"
-                    )
-                elif isinstance(newColumnExpression, list):
-                    for line in newColumnExpression:
-                        self.writeContent(line)
+                if isinstance(preAggrExpr, ColumnValue):
+                    # Check this column is in the child, for safety
+                    assert preAggrExpr in node.child.columns
                 else:
-                    raise Exception(f"Unexpected format of newColumnExpression: {type(newColumnExpression)}")
+                    newColumnName = self.getNewColumnName(preAggrExpr, node.child)
+                    newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable, newColumnName)
+                    # Set the new name
+                    preAggrExpr.setCodeName(newColumnName)
+                    if isinstance(newColumnExpression, str):
+                        self.writeContent(
+                            f"{childTable}['{newColumnName}'] = {newColumnExpression}"
+                        )
+                    elif isinstance(newColumnExpression, list):
+                        for line in newColumnExpression:
+                            self.writeContent(line)
+                    else:
+                        raise Exception(f"Unexpected format of newColumnExpression: {type(newColumnExpression)}")
 
         # Create the new dataFrame, do the postAggregateOperations here
         createdDataFrameName = f"df_aggr_{nodeNumber}"

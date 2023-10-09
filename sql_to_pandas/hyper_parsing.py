@@ -154,7 +154,7 @@ def parse_explain_plans():
     all_operator_trees = []
     for sql_file, explain_file in combined_sql_content:
         # Next queries: The rest
-        # if explain_file.split("_")[0] not in ["7"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
+        # if explain_file.split("_")[0] not in ["17"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
         #    continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
@@ -759,7 +759,11 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             if len(newTableFilters) >= 2:
                 op_node.tableFilters = join_statements_with_operator(newTableFilters, "AndOperator")
             elif len(newTableFilters) == 1:
-                op_node.tableFilters = newTableFilters[0]
+                if isinstance(newTableFilters[0], ConstantValue) and newTableFilters[0].type == "Bool" and newTableFilters[0].value == True:
+                    # Don't add bare Boolean True residuals
+                    op_node.tableFilters = []
+                else:
+                    op_node.tableFilters = newTableFilters[0]
             else:
                 op_node.tableFilters = newTableFilters
         elif isinstance(op_node, groupbyNode):
