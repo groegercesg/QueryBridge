@@ -154,8 +154,8 @@ def parse_explain_plans():
     all_operator_trees = []
     for sql_file, explain_file in combined_sql_content:
         # Next queries: The rest
-        # if explain_file.split("_")[0] not in ["17"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
-        #    continue
+        if explain_file.split("_")[0] not in ["20"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
+           continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
         with open(f'{explain_directory}/{explain_file}') as r:
@@ -211,16 +211,16 @@ def parse_explain_plans():
     # Unparse Pandas Trees to list
     failed_counter = 0
     for tree in all_operator_trees:
-        try:
-            pandas_content = UnparsePandasTree(tree[1]).getPandasContent()
-        except:
-            print(f"Pandas Generation for Query '{tree[0]}' Failed.")
-            failed_counter += 1
+        # try:
+        pandas_content = UnparsePandasTree(tree[1]).getPandasContent()
+        # except:
+        #     print(f"Pandas Generation for Query '{tree[0]}' Failed.")
+        #     failed_counter += 1
             
-        # print(f"Pandas Content for Plan '{tree[0]}':")
-        # for line in pandas_content:
-        #     print(line)
-        # print("-" * 15)
+        print(f"Pandas Content for Plan '{tree[0]}':")
+        for line in pandas_content:
+            print(line)
+        print("-" * 15)
     
     if failed_counter > 0:
         print("-"*10)
@@ -753,17 +753,25 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             else:
                 op_node.tableRestrictions = newTableRestrictions
             newTableFilters = []
-            for filter in op_node.tableFilters:
-                newTableFilters.append(hyper_expression_parsing(filter, iu_references))
+            for aFilter in op_node.tableFilters:
+                newTableFilters.append(hyper_expression_parsing(aFilter, iu_references))
             # Join all the restrictions together
+            # Filter bare Booleans
+            def bareBoolean(x):
+                if isinstance(x, ConstantValue):
+                    if (x.type == 'Bool' and x.value == True):
+                        return False
+                    else:
+                        return True
+                else:
+                    return True
+                
+            newTableFilters = list(filter(bareBoolean, newTableFilters))
+            
             if len(newTableFilters) >= 2:
                 op_node.tableFilters = join_statements_with_operator(newTableFilters, "AndOperator")
             elif len(newTableFilters) == 1:
-                if isinstance(newTableFilters[0], ConstantValue) and newTableFilters[0].type == "Bool" and newTableFilters[0].value == True:
-                    # Don't add bare Boolean True residuals
-                    op_node.tableFilters = []
-                else:
-                    op_node.tableFilters = newTableFilters[0]
+                op_node.tableFilters = newTableFilters[0]
             else:
                 op_node.tableFilters = newTableFilters
         elif isinstance(op_node, groupbyNode):
