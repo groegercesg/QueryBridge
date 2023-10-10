@@ -474,7 +474,7 @@
                                 "iu": null
                             },
                             {
-                                "name": "ps_coment",
+                                "name": "ps_comment",
                                 "type": [
                                     "Varchar",
                                     199

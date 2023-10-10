@@ -469,7 +469,7 @@
                                                 ]
                                             },
                                             {
-                                                "name": "ps_coment",
+                                                "name": "ps_comment",
                                                 "type": [
                                                     "Varchar",
                                                     199
@@ -497,11 +497,11 @@
                                         "mode": "=",
                                         "left": {
                                             "expression": "iuref",
-                                            "iu": "v10"
+                                            "iu": "v8"
                                         },
                                         "right": {
                                             "expression": "iuref",
-                                            "iu": "v8"
+                                            "iu": "v10"
                                         }
                                     }
                                 },
@@ -510,11 +510,11 @@
                                     "mode": "=",
                                     "left": {
                                         "expression": "iuref",
-                                        "iu": "v11"
+                                        "iu": "v6"
                                     },
                                     "right": {
                                         "expression": "iuref",
-                                        "iu": "v6"
+                                        "iu": "v11"
                                     }
                                 }
                             },

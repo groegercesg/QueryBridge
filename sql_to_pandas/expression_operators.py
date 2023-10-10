@@ -165,6 +165,10 @@ class IntervalNotionOperator(BinaryExpressionOperator):
 class AggregationOperators(UnaryExpressionOperator):
     def __init__(self):
         super().__init__()
+        
+class MaxAggrOperator(AggregationOperators):
+    def __init__(self):
+        super().__init__()
 
 class SumAggrOperator(AggregationOperators):
     def __init__(self):

@@ -1,13 +1,18 @@
 # Classes for HyperDB
-SUPPORTED_HYPER_OPERATORS = {'leftsemijoin', 'map', 'sort', 'join', 'groupby', 'leftantijoin', 'groupjoin', 'rightsemijoin', 'executiontarget', 'select', 'rightantijoin', 'tablescan'}
+SUPPORTED_HYPER_OPERATORS = {'leftsemijoin', 'map', 'sort', 'join', 'groupby', 'leftantijoin', 'groupjoin', 'rightsemijoin', 'executiontarget', 'select', 'rightantijoin', 'tablescan', 'explicitscan'}
 
 class HyperBaseNode():
     def __init__(self):
         self.child = None
+        self.hyperID = None
     
     def addChild(self, child):
         assert self.child == None
         self.child = child
+        
+    def setHyperID(self, id):
+        assert self.hyperID == None
+        self.hyperID = id
         
 class mapNode(HyperBaseNode):
     def __init__(self, mapValues):
@@ -31,6 +36,17 @@ class executiontargetNode(HyperBaseNode):
         super().__init__()
         self.output_columns = output_columns
         self.output_names = output_names
+        
+class explicitscanNode(HyperBaseNode):
+    def __init__(self, mapping):
+        super().__init__()
+        self.mapping = mapping
+        self.isRetrieve = False
+        self.table_columns = []
+        
+    def setRetrieve(self, value, retrieveOperatorID):
+        self.isRetrieve = value
+        self.targetOperator = retrieveOperatorID
 
 class tablescanNode(HyperBaseNode):
     def __init__(self, table_name, table_columns, tableRestrictions, tableFilters):

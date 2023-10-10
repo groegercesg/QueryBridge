@@ -10,6 +10,8 @@ from os import listdir
 from os.path import isfile, join
 import json
 
+from hyper_classes import *
+
 def generate_hyperdb_explains():
     db = PrepareHyperDB('hyperdb_tpch.hyper')
     db.prepare_database('data_storage')
@@ -73,10 +75,26 @@ def inspect_explain_plans():
     
     print("Below are the operators that Hyper DB Uses:")
     print(operators)
+    
+def fix_explictScanNodes(op_node: HyperBaseNode, all_nodes: dict):
+    # Visit Children
+    if isinstance(op_node, JoinBaseNode) and op_node.isJoinNode == True:
+        fix_explictScanNodes(op_node.left, all_nodes)
+        fix_explictScanNodes(op_node.right, all_nodes)
+    elif op_node.child != None:
+        fix_explictScanNodes(op_node.child, all_nodes)
+    else:
+        # A leaf node
+        pass
+    
+    # Children visited, now process current node
+    if isinstance(op_node, explicitscanNode):
+        if op_node.isRetrieve == True and op_node.child == None:
+            assert op_node.targetOperator in all_nodes
+            # Deepcopy it?
+            op_node.child = copy.deepcopy(all_nodes[op_node.targetOperator])
 
-from hyper_classes import *
-
-def create_operator_tree(explain_json):
+def create_operator_tree(explain_json, all_nodes: dict):
     operator_name = explain_json["operator"].lower()
     if operator_name not in SUPPORTED_HYPER_OPERATORS:
         raise Exception(f"Unknown operator in explain json: {operator_name}")
@@ -120,24 +138,38 @@ def create_operator_tree(explain_json):
         operator_class = joinNode("inner", explain_json["method"], explain_json["condition"])
     elif operator_name in ["leftsemijoin", "leftantijoin", "rightsemijoin", "rightantijoin"]:
         operator_class = joinNode(operator_name, explain_json["method"], explain_json["condition"])
+    elif operator_name == "explicitscan":
+        operator_class = explicitscanNode(explain_json["mapping"])
     else:
         raise Exception(f"No Operator Class Creation has been defined for the {operator_name} operator.")
 
     # Validate children operator options are as expected
     if ("input" in explain_json) and (any(x in explain_json for x in ["left", "right"])):
         raise Exception("There shouldn't be 'input' as well as either 'left'/'right' parameters for an operator")
-    
+       
     # Add children to the different operators
     if ("input" in explain_json):
-        operator_class.addChild(create_operator_tree(explain_json["input"]))
+        if isinstance(explain_json["input"], int):
+            assert isinstance(operator_class, explicitscanNode)
+            operator_class.setRetrieve(True, explain_json["input"])
+        else:
+            operator_class.addChild(create_operator_tree(explain_json["input"], all_nodes))
     elif any(x in explain_json for x in ["left", "right"]):
         # It should be an operator type if we're here
         assert isinstance(operator_class, JoinBaseNode) and hasattr(operator_class, "isJoinNode") and operator_class.isJoinNode == True
-        operator_class.addLeft(create_operator_tree(explain_json["left"]))
-        operator_class.addRight(create_operator_tree(explain_json["right"]))
+        operator_class.addLeft(create_operator_tree(explain_json["left"], all_nodes))
+        operator_class.addRight(create_operator_tree(explain_json["right"], all_nodes))
     else:
         # Only table scan node should have no children
         assert isinstance(operator_class, tablescanNode)
+        
+    # Set Hyper ID
+    operatorID = explain_json["operatorId"]
+    assert isinstance(operatorID, int)
+    operator_class.setHyperID(operatorID)
+    # Add to all nodes
+    assert operatorID not in all_nodes
+    all_nodes[operatorID] = operator_class
     
     return operator_class
     
@@ -154,20 +186,26 @@ def parse_explain_plans():
     all_operator_trees = []
     for sql_file, explain_file in combined_sql_content:
         # Next queries: The rest
-        # if explain_file.split("_")[0] not in ["21"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
+        # if sql_file.split(".")[0] not in ["21"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
         #    continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
         with open(f'{explain_directory}/{explain_file}') as r:
             explain_content = json.loads(r.read())
         
-        op_tree = create_operator_tree(explain_content)
-        all_operator_trees.append([sql_file, op_tree])
+        # Gather all the nodes
+        all_nodes = dict()
+        op_tree = create_operator_tree(explain_content, all_nodes)
+        all_operator_trees.append([sql_file, op_tree, all_nodes])
 
     #assert len(all_operator_trees) == 21
     print("All 21 HyperDB plans have been parsed into Hyper DB Class Trees")
     
     # Transform the operator_trees
+    # Task 0: Fix tree and it's explicitScan (where retrieve)
+    for tree in all_operator_trees:
+        fix_explictScanNodes(tree[1], tree[2])
+        print(f"Transformed Explicit Scan Nodes in Plan {tree[0]} Hyper Tree")
     # Task 1: Solve the 'v1' references, in 'iu'
         # These propagate up, and are occasionally reset by things like "mapNode" or "groupbyNode"
         # Postorder traversal is required for this, make a dict of the pairs:
@@ -177,7 +215,7 @@ def parse_explain_plans():
         # Also in this pass we should parse expressions (and similar things) into ExpressionOperators
     for tree in all_operator_trees:
         transform_hyper_iu_references(tree[1])
-        print(f"Transformed Plan {tree[0]} Hyper Tree")
+        print(f"Transformed IU References in Plan {tree[0]} Hyper Tree")
     # Task 2: Convert Hyper DB Nodes into Universal Plan Nodes
     for tree in all_operator_trees:
         tree[1] = transform_hyper_to_universal_plan(tree[1])
@@ -377,6 +415,18 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
                 new_op_node = FilterNode(
                     op_node.selectCondition
                 )
+            case explicitscanNode():
+                if op_node.isRetrieve == False:
+                    # Set as childNode, we can skip explicitScans
+                    # As they just rename stuff
+                    return childNode
+                else:
+                    assert hasattr(op_node, "targetOperator")
+                    new_op_node = RetrieveNode(
+                        op_node.table_columns,
+                        op_node.targetOperator
+                    )
+                    
             case _:
                 raise Exception(f"Unexpected op_node, it was of class: {op_node.__class__}")
 
@@ -404,6 +454,10 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
             case _:
                 # ScanNode
                 assert isinstance(lowest_node_pointer, ScanNode)
+                
+        # Add hyperID to new_op_node
+        assert hasattr(op_node, "hyperID")
+        new_op_node.addID(op_node.hyperID)
         
         return new_op_node
 
@@ -673,7 +727,7 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
         newAggregateOperations = []
         for aggr_op in aggregations_list:
             newAggrOp = None
-            if aggr_op['operation']['aggregate'] in ["avg", "sum", "count", "min"]:
+            if aggr_op['operation']['aggregate'] in ["avg", "sum", "count", "min", "max"]:
                 if aggr_op['operation']['aggregate'] == "sum":
                     newAggrOp = SumAggrOperator()
                 elif aggr_op['operation']['aggregate'] == "min":
@@ -682,6 +736,8 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                     newAggrOp = AvgAggrOperator()
                 elif aggr_op['operation']['aggregate'] == "count":
                     newAggrOp = CountAggrOperator()
+                elif aggr_op['operation']['aggregate'] == "max":
+                    newAggrOp = MaxAggrOperator()
                 else:
                     raise Exception(f"Unrecognised Aggregation operator: {aggr_op['operation']['aggregate']}")
                     
@@ -836,6 +892,22 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
         elif isinstance(op_node, selectNode):
             newSelectCondition = hyper_expression_parsing(op_node.selectCondition, iu_references)
             op_node.selectCondition = newSelectCondition
+        elif isinstance(op_node, explicitscanNode):
+            # set TableColumns
+            newTableColumns = []
+            for column in op_node.mapping:
+                assert "target" in column and "source" in column
+                columnTargetIU = column["target"][0]
+                assert columnTargetIU not in iu_references
+                if isinstance(column["source"]["iu"], list):
+                    columnSourceIU = column["source"]["iu"][0]
+                else:
+                    columnSourceIU = column["source"]["iu"]
+                assert columnSourceIU in iu_references
+                # Add to table columns
+                newTableColumns.append(iu_references[columnSourceIU])
+                iu_references[columnTargetIU] = iu_references[columnSourceIU]
+            op_node.table_columns = newTableColumns
         else:
             raise Exception(f"Unsure how to deal with {op_node.__class__} node.")
         

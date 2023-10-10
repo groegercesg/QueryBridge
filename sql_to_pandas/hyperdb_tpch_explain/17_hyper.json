@@ -661,11 +661,11 @@
                             "mode": "=",
                             "left": {
                                 "expression": "iuref",
-                                "iu": "v10"
+                                "iu": "v7"
                             },
                             "right": {
                                 "expression": "iuref",
-                                "iu": "v7"
+                                "iu": "v10"
                             }
                         },
                         {

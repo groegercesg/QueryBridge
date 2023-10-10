@@ -2,7 +2,11 @@ from expression_operators import *
 
 class UniversalBaseNode():
     def __init__(self):
-        pass
+        self.nodeID = None
+    
+    def addID(self, value):
+        assert self.nodeID == None
+        self.nodeID = value
     
 class UnaryBaseNode(UniversalBaseNode):
     def __init__(self):
@@ -81,3 +85,10 @@ class FilterNode(UnaryBaseNode):
     def __init__(self, condition):
         super().__init__()
         self.condition = condition
+
+class RetrieveNode(UnaryBaseNode):
+    def __init__(self, tableColumns, retrieveTargetID):
+        super().__init__()
+        self.tableColumns = tableColumns
+        self.retrieveTargetID = retrieveTargetID
+        

@@ -858,7 +858,7 @@
                                             ]
                                         },
                                         {
-                                            "name": "ps_coment",
+                                            "name": "ps_comment",
                                             "type": [
                                                 "Varchar",
                                                 199
@@ -1026,7 +1026,7 @@
                                 ]
                             },
                             {
-                                "name": "ps_coment",
+                                "name": "ps_comment",
                                 "type": [
                                     "Varchar",
                                     199

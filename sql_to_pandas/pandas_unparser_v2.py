@@ -18,6 +18,9 @@ def convert_aggregation_tree_to_pandas(aggr_tree: ExpressionBaseNode, dataFrameN
         # Should have a completed Code Name
         assert aggr_tree.codeName != ""
         return f"{dataFrameName}.{aggr_tree.codeName}"
+        
+    if aggr_tree.codeName != "":
+        return f"{dataFrameName}.{aggr_tree.codeName}"
     
     expression_output = ""
     match aggr_tree:
@@ -25,6 +28,8 @@ def convert_aggregation_tree_to_pandas(aggr_tree: ExpressionBaseNode, dataFrameN
             expression_output = f"{childNode}.sum()"
         case AvgAggrOperator():
             expression_output = f"{childNode}.mean()"
+        case MaxAggrOperator():
+            expression_output = f"{childNode}.max()"
         case _:
             raise Exception(f"Unknown Aggregation Operator: {aggr_tree}")
         
@@ -74,6 +79,8 @@ def convert_expression_operator_to_column_name(expr_tree: ExpressionBaseNode):
             expression_output.append("case")
         case SubstringOperator():
             expression_output.append("substr")
+        case MaxAggrOperator():
+            expression_output.append("max")
         case AggregationOperators():
             raise Exception(f"We have an aggregation operator, but don't have a case for it: {expr_tree}")
     
@@ -329,6 +336,11 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
             new_op_tree = PandasAddColumnsNode(
                 op_tree.values
             )
+        case RetrieveNode():
+            new_op_tree = PandasRetrieveNode(
+                op_tree.tableColumns,
+                op_tree.retrieveTargetID
+            )
         case _:
             raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
@@ -354,8 +366,12 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
             lowest_node_pointer.addLeft(leftNode)
             lowest_node_pointer.addRight(rightNode)
         case _:
-            # PandasScanNode
-            assert isinstance(lowest_node_pointer, PandasScanNode)
+            # LeafPandasNode
+            assert isinstance(lowest_node_pointer, LeafPandasNode)
+            
+    # Add nodeID to new_op_node
+    assert hasattr(op_tree, "nodeID")
+    new_op_tree.addID(op_tree.nodeID)
     
     return new_op_tree
 
@@ -364,6 +380,11 @@ class PandasBaseNode():
     def __init__(self):
         # The columns, as strs
         self.columns = set()
+        self.nodeID = None
+        
+    def addID(self, value):
+        assert self.nodeID == None
+        self.nodeID = value
         
     def addToTableColumns(self, incomingColumns):
         localColumns = set()
@@ -406,6 +427,10 @@ class PandasBaseNode():
         self.__updateTableColumns()
         return self.columns
     
+class LeafPandasNode(PandasBaseNode):
+    def __init__(self):
+        super().__init__()
+    
 class UnaryPandasNode(PandasBaseNode):
     def __init__(self):
         super().__init__()
@@ -430,7 +455,7 @@ class BinaryPandasNode(PandasBaseNode):
         self.right = right
         
 # Classes for Nodes
-class PandasScanNode(PandasBaseNode):
+class PandasScanNode(LeafPandasNode):
     def __init__(self, tableName, tableColumns, tableRestriction):
         super().__init__()
         self.tableName = tableName
@@ -470,6 +495,12 @@ class PandasAddColumnsNode(UnaryPandasNode):
     def __init__(self, columns):
         super().__init__()
         self.addColumns = columns
+        
+class PandasRetrieveNode(LeafPandasNode):
+    def __init__(self, tableColumns, retrieveTargetID):
+        super().__init__()
+        self.tableColumns = tableColumns
+        self.retrieveTargetID = retrieveTargetID
 
 class PandasAggrNode(UnaryPandasNode):
     def __init__(self, preAggregateExpressions, postAggregateOperations):
@@ -595,6 +626,9 @@ class UnparsePandasTree():
         self.nodesCounter = defaultdict(int)
         self.pandas_tree = pandas_tree
         
+        self.nodeDict = {}
+        self.gatherNodeDict(self.pandas_tree)
+        
         self.__walk_tree(self.pandas_tree)
         
     def getChildTableNames(self, current: PandasBaseNode) -> list[str]:
@@ -631,6 +665,20 @@ class UnparsePandasTree():
     def getPandasContent(self) -> list[str]:
         return self.pandas_content
     
+    def gatherNodeDict(self, current_node):
+        if isinstance(current_node, BinaryPandasNode):
+            self.gatherNodeDict(current_node.left)
+            self.gatherNodeDict(current_node.right)
+        elif isinstance(current_node, UnaryPandasNode):
+            self.gatherNodeDict(current_node.child)
+        else:
+            # A leaf node
+            pass
+        
+        if current_node.nodeID != None:
+            assert current_node.nodeID not in self.nodeDict
+            self.nodeDict[current_node.nodeID] = current_node
+    
     def __walk_tree(self, current_node):
         # Walk to children Children
         if isinstance(current_node, BinaryPandasNode):
@@ -656,6 +704,46 @@ class UnparsePandasTree():
             return column.value
         else:
             return column.codeName
+        
+    def visitPandasRetrieveNode(self, node):
+        self.nodesCounter[PandasRetrieveNode] += 1
+        nodeNumber = self.nodesCounter[PandasRetrieveNode]
+        createdDataFrameName = f"df_retrieve_{nodeNumber}"
+        
+        assert node.retrieveTargetID in self.nodeDict
+        retrievedNode = self.nodeDict[node.retrieveTargetID]
+        
+        nodeTableColumnsCounter = Counter([type(x) for x in node.tableColumns])
+        retrievedNodeColumnsCounter = Counter([type(x) for x in retrievedNode.columns])
+        
+        assert len(node.tableColumns) == len(retrievedNode.columns)
+        assert nodeTableColumnsCounter == retrievedNodeColumnsCounter
+        assert len(set(nodeTableColumnsCounter.values())) <= 1, "All should have the same value"
+        assert all(1 == x for x in nodeTableColumnsCounter.values()), "All should be 1"
+        
+        # If any of these fail, we might need to look at storing the hyper IU references
+        # Or some other method, that could be hard/annoying to do 
+
+        # Rewrite the codeNames
+        for i in range(len(node.tableColumns)):
+            targetType = type(node.tableColumns[i])
+            fromRetrievedNode = list(filter(lambda x: type(x) == targetType, retrievedNode.columns))
+            assert len(fromRetrievedNode) == 1
+            fromRetrievedNode = fromRetrievedNode[0]
+            
+            # Assign CodeName
+            node.tableColumns[i].codeName = fromRetrievedNode.codeName
+        
+        gatherColumnCodeNames = [x.codeName for x in node.tableColumns]
+
+        self.writeContent(
+            f"{createdDataFrameName} = {retrievedNode.tableName}[{gatherColumnCodeNames}]"
+        )
+        
+        # Set the tableName
+        node.tableName = createdDataFrameName
+        # Add to node.columns
+        node.columns = set(node.tableColumns)
         
     def visitPandasAddColumnsNode(self, node):
         # We will add columns into the childtable
@@ -1042,6 +1130,9 @@ class UnparsePandasTree():
                 if isinstance(preAggrExpr, ColumnValue):
                     # Check this column is in the child, for safety
                     assert preAggrExpr in node.child.columns
+                elif preAggrExpr.codeName != '':
+                    # Already created
+                    pass
                 else:
                     newColumnName = self.getNewColumnName(preAggrExpr, node.child)
                     newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable, newColumnName)
