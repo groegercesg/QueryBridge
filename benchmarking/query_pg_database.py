@@ -62,7 +62,7 @@ def run_pg_query(db_details, query_file, verbose):
             retrieved_records = db.execute_query(single_query)
             
             # If it's a select query, we store the results
-            if single_query[:6].lower() == "select":
+            if (single_query[:6].lower() == "select") or (single_query[:4].lower() == "with"):
                 results.append(retrieved_records)
             
             exec_time += db.connection.exec_time
@@ -78,6 +78,7 @@ def run_pg_query(db_details, query_file, verbose):
     if len(results) == 1:
         results = results[0]
     else:
+        print(results)
         raise ValueError("We have multiple statements that return values, we haven't coded how to handle this.")
             
     return results, exec_time

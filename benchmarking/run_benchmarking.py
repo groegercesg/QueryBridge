@@ -231,13 +231,18 @@ def main():
             sql_results_list = []
             pandas_results_list = []            
             
-            sql_file_path = make_sql_file_path(manifest_json["SQL Queries Location"], query["SQL Name"])
+            default_sql_file_path = make_sql_file_path(manifest_json["SQL Queries Location"], query["SQL Name"])
             
             # Create an array to store results
             results_array = []
             
             # Iterate through "Options"
             for query_option in query["Options"]:
+                if "SQL Name" in query_option:
+                    sql_file_path = make_sql_file_path(manifest_json["SQL Queries Location"], query_option["SQL Name"])
+                else:
+                    sql_file_path = default_sql_file_path
+                
                 if query_option["Type"] == "SQL":
                     sql_run_times = []
                     
@@ -321,7 +326,7 @@ def main():
                                     print(error_msg)
                             #raise Exception( f'Invalid result: { result.returncode }' )      
                         
-                        query_name = str(query["SQL Name"].split("/")[-1]).split(".")[0]
+                        query_name = str(sql_file_path.split("/")[-1]).split(".")[0]
                         function_default = "q" + query_name
                         
                         package_name = str(query_option["Converted Name"]).split(".")[0]

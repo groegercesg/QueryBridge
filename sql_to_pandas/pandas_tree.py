@@ -3738,7 +3738,6 @@ def create_tree(class_tree, sql_class):
         node_class = unique_node(current_node.output)
     elif node_type == "Group":
         node_class = group_aggr_node(current_node.output, current_node.group_key)
-        
     else:
         raise ValueError("The node: " + str(current_node.node_type) + " is not recognised. Not all node have been implemented")
     
