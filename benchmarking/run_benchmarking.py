@@ -13,6 +13,7 @@ import csv
 from math import log10, floor
 from query_pg_database import run_pg_query
 from query_duck_database import run_duck_query
+from query_hyper_database import run_hyper_query
 from compare_results import compare
 from prepare_all_databases import prepare_all
 import os
@@ -114,6 +115,7 @@ def main():
         pg_db_details = json.load(f)
         
     duck_db_details = manifest_json["Duck DB Connection"]
+    hyper_db_details = manifest_json["Hyper DB Connection"]
         
     # Store Queries
     store_queries = False
@@ -155,7 +157,14 @@ def main():
             pass
         else:
             # Prepare databases
-            prepare_all(args.verbose, manifest_json["Data Storage"], manifest_json["DB Gen Location"], scaling_factor, manifest_json["Postgres Connection Details"], manifest_json["Duck DB Connection"], manifest_json["Constants Location"])
+            prepare_only = None
+            if "Prepare Only" in manifest_json:
+                prepare_only = manifest_json["Prepare Only"]
+            prepare_all(args.verbose, manifest_json["Data Storage"],
+                        manifest_json["DB Gen Location"], scaling_factor,
+                        manifest_json["Postgres Connection Details"],
+                        manifest_json["Duck DB Connection"], manifest_json["Hyper DB Connection"],
+                        manifest_json["Constants Location"], prepare_only)
         
         # Import Pandas Data
         print("Importing Pandas Data")
@@ -255,6 +264,8 @@ def main():
                             sql_result, run_time = run_pg_query(pg_db_details, sql_file_path, args.verbose)
                         elif query_option["DBMS"] == "Duck DB":
                             sql_result, run_time = run_duck_query(duck_db_details, sql_file_path, args.verbose)
+                        elif query_option["DBMS"] == "Hyper DB":
+                            sql_result, run_time = run_hyper_query(hyper_db_details, sql_file_path, args.verbose)
                         else:
                             raise Exception("Unrecognised Query runner option")
                         
@@ -275,7 +286,9 @@ def main():
                         if query_option["Query Plan"] == "Postgres":
                             cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Postgres", "--planner_file", manifest_json["Postgres Connection Details"]]
                         elif query_option["Query Plan"] == "Duck DB":
-                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Duck_DB", "--planner_file", manifest_json["Duck DB Connection"]]
+                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Duck_DB", "--planner_file", duck_db_details]
+                        elif query_option["Query Plan"] == "Hyper DB":
+                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Hyper_DB", "--planner_file", hyper_db_details]
                         else:
                             raise Exception("Unrecognised option")
                         
@@ -471,7 +484,9 @@ def main():
             compare_decisions_list = []
             compare_decision = False
             for sql_name, sql_result in sql_results_list:
+                assert sql_result != None
                 for pandas_name, pandas_result in pandas_results_list:
+                    assert pandas_result != None
                     # We should check if pandas_result is the same as sql_result
                     compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"])
                     compare_decisions_list.append(compare_decision)
@@ -535,11 +550,9 @@ def main():
         start_store_queries_file_content += "\n"
         
         # Write out to file, named "Name"
-        f= open(manifest_json["Store Queries"]["Name"], "w+")
-        f.write(start_store_queries_file_content)
-        f.close()
+        with open(manifest_json["Store Queries"]["Name"], "w+") as f:
+            f.write(start_store_queries_file_content)
         
-    
     delete_temp_folder()
         
 if __name__ == "__main__":

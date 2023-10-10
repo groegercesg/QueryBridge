@@ -635,6 +635,7 @@ class UnparsePandasTree():
         self.nodesCounter = defaultdict(int)
         self.pandas_tree = pandas_tree
         
+        self.relations = set()
         self.nodeDict = {}
         self.gatherNodeDict(self.pandas_tree)
         
@@ -1119,6 +1120,8 @@ class UnparsePandasTree():
         self.nodesCounter[PandasScanNode] += 1
         nodeNumber = self.nodesCounter[PandasScanNode]
         createdDataFrameName = f"df_scan_{nodeNumber}"
+        # Add tableName
+        self.relations.add(node.tableName)
         previousTableName = node.tableName
         
         # Use restrictions

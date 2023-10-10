@@ -1,0 +1,5 @@
+Data Type,Scaling Factor,Query Name,Query Number,Average,Correct,Executed,Runs
+SQL,1,Hyper DB,Query 1,0.258,False,Yes,[0.25797533988952637]
+Pandas,1,Pandas Converted (Hyper DB),Query 1,3.22,False,Yes,[3.2243809700012207]
+SQL,1,Hyper DB,Query 2,0.199,True,Yes,[0.1991443634033203]
+Pandas,1,Pandas Converted (Hyper DB),Query 2,0.396,True,Yes,[0.3959202766418457]

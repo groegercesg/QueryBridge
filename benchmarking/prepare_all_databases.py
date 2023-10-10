@@ -2,6 +2,7 @@ from generate_tpch_data import data_generator
 
 from prepare_databases.prepare_duckdb import PrepareDuckDB
 from prepare_databases.prepare_postgres import PreparePostgres
+from prepare_databases.prepare_hyperdb import PrepareHyperDB
 
 import sys
 import os
@@ -20,6 +21,7 @@ class HiddenPrinting:
 class KnownDatabases(Enum):
     POSTGRES = PreparePostgres
     DUCK_DB = PrepareDuckDB
+    HYPER_DB = PrepareHyperDB
         
 def run_prepare(prepare_class, verbose, data_storage_location, connection_details, constants_location=None):
     if isinstance(prepare_class, KnownDatabases):
@@ -38,7 +40,7 @@ def run_prepare(prepare_class, verbose, data_storage_location, connection_detail
     print(f"{prep_db.database_name} Database Prepared")
 
 def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor, postgres_connection_details,
-                duck_db_connection_details, constants_location, run_only = None):
+                duck_db_connection_details, hyper_db_connection_details, constants_location, run_only = None):
     # Data generator
         # Generates the data and saves it to:
         # "Data Storage"
@@ -55,13 +57,16 @@ def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor,
         run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, constants_location)
         # Do Duck DB
         run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, constants_location)
-
+        # Do Hyper DB
+        run_prepare(KnownDatabases.HYPER_DB, verbose, data_storage_location, hyper_db_connection_details, constants_location)
     elif (run_only != None) and (run_only == "PostgreSQL"):
         run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, constants_location)
     elif (run_only != None) and (run_only == "DuckDB"):
         run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, constants_location)
+    elif (run_only != None) and (run_only == "HyperDB"):
+        run_prepare(KnownDatabases.HYPER_DB, verbose, data_storage_location, hyper_db_connection_details, constants_location)
     else:
-        raise Exception("Unexpected options for '--run_only. The supported options are: \n\t'PostgreSQL'\n\t'DuckDB'")
+        raise Exception("Unexpected options for '--run_only. The supported options are: \n\t'PostgreSQL'\n\t'DuckDB'\n\t'HyperDB'")
 
     
 def str2bool(v):

@@ -94,7 +94,7 @@ def fix_explictScanNodes(op_node: HyperBaseNode, all_nodes: dict):
             # Deepcopy it?
             op_node.child = copy.deepcopy(all_nodes[op_node.targetOperator])
 
-def create_operator_tree(explain_json, all_nodes: dict):
+def create_hyper_operator_tree(explain_json, all_nodes: dict):
     operator_name = explain_json["operator"].lower()
     if operator_name not in SUPPORTED_HYPER_OPERATORS:
         raise Exception(f"Unknown operator in explain json: {operator_name}")
@@ -156,12 +156,12 @@ def create_operator_tree(explain_json, all_nodes: dict):
             assert isinstance(operator_class, explicitscanNode)
             operator_class.setRetrieve(True, explain_json["input"])
         else:
-            operator_class.addChild(create_operator_tree(explain_json["input"], all_nodes))
+            operator_class.addChild(create_hyper_operator_tree(explain_json["input"], all_nodes))
     elif any(x in explain_json for x in ["left", "right"]):
         # It should be an operator type if we're here
         assert isinstance(operator_class, JoinBaseNode) and hasattr(operator_class, "isJoinNode") and operator_class.isJoinNode == True
-        operator_class.addLeft(create_operator_tree(explain_json["left"], all_nodes))
-        operator_class.addRight(create_operator_tree(explain_json["right"], all_nodes))
+        operator_class.addLeft(create_hyper_operator_tree(explain_json["left"], all_nodes))
+        operator_class.addRight(create_hyper_operator_tree(explain_json["right"], all_nodes))
     else:
         # Only table scan node should have no children
         assert isinstance(operator_class, tablescanNode)
@@ -175,6 +175,42 @@ def create_operator_tree(explain_json, all_nodes: dict):
     all_nodes[operatorID] = operator_class
     
     return operator_class
+
+def generate_unparse_pandas_from_explain_and_query(explain_json, query_file):
+    query_name = query_file.split("/")[-1].split(".")[0].strip()
+    
+    all_nodes = dict()
+    op_tree = create_hyper_operator_tree(explain_json, all_nodes)
+    
+    # Transform the operator_trees
+    # Task 0: Fix tree and it's explicitScan (where retrieve)
+    fix_explictScanNodes(op_tree, all_nodes)
+    print(f"Transformed Explicit Scan Nodes in Plan {query_name} Hyper Tree")
+    # Task 1: Solve the 'v1' references, in 'iu'
+    transform_hyper_iu_references(op_tree)
+    print(f"Transformed IU References in Plan {query_name} Hyper Tree")
+    # Task 2: Convert Hyper DB Nodes into Universal Plan Nodes
+    op_tree = transform_hyper_to_universal_plan(op_tree)
+    print(f"Transformed Plan {query_name} Hyper Tree into Universal Plan")
+    # Task 3: Fix sql table aliases in tablescans
+    transform_sql_table_aliases(query_file, op_tree)
+    
+    # Test 1: top node should be OutputNode
+    assert audit_universal_plan_tree_outputnode(op_tree)
+    # Test 2: all leaf nodes should be ScanNode
+    assert audit_universal_plan_tree_scannode(op_tree)
+    
+    # Convert Universal Plan Tree to Pandas Tree
+    op_tree = convert_universal_to_pandas(op_tree)
+    print(f"Converted Universal Plan Tree of {query_name} into Pandas Tree")
+
+    # Unparse Pandas Tree
+    try:
+        unparse_pandas = UnparsePandasTree(op_tree)
+    except:
+        print(f"Pandas Generation for Query '{query_name}' Failed.")
+        
+    return unparse_pandas
     
 def parse_explain_plans():
     query_directory = 'sql_to_pandas/tpch_queries'
@@ -197,7 +233,7 @@ def parse_explain_plans():
         
         # Gather all the nodes
         all_nodes = dict()
-        op_tree = create_operator_tree(explain_content, all_nodes)
+        op_tree = create_hyper_operator_tree(explain_content, all_nodes)
         all_operator_trees.append([sql_file, op_tree, all_nodes])
 
     #assert len(all_operator_trees) == 21
@@ -224,7 +260,7 @@ def parse_explain_plans():
         print(f"Transformed Plan {tree[0]} Hyper Tree into Universal Plan")
     # Task 3: Fix sql table aliases in tablescans
     for tree in all_operator_trees:
-        transform_sql_table_aliases(tree[0], tree[1])
+        transform_sql_table_aliases(f"{query_directory}/{tree[0]}", tree[1])
     
     print("Hyper Tree Plans have been Transformed into Universal Plan Trees")
     
@@ -275,10 +311,9 @@ from pandas_unparser_v2 import *
 from universal_plan_nodes import *
 from sqlglot import parse_one, exp
 
-def transform_sql_table_aliases(sql_file: str, op_tree: HyperBaseNode):
+def transform_sql_table_aliases(sql_file_path: str, op_tree: HyperBaseNode):
     def get_table_aliases(sql_file: str) -> dict:
-        query_directory = 'sql_to_pandas/tpch_queries'
-        with open(f'{query_directory}/{sql_file}') as f:
+        with open(f'{sql_file_path}') as f:
             sql_content = f.read()
         
         table_aliases = dict()
@@ -303,7 +338,7 @@ def transform_sql_table_aliases(sql_file: str, op_tree: HyperBaseNode):
             case _:
                 raise Exception(f"We are walking a universal plan tree, unknown type: {op_tree.__class__}") 
     
-    aliases = get_table_aliases(sql_file)
+    aliases = get_table_aliases(sql_file_path)
     walk_universal_tree(op_tree, aliases)
     
 
@@ -932,6 +967,6 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
     iu_references = dict()
     visit_solve_iu_references(op_tree, iu_references)
 
-generate_hyperdb_explains()
+#generate_hyperdb_explains()
 #inspect_explain_plans()
-parse_explain_plans()
+#parse_explain_plans()

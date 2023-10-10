@@ -12,7 +12,10 @@ import ast, traceback
 # Prepare database file
 from prepare_databases.prepare_duckdb import PrepareDuckDB
 from prepare_databases.prepare_postgres import PreparePostgres
+from prepare_databases.prepare_hyperdb import PrepareHyperDB
 from prepare_databases.prepare_database import EXPLAIN_LOCATION
+
+from hyper_parsing import generate_unparse_pandas_from_explain_and_query
 
 def syntax_check_code(path):
     with open(path) as f:
@@ -202,6 +205,8 @@ def main():
         print("Planning the query with: " + str(args.query_planner))
     elif args.query_planner == "Duck_DB":
         print("Planning the query with: " + str(args.query_planner))
+    elif args.query_planner == "Hyper_DB":
+        print("Planning the query with: " + str(args.query_planner))
     else:
         print("Unrecognised Query Planning option: " + str(args.query_planner))
         print("The current supported options are: ")
@@ -259,6 +264,14 @@ def main():
             raise Exception("No duck db preparation file specified")
         
         db = PrepareDuckDB(args.planner_file)
+    elif args.query_planner == "Hyper_DB":
+        # Validation for duck_db_prep
+        if args.planner_file == None:
+            raise Exception("No duck db preparation file specified")
+        
+        db = PrepareHyperDB(args.planner_file)
+    else:
+        raise Exception(f"Unrecognised option for query planner: {args.query_planner}")
     
     # Iterate through every subquery
     for i, sub_query in enumerate(split_query):
@@ -355,6 +368,30 @@ def main():
             else:
                 raise Exception(f'Unable to assign sub_query to last_query, it was of an odd type: {type(sub_query)}')
             explain_tree = make_tree_from_duck(explain_json, explain_tree, last_query)   
+        elif args.query_planner == "Hyper_DB":
+            unparse_pandas = generate_unparse_pandas_from_explain_and_query(explain_json, query_file)
+            
+            with open(python_output_name, 'w') as fp:
+                for line in unparse_pandas.getPandasContent():
+                    if "\n" in line:
+                        writeContent = line.split("\n")
+                    else:
+                        writeContent = [line]
+                        
+                    for line in writeContent:
+                        # write each item on a new line
+                        potentialTab = ""
+                        if args.benchmarking:
+                            potentialTab = "    "
+                        fp.write(f"{potentialTab}{line}\n")
+                        
+                # Write return 'blah', if benchmarking
+                if args.benchmarking:
+                    fp.write(f"{potentialTab}return {unparse_pandas.pandas_tree.tableName}\n")
+            
+            relations_subqueries = unparse_pandas.relations
+            
+            continue
         else:
             raise Exception("Unknown database planner specified")
         
