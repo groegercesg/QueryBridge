@@ -1,0 +1,798 @@
+{
+    "operator": "executiontarget",
+    "operatorId": 1,
+    "cardinality": 1,
+    "producesRows": true,
+    "output": [
+        {
+            "expression": "iuref",
+            "iu": [
+                "v",
+                [
+                    "Varchar",
+                    15
+                ]
+            ]
+        },
+        {
+            "expression": "iuref",
+            "iu": [
+                "v2",
+                [
+                    "BigInt"
+                ]
+            ]
+        },
+        {
+            "expression": "iuref",
+            "iu": [
+                "v3",
+                [
+                    "Double"
+                ]
+            ]
+        }
+    ],
+    "outputNames": [
+        "cntrycode",
+        "numcust",
+        "totacctbal"
+    ],
+    "input": {
+        "operator": "sort",
+        "operatorId": 2,
+        "sqlpos": [
+            [
+                1373,
+                1382
+            ],
+            [
+                1383,
+                1390
+            ]
+        ],
+        "cardinality": 1,
+        "criterion": [
+            {
+                "value": {
+                    "expression": "iuref",
+                    "iu": "v"
+                },
+                "descending": false,
+                "nullFirst": false
+            }
+        ],
+        "limit": 1,
+        "input": {
+            "operator": "groupby",
+            "operatorId": 3,
+            "sqlpos": [
+                [
+                    1329,
+                    1355
+                ],
+                [
+                    52,
+                    60
+                ],
+                [
+                    81,
+                    95
+                ]
+            ],
+            "cardinality": 292.021,
+            "input": {
+                "operator": "map",
+                "operatorId": 4,
+                "sqlpos": [
+                    [
+                        172,
+                        216
+                    ]
+                ],
+                "cardinality": 324.468,
+                "input": {
+                    "operator": "join",
+                    "operatorId": 5,
+                    "cardinality": 324.468,
+                    "method": "hash",
+                    "singleMatch": true,
+                    "left": {
+                        "operator": "groupby",
+                        "operatorId": 6,
+                        "sqlpos": [
+                            [
+                                583,
+                                597
+                            ]
+                        ],
+                        "cardinality": 1,
+                        "input": {
+                            "operator": "tablescan",
+                            "operatorId": 7,
+                            "sqlpos": [
+                                [
+                                    675,
+                                    683
+                                ]
+                            ],
+                            "cardinality": 36000,
+                            "relationId": 3,
+                            "schema": {
+                                "type": "persistedschema",
+                                "name": "hyperdb_tpch.hyper"
+                            },
+                            "values": [
+                                {
+                                    "name": "c_custkey",
+                                    "type": [
+                                        "Integer"
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "c_name",
+                                    "type": [
+                                        "Varchar",
+                                        25
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "c_address",
+                                    "type": [
+                                        "Varchar",
+                                        40
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "c_nationkey",
+                                    "type": [
+                                        "Integer"
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "c_phone",
+                                    "type": [
+                                        "Varchar",
+                                        15
+                                    ],
+                                    "iu": [
+                                        "v4",
+                                        [
+                                            "Varchar",
+                                            15
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "name": "c_acctbal",
+                                    "type": [
+                                        "Double"
+                                    ],
+                                    "iu": [
+                                        "v5",
+                                        [
+                                            "Double"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "name": "c_mktsegment",
+                                    "type": [
+                                        "Varchar",
+                                        10
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "c_comment",
+                                    "type": [
+                                        "Varchar",
+                                        117
+                                    ],
+                                    "iu": null
+                                }
+                            ],
+                            "debugName": {
+                                "classification": "nonsensitive",
+                                "value": "customer"
+                            },
+                            "restrictions": [
+                                {
+                                    "attribute": 5,
+                                    "mode": ">",
+                                    "value": {
+                                        "expression": "const",
+                                        "value": {
+                                            "type": [
+                                                "Double"
+                                            ],
+                                            "value": 0
+                                        }
+                                    }
+                                },
+                                {
+                                    "attribute": 4,
+                                    "mode": "lambda",
+                                    "value": {
+                                        "expression": "quantor",
+                                        "mode": "=some",
+                                        "value": {
+                                            "expression": "substring",
+                                            "arguments": [
+                                                {
+                                                    "expression": "iuref",
+                                                    "iu": "v4"
+                                                },
+                                                {
+                                                    "expression": "const",
+                                                    "value": {
+                                                        "type": [
+                                                            "Integer"
+                                                        ],
+                                                        "value": 1
+                                                    }
+                                                },
+                                                {
+                                                    "expression": "const",
+                                                    "value": {
+                                                        "type": [
+                                                            "Integer"
+                                                        ],
+                                                        "value": 2
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        "set": [
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "13"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "17"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "18"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "23"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "29"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "30"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "31"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "value2": null
+                                }
+                            ],
+                            "selectivity": 0.24
+                        },
+                        "groupingSets": [
+                            {
+                                "keyIndices": [],
+                                "coreIndices": null,
+                                "behavior": "static"
+                            }
+                        ],
+                        "emptyGroups": true,
+                        "aggExpressions": [
+                            {
+                                "value": {
+                                    "expression": "iuref",
+                                    "iu": "v5"
+                                }
+                            }
+                        ],
+                        "aggregates": [
+                            {
+                                "source": 0,
+                                "operation": {
+                                    "aggregate": "avg"
+                                },
+                                "iu": [
+                                    "v6",
+                                    [
+                                        "Double",
+                                        "nullable"
+                                    ]
+                                ]
+                            }
+                        ]
+                    },
+                    "right": {
+                        "operator": "leftantijoin",
+                        "operatorId": 8,
+                        "cardinality": 324.496,
+                        "method": "hash",
+                        "singleMatch": true,
+                        "referencedByScanEarlyProbe": true,
+                        "left": {
+                            "operator": "tablescan",
+                            "operatorId": 9,
+                            "sqlpos": [
+                                [
+                                    297,
+                                    305
+                                ]
+                            ],
+                            "cardinality": 39450,
+                            "relationId": 3,
+                            "schema": {
+                                "type": "persistedschema",
+                                "name": "hyperdb_tpch.hyper"
+                            },
+                            "values": [
+                                {
+                                    "name": "c_custkey",
+                                    "type": [
+                                        "Integer"
+                                    ],
+                                    "iu": [
+                                        "v7",
+                                        [
+                                            "Integer"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "name": "c_name",
+                                    "type": [
+                                        "Varchar",
+                                        25
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "c_address",
+                                    "type": [
+                                        "Varchar",
+                                        40
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "c_nationkey",
+                                    "type": [
+                                        "Integer"
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "c_phone",
+                                    "type": [
+                                        "Varchar",
+                                        15
+                                    ],
+                                    "iu": [
+                                        "v8",
+                                        [
+                                            "Varchar",
+                                            15
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "name": "c_acctbal",
+                                    "type": [
+                                        "Double"
+                                    ],
+                                    "iu": [
+                                        "v9",
+                                        [
+                                            "Double"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "name": "c_mktsegment",
+                                    "type": [
+                                        "Varchar",
+                                        10
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "c_comment",
+                                    "type": [
+                                        "Varchar",
+                                        117
+                                    ],
+                                    "iu": null
+                                }
+                            ],
+                            "debugName": {
+                                "classification": "nonsensitive",
+                                "value": "customer"
+                            },
+                            "restrictions": [
+                                {
+                                    "attribute": 4,
+                                    "mode": "lambda",
+                                    "value": {
+                                        "expression": "quantor",
+                                        "mode": "=some",
+                                        "value": {
+                                            "expression": "substring",
+                                            "arguments": [
+                                                {
+                                                    "expression": "iuref",
+                                                    "iu": "v8"
+                                                },
+                                                {
+                                                    "expression": "const",
+                                                    "value": {
+                                                        "type": [
+                                                            "Integer"
+                                                        ],
+                                                        "value": 1
+                                                    }
+                                                },
+                                                {
+                                                    "expression": "const",
+                                                    "value": {
+                                                        "type": [
+                                                            "Integer"
+                                                        ],
+                                                        "value": 2
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        "set": [
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "13"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "17"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "18"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "23"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "29"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "30"
+                                                }
+                                            },
+                                            {
+                                                "expression": "const",
+                                                "value": {
+                                                    "type": [
+                                                        "Varchar"
+                                                    ],
+                                                    "value": "31"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "value2": null
+                                }
+                            ],
+                            "selectivity": 0.263
+                        },
+                        "right": {
+                            "operator": "tablescan",
+                            "operatorId": 10,
+                            "sqlpos": [
+                                [
+                                    1174,
+                                    1180
+                                ]
+                            ],
+                            "cardinality": 1500000.0,
+                            "relationId": 6,
+                            "schema": {
+                                "type": "persistedschema",
+                                "name": "hyperdb_tpch.hyper"
+                            },
+                            "values": [
+                                {
+                                    "name": "o_orderkey",
+                                    "type": [
+                                        "Integer"
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_custkey",
+                                    "type": [
+                                        "Integer"
+                                    ],
+                                    "iu": [
+                                        "v10",
+                                        [
+                                            "Integer"
+                                        ]
+                                    ]
+                                },
+                                {
+                                    "name": "o_orderstatus",
+                                    "type": [
+                                        "Varchar",
+                                        1
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_totalprice",
+                                    "type": [
+                                        "Double"
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_orderdate",
+                                    "type": [
+                                        "Date"
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_orderpriority",
+                                    "type": [
+                                        "Varchar",
+                                        15
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_clerk",
+                                    "type": [
+                                        "Varchar",
+                                        15
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_shippriority",
+                                    "type": [
+                                        "Integer"
+                                    ],
+                                    "iu": null
+                                },
+                                {
+                                    "name": "o_comment",
+                                    "type": [
+                                        "Varchar",
+                                        79
+                                    ],
+                                    "iu": null
+                                }
+                            ],
+                            "mightScanDomain": true,
+                            "debugName": {
+                                "classification": "nonsensitive",
+                                "value": "orders"
+                            },
+                            "earlyProbes": [
+                                {
+                                    "builder": 8,
+                                    "attributes": [
+                                        1
+                                    ],
+                                    "type": "lookup"
+                                }
+                            ],
+                            "selectivity": 1
+                        },
+                        "condition": {
+                            "expression": "comparison",
+                            "mode": "=",
+                            "left": {
+                                "expression": "iuref",
+                                "iu": "v10"
+                            },
+                            "right": {
+                                "expression": "iuref",
+                                "iu": "v7"
+                            }
+                        }
+                    },
+                    "condition": {
+                        "expression": "comparison",
+                        "mode": ">",
+                        "left": {
+                            "expression": "iuref",
+                            "iu": "v9"
+                        },
+                        "right": {
+                            "expression": "iuref",
+                            "iu": "v6"
+                        }
+                    }
+                },
+                "values": [
+                    {
+                        "iu": [
+                            "v11",
+                            [
+                                "Varchar",
+                                15
+                            ]
+                        ],
+                        "value": {
+                            "expression": "substring",
+                            "arguments": [
+                                {
+                                    "expression": "iuref",
+                                    "iu": "v8"
+                                },
+                                {
+                                    "expression": "const",
+                                    "value": {
+                                        "type": [
+                                            "Integer"
+                                        ],
+                                        "value": 1
+                                    }
+                                },
+                                {
+                                    "expression": "const",
+                                    "value": {
+                                        "type": [
+                                            "Integer"
+                                        ],
+                                        "value": 2
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            "keyExpressions": [
+                {
+                    "expression": {
+                        "value": {
+                            "expression": "iuref",
+                            "iu": "v11"
+                        }
+                    },
+                    "iu": [
+                        "v",
+                        [
+                            "Varchar",
+                            15
+                        ]
+                    ]
+                }
+            ],
+            "groupingSets": [
+                {
+                    "keyIndices": [
+                        0
+                    ],
+                    "coreIndices": [
+                        0
+                    ],
+                    "behavior": "regular"
+                }
+            ],
+            "emptyGroups": false,
+            "aggExpressions": [
+                {
+                    "value": {
+                        "expression": "iuref",
+                        "iu": "v9"
+                    }
+                }
+            ],
+            "aggregates": [
+                {
+                    "source": 0,
+                    "operation": {
+                        "aggregate": "sum"
+                    },
+                    "iu": [
+                        "v3",
+                        [
+                            "Double"
+                        ]
+                    ]
+                },
+                {
+                    "source": 4294967295,
+                    "operation": {
+                        "aggregate": "count"
+                    },
+                    "iu": [
+                        "v2",
+                        [
+                            "BigInt"
+                        ]
+                    ]
+                }
+            ]
+        }
+    }
+}

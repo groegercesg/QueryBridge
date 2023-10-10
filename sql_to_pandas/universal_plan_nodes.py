@@ -55,6 +55,12 @@ class SortNode(UnaryBaseNode):
         assert all(isinstance(x, SortOperator) for x in sortCriteria)
         self.sortCriteria = sortCriteria
         
+class LimitNode(UnaryBaseNode):
+    def __init__(self, limitValue):
+        super().__init__()
+        assert isinstance(limitValue, int)
+        self.limitValue = limitValue
+        
 class GroupNode(UnaryBaseNode):
     def __init__(self, keyExpressions, preAggregateExpressions, postAggregateOperations):
         super().__init__()

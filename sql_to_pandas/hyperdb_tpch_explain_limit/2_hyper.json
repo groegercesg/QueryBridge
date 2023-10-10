@@ -98,12 +98,12 @@
         "operatorId": 2,
         "sqlpos": [
             [
-                1035,
-                1049
+                622,
+                636
             ],
             [
-                1101,
-                1110
+                667,
+                676
             ]
         ],
         "cardinality": 1.45382,
@@ -161,8 +161,8 @@
                     "operatorId": 5,
                     "sqlpos": [
                         [
-                            244,
-                            250
+                            153,
+                            159
                         ]
                     ],
                     "cardinality": 1,
@@ -234,8 +234,8 @@
                     "operatorId": 6,
                     "sqlpos": [
                         [
-                            228,
-                            234
+                            144,
+                            150
                         ]
                     ],
                     "cardinality": 25,
@@ -345,8 +345,8 @@
                             "operatorId": 10,
                             "sqlpos": [
                                 [
-                                    178,
-                                    182
+                                    115,
+                                    119
                                 ]
                             ],
                             "cardinality": 800,
@@ -506,8 +506,8 @@
                             "operatorId": 11,
                             "sqlpos": [
                                 [
-                                    563,
-                                    581
+                                    381,
+                                    399
                                 ]
                             ],
                             "cardinality": 26618.3,
@@ -537,8 +537,8 @@
                                             "operatorId": 15,
                                             "sqlpos": [
                                                 [
-                                                    727,
-                                                    733
+                                                    447,
+                                                    453
                                                 ]
                                             ],
                                             "cardinality": 1,
@@ -610,8 +610,8 @@
                                             "operatorId": 16,
                                             "sqlpos": [
                                                 [
-                                                    695,
-                                                    701
+                                                    436,
+                                                    442
                                                 ]
                                             ],
                                             "cardinality": 25,
@@ -695,8 +695,8 @@
                                         "operatorId": 17,
                                         "sqlpos": [
                                             [
-                                                661,
-                                                669
+                                                423,
+                                                431
                                             ]
                                         ],
                                         "cardinality": 10000,
@@ -803,8 +803,8 @@
                                     "operatorId": 18,
                                     "sqlpos": [
                                         [
-                                            627,
-                                            635
+                                            410,
+                                            418
                                         ]
                                     ],
                                     "cardinality": 800000,
@@ -971,8 +971,8 @@
                         "operatorId": 19,
                         "sqlpos": [
                             [
-                                210,
-                                218
+                                133,
+                                141
                             ]
                         ],
                         "cardinality": 800000,
@@ -1071,11 +1071,11 @@
                                 "mode": "=",
                                 "left": {
                                     "expression": "iuref",
-                                    "iu": "v24"
+                                    "iu": "v26"
                                 },
                                 "right": {
                                     "expression": "iuref",
-                                    "iu": "v26"
+                                    "iu": "v24"
                                 }
                             },
                             {
@@ -1098,8 +1098,8 @@
                     "operatorId": 20,
                     "sqlpos": [
                         [
-                            192,
-                            200
+                            122,
+                            130
                         ]
                     ],
                     "cardinality": 10000,

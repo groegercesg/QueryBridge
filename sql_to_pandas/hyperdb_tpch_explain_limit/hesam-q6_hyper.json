@@ -1,0 +1,314 @@
+{
+    "operator": "executiontarget",
+    "operatorId": 1,
+    "cardinality": 1,
+    "producesRows": true,
+    "output": [
+        {
+            "expression": "iuref",
+            "iu": [
+                "v",
+                [
+                    "Double",
+                    "nullable"
+                ]
+            ]
+        }
+    ],
+    "outputNames": [
+        "sum"
+    ],
+    "input": {
+        "operator": "groupby",
+        "operatorId": 2,
+        "sqlpos": [
+            [
+                25,
+                41
+            ]
+        ],
+        "cardinality": 1,
+        "input": {
+            "operator": "map",
+            "operatorId": 3,
+            "sqlpos": [
+                [
+                    55,
+                    56
+                ]
+            ],
+            "cardinality": 84017,
+            "input": {
+                "operator": "tablescan",
+                "operatorId": 4,
+                "sqlpos": [
+                    [
+                        127,
+                        135
+                    ]
+                ],
+                "cardinality": 84017,
+                "relationId": 7,
+                "schema": {
+                    "type": "persistedschema",
+                    "name": "hyperdb_tpch.hyper"
+                },
+                "values": [
+                    {
+                        "name": "l_orderkey",
+                        "type": [
+                            "Integer"
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_partkey",
+                        "type": [
+                            "Integer"
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_suppkey",
+                        "type": [
+                            "Integer"
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_linenumber",
+                        "type": [
+                            "Integer"
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_quantity",
+                        "type": [
+                            "Double"
+                        ],
+                        "iu": [
+                            "v2",
+                            [
+                                "Double"
+                            ]
+                        ]
+                    },
+                    {
+                        "name": "l_extendedprice",
+                        "type": [
+                            "Double"
+                        ],
+                        "iu": [
+                            "v3",
+                            [
+                                "Double"
+                            ]
+                        ]
+                    },
+                    {
+                        "name": "l_discount",
+                        "type": [
+                            "Double"
+                        ],
+                        "iu": [
+                            "v4",
+                            [
+                                "Double"
+                            ]
+                        ]
+                    },
+                    {
+                        "name": "l_tax",
+                        "type": [
+                            "Double"
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_returnflag",
+                        "type": [
+                            "Varchar",
+                            1
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_linestatus",
+                        "type": [
+                            "Varchar",
+                            1
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_shipdate",
+                        "type": [
+                            "Date"
+                        ],
+                        "iu": [
+                            "v5",
+                            [
+                                "Date"
+                            ]
+                        ]
+                    },
+                    {
+                        "name": "l_commitdate",
+                        "type": [
+                            "Date"
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_receiptdate",
+                        "type": [
+                            "Date"
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_shipinstruct",
+                        "type": [
+                            "Varchar",
+                            25
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_shipmode",
+                        "type": [
+                            "Varchar",
+                            10
+                        ],
+                        "iu": null
+                    },
+                    {
+                        "name": "l_comment",
+                        "type": [
+                            "Varchar",
+                            44
+                        ],
+                        "iu": null
+                    }
+                ],
+                "debugName": {
+                    "classification": "nonsensitive",
+                    "value": "t7"
+                },
+                "restrictions": [
+                    {
+                        "attribute": 10,
+                        "mode": "[)",
+                        "value": {
+                            "expression": "const",
+                            "value": {
+                                "type": [
+                                    "Date"
+                                ],
+                                "value": 2449354
+                            }
+                        },
+                        "value2": {
+                            "expression": "const",
+                            "value": {
+                                "type": [
+                                    "Date"
+                                ],
+                                "value": 2449719
+                            }
+                        }
+                    },
+                    {
+                        "attribute": 6,
+                        "mode": "[]",
+                        "value": {
+                            "expression": "const",
+                            "value": {
+                                "type": [
+                                    "Double"
+                                ],
+                                "value": 4587366580439587226
+                            }
+                        },
+                        "value2": {
+                            "expression": "const",
+                            "value": {
+                                "type": [
+                                    "Double"
+                                ],
+                                "value": 4589708452245819884
+                            }
+                        }
+                    },
+                    {
+                        "attribute": 4,
+                        "mode": "<",
+                        "value": {
+                            "expression": "const",
+                            "value": {
+                                "type": [
+                                    "Double"
+                                ],
+                                "value": 4627448617123184640
+                            }
+                        }
+                    }
+                ],
+                "selectivity": 0.014
+            },
+            "values": [
+                {
+                    "iu": [
+                        "v6",
+                        [
+                            "Double"
+                        ]
+                    ],
+                    "value": {
+                        "expression": "mul",
+                        "left": {
+                            "expression": "iuref",
+                            "iu": "v3"
+                        },
+                        "right": {
+                            "expression": "iuref",
+                            "iu": "v4"
+                        }
+                    }
+                }
+            ]
+        },
+        "groupingSets": [
+            {
+                "keyIndices": [],
+                "coreIndices": null,
+                "behavior": "static"
+            }
+        ],
+        "emptyGroups": true,
+        "aggExpressions": [
+            {
+                "value": {
+                    "expression": "iuref",
+                    "iu": "v6"
+                }
+            }
+        ],
+        "aggregates": [
+            {
+                "source": 0,
+                "operation": {
+                    "aggregate": "sum"
+                },
+                "iu": [
+                    "v",
+                    [
+                        "Double",
+                        "nullable"
+                    ]
+                ]
+            }
+        ]
+    }
+}

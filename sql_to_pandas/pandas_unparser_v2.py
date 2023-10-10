@@ -341,6 +341,10 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
                 op_tree.tableColumns,
                 op_tree.retrieveTargetID
             )
+        case LimitNode():
+            new_op_tree = PandasLimitNode(
+                op_tree.limitValue
+            )
         case _:
             raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
@@ -490,6 +494,11 @@ class PandasFilterNode(UnaryPandasNode):
     def __init__(self, condition):
         super().__init__()
         self.condition = condition
+
+class PandasLimitNode(UnaryPandasNode):
+    def __init__(self, limitValue):
+        super().__init__()
+        self.limitValue = limitValue
 
 class PandasAddColumnsNode(UnaryPandasNode):
     def __init__(self, columns):
@@ -705,6 +714,25 @@ class UnparsePandasTree():
         else:
             return column.codeName
         
+    def visitPandasLimitNode(self, node):
+        self.nodesCounter[PandasLimitNode] += 1
+        nodeNumber = self.nodesCounter[PandasLimitNode]
+        createdDataFrameName = f"df_limit_{nodeNumber}"
+        
+        # Get child name
+        childTableList = self.getChildTableNames(node)
+        assert len(childTableList) == 1
+        childTable = childTableList[0]
+        
+        self.writeContent(
+            f"{createdDataFrameName} = {childTable}.head({node.limitValue})"
+        )
+        
+        # Set the tableName
+        node.tableName = createdDataFrameName
+        # Add to node.columns
+        node.columns = set(node.child.columns)
+        
     def visitPandasRetrieveNode(self, node):
         self.nodesCounter[PandasRetrieveNode] += 1
         nodeNumber = self.nodesCounter[PandasRetrieveNode]
@@ -844,9 +872,8 @@ class UnparsePandasTree():
                 else:
                     raise Exception(f"Unexpected format of newColumnExpression: {type(newColumnExpression)}")
         
-        # KeyExpressions
+        # keyExpressions
         assert len(node.keyExpressions) > 0
-        assert len(node.postAggregateOperations) > 0, "We can't have a Group By without aggregations"
         processedKeys = [self.__getPandasRepresentationForColumn(x) for x in node.keyExpressions]
         self.writeContent(
             f"{createdDataFrameName} = {childTable} \\\n"

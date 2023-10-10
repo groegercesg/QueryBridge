@@ -121,7 +121,10 @@ def create_operator_tree(explain_json, all_nodes: dict):
             tableFilters = explain_json["residuals"]
         operator_class = tablescanNode(explain_json["debugName"]["value"], explain_json["values"], tableRestrictions, tableFilters)
     elif operator_name == "sort":
-        operator_class = sortNode(explain_json["criterion"])
+        limitValue = None
+        if "limit" in explain_json:
+            limitValue = explain_json["limit"]
+        operator_class = sortNode(explain_json["criterion"], limitValue)
     elif operator_name == "map":
         operator_class = mapNode(explain_json["values"])
     elif operator_name == "select":
@@ -185,8 +188,7 @@ def parse_explain_plans():
     
     all_operator_trees = []
     for sql_file, explain_file in combined_sql_content:
-        # Next queries: The rest
-        # if sql_file.split(".")[0] not in ["21"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
+        # if sql_file.split(".")[0] not in ["3"]:
         #    continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
@@ -261,10 +263,10 @@ def parse_explain_plans():
         # print("-" * 15)
     
     if failed_counter > 0:
-        print("-"*10)
+        print("-"*15)
         print(f"We failed {failed_counter} out of {len(all_operator_trees)}; or {round((failed_counter / len(all_operator_trees)) * 100, 2)}%.")
     else:
-        print("-"*10)
+        print("-"*15)
         print(f"We succeeded in unparsing all {len(all_operator_trees)} Pandas trees into Pandas Content")
     
     print("Unparsed Pandas Tree(s) into Pandas Content")
@@ -389,9 +391,21 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
                     op_node.joinCondition
                 )
             case sortNode():
-                new_op_node = SortNode(
+                sort_node = SortNode(
                     op_node.sortCriteria
                 )
+                # Create a limitNode if we have that
+                if op_node.limitValue != None:
+                    new_op_node = LimitNode(
+                        op_node.limitValue
+                    )
+                    # Only add if not an empty list
+                    if op_node.sortCriteria != []:
+                        new_op_node.addChild(
+                            sort_node
+                        )
+                else:
+                    new_op_node = sort_node
             case mapNode():
                 new_op_node = NewColumnNode(
                     op_node.mapValues
@@ -573,6 +587,8 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                     current_op = GreaterThanOperator()
                 elif expression["mode"] == "<":
                     current_op = LessThanOperator()
+                elif expression["mode"] == "<=":
+                    current_op = LessThanEqOperator()
                 elif expression["mode"] == "<>":
                     current_op = NotEqualsOperator()
                 else:
@@ -916,6 +932,6 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
     iu_references = dict()
     visit_solve_iu_references(op_tree, iu_references)
 
-#generate_hyperdb_explains()
+generate_hyperdb_explains()
 #inspect_explain_plans()
 parse_explain_plans()

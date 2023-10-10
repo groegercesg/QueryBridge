@@ -1,7 +1,7 @@
 {
     "operator": "executiontarget",
     "operatorId": 1,
-    "cardinality": 794.666,
+    "cardinality": 1,
     "producesRows": true,
     "output": [
         {
@@ -45,9 +45,13 @@
             [
                 1004,
                 1010
+            ],
+            [
+                1032,
+                1039
             ]
         ],
-        "cardinality": 794.666,
+        "cardinality": 1,
         "criterion": [
             {
                 "value": {
@@ -66,6 +70,7 @@
                 "nullFirst": true
             }
         ],
+        "limit": 1,
         "input": {
             "operator": "groupby",
             "operatorId": 3,

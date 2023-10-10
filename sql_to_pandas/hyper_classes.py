@@ -20,9 +20,10 @@ class mapNode(HyperBaseNode):
         self.mapValues = mapValues
         
 class sortNode(HyperBaseNode):
-    def __init__(self, sortCriteria):
+    def __init__(self, sortCriteria, limitValue):
         super().__init__()
         self.sortCriteria = sortCriteria
+        self.limitValue = limitValue
         
 class groupbyNode(HyperBaseNode):
     def __init__(self, keyExpressions, aggregateExpressions, aggregateOperations):
