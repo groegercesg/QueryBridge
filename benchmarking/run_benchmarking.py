@@ -21,6 +21,7 @@ from os import path
 import importlib.util
 import sys
 import re
+import pandas as pd
 
 class HiddenPrinting:
     def __enter__(self):
@@ -486,7 +487,7 @@ def main():
             for sql_name, sql_result in sql_results_list:
                 assert sql_result != None
                 for pandas_name, pandas_result in pandas_results_list:
-                    assert pandas_result != None
+                    assert isinstance(pandas_result, pd.DataFrame)
                     # We should check if pandas_result is the same as sql_result
                     compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"])
                     compare_decisions_list.append(compare_decision)
@@ -499,6 +500,15 @@ def main():
                         print(columns)
                         for row in sql_result:
                             print(row)
+                    else:
+                        if args.verbose:
+                            print(color.GREEN + str(query["Query Name"]) + ": The returned data was correct and the same!" + "\n" + "Between " + str(pandas_name) + " and " + str(sql_name) + "." + color.END)
+                            print("Pandas Data:")
+                            print(pandas_result)
+                            print("SQL Data:")
+                            print(columns)
+                            for row in sql_result:
+                                print(row)
                         
             # Write results, use from results_array
             for result_set in results_array:

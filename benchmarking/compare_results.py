@@ -2,6 +2,21 @@ import math
 import datetime
 import pandas as pd
 import decimal
+from tableauhyperapi import Date
+from sqlglot import parse_one, exp
+
+def get_columns_v2(query):
+    # Use sqlglot
+    gatherColumns = []
+    top_select = parse_one(query).find(exp.Select)
+    for projection in top_select.expressions:
+        projectionValue = projection.alias_or_name
+        if projectionValue == '':
+            projectionValue = projection.key
+        assert projectionValue != ''
+        gatherColumns.append(projectionValue)
+    print(gatherColumns)
+    return gatherColumns
 
 def get_columns(query):
     # Alternate method
@@ -52,7 +67,7 @@ def compare(query_file, pandas_result, sql_result, decimal_places):
     
     # Preprocessing
     # get columns of SQL
-    columns = get_columns(sql_query)
+    columns = get_columns_v2(sql_query)
     
     # If our SQL Column names have brackets in them
     # These obviously won't appear in Pandas Columns
@@ -111,6 +126,12 @@ def truncate(number, digits):
         return float(number)
     
     
+import difflib
+
+def get_overlap(s1, s2):
+    s = difflib.SequenceMatcher(None, s1, s2)
+    pos_a, pos_b, size = s.find_longest_match(0, len(s1), 0, len(s2)) 
+    return s1[pos_a:pos_a+size]
 
 
 def compare_column(sql_column, pandas_column, decimal_places):
@@ -131,6 +152,10 @@ def compare_column(sql_column, pandas_column, decimal_places):
         if isinstance(sql_column[i], datetime.date) and isinstance(pandas_column[i], pd.Timestamp):
             sql_value = pd.Timestamp(sql_column[i])
             pd_value = pandas_column[i]
+        elif isinstance(sql_column[i], Date) and isinstance(pandas_column[i], pd.Timestamp):
+            sql_year, sql_month, sql_day = sql_column[i].year, sql_column[i].month, sql_column[i].day
+            sql_value = pd.Timestamp(sql_year, sql_month, sql_day)
+            pd_value = pandas_column[i]
         else:
             sql_value = str(sql_column[i]).strip()
             pd_value = str(pandas_column[i]).strip()
@@ -143,6 +168,9 @@ def compare_column(sql_column, pandas_column, decimal_places):
             # Convert to truncated floats
             sql_trunc = truncate(sql_value, decimal_places) 
             pd_trunc = truncate(pd_value, decimal_places)
+            
+            longest_overlap = len(get_overlap(str(sql_value), str(pd_value)))
+            
             if float(sql_value) == pd_value:
                 # They are equal, left float
                 pass
@@ -154,6 +182,9 @@ def compare_column(sql_column, pandas_column, decimal_places):
                 pass
             elif sql_trunc == pd_trunc:
                 # Equal to decimal places
+                pass
+            elif longest_overlap >= 10:
+                # Long overlap, so fine
                 pass
             else:
                 column_equivalent = False

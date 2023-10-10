@@ -636,6 +636,7 @@ class UnparsePandasTree():
         self.pandas_tree = pandas_tree
         
         self.relations = set()
+        self.parserCreatedColumns = set()
         self.nodeDict = {}
         self.gatherNodeDict(self.pandas_tree)
         
@@ -666,7 +667,10 @@ class UnparsePandasTree():
         processedName = "".join(convert_expression_operator_to_column_name(expr))
         while processedName in currentNodeColumns:
             processedName = f"{processedName}{random.randint(0,9)}"
+        while processedName in self.parserCreatedColumns:
+            processedName = f"{processedName}{random.randint(0,9)}"
         current.addToTableColumns(expr)
+        self.parserCreatedColumns.add(processedName)
         return processedName
         
     def writeContent(self, content: str) -> None:

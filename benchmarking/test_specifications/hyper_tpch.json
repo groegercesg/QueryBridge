@@ -436,6 +436,6 @@
     "Data Storage": "data_storage",
     "Use Numpy": "False",
     "Results Precision": 4,
-    "Regenerate Data": "True",
+    "Regenerate Data": "False",
     "Prepare Only": "HyperDB"
 }
