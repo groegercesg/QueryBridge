@@ -1,3 +1,5 @@
+import sys
+
 class ExpressionBaseNode():
     def __init__(self):
         self.codeName = ""
@@ -246,3 +248,22 @@ class SortOperator(LeafNode):
         assert descending == True or descending == False
         self.descending = descending
         
+### Functions for handling these
+
+def str_to_class(classname):
+    return getattr(sys.modules[__name__], classname)
+
+def join_statements_with_operator(statements: list[ExpressionBaseNode], join_operator: BinaryExpressionOperator) -> ExpressionBaseNode:
+    assert len(statements) >= 2
+    assert join_operator in ["OrOperator", "AndOperator"]
+    current_op = str_to_class(join_operator)()
+    current_node = current_op
+    
+    while len(statements) > 2:
+        current_node.addLeft(statements.pop())
+        # Decide operator to add
+        current_node.addRight(str_to_class(join_operator)())
+        current_node = current_node.right
+    current_node.addLeft(statements.pop())
+    current_node.addRight(statements.pop())
+    return current_op

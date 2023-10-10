@@ -154,8 +154,8 @@ def parse_explain_plans():
     all_operator_trees = []
     for sql_file, explain_file in combined_sql_content:
         # Next queries: The rest
-        if explain_file.split("_")[0] not in ["22"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
-           continue
+        # if explain_file.split("_")[0] not in ["21"]: # "1", "3", "6", "10", "19", "18", "4", "14", "16", "5", "8", "9", "11", "12", "13", "7"
+        #    continue
          
         print(f"Transforming {explain_file} into a Hyper Tree")
         with open(f'{explain_directory}/{explain_file}') as r:
@@ -211,22 +211,25 @@ def parse_explain_plans():
     # Unparse Pandas Trees to list
     failed_counter = 0
     for tree in all_operator_trees:
-        # try:
-        pandas_content = UnparsePandasTree(tree[1]).getPandasContent()
-        # except:
-        #     print(f"Pandas Generation for Query '{tree[0]}' Failed.")
-        #     failed_counter += 1
+        try:
+            pandas_content = UnparsePandasTree(tree[1]).getPandasContent()
+        except:
+            print(f"Pandas Generation for Query '{tree[0]}' Failed.")
+            failed_counter += 1
             
-        print(f"Pandas Content for Plan '{tree[0]}':")
-        for line in pandas_content:
-            print(line)
-        print("-" * 15)
+        # print(f"Pandas Content for Plan '{tree[0]}':")
+        # for line in pandas_content:
+        #     print(line)
+        # print("-" * 15)
     
     if failed_counter > 0:
         print("-"*10)
         print(f"We failed {failed_counter} out of {len(all_operator_trees)}; or {round((failed_counter / len(all_operator_trees)) * 100, 2)}%.")
+    else:
+        print("-"*10)
+        print(f"We succeeded in unparsing all {len(all_operator_trees)} Pandas trees into Pandas Content")
     
-    print("Unparsed Pandas Tree into Pandas Content")
+    print("Unparsed Pandas Tree(s) into Pandas Content")
     
 from pandas_unparser_v2 import *
 from universal_plan_nodes import *
@@ -409,24 +412,6 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
 from expression_operators import *
 import datetime
 import struct
-    
-def str_to_class(classname):
-    return getattr(sys.modules[__name__], classname)
-    
-def join_statements_with_operator(statements: list[ExpressionBaseNode], join_operator: BinaryExpressionOperator) -> ExpressionBaseNode:
-    assert len(statements) >= 2
-    assert join_operator in ["OrOperator", "AndOperator"]
-    current_op = str_to_class(join_operator)()
-    current_node = current_op
-    
-    while len(statements) > 2:
-        current_node.addLeft(statements.pop())
-        # Decide operator to add
-        current_node.addRight(str_to_class(join_operator)())
-        current_node = current_node.right
-    current_node.addLeft(statements.pop())
-    current_node.addRight(statements.pop())
-    return current_op
 
 def transform_hyper_iu_references(op_tree: HyperBaseNode):
     def hyper_restriction_parsing(restriction, table_columns, iu_references):

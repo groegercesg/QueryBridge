@@ -1,10 +1,14 @@
 from collections import defaultdict, Counter
+import copy
 import random
 
 from universal_plan_nodes import *
 from expression_operators import *
 
 TAB = "    "
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
 
 def convert_aggregation_tree_to_pandas(aggr_tree: ExpressionBaseNode, dataFrameName: str) -> str:
     # Visit Children
@@ -547,6 +551,21 @@ def join_overlap_column_renaming(node: JoinNode, columnOverlap: set):
     for col in node.right.columns:
         if col.codeName in [x.codeName for x in columnOverlap]:
             col.codeName = f"{col.codeName}_y"
+            
+def join_overlap_column_renaming_list(options: list[ExpressionBaseNode], columnOverlap: set):
+    # There was column overlap between the tables
+    # so '_x' and '_y' versions have been created.
+    xGivenCols = set()
+    yGivenCols = set()
+    # Set them to be _x and _y
+    for col in options:
+        if col.codeName in [x.codeName for x in columnOverlap] and not col.codeName in xGivenCols:
+            xGivenCols.add(col.codeName)
+            col.codeName = f"{col.codeName}_x"
+    for col in options:
+        if col.codeName in [x.codeName for x in columnOverlap] and not col.codeName in yGivenCols:
+            yGivenCols.add(col.codeName)
+            col.codeName = f"{col.codeName}_y"
 
 def do_join_key_separation(node: JoinNode):
     leftValues = []
@@ -784,29 +803,13 @@ class UnparsePandasTree():
         # Get child name
         childTableList = self.getChildTableNames(node)
         assert len(childTableList) == 2
-    
-        if any(isinstance(x, LookupOperator) for x in node.joinCondition) and node.joinMethod == "bnl":
-            # This is a batch-nested loop situation
-            assert node.joinType == "inner"
-            node.joinType = "bnl"
-        elif not all(isinstance(x, EqualsOperator) for x in node.joinCondition):
-            # This is a non-equi join situation
-            assert node.joinType == "inner"
-            node.joinType = "non-equi"
-            
-        if node.joinMethod != "bnl":                
-            leftKeys, rightKeys = do_join_key_separation(node)
-            
-            leftKeysString = [self.__getPandasRepresentationForColumn(x) for x in leftKeys]
-            rightKeysString = [self.__getPandasRepresentationForColumn(x) for x in rightKeys]
-            
-            assert node.checkLeftRightKeysValid(leftKeysString, rightKeysString)
-        else:
-            # Initialise as sets for proper form
-            leftKeys, rightKeys = set(), set()
         
+        # Set leftTable and rightTable
+        leftTable = childTableList[0]
+        rightTable = childTableList[1]
+        
+        # Decide the joinMethod
         joinMethod = None
-        
         match node.joinMethod:
             case "hash":
                 # If you set 'merge(Sort=False)', then it's a Hash Join
@@ -820,7 +823,72 @@ class UnparsePandasTree():
                 raise Exception(f"Unknown Join Method provided: {node.joinMethod}")
         
         assert joinMethod != None
-        
+    
+        if any(isinstance(x, LookupOperator) for x in node.joinCondition) and node.joinMethod == "bnl":
+            # This is a batch-nested loop situation
+            assert node.joinType == "inner"
+            node.joinType = "bnl"
+        elif not all(isinstance(x, EqualsOperator) for x in node.joinCondition):
+            # This is a non-equi join situation
+            operatorCount = Counter(node.joinCondition)
+            if operatorCount[EqualsOperator()] == 1 and operatorCount[NotEqualsOperator()] >= 1:
+                # Inner cond situation
+                # The left and right of the equals operator should be the same code name
+                # We refer to this henceforth as the filter_key
+                innerTableName = f"inner_cond"
+                equalOperator = list(filter(lambda x: isinstance(x, EqualsOperator), node.joinCondition))
+                assert len(equalOperator) == 1
+                equalOperator = equalOperator[0]
+                assert equalOperator.left.codeName == equalOperator.right.codeName
+                innerKey = equalOperator.left.codeName
+                # Check the joinCondition didn't have things other than Equals and NotEquals
+                assert len(set(operatorCount.keys()) - set([EqualsOperator(), NotEqualsOperator()])) == 0
+                # Pull out the inner cond, use a deep copy, as we'll be editing some stuff
+                inner_condition_operators = copy.deepcopy(list(filter(lambda x: isinstance(x, NotEqualsOperator), node.joinCondition)))
+                assert len(inner_condition_operators) > 0
+                # Do intersection thing with "_x" and "_y"; only with innerConditionColumns!
+                innerConditionColumns = flatten([[x.left, x.right] for x in inner_condition_operators])
+                columnOverlap = node.left.columns.intersection(node.right.columns) - set([equalOperator.left, equalOperator.right])
+                if columnOverlap:
+                    join_overlap_column_renaming_list(innerConditionColumns, columnOverlap)
+                
+                if len(inner_condition_operators) == 1:
+                    innerCondition = convert_expression_operator_to_pandas(inner_condition_operators[0], innerTableName)#
+                else:
+                    # 2 or more inner conditions
+                    and_join = join_statements_with_operator(inner_condition_operators, "AndOperator")
+                    innerCondition = convert_expression_operator_to_pandas(and_join, innerTableName)#
+               
+                self.writeContent(
+                    f"{innerTableName} = {leftTable}.merge({rightTable}, left_on='{innerKey}', right_on='{innerKey}', how='{'inner'}', sort={joinMethod})"
+                )
+                
+                projectInnerCondWithKey = ""
+                if node.joinType not in ['rightsemijoin', 'leftsemijoin']:
+                    projectInnerCondWithKey = f"['{innerKey}']"
+                    
+                self.writeContent(
+                    f"{innerTableName} = {innerTableName}[{innerCondition}]{projectInnerCondWithKey}"
+                )
+                
+                # Set the values for the main join
+                node.joinCondition = [equalOperator]
+                rightTable = innerTableName
+            else:
+                assert node.joinType == "inner"
+                node.joinType = "non-equi"
+                
+        if node.joinMethod != "bnl":                
+            leftKeys, rightKeys = do_join_key_separation(node)
+            
+            leftKeysString = [self.__getPandasRepresentationForColumn(x) for x in leftKeys]
+            rightKeysString = [self.__getPandasRepresentationForColumn(x) for x in rightKeys]
+            
+            assert node.checkLeftRightKeysValid(leftKeysString, rightKeysString)
+        else:
+            # Initialise as sets for proper form
+            leftKeys, rightKeys = set(), set()
+               
         # And set the table columns
         match node.joinType:
             case "inner":
@@ -831,34 +899,34 @@ class UnparsePandasTree():
                     assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
                     
                 self.writeContent(
-                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'inner'}', sort={joinMethod})"
+                    f"{createdDataFrameName} = {leftTable}.merge({rightTable}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'inner'}', sort={joinMethod})"
                 )
                 node.columns = node.left.columns.union(node.right.columns)
             case "rightsemijoin":
                 if len(leftKeysString) == 1 and len(rightKeysString) == 1:
                     self.writeContent(
-                        f"{createdDataFrameName} = {childTableList[1]}[{childTableList[1]}['{rightKeysString[0]}'].isin({childTableList[0]}['{leftKeysString[0]}'])]"
+                        f"{createdDataFrameName} = {rightTable}[{rightTable}['{rightKeysString[0]}'].isin({leftTable}['{leftKeysString[0]}'])]"
                     )
                 else:
                     self.writeContent(
-                        f"{createdDataFrameName} = {childTableList[1]}[{childTableList[1]}[{rightKeysString}].isin({childTableList[0]}.set_index([{leftKeysString}]).index)]"
+                        f"{createdDataFrameName} = {rightTable}[{rightTable}[{rightKeysString}].isin({leftTable}.set_index([{leftKeysString}]).index)]"
                     )
                 node.columns = node.right.columns
             case "leftsemijoin":
                 if len(leftKeysString) == 1 and len(rightKeysString) == 1:
                     self.writeContent(
                         # df_join_1 = df_scan_1[df_scan_1['o_orderkey'].isin(df_scan_2["l_orderkey"])]
-                        f"{createdDataFrameName} = {childTableList[0]}[{childTableList[0]}['{leftKeysString[0]}'].isin({childTableList[1]}['{rightKeysString[0]}'])]"
+                        f"{createdDataFrameName} = {leftTable}[{leftTable}['{leftKeysString[0]}'].isin({rightTable}['{rightKeysString[0]}'])]"
                     )
                 else:
                     self.writeContent(
                         # df_join_1 = df_scan_1[df_scan_1[['o_orderkey']].isin(df_scan_2.set_index(["l_orderkey"]).index)]
-                        f"{createdDataFrameName} = {childTableList[0]}[{childTableList[0]}[{leftKeysString}].isin({childTableList[1]}.set_index([{rightKeysString}]).index)]"
+                        f"{createdDataFrameName} = {leftTable}[{leftTable}[{leftKeysString}].isin({rightTable}.set_index([{rightKeysString}]).index)]"
                     )
                 node.columns = node.left.columns
             case "leftantijoin" | "rightantijoin":
                 self.writeContent(
-                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'outer'}', sort={joinMethod}, indicator=True)"
+                    f"{createdDataFrameName} = {leftTable}.merge({rightTable}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'outer'}', sort={joinMethod}, indicator=True)"
                 )
                 
                 # Set the joinKeep
@@ -885,7 +953,7 @@ class UnparsePandasTree():
                 
                 joinCondition = convert_expression_operator_to_pandas(node.joinCondition[0], createdDataFrameName)
                 self.writeContent(
-                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, how='{'cross'}', sort={joinMethod})"
+                    f"{createdDataFrameName} = {leftTable}.merge({rightTable}, how='{'cross'}', sort={joinMethod})"
                 )
                 self.writeContent(
                     f"{createdDataFrameName} = {createdDataFrameName}[{joinCondition}]"
@@ -899,7 +967,7 @@ class UnparsePandasTree():
                     assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
                 
                 self.writeContent(
-                    f"{createdDataFrameName} = {childTableList[0]}.merge({childTableList[1]}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'outer'}', sort={joinMethod})"
+                    f"{createdDataFrameName} = {leftTable}.merge({rightTable}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'outer'}', sort={joinMethod})"
                 )
                 node.columns = node.left.columns.union(node.right.columns)
             case "bnl":
@@ -909,17 +977,15 @@ class UnparsePandasTree():
                     join_overlap_column_renaming(node, columnOverlap)
                     assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
                 
-                leftDF = childTableList[0]
-                rightDF = childTableList[1]
                 defaultBlockSize = 10
                 intermediateDataframeName = "joined_block"
                 joinCondition = convert_expression_operator_to_pandas(node.joinCondition[0], intermediateDataframeName)
                 self.writeContent(
                     f"result_blocks = []\n"
-                    f"for i in range(0, len({leftDF}), {defaultBlockSize}):\n"
-                    f"{TAB}block_left = {leftDF}.iloc[i:i+{defaultBlockSize}]\n"
-                    f"{TAB}for j in range(0, len({rightDF}), {defaultBlockSize}):\n"
-                    f"{TAB}{TAB}block_right = {rightDF}.iloc[j:j+{defaultBlockSize}]\n"
+                    f"for i in range(0, len({leftTable}), {defaultBlockSize}):\n"
+                    f"{TAB}block_left = {leftTable}.iloc[i:i+{defaultBlockSize}]\n"
+                    f"{TAB}for j in range(0, len({rightTable}), {defaultBlockSize}):\n"
+                    f"{TAB}{TAB}block_right = {rightTable}.iloc[j:j+{defaultBlockSize}]\n"
                     f"{TAB}{TAB}{intermediateDataframeName} = pd.merge(block_left, block_right, how='{'cross'}')\n"
                     f"{TAB}{TAB}{intermediateDataframeName} = {intermediateDataframeName}[{joinCondition}]\n"
                     f"{TAB}{TAB}result_blocks.append({intermediateDataframeName})\n"
@@ -930,11 +996,6 @@ class UnparsePandasTree():
                 node.columns = node.left.columns.union(node.right.columns)
             case _:
                 raise Exception(f"Unexpected Join Type supplied: {node.joinType}")
-        
-        # Look for duplicate columns
-        columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))
-        if columnOverlap:
-            raise Exception("We have column overlap, we should be resolving this elsewhere")
         
         # Set the tableName
         node.tableName = createdDataFrameName
