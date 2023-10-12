@@ -501,14 +501,14 @@ def main():
                         for row in sql_result:
                             print(row)
                     else:
-                        if args.verbose:
-                            print(color.GREEN + str(query["Query Name"]) + ": The returned data was correct and the same!" + "\n" + "Between " + str(pandas_name) + " and " + str(sql_name) + "." + color.END)
-                            print("Pandas Data:")
-                            print(pandas_result)
-                            print("SQL Data:")
-                            print(columns)
-                            for row in sql_result:
-                                print(row)
+                        print(color.GREEN + str(query["Query Name"]) + ": The returned data was correct and the same!" + "\n" + "Between " + str(pandas_name) + " and " + str(sql_name) + "." + color.END)
+                        # if args.verbose:
+                        #     print("Pandas Data:")
+                        #     print(pandas_result)
+                        #     print("SQL Data:")
+                        #     print(columns)
+                        #     for row in sql_result:
+                        #         print(row)
                         
             # Write results, use from results_array
             for result_set in results_array:

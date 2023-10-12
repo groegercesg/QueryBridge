@@ -2,6 +2,7 @@ from collections import defaultdict
 from copy import deepcopy
 import functools
 import sys
+from sqlglot import parse_one, exp
 
 class TreeHelper():
     def __init__(self, expr_tree_output_path, benchmarking, in_use_numpy, in_groupbyfusion, in_mergefusion):
@@ -24,12 +25,25 @@ class CodeCompilation():
         self.indexes = []
         self.relations = []
         self.sql = sql_class
+        self.specialoutputs = self.__process_sql_to_get_special_outputs(self.sql)
+        self.specialrenames = {}
         self.column_ordering = column_ordering
         self.column_limiting = column_limiting
         self.bracket_replace = {}
         self.useAlias = {}
         self.aliasRelationPairs = {}
-        
+    
+    def __process_sql_to_get_special_outputs(self, sql):
+            # Use sqlglot
+            gatherColumns = dict()
+            top_select = parse_one(sql.file_content).find(exp.Select)
+            for projection in top_select.expressions:
+                if  projection.alias_or_name == '':
+                    assert projection.sql().lower() != ""
+                    assert projection.key != ""
+                    gatherColumns[projection.sql().lower()] = projection.key
+            return gatherColumns
+    
     def setAggr(self, aggr):
         self.usePostAggr = aggr
         
@@ -66,6 +80,8 @@ class CodeCompilation():
         new_relations = list(set(self.relations + other.relations))
         # sql
         new_sql = self.sql
+        new_specialoutputs = self.specialoutputs | other.specialoutputs
+        new_specialrenames = self.specialrenames | other.specialrenames
         # usePostAggr
         new_use_post_aggr = self.usePostAggr or other.usePostAggr
         # useAlias

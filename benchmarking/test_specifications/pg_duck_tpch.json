@@ -439,7 +439,7 @@
         {
             "Query Name": "Query 15",
             "Required Data": ["lineitem", "supplier"],
-            "SQL Name": "15.sql",
+            "SQL Name": "15_cte.sql",
             "Options": [
                 {
                     "Type": "SQL",
@@ -463,7 +463,8 @@
                     "Converter": "True",
                     "Converted Name": "pg_q15_pandas.py",
                     "Results Name": "Pandas Converted (Postgres)",
-                    "Query Plan": "Postgres"
+                    "Query Plan": "Postgres",
+                    "SQL Name": "15.sql"
                 }
             ]
         },
@@ -690,14 +691,15 @@
     "SQL Queries Location": "benchmarking/queries",
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 6,
+    "Number of Query Runs": 1,
     "Results Location": "benchmarking/test_results/pg_duck_tpch_test_results_sem2.csv",
     "Postgres Connection Details": "postgres_connection.json",
     "Duck DB Connection": "duckdb_tpch.duckdb",
+    "Hyper DB Connection": "hyperdb_tpch.hyper",
     "DB Gen Location": "tpch-dbgen",
     "Constants Location": "tpch-prep",
     "Data Storage": "data_storage",
     "Use Numpy": "False",
     "Results Precision": 4,
-    "Regenerate Data": "True"
+    "Regenerate Data": "False"
 }

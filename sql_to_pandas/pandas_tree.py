@@ -1,5 +1,6 @@
 # Date conversion
 import pandas as pd
+import random
 
 # SQL Parsing
 from sqlglot import parse_one, exp
@@ -47,7 +48,7 @@ def process_output(self, output, codecomphelper):
                     #output[i] = brack_cleaned_output
         # Make lowercase as well
         # Do section that uses the codeCompHelper bracket_replace
-        is_complex, brack_replace_output = complex_name_solve(brack_cleaned_output) 
+        is_complex, brack_replace_output = complex_name_solve(brack_cleaned_output, codecomphelper) 
         if hasattr(codecomphelper, "bracket_replace"):
             for x in list(codecomphelper.bracket_replace):
                 if x in relation_cleaned_output:
@@ -64,7 +65,7 @@ def process_output(self, output, codecomphelper):
                         left_over_parts = relation_cleaned_output.split(x)
                         solved_parts = []
                         for j in range(len(left_over_parts)):
-                            is_comp, new_elem = complex_name_solve(left_over_parts[j])
+                            is_comp, new_elem = complex_name_solve(left_over_parts[j], codecomphelper)
                             solved_parts.append(new_elem)
                     
                         # Join in back together
@@ -1930,7 +1931,7 @@ def do_aggregation(self, prev_df, this_df, codeCompHelper, treeHelper):
             pandas = tree.evaluate()
             
             # Handle complex names in output
-            is_complex, new_name = complex_name_solve(col)
+            is_complex, new_name = complex_name_solve(col, codeCompHelper)
             if is_complex == True:
                 # Replace these
                 codeCompHelper.add_bracket_replace(col, new_name)
@@ -2235,7 +2236,7 @@ def handle_complex_aggregations(self, data, codeCompHelper, treeHelper, prev_df,
                 for item in after:
                     
                     # Handle complex names in output
-                    is_complex, new_name = complex_name_solve(col)
+                    is_complex, new_name = complex_name_solve(col, codeCompHelper)
                     if is_complex == True:
                         if cases != {}:
                             if cases.get(col, None) != None:
@@ -2496,7 +2497,7 @@ class group_aggr_node():
                 before_filter, during_filter, after_filter = handle_complex_aggregations(self, cut_filter, codeCompHelper, treeHelper, prev_df, this_df, {})
             else:
                 raise ValueError("Unrecognised type of filter for the Group Aggregation Node, filter: " + str(self.filter))
-        
+            
         instructions = []
         
         # Track the replaces of cases
@@ -2666,7 +2667,7 @@ class group_aggr_node():
         # Handle before
         for before_name, before_command in before_group:
             # Handle complex names in output
-            is_complex, new_name = complex_name_solve(before_name)
+            is_complex, new_name = complex_name_solve(before_name, codeCompHelper)
             if is_complex == True:
                 # Replace these
                 codeCompHelper.add_bracket_replace(before_name, new_name)
@@ -2706,7 +2707,7 @@ class group_aggr_node():
                 during_col = during_col[1:-1]
                       
             # Handle brackets in output
-            is_complex, new_name = complex_name_solve(during_name)
+            is_complex, new_name = complex_name_solve(during_name, codeCompHelper)
             if is_complex == True:
                 # Replace these
                 codeCompHelper.add_bracket_replace(during_name, new_name)
@@ -2751,6 +2752,14 @@ class group_aggr_node():
             
         # Apply post_filters
         if hasattr(self, "filter"):
+            # Quickly preprocess
+            for i in range(len(filter_steps)):
+                for key in codeCompHelper.specialoutputs:
+                    clean_key = key.replace("(", "").replace(")", "")
+                    if clean_key in filter_steps[i][0]:
+                        inv_special_renames = {v: k for k, v in codeCompHelper.specialrenames.items()}
+                        filter_steps[i][0] = inv_special_renames[codeCompHelper.specialoutputs[key]]
+        
             # check codeCompHelper.bracket_replace
             # df_group_1 = df_group_1[df_group_1.sum_quantity > 300]
             for name, type, amount in filter_steps:
@@ -2763,6 +2772,41 @@ class group_aggr_node():
         
         # Choose aliases
         output_cols = choose_aliases(self, codeCompHelper)
+        other_output_cols = [idx[0] for idx in after_group]
+        
+        gather_renames = dict()
+        for idx, col in enumerate(output_cols):
+            if col in codeCompHelper.specialrenames:
+                newValue = codeCompHelper.specialrenames[col]
+                gather_renames[col] = newValue
+                output_cols[idx] = newValue
+                originalValue = {v: k for k, v in codeCompHelper.specialoutputs.items()}[newValue]
+                # Remove from specialoutputs
+                codeCompHelper.specialoutputs = {key:val for key, val in codeCompHelper.specialoutputs.items() if val != newValue}
+                # And from specialrenames
+                codeCompHelper.specialrenames = {key:val for key, val in codeCompHelper.specialrenames.items() if val != newValue}
+                # Reset bracketreplace
+                codeCompHelper.bracket_replace = {key:val for key, val in codeCompHelper.bracket_replace.items() if val != col}
+                codeCompHelper.bracket_replace[originalValue] = newValue
+        
+        for idx, col in enumerate(other_output_cols):
+            if col in codeCompHelper.specialrenames:
+                newValue = codeCompHelper.specialrenames[col]
+                gather_renames[col] = newValue
+                
+                # Remove from specialoutputs
+                codeCompHelper.specialoutputs = {key:val for key, val in codeCompHelper.specialoutputs.items() if val != newValue}
+                # And from specialrenames
+                codeCompHelper.specialrenames = {key:val for key, val in codeCompHelper.specialrenames.items() if val != newValue}
+                # Reset bracketreplace
+                codeCompHelper.bracket_replace = {key:val for key, val in codeCompHelper.bracket_replace.items() if val != col}
+        
+        
+        if gather_renames != {}:
+            # df_output_1 = df_limit_1.rename(columns={'l_quantitysum7': 'sum'})
+            statement_string = f"{this_df} = {this_df}.rename(columns={gather_renames})"
+            instructions.append(statement_string)
+        
         
         # Check output_cols for bracket replaces
         for i in range(len(output_cols)):
@@ -2807,7 +2851,7 @@ class group_aggr_node():
         
         return instructions   
     
-def complex_name_solve(in_name):
+def complex_name_solve(in_name, codeCompHelper):
     complex_items = ["*", "-", "(", ")", " ", "/", "+", "-", "*", "."]
     
     is_complex = False
@@ -2817,6 +2861,12 @@ def complex_name_solve(in_name):
     if in_name in complex_items:
         return is_complex, in_name
     
+    # Detect sum
+    if ("sum(" in in_name) and (")" in in_name) and in_name in codeCompHelper.specialoutputs:
+        # We need to add to a something
+        new_name = f"{codeCompHelper.specialoutputs[in_name]}{random.randint(0,9)}"
+        codeCompHelper.specialrenames[new_name] = codeCompHelper.specialoutputs[in_name]
+        return True, new_name
     
     if any(item in in_name for item in complex_items):
         # We have one of these items in our string
@@ -3195,7 +3245,7 @@ class merge_node():
                 # Output has no column name
                 # Use solve_complex_name
                 
-                is_complex, new_name = complex_name_solve(self.output[substring_present]) 
+                is_complex, new_name = complex_name_solve(self.output[substring_present], codeCompHelper) 
                 if is_complex == True:
                     statement = str(this_df) + "['" + str(new_name) + "'] = " + this_df + "." + str(self.output[substring_present])
                     instructions.append(statement)

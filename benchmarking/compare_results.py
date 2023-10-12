@@ -6,9 +6,12 @@ from tableauhyperapi import Date
 from sqlglot import parse_one, exp
 
 def get_columns_v2(query):
-    # Use sqlglot
+    # Use sqlglot, remove views from the query
+    if "create view" in query:
+        query = query.split(";")[1].strip()
+    parsed_query = parse_one(query)
     gatherColumns = []
-    top_select = parse_one(query).find(exp.Select)
+    top_select = parsed_query.find(exp.Select)
     for projection in top_select.expressions:
         projectionValue = projection.alias_or_name
         if projectionValue == '':
