@@ -489,7 +489,15 @@ def main():
                 for pandas_name, pandas_result in pandas_results_list:
                     assert isinstance(pandas_result, pd.DataFrame)
                     # We should check if pandas_result is the same as sql_result
-                    compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"])
+                    
+                    compare_order_checking = None
+                    if "Order Checking" in manifest_json:
+                        compare_order_checking = manifest_json["Order Checking"]
+                    else:
+                        # Default is we check the order
+                        compare_order_checking = True
+                    
+                    compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"], compare_order_checking)
                     compare_decisions_list.append(compare_decision)
                     
                     if not compare_decision:

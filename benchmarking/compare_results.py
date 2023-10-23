@@ -60,7 +60,7 @@ def get_columns(query):
         split_query[i] = str(split_query[i]).replace(" ", "")
     return split_query
 
-def compare(query_file, pandas_result, sql_result, decimal_places):
+def compare(query_file, pandas_result, sql_result, decimal_places, order_checking):
     # Compare Result
     compare_result = True
     
@@ -103,13 +103,15 @@ def compare(query_file, pandas_result, sql_result, decimal_places):
     # Iterate through Columnns of SQL_Result
     # Compare the column to the columns[idx] of pandas_result
     for i in range(len(columns)):
-        column_compare = compare_column([row[i] for row in sql_result], pandas_result[columns[i]].tolist(), decimal_places)
+        if order_checking == True:
+            column_compare = compare_column([row[i] for row in sql_result], pandas_result[columns[i]].tolist(), decimal_places)
+        else:
+            column_compare = compare_column_no_order([row[i] for row in sql_result], pandas_result[columns[i]].tolist(), decimal_places)
         # Only propagate decision forward, if is "False"
         # I.e. Don't give a decision of True, as this will overwrite previous Falses
         if column_compare == False:
             compare_result = False
             return compare_result, columns
-        
     
     return compare_result, columns
 
@@ -137,6 +139,81 @@ def get_overlap(s1, s2):
     return s1[pos_a:pos_a+size]
 
 
+def compare_column_no_order(sql_column, pandas_column, decimal_places):
+    """Function to compare two lists of data for accuracy
+    """
+    column_equivalent = False
+    
+    if len(sql_column) != len(pandas_column):
+        return column_equivalent
+    
+    sql_first_type = type(sql_column[0])
+    assert(all(isinstance(x, sql_first_type) for x in sql_column))
+    pandas_first_type = type(pandas_column[0])
+    assert(all(isinstance(x, pandas_first_type) for x in pandas_column))
+    
+    column_types = set([sql_first_type, pandas_first_type])
+    
+    if column_types == set([type("a")]):
+        # String
+        
+        column_equivalent = set(sql_column) == set(pandas_column)
+    elif column_types == set([decimal.Decimal, float]):
+        # Decimal and Float
+        sql_column = from_decimal_to_float(sql_column, decimal_places)
+        pandas_column = from_decimal_to_float(pandas_column, decimal_places)
+        
+        column_equivalent = set(sql_column) == set(pandas_column)
+    elif column_types == set([type(1.012)]):
+        # Float
+        sql_column = from_decimal_to_float(sql_column, decimal_places)
+        pandas_column = from_decimal_to_float(pandas_column, decimal_places)
+        
+        sql_column_sorted = sorted(sql_column)
+        pandas_column_sorted = sorted(pandas_column)
+        
+        overlaps = []
+        for i in range(len(sql_column)):
+            overlaps.append(len(get_overlap(str(sql_column_sorted[i]), str(pandas_column_sorted[i]))))
+        
+        column_equivalent = (set(sql_column) == set(pandas_column)) or (len(overlaps) == len(list(filter(lambda x: x >= 10, overlaps))))
+    elif column_types == set([type(1)]):
+        # Int
+        
+        column_equivalent = set(sql_column) == set(pandas_column)
+    elif column_types == set([type("STR")]):
+        # String
+        for i in range(len(sql_column)):
+            sql_column[i] = str(sql_column[i]).strip()
+            pandas_column[i] = str(pandas_column[i]).strip()
+            
+        print(sql_column[0])
+        print(pandas_column[0])
+        
+        column_equivalent = set(sql_column) == set(pandas_column)
+    else:
+        raise Exception(f"Unknown type of column_types: {column_types}")
+    
+    if column_equivalent == False:
+        print(sql_column)
+        print(pandas_column)
+        print(sql_column[0])
+        print(pandas_column[0])
+        print("=" * 20)
+        print(set.intersection(set(sql_column), set(pandas_column)))
+        print(len(set(sql_column)))
+        print(len(set(pandas_column)))
+        print(column_types)
+        print( column_types == set([type("STR")]))
+        raise Exception()
+    
+    return column_equivalent
+
+def from_decimal_to_float(columns_values, decimal_places):
+    for i in range(len(columns_values)):
+        columns_values[i] = float(truncate(columns_values[i], decimal_places))
+    return columns_values
+
 def compare_column(sql_column, pandas_column, decimal_places):
     """Function to compare two lists of data for accuracy
 
@@ -161,8 +238,7 @@ def compare_column(sql_column, pandas_column, decimal_places):
             pd_value = pandas_column[i]
         else:
             sql_value = str(sql_column[i]).strip()
-            pd_value = str(pandas_column[i]).strip()
-            
+            pd_value = str(pandas_column[i]).strip() 
         
         if sql_value == pd_value:
             # They are Equal, next item

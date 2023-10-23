@@ -1,0 +1,970 @@
+{
+    "Test Name": "Postgres, Duck DB and Hyper DB TPC-H No Limit Or Order Test",
+    "Scaling Factors": [1],
+    "Queries": [
+        {
+            "Query Name": "Query 1",
+            "Required Data": ["lineitem"],
+            "SQL Name": "1.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q1_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q1_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q1_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 2",
+            "Required Data": ["part", "supplier", "partsupp", "nation", "region"],
+            "SQL Name": "2.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q2_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q2_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q2_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 3",
+            "Required Data": ["customer", "orders", "lineitem"],
+            "SQL Name": "3.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q3_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q3_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q3_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 4",
+            "Required Data": ["orders", "lineitem"],
+            "SQL Name": "4.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q4_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q4_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q4_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 5",
+            "Required Data": ["customer", "orders", "lineitem", "supplier", "nation", "region"],
+            "SQL Name": "5.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q5_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q5_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q5_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 6",
+            "Required Data": ["lineitem"],
+            "SQL Name": "6.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q6_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q6_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q6_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 7",
+            "Required Data": ["supplier", "lineitem", "orders", "customer", "nation"],
+            "SQL Name": "7.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q7_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q7_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q7_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 8",
+            "Required Data": ["part", "supplier", "lineitem", "orders", "customer", "nation", "region"],
+            "SQL Name": "8.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q8_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q8_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q8_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 9",
+            "Required Data": ["part", "supplier", "lineitem", "partsupp", "orders", "nation"],
+            "SQL Name": "9.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q9_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q9_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q9_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 10",
+            "Required Data": ["customer", "orders", "lineitem", "nation"],
+            "SQL Name": "10.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q10_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q10_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q10_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 11",
+            "Required Data": ["partsupp", "supplier", "nation"],
+            "SQL Name": "11.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q11_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q11_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q11_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 12",
+            "Required Data": ["orders", "lineitem"],
+            "SQL Name": "12.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q12_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q12_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q12_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 13",
+            "Required Data": ["customer", "orders"],
+            "SQL Name": "13.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q13_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q13_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q13_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 14",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "14.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q14_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q14_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q14_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 15",
+            "Required Data": ["lineitem", "supplier"],
+            "SQL Name": "15_cte.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q15_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q15_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres",
+                    "SQL Name": "15.sql"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q15_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 16",
+            "Required Data": ["partsupp", "part", "supplier"],
+            "SQL Name": "16.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q16_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q16_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q16_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 17",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "17.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q17_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q17_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q17_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 18",
+            "Required Data": ["customer", "orders", "lineitem"],
+            "SQL Name": "18.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q18_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q18_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q18_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 19",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "19.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q19_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q19_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q19_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 20",
+            "Required Data": ["supplier", "nation", "partsupp", "part", "lineitem"],
+            "SQL Name": "20.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q20_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q20_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q20_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 21",
+            "Required Data": ["supplier", "lineitem", "orders", "nation"],
+            "SQL Name": "21.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q21_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q21_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q21_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 22",
+            "Required Data": ["customer", "orders"],
+            "SQL Name": "22.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Postgres",
+                    "DBMS": "Postgres"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Duck DB",
+                    "DBMS": "Duck DB"
+                },
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "duck_q22_pandas.py",
+                    "Results Name": "Pandas Converted (Duck DB)",
+                    "Query Plan": "Duck DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "pg_q22_pandas.py",
+                    "Results Name": "Pandas Converted (Postgres)",
+                    "Query Plan": "Postgres"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q22_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        }
+    ],
+    "Temporary Directory": "benchmarking/temp_queries",
+    "SQL Converter Location": "sql_to_pandas/sql_to_pandas.py",
+    "SQL Queries Location": "sql_to_pandas/tpch_no_limit_order",
+    "Stored Queries Location": "benchmarking/stored_queries",
+    "Pandas Data Loader": "tpch_data_loader.py",
+    "Number of Query Runs": 1,
+    "Results Location": "benchmarking/test_results/pg_duck_hyper_tpch_no_limit_order_test_results.csv",
+    "Postgres Connection Details": "postgres_connection.json",
+    "Duck DB Connection": "duckdb_tpch.duckdb",
+    "Hyper DB Connection": "hyperdb_tpch.hyper",
+    "DB Gen Location": "tpch-dbgen",
+    "Constants Location": "tpch-prep",
+    "Data Storage": "data_storage",
+    "Use Numpy": "False",
+    "Results Precision": 4,
+    "Regenerate Data": "False",
+    "Order Checking": "False"
+}
