@@ -1,7 +1,6 @@
 Data Type,Scaling Factor,Query Name,Query Number,Average,Correct,Executed,Runs
-SQL,1,Postgres,Query 1,6.53,True,Yes,[6.526731252670288]
-SQL,1,Duck DB,Query 1,0.354,True,Yes,[0.35398244857788086]
-SQL,1,Hyper DB,Query 1,0.252,True,Yes,[0.25170135498046875]
-Pandas,1,Pandas Converted (Duck DB),Query 1,1.54,True,Yes,[1.5409862995147705]
-Pandas,1,Pandas Converted (Postgres),Query 1,1.85,True,Yes,[1.8468658924102783]
-Pandas,1,Pandas Converted (Hyper DB),Query 1,1.38,True,Yes,[1.3828237056732178]
+SQL,1,Postgres,Query 1,6.55,True,Yes,[6.552277565002441]
+SQL,1,Duck DB,Query 1,0.472,True,Yes,[0.4724717140197754]
+SQL,1,Hyper DB,Query 1,0.243,True,Yes,[0.24334502220153809]
+Pandas,1,Pandas Converted (Duck DB),Query 1,1.36,True,Yes,[1.364367961883545]
+Pandas,1,Pandas Converted (Hyper DB),Query 1,1.14,True,Yes,[1.1371734142303467]

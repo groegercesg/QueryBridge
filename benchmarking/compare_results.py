@@ -1,4 +1,4 @@
-import math
+from collections import Counter
 import datetime
 import pandas as pd
 import decimal
@@ -186,20 +186,49 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places):
         for i in range(len(sql_column)):
             sql_column[i] = str(sql_column[i]).strip()
             pandas_column[i] = str(pandas_column[i]).strip()
-            
-        print(sql_column[0])
-        print(pandas_column[0])
+        
+        column_equivalent = set(sql_column) == set(pandas_column)
+    elif column_types == set([pd.Timestamp, Date]):
+        # Timestamp and (Hyper) Date, convert hyper date to pd.Timestamp
+        
+        if isinstance(sql_column[0], Date):
+            newColumn = []
+            for date in pandas_column:
+                sql_year, sql_month, sql_day = date.year, date.month, date.day
+                newColumn.append(pd.Timestamp(sql_year, sql_month, sql_day))
+            sql_column = newColumn
+        else: 
+            raise Exception(f"sql_column was not of type Hyper Date, it was: {type(sql_column[0])}")
+        
+        column_equivalent = set(sql_column) == set(pandas_column)
+    elif column_types == set([pd.Timestamp, datetime.date]):
+        # Timestamp and datetime, convert datetime to pd.Timestamp
+        
+        if isinstance(sql_column[0], datetime.date):
+            newColumn = []
+            for date in pandas_column:
+                newColumn.append(pd.Timestamp(date))
+            sql_column = newColumn
+        else: 
+            raise Exception(f"sql_column was not of type datetime Date, it was: {type(sql_column[0])}")
         
         column_equivalent = set(sql_column) == set(pandas_column)
     else:
         raise Exception(f"Unknown type of column_types: {column_types}")
     
     if column_equivalent == False:
-        print(sql_column)
-        print(pandas_column)
+        print(set(sql_column))
+        print(set(pandas_column))
+        # Counters
+        print("COUNTERS:")
+        print(Counter(sql_column))
+        print(Counter(pandas_column))
+        print("LENGTHS:")
+        print(len(sql_column))
+        print(len(pandas_column))
+        print("=" * 20)
         print(sql_column[0])
         print(pandas_column[0])
-        print("=" * 20)
         print(set.intersection(set(sql_column), set(pandas_column)))
         print(len(set(sql_column)))
         print(len(set(pandas_column)))
