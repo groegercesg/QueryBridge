@@ -209,6 +209,7 @@ def generate_unparse_pandas_from_explain_and_query(explain_json, query_file):
         unparse_pandas = UnparsePandasTree(op_tree)
     except:
         print(f"Pandas Generation for Query '{query_name}' Failed.")
+        raise Exception("Failed Pandas Generation")
         
     return unparse_pandas
     
@@ -786,7 +787,11 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                 elif aggr_op['operation']['aggregate'] == "avg":
                     newAggrOp = AvgAggrOperator()
                 elif aggr_op['operation']['aggregate'] == "count":
-                    newAggrOp = CountAggrOperator()
+                    if "distinct" in aggr_op['operation']:
+                        assert aggr_op["operation"]["distinct"] == True
+                        newAggrOp = CountDistinctAggrOperator()
+                    else:
+                        newAggrOp = CountAggrOperator()
                 elif aggr_op['operation']['aggregate'] == "max":
                     newAggrOp = MaxAggrOperator()
                 else:

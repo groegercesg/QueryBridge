@@ -39,13 +39,15 @@ def convert_expression_operator_to_aggr(expr_tree: ExpressionBaseNode) -> str:
     expression_output = ""
     match expr_tree:
         case SumAggrOperator():
-            expression_output = "sum"
+            expression_output = "'sum'"
         case MinAggrOperator():
-            expression_output = "min"
+            expression_output = "'min'"
         case AvgAggrOperator():
-            expression_output = "mean"
+            expression_output = "'mean'"
         case CountAggrOperator() | CountAllOperator():
-            expression_output = "count"
+            expression_output = "'count'"
+        case CountDistinctAggrOperator():
+            expression_output = "lambda x : x.nunique()"
         case AggregationOperators():
             raise Exception(f"We have an aggregation operator, but don't have a case for it: {expr_tree}")
     
@@ -902,7 +904,7 @@ class UnparsePandasTree():
             columnAggregation = convert_expression_operator_to_aggr(postAggrOp)
             assert not any(x == "" for x in [newColumnName, previousColumnName, columnAggregation])
             self.writeContent(
-                f"{TAB}{TAB}{newColumnName}=('{previousColumnName}', '{columnAggregation}'),"
+                f"{TAB}{TAB}{newColumnName}=('{previousColumnName}', {columnAggregation}),"
             )
             
         # Write the aggregation closing

@@ -185,6 +185,10 @@ class AvgAggrOperator(AggregationOperators):
 class CountAggrOperator(UnaryExpressionOperator):
     def __init__(self):
         super().__init__()
+        
+class CountDistinctAggrOperator(UnaryExpressionOperator):
+    def __init__(self):
+        super().__init__()
 
 class CountAllOperator(LeafNode):
     def __init__(self):
