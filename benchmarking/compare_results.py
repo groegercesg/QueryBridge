@@ -18,7 +18,7 @@ def get_columns_v2(query):
             projectionValue = projection.key
         assert projectionValue != ''
         gatherColumns.append(projectionValue)
-    print(gatherColumns)
+    
     return gatherColumns
 
 def get_columns(query):
@@ -154,16 +154,18 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places):
     
     column_types = set([sql_first_type, pandas_first_type])
     
-    if column_types == set([type("a")]):
-        # String
+    if column_types == set([decimal.Decimal, int]):
+        # Decimal and Int
+        sql_column = from_decimal_to_int(sql_column, decimal_places)
+        pandas_column = from_decimal_to_int(pandas_column, decimal_places)
         
-        column_equivalent = set(sql_column) == set(pandas_column)
+        column_equivalent = Counter(sql_column) == Counter(pandas_column)
     elif column_types == set([decimal.Decimal, float]):
         # Decimal and Float
         sql_column = from_decimal_to_float(sql_column, decimal_places)
         pandas_column = from_decimal_to_float(pandas_column, decimal_places)
         
-        column_equivalent = set(sql_column) == set(pandas_column)
+        column_equivalent = Counter(sql_column) == Counter(pandas_column)
     elif column_types == set([type(1.012)]):
         # Float
         sql_column = from_decimal_to_float(sql_column, decimal_places)
@@ -176,18 +178,19 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places):
         for i in range(len(sql_column)):
             overlaps.append(len(get_overlap(str(sql_column_sorted[i]), str(pandas_column_sorted[i]))))
         
-        column_equivalent = (set(sql_column) == set(pandas_column)) or (len(overlaps) == len(list(filter(lambda x: x >= 10, overlaps))))
+        column_equivalent = (Counter(sql_column) == Counter(pandas_column)) or (len(overlaps) == len(list(filter(lambda x: x >= 10, overlaps))))
     elif column_types == set([type(1)]):
         # Int
         
-        column_equivalent = set(sql_column) == set(pandas_column)
+        column_equivalent = Counter(sql_column) == Counter(pandas_column)
     elif column_types == set([type("STR")]):
         # String
+        assert len(sql_column) == len(pandas_column)
         for i in range(len(sql_column)):
             sql_column[i] = str(sql_column[i]).strip()
             pandas_column[i] = str(pandas_column[i]).strip()
         
-        column_equivalent = set(sql_column) == set(pandas_column)
+        column_equivalent = Counter(sql_column) == Counter(pandas_column)
     elif column_types == set([pd.Timestamp, Date]):
         # Timestamp and (Hyper) Date, convert hyper date to pd.Timestamp
         
@@ -200,7 +203,7 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places):
         else: 
             raise Exception(f"sql_column was not of type Hyper Date, it was: {type(sql_column[0])}")
         
-        column_equivalent = set(sql_column) == set(pandas_column)
+        column_equivalent = Counter(sql_column) == Counter(pandas_column)
     elif column_types == set([pd.Timestamp, datetime.date]):
         # Timestamp and datetime, convert datetime to pd.Timestamp
         
@@ -212,35 +215,20 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places):
         else: 
             raise Exception(f"sql_column was not of type datetime Date, it was: {type(sql_column[0])}")
         
-        column_equivalent = set(sql_column) == set(pandas_column)
+        column_equivalent = Counter(sql_column) == Counter(pandas_column)
     else:
         raise Exception(f"Unknown type of column_types: {column_types}")
-    
-    if column_equivalent == False:
-        print(set(sql_column))
-        print(set(pandas_column))
-        # Counters
-        print("COUNTERS:")
-        print(Counter(sql_column))
-        print(Counter(pandas_column))
-        print("LENGTHS:")
-        print(len(sql_column))
-        print(len(pandas_column))
-        print("=" * 20)
-        print(sql_column[0])
-        print(pandas_column[0])
-        print(set.intersection(set(sql_column), set(pandas_column)))
-        print(len(set(sql_column)))
-        print(len(set(pandas_column)))
-        print(column_types)
-        print( column_types == set([type("STR")]))
-        raise Exception()
     
     return column_equivalent
 
 def from_decimal_to_float(columns_values, decimal_places):
     for i in range(len(columns_values)):
         columns_values[i] = float(truncate(columns_values[i], decimal_places))
+    return columns_values
+
+def from_decimal_to_int(columns_values, decimal_places):
+    for i in range(len(columns_values)):
+        columns_values[i] = int(truncate(columns_values[i], decimal_places))
     return columns_values
 
 def compare_column(sql_column, pandas_column, decimal_places):
