@@ -145,6 +145,10 @@ class GreaterThanOperator(BinaryExpressionOperator):
     def __init__(self):
         super().__init__()
         
+class GreaterThanEqOperator(BinaryExpressionOperator):
+    def __init__(self):
+        super().__init__()
+        
 class IntervalNotionOperator(BinaryExpressionOperator):
     """
     Inequality  | Interval Notion

@@ -7,6 +7,10 @@ class UniversalBaseNode():
     def addID(self, value):
         assert self.nodeID == None
         self.nodeID = value
+        
+class LeafBaseNode(UniversalBaseNode):
+    def __init__(self):
+        super().__init__()
     
 class UnaryBaseNode(UniversalBaseNode):
     def __init__(self):
@@ -68,7 +72,7 @@ class GroupNode(UnaryBaseNode):
         self.preAggregateExpressions = preAggregateExpressions
         self.postAggregateOperations = postAggregateOperations
 
-class ScanNode(UniversalBaseNode):
+class ScanNode(LeafBaseNode):
     def __init__(self, tableName, tableColumns, tableRestrictions, tableFilters):
         super().__init__()
         self.tableName = tableName

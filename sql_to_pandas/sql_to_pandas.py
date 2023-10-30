@@ -15,7 +15,9 @@ from prepare_databases.prepare_postgres import PreparePostgres
 from prepare_databases.prepare_hyperdb import PrepareHyperDB
 from prepare_databases.prepare_database import EXPLAIN_LOCATION
 
-from hyper_parsing import generate_unparse_pandas_from_explain_and_query
+from hyper_parsing import generate_unparse_content_from_explain_and_query
+from pandas_unparser_v2 import *
+from sdqlpy_unparser import *
 
 def syntax_check_code(path):
     with open(path) as f:
@@ -122,6 +124,13 @@ def init_argparse() -> argparse.ArgumentParser:
                         required=False,
                         default=False,
                         help='Should we fuse merge join and sort operations. Defaults to False.')
+
+    parser.add_argument('--output_fmt',
+                        metavar='output_fmt',
+                        type=str,
+                        required=False,
+                        default="pandas",
+                        help='What output format would you like to use?')
 
     return parser
 
@@ -369,27 +378,45 @@ def main():
                 raise Exception(f'Unable to assign sub_query to last_query, it was of an odd type: {type(sub_query)}')
             explain_tree = make_tree_from_duck(explain_json, explain_tree, last_query)   
         elif args.query_planner == "Hyper_DB":
-            unparse_pandas = generate_unparse_pandas_from_explain_and_query(explain_json, query_file)
+            unparse_content = generate_unparse_content_from_explain_and_query(explain_json, query_file, args.output_fmt)
             
-            with open(python_output_name, 'w') as fp:
-                for line in unparse_pandas.getPandasContent():
-                    if "\n" in line:
-                        writeContent = line.split("\n")
-                    else:
-                        writeContent = [line]
-                        
-                    for line in writeContent:
-                        # write each item on a new line
-                        potentialTab = ""
-                        if args.benchmarking:
-                            potentialTab = "    "
-                        fp.write(f"{potentialTab}{line}\n")
-                        
-                # Write return 'blah', if benchmarking
-                if args.benchmarking:
-                    fp.write(f"{potentialTab}return {unparse_pandas.pandas_tree.tableName}\n")
+            if isinstance(unparse_content, UnparsePandasTree):
+                with open(python_output_name, 'w') as fp:
+                    for line in unparse_content.getPandasContent():
+                        if "\n" in line:
+                            writeContent = line.split("\n")
+                        else:
+                            writeContent = [line]
+                            
+                        for line in writeContent:
+                            # write each item on a new line
+                            potentialTab = ""
+                            if args.benchmarking:
+                                potentialTab = "    "
+                            fp.write(f"{potentialTab}{line}\n")
+                            
+                    # Write return 'blah', if benchmarking
+                    if args.benchmarking:
+                        fp.write(f"{potentialTab}return {unparse_content.pandas_tree.tableName}\n")
+            elif isinstance(unparse_content, UnparseSDQLpyTree):
+                with open(python_output_name, 'w') as fp:
+                    for line in unparse_content.getSDQLpyContent():
+                        if "\n" in line:
+                            writeContent = line.split("\n")
+                        else:
+                            writeContent = [line]
+                            
+                        for line in writeContent:
+                            # write each item on a new line
+                            potentialTab = ""
+                            if args.benchmarking:
+                                potentialTab = "    "
+                            fp.write(f"{potentialTab}{line}\n")
+                    
+            else:
+                raise Exception(f"Unexpected format for unparse_content class: {type(unparse_content)}")
             
-            relations_subqueries = unparse_pandas.relations
+            relations_subqueries = unparse_content.relations
             
             continue
         else:

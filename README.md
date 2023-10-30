@@ -27,6 +27,8 @@
     - [Installing Postgres and creating the Database](#installing-postgres-and-creating-the-database)
     - [Disable things in Postgres that we don't support](#disable-things-in-postgres-that-we-dont-support)
   - [Setting up DuckDB](#setting-up-duckdb)
+  - [Setting up HyperDB](#setting-up-hyperdb)
+  - [Setting up SDQL.py](#setting-up-sdqlpy)
   - [Setting up Python](#setting-up-python)
     - [Setup the Python Environment](#setup-the-python-environment)
     - [Populate the Databases with data](#populate-the-databases-with-data)
@@ -196,6 +198,25 @@ The second command should inform whether the database has come back up
 
 As DuckDB is an embedded DBMS, installation is made super easy. It comes with the Conda environment. So just follow the steps below to setup Python and Conda.
 
+### Setting up HyperDB
+
+Same as above
+
+### Setting up SDQL.py
+
+Follow the instructions from the REPO: [edin-dal/sdqlpy](https://github.com/edin-dal/sdqlpy)
+
+Here is an abridged summary for Fedora:
+
+```bash
+sudo dnf install openssl-devel openssl tbb-devel
+python3 --version # Should be >= 3.8.10
+cd tpch-dbgen  
+make
+./dbgen -s 1 -vf  # For SF 1
+export TPCH_DATASET=$PWD'/'
+```
+
 ### Setting up Python
 
 This project requires python version 3.10 or higher, check this by running:
@@ -203,10 +224,6 @@ This project requires python version 3.10 or higher, check this by running:
 ```bash
 python --version
 ```
-
-Then install the corresponding version of the Conda package manager, using the below link:
-
-[Conda installation guide](https://docs.conda.io/projects/conda/en/latest/user-guide/install/linux.html)
 
 #### Setup the Python Environment
 

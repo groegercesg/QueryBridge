@@ -12,6 +12,8 @@ import json
 
 from hyper_classes import *
 
+from sdqlpy_unparser import *
+
 def generate_hyperdb_explains():
     db = PrepareHyperDB('hyperdb_tpch.hyper')
     db.prepare_database('data_storage')
@@ -176,7 +178,7 @@ def create_hyper_operator_tree(explain_json, all_nodes: dict):
     
     return operator_class
 
-def generate_unparse_pandas_from_explain_and_query(explain_json, query_file):
+def generate_unparse_content_from_explain_and_query(explain_json, query_file, output_format):
     query_name = query_file.split("/")[-1].split(".")[0].strip()
     
     all_nodes = dict()
@@ -200,18 +202,34 @@ def generate_unparse_pandas_from_explain_and_query(explain_json, query_file):
     # Test 2: all leaf nodes should be ScanNode
     assert audit_universal_plan_tree_scannode(op_tree)
     
-    # Convert Universal Plan Tree to Pandas Tree
-    op_tree = convert_universal_to_pandas(op_tree)
-    print(f"Converted Universal Plan Tree of {query_name} into Pandas Tree")
+    unparse_content = None
+    if output_format == "pandas":
+        # Convert Universal Plan Tree to Pandas Tree
+        op_tree = convert_universal_to_pandas(op_tree)
+        print(f"Converted Universal Plan Tree of {query_name} into Pandas Tree")
 
-    # Unparse Pandas Tree
-    try:
-        unparse_pandas = UnparsePandasTree(op_tree)
-    except:
-        print(f"Pandas Generation for Query '{query_name}' Failed.")
-        raise Exception("Failed Pandas Generation")
+        # Unparse Pandas Tree
+        try:
+            unparse_content = UnparsePandasTree(op_tree)
+        except:
+            print(f"Pandas Generation for Query '{query_name}' Failed.")
+            raise Exception("Failed Pandas Generation")
+    elif output_format == "sdqlpy":
+        # Convert Universal Plan Tree to SDQLpy Tree
+        op_tree = convert_universal_to_sdqlpy(op_tree)
+        print(f"Converted Universal Plan Tree of {query_name} into SDQLpy Tree")
         
-    return unparse_pandas
+        # Unparse SDQLpy Tree
+        # try:
+        unparse_content = UnparseSDQLpyTree(op_tree)
+        # except:
+        #     print(f"SDQLpy Generation for Query '{query_name}' Failed.")
+        #     raise Exception("Failed SDQLpy Generation")
+    else:
+        raise Exception(f"Unexpected format for output_format: {output_format}")
+        
+    assert unparse_content != None
+    return unparse_content
     
 def parse_explain_plans():
     query_directory = 'sql_to_pandas/tpch_queries'
