@@ -413,6 +413,10 @@ def main():
                                 potentialTab = "    "
                             fp.write(f"{potentialTab}{line}\n")
                     
+                    # Write return 'blah', if benchmarking
+                    if args.benchmarking:
+                        fp.write(f"{potentialTab}return {unparse_content.sdqlpy_tree.tableName}\n")
+                    
             else:
                 raise Exception(f"Unexpected format for unparse_content class: {type(unparse_content)}")
             

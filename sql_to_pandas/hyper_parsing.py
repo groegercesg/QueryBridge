@@ -217,6 +217,9 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     elif output_format == "sdqlpy":
         # Convert Universal Plan Tree to SDQLpy Tree
         op_tree = convert_universal_to_sdqlpy(op_tree)
+        
+        # Test: All leaf nodes should be SDQLpyRecordNode
+        assert audit_sdqlpy_tree_scannode(op_tree)
         print(f"Converted Universal Plan Tree of {query_name} into SDQLpy Tree")
         
         # Unparse SDQLpy Tree

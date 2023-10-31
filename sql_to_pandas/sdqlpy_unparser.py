@@ -3,7 +3,30 @@ from collections import defaultdict
 from universal_plan_nodes import *
 from expression_operators import *
 
+from sdqlpy_classes import *
+
 TAB = "    "
+
+def audit_sdqlpy_tree_scannode(op_tree: SDQLpyBaseNode) -> bool:
+    def get_leaf_nodes(op_tree: SDQLpyBaseNode) -> list[SDQLpyBaseNode]:
+        leafs = []
+        def _get_leaf_nodes(op_node: SDQLpyBaseNode):
+            match op_node:
+                case BinarySDQLpyNode():
+                    _get_leaf_nodes(op_node.left)
+                    _get_leaf_nodes(op_node.right)
+                case UnarySDQLpyNode():
+                    _get_leaf_nodes(op_node.child)
+                case SDQLpyBaseNode():
+                    leafs.append(op_node)
+                case _:
+                    raise Exception(f"We are auditing a universal plan tree, all nodes should be at minimum a UniversalBaseNode, not: {op_node.__class__}") 
+        _get_leaf_nodes(op_tree)
+        return leafs
+    
+    # Get all leaves, make sure they're all SDQLpyRecordNode
+    all_leaves = get_leaf_nodes(op_tree)
+    return all(isinstance(leaf, SDQLpyRecordNode) for leaf in all_leaves)
 
 def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaName: str) -> str:
     def handleConstantValue(expr: ConstantValue):
@@ -100,7 +123,7 @@ def convert_universal_to_sdqlpy(op_tree: UniversalBaseNode):
     # Create a 'new_op_tree' from an existing 'op_tree'
     match op_tree:
         case ScanNode():
-            new_op_tree = SDQLpyScanNode(
+            new_op_tree = SDQLpyRecordNode(
                 op_tree.tableName
             )
         case GroupNode():
@@ -171,106 +194,6 @@ def convert_universal_to_sdqlpy(op_tree: UniversalBaseNode):
     
     return new_op_tree
 
-# Classes for the SDQLpy Tree
-class SDQLpyBaseNode():
-    def __init__(self):
-        # The columns, as strs
-        self.columns = set()
-        self.nodeID = None
-        
-    def addID(self, value):
-        assert self.nodeID == None
-        self.nodeID = value
-        
-    def addToTableColumns(self, incomingColumns):
-        localColumns = set()
-        if isinstance(incomingColumns, list):
-            assert all(isinstance(x, ExpressionBaseNode) for x in incomingColumns)
-            localColumns.update(incomingColumns)
-        elif isinstance(incomingColumns, ExpressionBaseNode):
-            localColumns.add(incomingColumns)
-        else:
-            raise Exception(f"Unexpected format of incoming columns, {type(incomingColumns)}")
-    
-        self.columns.update(localColumns)
-        
-    def __updateTableColumns(self):
-        if len(self.columns) > 0:
-            pass
-        else:
-            # get from children
-            if hasattr(self, "left"):
-                #if self.left.columns:
-                #    self.columns.update(self.left.columns)
-                #else:
-                self.columns.update(self.left.getTableColumnsInternal())
-            if hasattr(self, "right"):
-                self.columns.update(self.right.getTableColumnsInternal())
-            if hasattr(self, "child"):
-                self.columns.update(self.child.getTableColumnsInternal())
-        
-    def getTableColumnsString(self) -> set():
-        self.__updateTableColumns()
-        outputNames = set()
-        for col in self.columns:
-            if col.codeName != '':
-                outputNames.add(col.codeName)
-            else:
-                outputNames.add(col.value)
-        return outputNames
-
-    def getTableColumnsInternal(self) -> set():
-        self.__updateTableColumns()
-        return self.columns
-    
-class LeafSDQLpyNode(SDQLpyBaseNode):
-    def __init__(self):
-        super().__init__()
-        
-class PipelineBreakerNode(SDQLpyBaseNode):
-    def __init__(self):
-        super().__init__()
-        self.filterContent = None
-    
-    def addFilterContent(self, filterContent):
-        assert self.filterContent == None
-        self.filterContent = filterContent
-        
-class UnarySDQLpyNode(PipelineBreakerNode):
-    def __init__(self):
-        super().__init__()
-        self.child = None
-        
-    def addChild(self, child: SDQLpyBaseNode):
-        assert self.child == None
-        self.child = child
-        
-class BinarySDQLpyNode(PipelineBreakerNode):
-    def __init__(self):
-        super().__init__()
-        self.left = None
-        self.right = None
-        
-    def addLeft(self, left: SDQLpyBaseNode):
-        assert self.left == None
-        self.left = left
-        
-    def addRight(self, right: SDQLpyBaseNode):
-        assert self.right == None
-        self.right = right
-
-# Classes for Nodes
-class SDQLpyScanNode(LeafSDQLpyNode):
-    def __init__(self, tableName):
-        super().__init__()
-        self.tableName = tableName
-
-class SDQLpyAggrNode(UnarySDQLpyNode):
-    def __init__(self, preAggregateExpressions, postAggregateOperations):
-        super().__init__()
-        self.preAggregateExpressions = preAggregateExpressions
-        self.postAggregateOperations = postAggregateOperations
-
 # Unparser
 class UnparseSDQLpyTree():
     def __init__(self, sdqlpy_tree: SDQLpyBaseNode) -> None:
@@ -282,6 +205,9 @@ class UnparseSDQLpyTree():
         self.parserCreatedColumns = set()
         self.nodeDict = {}
         self.gatherNodeDict(self.sdqlpy_tree)
+        
+        # Set top node of the sdqlpy_tree to True
+        sdqlpy_tree.topNode = True
         
         self.__walk_tree(self.sdqlpy_tree)
         
@@ -305,9 +231,7 @@ class UnparseSDQLpyTree():
         return self.sdqlpy_content
     
     def gatherNodeDict(self, current_node):
-        if current_node == None:
-            pass
-        elif isinstance(current_node, BinarySDQLpyNode):
+        if isinstance(current_node, BinarySDQLpyNode):
             self.gatherNodeDict(current_node.left)
             self.gatherNodeDict(current_node.right)
         elif isinstance(current_node, UnarySDQLpyNode):
@@ -316,47 +240,42 @@ class UnparseSDQLpyTree():
             # A leaf node
             pass
         
-        if (current_node != None) and (current_node.nodeID != None):
+        if current_node.nodeID != None:
             assert current_node.nodeID not in self.nodeDict
             self.nodeDict[current_node.nodeID] = current_node
     
     
     def __walk_tree(self, current_node):
         # Walk to children Children
-        if current_node == None:
-            pass
-        elif isinstance(current_node, BinarySDQLpyNode):
+        if isinstance(current_node, BinarySDQLpyNode):
             self.__walk_tree(current_node.left)
             self.__walk_tree(current_node.right)
         elif isinstance(current_node, UnarySDQLpyNode):
             self.__walk_tree(current_node.child)
         else:
             # A leaf node
+            assert isinstance(current_node, LeafSDQLpyNode)
             pass
         
-        if current_node != None:
-            # Visit the current_node and add it to self.pandas_content
-            targetVisitorMethod = f"visit{current_node.__class__.__name__}"
-            if hasattr(self, targetVisitorMethod):
-                getattr(self, targetVisitorMethod)(current_node)
-            else:
-                raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
-            
-    def visitSDQLpyScanNode(self, node):
-        # We don't do anything for a scan node
+        # Visit the current_node and add it to self.pandas_content
+        targetVisitorMethod = f"visit_{current_node.__class__.__name__}"
+        if hasattr(self, targetVisitorMethod):
+            # Count number of nodes
+            self.nodesCounter[current_node.__class__.__name__] += 1
+            getattr(self, targetVisitorMethod)(current_node)
+        else:
+            raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
+        
+    def visit_SDQLpyRecordNode(self, node):
+        # We don't do anything for a record node
+        node.getTableName(self)
         self.relations.add(node.tableName)
-        pass
             
-    def visitSDQLpyAggrNode(self, node):
-        self.nodesCounter[SDQLpyAggrNode] += 1
-        nodeNumber = self.nodesCounter[SDQLpyAggrNode]
-        
+    def visit_SDQLpyAggrNode(self, node):        
         # Get child name
-        childTableList = self.getChildTableNames(node)
-        assert len(childTableList) == 1
-        childTable = childTableList[0]
+        childTable = node.getChildName(self)
         
-        createdDictName = f"aggr_{nodeNumber}"
+        createdDictName = node.getTableName(self)
         lambda_index = "p"
         
         assert len(node.postAggregateOperations) == 1 and isinstance(node.postAggregateOperations[0], SumAggrOperator)
@@ -382,7 +301,5 @@ class UnparseSDQLpyTree():
             f")"
         )
         
-        # Set the tableName
-        node.tableName = createdDictName
         # Set node.columns
         node.columns = set(node.postAggregateOperations)
