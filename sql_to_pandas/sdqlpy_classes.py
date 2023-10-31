@@ -55,9 +55,9 @@ class SDQLpyBaseNode():
         self.__updateTableColumns()
         return self.columns
     
-    def getTableName(self, unparser):
+    def getTableName(self, unparser, not_output=False):
         assert self.sdqlrepr != None
-        if self.topNode == True:
+        if self.topNode == True and not_output == False:
             # Default SDQL name for top level output
             self.tableName =  "results"
         else:
@@ -128,3 +128,11 @@ class SDQLpyAggrNode(UnarySDQLpyNode):
         self.preAggregateExpressions = preAggregateExpressions
         self.postAggregateOperations = postAggregateOperations
         self.sdqlrepr = "aggr"
+        
+class SDQLpyGroupNode(UnarySDQLpyNode):
+    def __init__(self, keyExpressions, preAggregateExpressions, postAggregateOperations):
+        super().__init__()
+        self.keyExpressions = keyExpressions
+        self.preAggregateExpressions = preAggregateExpressions
+        self.postAggregateOperations = postAggregateOperations
+        self.sdqlrepr = "group"

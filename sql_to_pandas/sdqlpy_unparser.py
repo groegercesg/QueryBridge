@@ -39,6 +39,8 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaN
             month = str(expr.value.month).zfill(2)
             day = str(expr.value.day).zfill(2)
             return f"{year}{month}{day}"
+        elif expr.type == "Integer":
+            return f'{expr.value}.0'
         else:
             raise Exception(f"Unknown Constant Value Type: {expr.type}")
         
@@ -103,96 +105,140 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaN
             expression_output = f"{leftNode} and {rightNode}"
         case MulOperator():
             expression_output = f"{leftNode} * {rightNode}"
+        case SubOperator():
+            expression_output = f"({leftNode} - {rightNode})"
+        case AddOperator():
+            expression_output = f"({leftNode} + {rightNode})"
+        case CountAllOperator():
+            expression_output = "1"
         case _: 
             raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
     return expression_output
 
-def convert_universal_to_sdqlpy(op_tree: UniversalBaseNode):
-    # Visit Children
-    leftNode, rightNode, childNode = None, None, None
-    if isinstance(op_tree, BinaryBaseNode):
-        leftNode = convert_universal_to_sdqlpy(op_tree.left)
-        rightNode = convert_universal_to_sdqlpy(op_tree.right)
-    elif isinstance(op_tree, UnaryBaseNode):
-        childNode = convert_universal_to_sdqlpy(op_tree.child)
-    else:
-        # A leaf node
-        pass
-    
-    # Create a 'new_op_tree' from an existing 'op_tree'
-    match op_tree:
-        case ScanNode():
-            new_op_tree = SDQLpyRecordNode(
-                op_tree.tableName
-            )
-        case GroupNode():
-            if op_tree.keyExpressions == []:
-                new_op_tree = SDQLpyAggrNode(
-                    op_tree.preAggregateExpressions,
-                    op_tree.postAggregateOperations
+def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBaseNode:
+    def convert_trees(op_tree: UniversalBaseNode) -> SDQLpyBaseNode:
+        # Visit Children
+        leftNode, rightNode, childNode = None, None, None
+        if isinstance(op_tree, BinaryBaseNode):
+            leftNode = convert_trees(op_tree.left)
+            rightNode = convert_trees(op_tree.right)
+        elif isinstance(op_tree, UnaryBaseNode):
+            childNode = convert_trees(op_tree.child)
+        else:
+            # A leaf node
+            pass
+        
+        # Create a 'new_op_tree' from an existing 'op_tree'
+        match op_tree:
+            case ScanNode():
+                new_op_tree = SDQLpyRecordNode(
+                    op_tree.tableName
                 )
-            else:
-                raise Exception
-        case OutputNode():
-            new_op_tree = None
-        case _:
-            raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
-
-    # Pipeline breaker
-    if isinstance(new_op_tree, PipelineBreakerNode):
-        match op_tree.child:
-            case LeafBaseNode():
-                match op_tree.child:
-                    case ScanNode():
-                        if op_tree.child.tableRestrictions != None:
-                            new_op_tree.addFilterContent(op_tree.child.tableRestrictions)
-                    case _:
-                        raise Exception(f"We encountered an unknown child")
-            case UnaryBaseNode():
-                raise Exception("child is a Unary Node")
-            case BinaryBaseNode():
-                raise Exception("child is a Binary Node")
-            case _:
-                raise Exception()
-    
-    # Add in the children
-    if new_op_tree == None:
-        if (leftNode == None) and (rightNode == None) and (childNode == None):
-            # pass, we're in a Leaf
-            pass
-        elif (leftNode == None) and (rightNode == None):
-            # we're in a Unary node
-            new_op_tree = childNode
-        elif (childNode == None):
-            raise Exception("Trying to replace for a Binary situation")
-        else:
-            raise Exception("Child and a Binary, impossible")
-    else:
-        match new_op_tree:
-            case UnarySDQLpyNode():
-                if childNode != None:
-                    new_op_tree.addChild(childNode)
-            case BinarySDQLpyNode():
-                if (leftNode != None) and (rightNode != None):
-                    new_op_tree.addLeft(leftNode)
-                    new_op_tree.addRight(rightNode)
+            case GroupNode():
+                if op_tree.keyExpressions == []:
+                    new_op_tree = SDQLpyAggrNode(
+                        op_tree.preAggregateExpressions,
+                        op_tree.postAggregateOperations
+                    )
                 else:
-                    raise Exception("Binary with some Nones")
+                    new_op_tree = SDQLpyGroupNode(
+                        op_tree.keyExpressions,
+                        op_tree.preAggregateExpressions,
+                        op_tree.postAggregateOperations
+                    )
+            case OutputNode():
+                new_op_tree = None
             case _:
-                # LeafSDQLpyNode
-                assert isinstance(new_op_tree, LeafSDQLpyNode)
-    
-    # Add nodeID to new_op_node
-    assert hasattr(op_tree, "nodeID")
-    if new_op_tree != None:
-        if new_op_tree.nodeID == None:
-            new_op_tree.addID(op_tree.nodeID)
+                raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
+
+        # Pipeline breaker
+        if isinstance(new_op_tree, PipelineBreakerNode):
+            match op_tree.child:
+                case LeafBaseNode():
+                    match op_tree.child:
+                        case ScanNode():
+                            if op_tree.child.tableRestrictions != None:
+                                new_op_tree.addFilterContent(op_tree.child.tableRestrictions)
+                        case _:
+                            raise Exception(f"We encountered an unknown child")
+                case UnaryBaseNode():
+                    raise Exception("child is a Unary Node")
+                case BinaryBaseNode():
+                    raise Exception("child is a Binary Node")
+                case _:
+                    raise Exception()
+        
+        # Add in the children
+        if new_op_tree == None:
+            if (leftNode == None) and (rightNode == None) and (childNode == None):
+                # pass, we're in a Leaf
+                pass
+            elif (leftNode == None) and (rightNode == None):
+                # we're in a Unary node
+                new_op_tree = childNode
+            elif (childNode == None):
+                raise Exception("Trying to replace for a Binary situation")
+            else:
+                raise Exception("Child and a Binary, impossible")
         else:
-            # We've already assigned one, don't overwrite it
-            pass
+            match new_op_tree:
+                case UnarySDQLpyNode():
+                    if childNode != None:
+                        new_op_tree.addChild(childNode)
+                case BinarySDQLpyNode():
+                    if (leftNode != None) and (rightNode != None):
+                        new_op_tree.addLeft(leftNode)
+                        new_op_tree.addRight(rightNode)
+                    else:
+                        raise Exception("Binary with some Nones")
+                case _:
+                    # LeafSDQLpyNode
+                    assert isinstance(new_op_tree, LeafSDQLpyNode)
+        
+        # Add nodeID to new_op_node
+        assert hasattr(op_tree, "nodeID")
+        if new_op_tree != None:
+            if new_op_tree.nodeID == None:
+                new_op_tree.addID(op_tree.nodeID)
+            else:
+                # We've already assigned one, don't overwrite it
+                pass
+        
+        return new_op_tree
     
-    return new_op_tree
+    # Use the output node to set relevant code names
+    def set_codeNames(topNode):
+        assert isinstance(topNode, OutputNode)
+        assert len(topNode.outputNames) == len(topNode.outputColumns)
+        
+        for idx, name in enumerate(topNode.outputNames):
+            if topNode.outputColumns[idx].codeName != "":
+                assert (name == topNode.outputColumns[idx].codeName)
+            else:
+                topNode.outputColumns[idx].codeName = name
+                
+    def orderTopNode(sdqlpy_tree, output_cols_order):
+        match sdqlpy_tree:
+            case SDQLpyGroupNode():
+                # Do ordering, sort postAggregateOperations by output_cols_order
+                ordering = {k:v for v,k in enumerate(output_cols_order)}
+                sdqlpy_tree.postAggregateOperations.sort(key = lambda x : ordering.get(x.codeName))
+            case SDQLpyAggrNode():
+                # No ordering required, as it only returns a single value
+                pass
+            case _:
+                raise Exception(f"No ordering configured for node: {type(sdqlpy_tree)}")
+    
+    # Set the code names
+    set_codeNames(universal_tree)
+    output_cols_order = universal_tree.outputNames
+    # Call convert trees
+    sdqlpy_tree = convert_trees(universal_tree)
+    # Order the topNode correctly
+    orderTopNode(sdqlpy_tree, output_cols_order)
+    
+    return sdqlpy_tree
 
 # Unparser
 class UnparseSDQLpyTree():
@@ -270,6 +316,73 @@ class UnparseSDQLpyTree():
         # We don't do anything for a record node
         node.getTableName(self)
         self.relations.add(node.tableName)
+        
+    def visit_SDQLpyGroupNode(self, node):
+        # Get child name
+        childTable = node.getChildName(self)
+        
+        initialDictName = node.getTableName(self, not_output = True)
+        createdDictName = node.getTableName(self)
+        lambda_index = "p"
+        
+        self.writeContent(
+            f"{initialDictName} = {childTable}.sum(lambda {lambda_index} :"
+        )
+        
+        # Write keys
+        keyContent = []
+        for key in node.keyExpressions:
+            expr = convert_expression_operator_to_sdqlpy(key, lambda_index)
+            keyContent.append(
+                f'"{key.codeName}": {expr}'
+            )
+        keyFormatted = f"{{{', '.join(keyContent)}}}"
+        self.writeContent(
+            f"{TAB}{{\n"
+            f"{TAB}{TAB}record({keyFormatted}):"
+        )
+        
+        # Write aggregations
+        aggrContent = []
+        for aggr in node.postAggregateOperations:
+            # Skip Average aggregations for now
+            if not isinstance(aggr, AvgAggrOperator):
+                # And get the expr of the child
+                if isinstance(aggr, CountAllOperator):
+                    expr = convert_expression_operator_to_sdqlpy(aggr, lambda_index)
+                else:
+                    expr = convert_expression_operator_to_sdqlpy(aggr.child, lambda_index)
+                
+                aggrContent.append(
+                    f'"{aggr.codeName}": {expr}'
+                )
+        aggrFormatted = f"{{{', '.join(aggrContent)}}}"
+        self.writeContent(
+            f"{TAB}{TAB}record({aggrFormatted})\n"
+            f"{TAB}}}\n"
+        )
+        
+        # Write filterContent, if we have it
+        if node.filterContent != None:
+            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, lambda_index)
+            self.writeContent(
+                f"{TAB}if\n"
+                f"{TAB}{TAB}{filterContent}\n"
+                f"{TAB}else\n"
+                f"{TAB}{TAB}None"
+            )
+        
+        self.writeContent(
+            f")"
+        )
+        
+        # Do the summation at the end
+        self.writeContent(
+            f"{createdDictName} = {initialDictName}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}})"
+        )
+        
+        # Set node.columns
+        node.columns = set(node.postAggregateOperations)
             
     def visit_SDQLpyAggrNode(self, node):        
         # Get child name

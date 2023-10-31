@@ -216,15 +216,15 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
             raise Exception("Failed Pandas Generation")
     elif output_format == "sdqlpy":
         # Convert Universal Plan Tree to SDQLpy Tree
-        op_tree = convert_universal_to_sdqlpy(op_tree)
+        sdqlpy_tree = convert_universal_to_sdqlpy(op_tree)
         
         # Test: All leaf nodes should be SDQLpyRecordNode
-        assert audit_sdqlpy_tree_scannode(op_tree)
+        assert audit_sdqlpy_tree_scannode(sdqlpy_tree)
         print(f"Converted Universal Plan Tree of {query_name} into SDQLpy Tree")
         
         # Unparse SDQLpy Tree
         # try:
-        unparse_content = UnparseSDQLpyTree(op_tree)
+        unparse_content = UnparseSDQLpyTree(sdqlpy_tree)
         # except:
         #     print(f"SDQLpy Generation for Query '{query_name}' Failed.")
         #     raise Exception("Failed SDQLpy Generation")
