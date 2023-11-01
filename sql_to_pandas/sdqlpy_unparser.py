@@ -26,7 +26,7 @@ def audit_sdqlpy_tree_scannode(op_tree: SDQLpyBaseNode) -> bool:
     
     # Get all leaves, make sure they're all SDQLpyRecordNode
     all_leaves = get_leaf_nodes(op_tree)
-    return all(isinstance(leaf, SDQLpyRecordNode) for leaf in all_leaves)
+    return all(isinstance(leaf, (SDQLpyRecordNode, SDQLpyJoinBuildNode)) for leaf in all_leaves)
 
 def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaName: str) -> str:
     def handleConstantValue(expr: ConstantValue):
@@ -133,7 +133,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         match op_tree:
             case ScanNode():
                 new_op_tree = SDQLpyRecordNode(
-                    op_tree.tableName
+                    op_tree.tableName,
+                    op_tree.tableColumns
                 )
             case GroupNode():
                 if op_tree.keyExpressions == []:
@@ -147,26 +148,15 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     )
             case OutputNode():
                 new_op_tree = None
+            case JoinNode():
+                new_op_tree = SDQLpyJoinNode(
+                    op_tree.joinMethod,
+                    op_tree.joinType,
+                    op_tree.joinCondition
+                )
             case _:
                 raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
-        # Pipeline breaker
-        if isinstance(new_op_tree, PipelineBreakerNode):
-            match op_tree.child:
-                case LeafBaseNode():
-                    match op_tree.child:
-                        case ScanNode():
-                            if op_tree.child.tableRestrictions != None:
-                                new_op_tree.addFilterContent(op_tree.child.tableRestrictions)
-                        case _:
-                            raise Exception(f"We encountered an unknown child")
-                case UnaryBaseNode():
-                    raise Exception("child is a Unary Node")
-                case BinaryBaseNode():
-                    raise Exception("child is a Binary Node")
-                case _:
-                    raise Exception()
-        
         # Add in the children
         if new_op_tree == None:
             if (leftNode == None) and (rightNode == None) and (childNode == None):
@@ -188,11 +178,68 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     if (leftNode != None) and (rightNode != None):
                         new_op_tree.addLeft(leftNode)
                         new_op_tree.addRight(rightNode)
+                        if isinstance(new_op_tree, SDQLpyJoinNode):
+                            new_op_tree.set_columns_variable()
                     else:
                         raise Exception("Binary with some Nones")
                 case _:
                     # LeafSDQLpyNode
                     assert isinstance(new_op_tree, LeafSDQLpyNode)
+        
+        # Pipeline breaker
+        if isinstance(new_op_tree, PipelineBreakerNode):
+            if childNode == new_op_tree:
+                # They are equal, we skip
+                pass
+            elif childNode != None :
+                match op_tree.child:
+                    case LeafBaseNode():
+                        match op_tree.child:
+                            case ScanNode():
+                                if op_tree.child.tableRestrictions != None:
+                                    new_op_tree.addFilterContent(op_tree.child.tableRestrictions)
+                            case _:
+                                raise Exception(f"We encountered an unknown child")
+                    case UnaryBaseNode():
+                        raise Exception("child is a Unary Node")
+                    case BinaryBaseNode():
+                        if isinstance(childNode, SDQLpyJoinNode):
+                            # Joins have a postJoinFilter, this should be carried up
+                            if childNode.postJoinFilters != []:
+                                new_op_tree.addFilterContent(childNode.addFilterContent)
+                        else:
+                            raise Exception(f"Unknown Binary Node that is a child: {type(childNode)}")
+                    case _:
+                        raise Exception()
+            elif (leftNode != None) and (rightNode != None):
+                if isinstance(new_op_tree, SDQLpyJoinNode):
+                    # Run the join key separation now
+                    new_op_tree.do_join_key_separation()
+                    
+                    # Make Left a JoinBuild, add the filter there
+                    # Leave Right a ScanNode, a Propagate right filter up to here
+                    if isinstance(op_tree.left, ScanNode):
+                        left_joinBuild = SDQLpyJoinBuildNode(
+                            op_tree.left.tableName,
+                            new_op_tree.leftKeys,
+                            op_tree.left.tableColumns,
+                            op_tree.left.tableRestrictions
+                        )
+                        new_op_tree.left = left_joinBuild
+                    else:
+                        # No need to make it a joinBuild, as it's already indexed
+                        # AS long as it's a join
+                        assert isinstance(op_tree.left, JoinNode)
+                        
+                    # Add right tableRestrictions
+                    new_op_tree.addFilterContent(op_tree.right.tableRestrictions)
+                    
+                    
+                else:
+                    raise Exception(f"A binary node, but no behavior implemented for it: {type(new_op_tree)}")
+                        
+            else:
+                raise Exception("A leaf")
         
         # Add nodeID to new_op_node
         assert hasattr(op_tree, "nodeID")
@@ -235,6 +282,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     sdqlpy_tree = convert_trees(universal_tree)
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)
+    # TODO: Pass to merge the GroupNodes down into the JoinBuild (?)
     
     return sdqlpy_tree
 
@@ -315,6 +363,10 @@ class UnparseSDQLpyTree():
         node.getTableName(self)
         self.relations.add(node.tableName)
         
+    def visit_SDQLpyJoinNode(self, node):
+        
+        assert node.outputRecord != None
+        
     def visit_SDQLpyGroupNode(self, node):
         # Get child name
         childTable = node.getChildName(self)
@@ -378,9 +430,6 @@ class UnparseSDQLpyTree():
         self.writeContent(
             f"{createdDictName} = {initialDictName}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}})"
         )
-        
-        # Set node.columns
-        node.columns = set(node.aggregateOperations)
             
     def visit_SDQLpyAggrNode(self, node):        
         # Get child name
@@ -410,6 +459,3 @@ class UnparseSDQLpyTree():
         self.writeContent(
             f")"
         )
-        
-        # Set node.columns
-        node.columns = set(node.aggregateOperations)
