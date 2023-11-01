@@ -4,10 +4,11 @@ from universal_plan_nodes import *
 from expression_operators import *
 
 from sdqlpy_classes import *
+from sdqlpy_helpers import *
 
 TAB = "    "
 
-def audit_sdqlpy_tree_scannode(op_tree: SDQLpyBaseNode) -> bool:
+def audit_sdqlpy_tree_recordnode(op_tree: SDQLpyBaseNode) -> bool:
     def get_leaf_nodes(op_tree: SDQLpyBaseNode) -> list[SDQLpyBaseNode]:
         leafs = []
         def _get_leaf_nodes(op_node: SDQLpyBaseNode):
@@ -26,95 +27,9 @@ def audit_sdqlpy_tree_scannode(op_tree: SDQLpyBaseNode) -> bool:
     
     # Get all leaves, make sure they're all SDQLpyRecordNode
     all_leaves = get_leaf_nodes(op_tree)
-    return all(isinstance(leaf, (SDQLpyRecordNode, SDQLpyJoinBuildNode)) for leaf in all_leaves)
+    return all(isinstance(leaf, SDQLpyRecordNode) for leaf in all_leaves)
 
-def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaName: str) -> str:
-    def handleConstantValue(expr: ConstantValue):
-        if expr.type == "String":
-            return f"'{expr.value}'"
-        elif expr.type == "Float":
-            return expr.value
-        elif expr.type == "Datetime":
-            year = str(expr.value.year).zfill(4)
-            month = str(expr.value.month).zfill(2)
-            day = str(expr.value.day).zfill(2)
-            return f"{year}{month}{day}"
-        elif expr.type == "Integer":
-            return f'{expr.value}.0'
-        else:
-            raise Exception(f"Unknown Constant Value Type: {expr.type}")
-        
-    def handleIntervalNotion(expr: IntervalNotionOperator, lambdaName):
-        match expr.mode:
-            case "[]":
-                leftExpr = GreaterThanEqOperator()
-                rightExpr = LessThanEqOperator()
-            case "()":
-                leftExpr = GreaterThanOperator()
-                rightExpr = LessThanOperator()
-            case "[)":
-                leftExpr = GreaterThanEqOperator()
-                rightExpr = LessThanOperator()
-            case "(]":
-                leftExpr = GreaterThanOperator()
-                rightExpr = LessThanEqOperator()
-            case _:
-                raise Exception(f"Unknown Internal Notion operator: {expr.mode}")
-        
-        leftExpr.left = expr.value
-        leftExpr.right = expr.left
-                
-        rightExpr.left = expr.value
-        rightExpr.right = expr.right
-        
-        convertedExpression = AndOperator()
-        convertedExpression.left = leftExpr
-        convertedExpression.right = rightExpr
-        
-        sdqlpyExpression = convert_expression_operator_to_sdqlpy(convertedExpression, lambdaName)
-        return sdqlpyExpression
-    
-    # Visit Children
-    if isinstance(expr_tree, BinaryExpressionOperator):
-        leftNode = convert_expression_operator_to_sdqlpy(expr_tree.left, lambdaName)
-        rightNode = convert_expression_operator_to_sdqlpy(expr_tree.right, lambdaName)
-    elif isinstance(expr_tree, UnaryExpressionOperator):
-        childNode = convert_expression_operator_to_sdqlpy(expr_tree.child, lambdaName)
-    else:
-        # A value node
-        assert isinstance(expr_tree, LeafNode)
-        pass
-    
-    expression_output = None
-    match expr_tree:
-        case ColumnValue():
-            expression_output = f"{lambdaName}[0].{expr_tree.value}"
-        case ConstantValue():
-            expression_output = handleConstantValue(expr_tree)
-        case LessThanOperator():
-            expression_output = f"({leftNode} < {rightNode})"
-        case LessThanEqOperator():
-            expression_output = f"({leftNode} <= {rightNode})"
-        case GreaterThanOperator():
-            expression_output = f"({leftNode} > {rightNode})"
-        case GreaterThanEqOperator():
-            expression_output = f"({leftNode} >= {rightNode})"
-        case IntervalNotionOperator():
-            expression_output = handleIntervalNotion(expr_tree, lambdaName)
-        case AndOperator():
-            expression_output = f"{leftNode} and {rightNode}"
-        case MulOperator():
-            expression_output = f"{leftNode} * {rightNode}"
-        case SubOperator():
-            expression_output = f"({leftNode} - {rightNode})"
-        case AddOperator():
-            expression_output = f"({leftNode} + {rightNode})"
-        case CountAllOperator():
-            expression_output = "1"
-        case _: 
-            raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
-    return expression_output
 
 def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBaseNode:
     def convert_trees(op_tree: UniversalBaseNode) -> SDQLpyBaseNode:
@@ -222,14 +137,23 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                         left_joinBuild = SDQLpyJoinBuildNode(
                             op_tree.left.tableName,
                             new_op_tree.leftKeys,
-                            op_tree.left.tableColumns,
-                            op_tree.left.tableRestrictions
+                            op_tree.left.tableColumns
                         )
+                        left_joinBuild.addFilterContent(op_tree.left.tableRestrictions)
+                        # Store the Record below
+                        left_joinBuild.child = leftNode
                         new_op_tree.left = left_joinBuild
+                    elif isinstance(op_tree.left, JoinNode):
+                        # Set an output record for this node in new_op_tree
+                        createdOutputRecord = SDQLpyRecordOutput(
+                            new_op_tree.leftKeys,
+                            [],
+                            list(leftNode.left.columns),
+                            list(leftNode.right.columns),
+                        )
+                        new_op_tree.left.set_output_record(createdOutputRecord)
                     else:
-                        # No need to make it a joinBuild, as it's already indexed
-                        # AS long as it's a join
-                        assert isinstance(op_tree.left, JoinNode)
+                        raise Exception("Unknown format for left/right of a JoinNode")
                         
                     # Add right tableRestrictions
                     new_op_tree.addFilterContent(op_tree.right.tableRestrictions)
@@ -275,6 +199,40 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             case _:
                 raise Exception(f"No ordering configured for node: {type(sdqlpy_tree)}")
     
+    def mergeGroupNodeDown(sdqlpy_tree):
+        if isinstance(sdqlpy_tree, SDQLpyGroupNode) and isinstance(sdqlpy_tree.child, SDQLpyJoinNode):
+            assert sdqlpy_tree.child.outputRecord == None
+            
+            # Determine which side of the thing it came from
+            leftColumns = sdqlpy_tree.child.left.columns
+            rightColumns = sdqlpy_tree.child.right.columns
+            
+            # TODO: New, Better method for this, this is awful currently
+            for associateList in [sdqlpy_tree.keyExpressions, sdqlpy_tree.aggregateOperations]:
+                for value in associateList:
+                    # Have to surface all ColumnValue classes, then add this association\
+                    if value in leftColumns:
+                        value.associatedWith = "L"
+                    elif value in rightColumns:
+                        value.associatedWith = "R"
+                    else:
+                        raise Exception("Unable to determine which side the value was associated with")
+                
+            createdOutputRecord = SDQLpyRecordOutput(
+                sdqlpy_tree.keyExpressions,
+                sdqlpy_tree.aggregateOperations
+            )
+            sdqlpy_tree.child.set_output_record(createdOutputRecord)
+            
+            # Replace GroupNode with a SDQLpyConcatNode
+            new_sdqlpy_tree = SDQLpyConcatNode(
+                sdqlpy_tree.columns
+            )
+            new_sdqlpy_tree.child = sdqlpy_tree.child
+            return new_sdqlpy_tree
+        else:
+            return sdqlpy_tree
+    
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
@@ -283,6 +241,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)
     # TODO: Pass to merge the GroupNodes down into the JoinBuild (?)
+    sdqlpy_tree = mergeGroupNodeDown(sdqlpy_tree)
     
     return sdqlpy_tree
 
@@ -363,9 +322,102 @@ class UnparseSDQLpyTree():
         node.getTableName(self)
         self.relations.add(node.tableName)
         
-    def visit_SDQLpyJoinNode(self, node):
+    def visit_SDQLpyConcatNode(self, node):
+        # Get child name
+        childTable = node.getChildName(self)
         
+        createdDictName = node.getTableName(self)
+        lambda_index = "p"
+        
+        # Do the summation at the end
+        self.writeContent(
+            f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}})"
+        )
+        
+    def visit_SDQLpyJoinBuildNode(self, node):
+        # Get child name
+        childTable = node.getChildName(self)
+        
+        createdDictName = node.getTableName(self)
+        lambda_index = "p"
+        
+        self.writeContent(
+            f"{createdDictName} = {childTable}.joinBuild(\n"
+            f'{TAB}"{node.tableKey.codeName}",'
+        )
+        
+        if node.filterContent == None:
+            self.writeContent(
+                f"{TAB}lambda {lambda_index}: True,"
+            )
+        else:
+            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, lambda_index)
+            self.writeContent(
+                f"{TAB}lambda {lambda_index}: {filterContent},"
+            )
+        
+        # additionalColumns
+        if node.additionalColumns == []:
+            self.writeContent(
+                f"{TAB}[]"
+            )
+        else:
+            columnNames = []
+            for col in node.additionalColumns:
+                assert isinstance(col, ColumnValue)
+                columnNames.append(col.codeName)
+            columnContent = ", ".join(map(lambda x: f'"{x}"', columnNames))
+            self.writeContent(
+                f"{TAB}[{columnContent}]"
+            )
+        
+        self.writeContent(
+            f")\n"
+        )
+        
+    def visit_SDQLpyJoinNode(self, node):
+        # Get child name
+        leftTable, rightTable = node.getChildNames(self)
+        
+        createdDictName = node.getTableName(self)
+        lambda_index = "p"
+        
+        assert node.joinType == "inner" and node.joinMethod == "hash"
+        
+        assert len(node.rightKeys) == 1 and isinstance(node.rightKeys[0], ColumnValue)
+        rightKey = node.rightKeys[0].codeName
+        self.writeContent(
+            f"{createdDictName} = {rightTable}.joinProbe(\n"
+            f'{TAB}{leftTable},\n'
+            f'{TAB}"{rightKey}",'
+        )
+        
+        # Filter Content
+        if node.filterContent == None:
+            self.writeContent(
+                f"{TAB}lambda {lambda_index}: True,"
+            )
+        else:
+            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, lambda_index)
+            self.writeContent(
+                f"{TAB}lambda {lambda_index}: {filterContent},"
+            )
+        
+        # Do outputRecord
         assert node.outputRecord != None
+        
+        output_lambda_index = "probeDictKey"
+        self.writeContent(
+            f"{TAB}lambda indexedDictValue, {output_lambda_index}:"
+        )
+        for output_line in node.outputRecord.generateSDQLpy(output_lambda_index):
+            self.writeContent(
+                f"{TAB}{output_line}"
+            )    
+        
+        self.writeContent(
+            f")\n"
+        )
         
     def visit_SDQLpyGroupNode(self, node):
         # Get child name

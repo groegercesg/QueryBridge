@@ -3,6 +3,9 @@ from collections import Counter
 from universal_plan_nodes import *
 from expression_operators import *
 
+from sdqlpy_helpers import *
+TAB = "    "
+
 # Classes for the SDQLpy Tree
 class SDQLpyBaseNode():
     def __init__(self):
@@ -126,15 +129,14 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
     def getTableName(self, unparser):
         return self.sdqlrepr
 
-class SDQLpyJoinBuildNode(LeafSDQLpyNode):
-    def __init__(self, tableName, tableKeys, additionalColumns, filterCondition = None):
+class SDQLpyJoinBuildNode(UnarySDQLpyNode):
+    def __init__(self, tableName, tableKeys, additionalColumns):
         super().__init__()
         self.tableName = tableName
         assert isinstance(tableKeys, list) and len(tableKeys) == 1
         self.tableKey = tableKeys[0]
         assert isinstance(additionalColumns, list)
         self.additionalColumns = additionalColumns
-        self.filterCondition = filterCondition
         self.sdqlrepr = "indexed"
         self.columns = set([self.tableKey]).union(set(self.additionalColumns))
 
@@ -144,6 +146,12 @@ class SDQLpyAggrNode(UnarySDQLpyNode):
         self.aggregateOperations = aggregateOperations
         self.sdqlrepr = "aggr"
         self.columns = set(self.aggregateOperations)
+        
+class SDQLpyConcatNode(UnarySDQLpyNode):
+    def __init__(self, columns):
+        super().__init__()
+        self.sdqlrepr = "concat"
+        self.columns = columns
         
 class SDQLpyGroupNode(UnarySDQLpyNode):
     def __init__(self, keyExpressions, aggregateOperations):
@@ -170,7 +178,12 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         joinCondition = self.__splitConditionsIntoList(joinCondition)
         assert isinstance(joinCondition, list)
         self.joinCondition = joinCondition
+        self.outputRecord = None
         self.sdqlrepr = "join"
+        
+    def set_output_record(self, incomingRecord):
+        assert isinstance(incomingRecord, SDQLpyRecordOutput)
+        self.outputRecord = incomingRecord
         
     def set_columns_variable(self):
         match self.joinType:
@@ -221,3 +234,55 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                 raise Exception(f"Couldn't find the x.right value in either of the left and right tables!")
             
         assert len(self.leftKeys) == len(self.rightKeys) == len(self.joinCondition)
+
+# Classes for SDQLpy Constructs
+class SDQLpyRecordOutput():
+    def __init__(self, l_keys, r_keys, l_columns, r_columns):
+        assert isinstance(l_keys, list) and isinstance(r_keys, list)
+        self.l_keys = l_keys
+        self.r_keys = r_keys
+        assert isinstance(l_columns, list) and isinstance(r_columns, list)
+        self.l_columns = l_columns
+        self.r_columns = r_columns
+        
+    def generateSDQLpy(self, lambda_index, zero_index=False):
+        output_content = []
+        
+        output_content.append(
+            f"{{"
+        )
+        
+        # Process: Keys
+        if len(self.keys) == 1:
+            keyFormatted = convert_expression_operator_to_sdqlpy(self.keys[0], lambda_index, zero_index)
+        else:
+            keyContent = []
+            for key in self.keys:
+                expr = convert_expression_operator_to_sdqlpy(key, lambda_index, zero_index)
+                keyContent.append(
+                    f'"{key.codeName}": {expr}'
+                )
+            keyFormatted = f"record({{{', '.join(keyContent)}}})"
+        output_content.append(
+            f"{TAB}{keyFormatted}:"
+        )
+        # Process: Columns
+        colContent = []
+        for col in self.columns:
+            if isinstance(col, ColumnValue):
+                expr = convert_expression_operator_to_sdqlpy(col, lambda_index, zero_index)
+            else:
+                expr = convert_expression_operator_to_sdqlpy(col.child, lambda_index, zero_index)
+            colContent.append(
+                f'"{col.codeName}": {expr}'
+            )
+        columnFormatted = f"record({{{', '.join(colContent)}}})"
+        output_content.append(
+            f"{TAB}{columnFormatted}"
+        )
+        
+        output_content.append(
+            f"}}"
+        )
+        
+        return output_content
