@@ -123,16 +123,14 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
         return self.sdqlrepr
 
 class SDQLpyAggrNode(UnarySDQLpyNode):
-    def __init__(self, preAggregateExpressions, postAggregateOperations):
+    def __init__(self, aggregateOperations):
         super().__init__()
-        self.preAggregateExpressions = preAggregateExpressions
-        self.postAggregateOperations = postAggregateOperations
+        self.aggregateOperations = aggregateOperations
         self.sdqlrepr = "aggr"
         
 class SDQLpyGroupNode(UnarySDQLpyNode):
-    def __init__(self, keyExpressions, preAggregateExpressions, postAggregateOperations):
+    def __init__(self, keyExpressions, aggregateOperations):
         super().__init__()
         self.keyExpressions = keyExpressions
-        self.preAggregateExpressions = preAggregateExpressions
-        self.postAggregateOperations = postAggregateOperations
+        self.aggregateOperations = aggregateOperations
         self.sdqlrepr = "group"

@@ -138,13 +138,11 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             case GroupNode():
                 if op_tree.keyExpressions == []:
                     new_op_tree = SDQLpyAggrNode(
-                        op_tree.preAggregateExpressions,
                         op_tree.postAggregateOperations
                     )
                 else:
                     new_op_tree = SDQLpyGroupNode(
                         op_tree.keyExpressions,
-                        op_tree.preAggregateExpressions,
                         op_tree.postAggregateOperations
                     )
             case OutputNode():
@@ -221,9 +219,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     def orderTopNode(sdqlpy_tree, output_cols_order):
         match sdqlpy_tree:
             case SDQLpyGroupNode():
-                # Do ordering, sort postAggregateOperations by output_cols_order
+                # Do ordering, sort aggregateOperations by output_cols_order
                 ordering = {k:v for v,k in enumerate(output_cols_order)}
-                sdqlpy_tree.postAggregateOperations.sort(key = lambda x : ordering.get(x.codeName))
+                sdqlpy_tree.aggregateOperations.sort(key = lambda x : ordering.get(x.codeName))
             case SDQLpyAggrNode():
                 # No ordering required, as it only returns a single value
                 pass
@@ -344,7 +342,7 @@ class UnparseSDQLpyTree():
         
         # Write aggregations
         aggrContent = []
-        for aggr in node.postAggregateOperations:
+        for aggr in node.aggregateOperations:
             # Skip Average aggregations for now
             if not isinstance(aggr, AvgAggrOperator):
                 # And get the expr of the child
@@ -382,7 +380,7 @@ class UnparseSDQLpyTree():
         )
         
         # Set node.columns
-        node.columns = set(node.postAggregateOperations)
+        node.columns = set(node.aggregateOperations)
             
     def visit_SDQLpyAggrNode(self, node):        
         # Get child name
@@ -391,10 +389,9 @@ class UnparseSDQLpyTree():
         createdDictName = node.getTableName(self)
         lambda_index = "p"
         
-        assert len(node.postAggregateOperations) == 1 and isinstance(node.postAggregateOperations[0], SumAggrOperator)
+        assert len(node.aggregateOperations) == 1 and isinstance(node.aggregateOperations[0], SumAggrOperator)
         
-        assert len(node.preAggregateExpressions) == 1
-        aggrContent = convert_expression_operator_to_sdqlpy(node.preAggregateExpressions[0], lambda_index)
+        aggrContent = convert_expression_operator_to_sdqlpy(node.aggregateOperations[0].child, lambda_index)
         
         self.writeContent(
             f"{createdDictName} = {childTable}.sum(\n"
@@ -415,4 +412,4 @@ class UnparseSDQLpyTree():
         )
         
         # Set node.columns
-        node.columns = set(node.postAggregateOperations)
+        node.columns = set(node.aggregateOperations)
