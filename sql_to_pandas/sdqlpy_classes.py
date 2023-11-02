@@ -10,7 +10,8 @@ TAB = "    "
 class SDQLpyBaseNode():
     def __init__(self):
         # The columns, as strs
-        self.columns = set()
+        self.incomingColumns = set()
+        self.outputColumns = set()
         self.nodeID = None
         self.sdqlrepr = None
         self.topNode = False
@@ -18,47 +19,6 @@ class SDQLpyBaseNode():
     def addID(self, value):
         assert self.nodeID == None
         self.nodeID = value
-        
-    def addToTableColumns(self, incomingColumns):
-        localColumns = set()
-        if isinstance(incomingColumns, list):
-            assert all(isinstance(x, ExpressionBaseNode) for x in incomingColumns)
-            localColumns.update(incomingColumns)
-        elif isinstance(incomingColumns, ExpressionBaseNode):
-            localColumns.add(incomingColumns)
-        else:
-            raise Exception(f"Unexpected format of incoming columns, {type(incomingColumns)}")
-    
-        self.columns.update(localColumns)
-        
-    def __updateTableColumns(self):
-        if len(self.columns) > 0:
-            pass
-        else:
-            # get from children
-            if hasattr(self, "left"):
-                #if self.left.columns:
-                #    self.columns.update(self.left.columns)
-                #else:
-                self.columns.update(self.left.getTableColumnsInternal())
-            if hasattr(self, "right"):
-                self.columns.update(self.right.getTableColumnsInternal())
-            if hasattr(self, "child"):
-                self.columns.update(self.child.getTableColumnsInternal())
-        
-    def getTableColumnsString(self) -> set():
-        self.__updateTableColumns()
-        outputNames = set()
-        for col in self.columns:
-            if col.codeName != '':
-                outputNames.add(col.codeName)
-            else:
-                outputNames.add(col.value)
-        return outputNames
-
-    def getTableColumnsInternal(self) -> set():
-        self.__updateTableColumns()
-        return self.columns
     
     def getTableName(self, unparser, not_output=False):
         assert self.sdqlrepr != None
@@ -92,6 +52,7 @@ class UnarySDQLpyNode(PipelineBreakerNode):
     def addChild(self, child: SDQLpyBaseNode):
         assert self.child == None
         self.child = child
+        self.incomingColumns = self.child.outputColumns
         
     def getChildName(self, unparser):
         childTableList = unparser.getChildTableNames(self)
@@ -103,14 +64,17 @@ class BinarySDQLpyNode(PipelineBreakerNode):
         super().__init__()
         self.left = None
         self.right = None
+        self.incomingColumns = set()
         
     def addLeft(self, left: SDQLpyBaseNode):
         assert self.left == None
         self.left = left
+        self.incomingColumns = self.incomingColumns.union(self.left.outputColumns)
         
     def addRight(self, right: SDQLpyBaseNode):
         assert self.right == None
         self.right = right
+        self.incomingColumns = self.incomingColumns.union(self.right.outputColumns)
         
     def getChildNames(self, unparser):
         childTableList = unparser.getChildTableNames(self)
@@ -124,7 +88,8 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
         self.tableName = tableName
         self.sdqlrepr = tableName
         self.tableColumns = tableColumns
-        self.columns = set(self.tableColumns)
+        self.incomingColumns = set(self.tableColumns)
+        self.outputColumns = set(self.tableColumns)
         
     def getTableName(self, unparser):
         return self.sdqlrepr
@@ -138,20 +103,20 @@ class SDQLpyJoinBuildNode(UnarySDQLpyNode):
         assert isinstance(additionalColumns, list)
         self.additionalColumns = additionalColumns
         self.sdqlrepr = "indexed"
-        self.columns = set([self.tableKey]).union(set(self.additionalColumns))
+        self.outputColumns = set([self.tableKey]).union(set(self.additionalColumns))
 
 class SDQLpyAggrNode(UnarySDQLpyNode):
     def __init__(self, aggregateOperations):
         super().__init__()
         self.aggregateOperations = aggregateOperations
         self.sdqlrepr = "aggr"
-        self.columns = set(self.aggregateOperations)
+        self.outputColumns = set(self.aggregateOperations)
         
 class SDQLpyConcatNode(UnarySDQLpyNode):
     def __init__(self, columns):
         super().__init__()
         self.sdqlrepr = "concat"
-        self.columns = columns
+        self.outputColumns = columns
         
 class SDQLpyGroupNode(UnarySDQLpyNode):
     def __init__(self, keyExpressions, aggregateOperations):
@@ -159,7 +124,7 @@ class SDQLpyGroupNode(UnarySDQLpyNode):
         self.keyExpressions = keyExpressions
         self.aggregateOperations = aggregateOperations
         self.sdqlrepr = "group"
-        self.columns = set(self.aggregateOperations).union(set(self.keyExpressions))
+        self.outputColumns = set(self.aggregateOperations).union(set(self.keyExpressions))
         
 class SDQLpyJoinNode(BinarySDQLpyNode):
     KNOWN_JOIN_METHODS = set([
@@ -189,7 +154,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         match self.joinType:
             case "inner":
                 assert (self.left != None) and (self.right != None)
-                self.columns = self.left.columns.union(self.right.columns)
+                self.outputColumns = self.left.outputColumns.union(self.right.outputColumns)
             case _:
                 raise Exception(f"No columns variable set for joinType: {self.joinType}")
         
@@ -219,16 +184,16 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
     def do_join_key_separation(self):
         self.leftKeys, self.rightKeys = [], []
         for x in self.joinCondition:
-            if id(x.left) in [id(col) for col in self.left.columns]:
+            if id(x.left) in [id(col) for col in self.left.outputColumns]:
                 self.leftKeys.append(x.left)
-            elif id(x.left) in [id(col) for col in self.right.columns]:
+            elif id(x.left) in [id(col) for col in self.right.outputColumns]:
                 self.rightKeys.append(x.left)
             else:
                 raise Exception(f"Couldn't find the x.left value in either of the left and right tables!")
             
-            if id(x.right) in [id(col) for col in self.left.columns]:
+            if id(x.right) in [id(col) for col in self.left.outputColumns]:
                 self.leftKeys.append(x.right)
-            elif id(x.right) in [id(col) for col in self.right.columns]:
+            elif id(x.right) in [id(col) for col in self.right.outputColumns]:
                 self.rightKeys.append(x.right)
             else:
                 raise Exception(f"Couldn't find the x.right value in either of the left and right tables!")
@@ -250,7 +215,23 @@ class SDQLpyRecordOutput():
         for col in self.columns:
             setSourceNodeColumnValues(col, l_lambda_idx, l_columns, r_lambda_idx, r_columns)
         
-        output_content = self.generateSDQLpy("")
+        output_content = self.generateSDQLpyContent()
+        
+        for key in self.keys:
+            resetColumnValues(key)
+        for col in self.columns:
+            resetColumnValues(col)
+            
+        return output_content
+    
+    def generateSDQLpyOneLambda(self, lambda_idx, columns):
+        # Assign sourceNode to the Column Values
+        for key in self.keys:
+            setSourceNodeColumnValues(key, lambda_idx, columns)
+        for col in self.columns:
+            setSourceNodeColumnValues(col, lambda_idx, columns)
+        
+        output_content = self.generateSDQLpyContent()
         
         for key in self.keys:
             resetColumnValues(key)
@@ -259,7 +240,7 @@ class SDQLpyRecordOutput():
             
         return output_content
         
-    def generateSDQLpy(self, lambda_index):
+    def generateSDQLpyContent(self):
         output_content = []
         
         output_content.append(
@@ -268,11 +249,11 @@ class SDQLpyRecordOutput():
         
         # Process: Keys
         if len(self.keys) == 1:
-            keyFormatted = convert_expression_operator_to_sdqlpy(self.keys[0], lambda_index)
+            keyFormatted = convert_expression_operator_to_sdqlpy(self.keys[0])
         else:
             keyContent = []
             for key in self.keys:
-                expr = convert_expression_operator_to_sdqlpy(key, lambda_index)
+                expr = convert_expression_operator_to_sdqlpy(key)
                 keyContent.append(
                     f'"{key.codeName}": {expr}'
                 )
@@ -284,9 +265,9 @@ class SDQLpyRecordOutput():
         colContent = []
         for col in self.columns:
             if isinstance(col, ColumnValue):
-                expr = convert_expression_operator_to_sdqlpy(col, lambda_index)
+                expr = convert_expression_operator_to_sdqlpy(col)
             else:
-                expr = convert_expression_operator_to_sdqlpy(col.child, lambda_index)
+                expr = convert_expression_operator_to_sdqlpy(col.child)
             colContent.append(
                 f'"{col.codeName}": {expr}'
             )

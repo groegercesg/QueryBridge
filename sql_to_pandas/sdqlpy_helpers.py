@@ -1,13 +1,20 @@
 from expression_operators import *
 
+def convert_expr_to_sdqlpy(value, lambda_idx, node_columns):
+    setSourceNodeColumnValues(value, lambda_idx, node_columns)
+    expr_content = convert_expression_operator_to_sdqlpy(value)
+    resetColumnValues(value)
+    
+    return expr_content
+
 def setSourceNodeColumnValues(value, l_lambda_idx, l_columns, r_lambda_idx=None, r_columns=None):
     def check_and_fix_columns(columns):
         if isinstance(columns, set) and isinstance(next(iter(columns)), ExpressionBaseNode):
             return getCodeNameFromSetColumnValues(columns)
         elif isinstance(columns, list) and isinstance(columns[0], str):
-            return columns
+            return set(columns)
         elif isinstance(columns, str):
-            return [columns]
+            return set([columns])
         else:
             raise Exception(f"Unexpected type for columns: {type(columns)}")
             
@@ -30,7 +37,7 @@ def getCodeNameFromSetColumnValues(columns):
     return columns_str
 
 def setSourceNodeColumnValuesOneLambda(value, lambda_idx, columns):
-    assert isinstance(columns, list) and isinstance(columns[0], str)
+    assert isinstance(columns, set) and isinstance(next(iter(columns)), str)
     
     if isinstance(value, BinaryExpressionOperator):
         setSourceNodeColumnValuesOneLambda(value.left, lambda_idx, columns)
@@ -55,6 +62,8 @@ def setSourceNodeColumnValuesOneLambda(value, lambda_idx, columns):
                 value.sourceNode = decidedSourceValue
             else:
                 assert value.sourceNode == decidedSourceValue
+        case IntervalNotionOperator():
+            setSourceNodeColumnValuesOneLambda(value.value, lambda_idx, columns)
 
 def setSourceNodeColumnValuesTwoLambda(value, l_lambda_idx, r_lambda_idx, l_columns, r_columns):
     if isinstance(value, BinaryExpressionOperator):
@@ -99,7 +108,7 @@ def resetColumnValues(value):
             if value.sourceNode != None:
                 value.sourceNode = None
 
-def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaName: str) -> str:
+def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
     def handleConstantValue(expr: ConstantValue):
         if expr.type == "String":
             return f"'{expr.value}'"
@@ -115,7 +124,7 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaN
         else:
             raise Exception(f"Unknown Constant Value Type: {expr.type}")
         
-    def handleIntervalNotion(expr: IntervalNotionOperator, lambdaName):
+    def handleIntervalNotion(expr: IntervalNotionOperator):
         match expr.mode:
             case "[]":
                 leftExpr = GreaterThanEqOperator()
@@ -142,15 +151,15 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaN
         convertedExpression.left = leftExpr
         convertedExpression.right = rightExpr
         
-        sdqlpyExpression = convert_expression_operator_to_sdqlpy(convertedExpression, lambdaName)
+        sdqlpyExpression = convert_expression_operator_to_sdqlpy(convertedExpression)
         return sdqlpyExpression
     
     # Visit Children
     if isinstance(expr_tree, BinaryExpressionOperator):
-        leftNode = convert_expression_operator_to_sdqlpy(expr_tree.left, lambdaName)
-        rightNode = convert_expression_operator_to_sdqlpy(expr_tree.right, lambdaName)
+        leftNode = convert_expression_operator_to_sdqlpy(expr_tree.left)
+        rightNode = convert_expression_operator_to_sdqlpy(expr_tree.right)
     elif isinstance(expr_tree, UnaryExpressionOperator):
-        childNode = convert_expression_operator_to_sdqlpy(expr_tree.child, lambdaName)
+        childNode = convert_expression_operator_to_sdqlpy(expr_tree.child)
     else:
         # A value node
         assert isinstance(expr_tree, LeafNode)
@@ -159,10 +168,8 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaN
     expression_output = None
     match expr_tree:
         case ColumnValue():
-            if expr_tree.sourceNode != None:
-                expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
-            else:
-                expression_output = f"{lambdaName}.{expr_tree.value}"
+            assert expr_tree.sourceNode != None
+            expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
         case ConstantValue():
             expression_output = handleConstantValue(expr_tree)
         case LessThanOperator():
@@ -174,7 +181,7 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaN
         case GreaterThanEqOperator():
             expression_output = f"({leftNode} >= {rightNode})"
         case IntervalNotionOperator():
-            expression_output = handleIntervalNotion(expr_tree, lambdaName)
+            expression_output = handleIntervalNotion(expr_tree)
         case AndOperator():
             expression_output = f"{leftNode} and {rightNode}"
         case MulOperator():
