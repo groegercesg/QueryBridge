@@ -108,9 +108,12 @@ class SDQLpyJoinBuildNode(UnarySDQLpyNode):
 class SDQLpyAggrNode(UnarySDQLpyNode):
     def __init__(self, aggregateOperations):
         super().__init__()
-        self.aggregateOperations = aggregateOperations
+        self.outputRecord = SDQLpyRecordOutput(
+            [],
+            aggregateOperations
+        )
         self.sdqlrepr = "aggr"
-        self.outputColumns = set(self.aggregateOperations)
+        self.outputColumns = set(aggregateOperations)
         
 class SDQLpyConcatNode(UnarySDQLpyNode):
     def __init__(self, columns):
@@ -121,10 +124,12 @@ class SDQLpyConcatNode(UnarySDQLpyNode):
 class SDQLpyGroupNode(UnarySDQLpyNode):
     def __init__(self, keyExpressions, aggregateOperations):
         super().__init__()
-        self.keyExpressions = keyExpressions
-        self.aggregateOperations = aggregateOperations
+        self.outputRecord = SDQLpyRecordOutput(
+            keyExpressions,
+            aggregateOperations
+        )
         self.sdqlrepr = "group"
-        self.outputColumns = set(self.aggregateOperations).union(set(self.keyExpressions))
+        self.outputColumns = set(aggregateOperations).union(set(keyExpressions))
         
 class SDQLpyJoinNode(BinarySDQLpyNode):
     KNOWN_JOIN_METHODS = set([
@@ -243,6 +248,15 @@ class SDQLpyRecordOutput():
     def generateSDQLpyContent(self):
         output_content = []
         
+        if self.keys == []:
+            # If there are no keys, this should be an aggr output
+            assert len(self.columns) == 1
+            assert isinstance(self.columns[0], SumAggrOperator)
+            output_content.append(
+                f"{TAB}{convert_expression_operator_to_sdqlpy(self.columns[0].child)}"
+            )
+            return output_content
+        
         output_content.append(
             f"{{"
         )
@@ -264,7 +278,7 @@ class SDQLpyRecordOutput():
         # Process: Columns
         colContent = []
         for col in self.columns:
-            if isinstance(col, ColumnValue):
+            if isinstance(col, (ColumnValue, CountAllOperator)):
                 expr = convert_expression_operator_to_sdqlpy(col)
             else:
                 expr = convert_expression_operator_to_sdqlpy(col.child)

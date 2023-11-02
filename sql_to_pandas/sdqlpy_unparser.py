@@ -29,8 +29,6 @@ def audit_sdqlpy_tree_recordnode(op_tree: SDQLpyBaseNode) -> bool:
     all_leaves = get_leaf_nodes(op_tree)
     return all(isinstance(leaf, SDQLpyRecordNode) for leaf in all_leaves)
 
-
-
 def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBaseNode:
     def convert_trees(op_tree: UniversalBaseNode) -> SDQLpyBaseNode:
         # Visit Children
@@ -57,10 +55,15 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                         op_tree.postAggregateOperations
                     )
                 else:
-                    new_op_tree = SDQLpyGroupNode(
+                    # A Group should be a Concat <- Group
+                    new_op_tree = SDQLpyConcatNode(
+                        op_tree.postAggregateOperations
+                    )
+                    group_node = SDQLpyGroupNode(
                         op_tree.keyExpressions,
                         op_tree.postAggregateOperations
                     )
+                    new_op_tree.addChild(group_node)
             case OutputNode():
                 new_op_tree = None
             case JoinNode():
@@ -73,6 +76,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
         # Add in the children
+        original_nodes = []
         if new_op_tree == None:
             if (leftNode == None) and (rightNode == None) and (childNode == None):
                 # pass, we're in a Leaf
@@ -85,83 +89,95 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             else:
                 raise Exception("Child and a Binary, impossible")
         else:
-            match new_op_tree:
+            # Only add to the lowest node
+            # Find the lowest node
+            lowest_node_pointer = new_op_tree
+            searching = True
+            while searching == True:
+                match lowest_node_pointer:
+                    case UnarySDQLpyNode():
+                        if lowest_node_pointer.child != None:
+                            original_nodes.append(lowest_node_pointer)
+                            lowest_node_pointer = lowest_node_pointer.child
+                        else:
+                            searching = False
+                    case _:
+                        searching = False
+            # Add lowest, as it won't have been gathered by the while
+            original_nodes.append(lowest_node_pointer)
+            match lowest_node_pointer:
                 case UnarySDQLpyNode():
-                    if childNode != None:
-                        new_op_tree.addChild(childNode)
+                    lowest_node_pointer.addChild(childNode)
                 case BinarySDQLpyNode():
-                    if (leftNode != None) and (rightNode != None):
-                        new_op_tree.addLeft(leftNode)
-                        new_op_tree.addRight(rightNode)
-                        if isinstance(new_op_tree, SDQLpyJoinNode):
-                            new_op_tree.set_columns_variable()
+                    lowest_node_pointer.addLeft(leftNode)
+                    lowest_node_pointer.addRight(rightNode)
+                    if isinstance(lowest_node_pointer, SDQLpyJoinNode):
+                        lowest_node_pointer.set_columns_variable()
                     else:
                         raise Exception("Binary with some Nones")
                 case _:
                     # LeafSDQLpyNode
-                    assert isinstance(new_op_tree, LeafSDQLpyNode)
+                    assert isinstance(lowest_node_pointer, LeafSDQLpyNode)
         
         # Pipeline breaker
-        if isinstance(new_op_tree, PipelineBreakerNode):
-            if childNode == new_op_tree:
-                # They are equal, we skip
-                pass
-            elif childNode != None :
-                match op_tree.child:
-                    case LeafBaseNode():
-                        match op_tree.child:
-                            case ScanNode():
-                                if op_tree.child.tableRestrictions != None:
-                                    new_op_tree.addFilterContent(op_tree.child.tableRestrictions)
-                            case _:
-                                raise Exception(f"We encountered an unknown child")
-                    case UnaryBaseNode():
-                        raise Exception("child is a Unary Node")
-                    case BinaryBaseNode():
-                        if isinstance(childNode, SDQLpyJoinNode):
-                            # Joins have a postJoinFilter, this should be carried up
-                            if childNode.postJoinFilters != []:
-                                new_op_tree.addFilterContent(childNode.addFilterContent)
+        for node in original_nodes:
+            if isinstance(node, PipelineBreakerNode):
+                if childNode == node:
+                    # They are equal, we skip
+                    pass
+                elif childNode != None :
+                    match op_tree.child:
+                        case LeafBaseNode():
+                            match op_tree.child:
+                                case ScanNode():
+                                    if op_tree.child.tableRestrictions != None:
+                                        node.addFilterContent(op_tree.child.tableRestrictions)
+                                case _:
+                                    raise Exception(f"We encountered an unknown child")
+                        case UnaryBaseNode():
+                            raise Exception("child is a Unary Node")
+                        case BinaryBaseNode():
+                            if isinstance(childNode, SDQLpyJoinNode):
+                                # Joins have a postJoinFilter, this should be carried up
+                                if childNode.postJoinFilters != []:
+                                    node.addFilterContent(childNode.addFilterContent)
+                            else:
+                                raise Exception(f"Unknown Binary Node that is a child: {type(childNode)}")
+                        case _:
+                            raise Exception()
+                elif (leftNode != None) and (rightNode != None):
+                    if isinstance(node, SDQLpyJoinNode):
+                        # Run the join key separation now
+                        node.do_join_key_separation()
+                        
+                        # Make Left a JoinBuild, add the filter there
+                        # Leave Right a ScanNode, a Propagate right filter up to here
+                        if isinstance(op_tree.left, ScanNode):
+                            left_joinBuild = SDQLpyJoinBuildNode(
+                                op_tree.left.tableName,
+                                node.leftKeys,
+                                op_tree.left.tableColumns
+                            )
+                            left_joinBuild.addFilterContent(op_tree.left.tableRestrictions)
+                            # Store the Record below
+                            left_joinBuild.addChild(leftNode)
+                            node.left = left_joinBuild
+                        elif isinstance(op_tree.left, JoinNode):
+                            # Set an output record for this node in new_op_tree
+                            createdOutputRecord = SDQLpyRecordOutput(
+                                node.leftKeys,
+                                list(leftNode.left.outputColumns.union(leftNode.right.outputColumns) - set(new_op_tree.leftKeys))
+                            )
+                            node.left.set_output_record(createdOutputRecord)
                         else:
-                            raise Exception(f"Unknown Binary Node that is a child: {type(childNode)}")
-                    case _:
-                        raise Exception()
-            elif (leftNode != None) and (rightNode != None):
-                if isinstance(new_op_tree, SDQLpyJoinNode):
-                    # Run the join key separation now
-                    new_op_tree.do_join_key_separation()
-                    
-                    # Make Left a JoinBuild, add the filter there
-                    # Leave Right a ScanNode, a Propagate right filter up to here
-                    if isinstance(op_tree.left, ScanNode):
-                        left_joinBuild = SDQLpyJoinBuildNode(
-                            op_tree.left.tableName,
-                            new_op_tree.leftKeys,
-                            op_tree.left.tableColumns
-                        )
-                        left_joinBuild.addFilterContent(op_tree.left.tableRestrictions)
-                        # Store the Record below
-                        left_joinBuild.addChild(leftNode)
-                        new_op_tree.left = left_joinBuild
-                    elif isinstance(op_tree.left, JoinNode):
-                        # Set an output record for this node in new_op_tree
-                        createdOutputRecord = SDQLpyRecordOutput(
-                            new_op_tree.leftKeys,
-                            list(leftNode.left.outputColumns.union(leftNode.right.outputColumns) - set(new_op_tree.leftKeys))
-                        )
-                        new_op_tree.left.set_output_record(createdOutputRecord)
+                            raise Exception("Unknown format for left/right of a JoinNode")
+                            
+                        # Add right tableRestrictions
+                        node.addFilterContent(op_tree.right.tableRestrictions)
                     else:
-                        raise Exception("Unknown format for left/right of a JoinNode")
-                        
-                    # Add right tableRestrictions
-                    new_op_tree.addFilterContent(op_tree.right.tableRestrictions)
-                    
-                    
+                        raise Exception(f"A binary node, but no behavior implemented for it: {type(new_op_tree)}")      
                 else:
-                    raise Exception(f"A binary node, but no behavior implemented for it: {type(new_op_tree)}")
-                        
-            else:
-                raise Exception("A leaf")
+                    raise Exception("A leaf")
         
         # Add nodeID to new_op_node
         assert hasattr(op_tree, "nodeID")
@@ -190,29 +206,25 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             case SDQLpyGroupNode():
                 # Do ordering, sort aggregateOperations by output_cols_order
                 ordering = {k:v for v,k in enumerate(output_cols_order)}
-                sdqlpy_tree.aggregateOperations.sort(key = lambda x : ordering.get(x.codeName))
+                sdqlpy_tree.outputRecord.columns.sort(key = lambda x : ordering.get(x.codeName))
             case SDQLpyAggrNode():
                 # No ordering required, as it only returns a single value
                 pass
+            case SDQLpyConcatNode():
+                orderTopNode(sdqlpy_tree.child, output_cols_order)
             case _:
                 raise Exception(f"No ordering configured for node: {type(sdqlpy_tree)}")
     
     def mergeGroupNodeDown(sdqlpy_tree):
-        if isinstance(sdqlpy_tree, SDQLpyGroupNode) and isinstance(sdqlpy_tree.child, SDQLpyJoinNode):
+        if isinstance(sdqlpy_tree, SDQLpyConcatNode):
+            sdqlpy_tree.child = mergeGroupNodeDown(sdqlpy_tree.child)
+            return sdqlpy_tree
+        elif isinstance(sdqlpy_tree, SDQLpyGroupNode) and isinstance(sdqlpy_tree.child, SDQLpyJoinNode):
             assert sdqlpy_tree.child.outputRecord == None
+            sdqlpy_tree.child.set_output_record(sdqlpy_tree.outputRecord)
             
-            createdOutputRecord = SDQLpyRecordOutput(
-                sdqlpy_tree.keyExpressions,
-                sdqlpy_tree.aggregateOperations
-            )
-            sdqlpy_tree.child.set_output_record(createdOutputRecord)
-            
-            # Replace GroupNode with a SDQLpyConcatNode
-            new_sdqlpy_tree = SDQLpyConcatNode(
-                sdqlpy_tree.outputColumns
-            )
-            new_sdqlpy_tree.child = sdqlpy_tree.child
-            return new_sdqlpy_tree
+            # Bump out the GroupNode
+            return sdqlpy_tree.child
         else:
             return sdqlpy_tree
     
@@ -223,7 +235,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     sdqlpy_tree = convert_trees(universal_tree)
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)
-    # TODO: Pass to merge the GroupNodes down into the JoinBuild (?)
+    # TODO: Replace this with a universal folding style method
+    # Merge the GroupNodes down into the JoinBuild (?)
     sdqlpy_tree = mergeGroupNodeDown(sdqlpy_tree)
     
     return sdqlpy_tree
@@ -365,6 +378,7 @@ class UnparseSDQLpyTree():
         createdDictName = node.getTableName(self)
         lambda_index = "p"
         
+        # TODO: We only support an inner hash join at the moment
         assert node.joinType == "inner" and node.joinMethod == "hash"
         
         assert len(node.rightKeys) == 1 and isinstance(node.rightKeys[0], ColumnValue)
@@ -418,38 +432,13 @@ class UnparseSDQLpyTree():
             f"{initialDictName} = {childTable}.sum(lambda {lambda_index} :"
         )
         
-        # Write keys
-        keyContent = []
-        for key in node.keyExpressions:
-            expr = convert_expr_to_sdqlpy(key, f"{lambda_index}[0]", node.incomingColumns)
-            keyContent.append(
-                f'"{key.codeName}": {expr}'
+        # Output the RecordOutput
+        for output_line in node.outputRecord.generateSDQLpyOneLambda(
+            f"{lambda_index}[0]", node.incomingColumns
+        ):
+            self.writeContent(
+                f"{TAB}{output_line}"
             )
-        keyFormatted = f"{{{', '.join(keyContent)}}}"
-        self.writeContent(
-            f"{TAB}{{\n"
-            f"{TAB}{TAB}record({keyFormatted}):"
-        )
-        
-        # Write aggregations
-        aggrContent = []
-        for aggr in node.aggregateOperations:
-            # Skip Average aggregations for now
-            if not isinstance(aggr, AvgAggrOperator):
-                # And get the expr of the child
-                if isinstance(aggr, CountAllOperator):
-                    expr = convert_expr_to_sdqlpy(aggr, f"{lambda_index}[0]", node.incomingColumns)
-                else:
-                    expr = convert_expr_to_sdqlpy(aggr.child, f"{lambda_index}[0]", node.incomingColumns)
-                
-                aggrContent.append(
-                    f'"{aggr.codeName}": {expr}'
-                )
-        aggrFormatted = f"{{{', '.join(aggrContent)}}}"
-        self.writeContent(
-            f"{TAB}{TAB}record({aggrFormatted})\n"
-            f"{TAB}}}\n"
-        )
         
         # Write filterContent, if we have it
         if node.filterContent != None:
@@ -464,11 +453,6 @@ class UnparseSDQLpyTree():
         self.writeContent(
             f")"
         )
-        
-        # Do the summation at the end
-        self.writeContent(
-            f"{createdDictName} = {initialDictName}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}})"
-        )
             
     def visit_SDQLpyAggrNode(self, node):        
         # Get child name
@@ -477,14 +461,18 @@ class UnparseSDQLpyTree():
         createdDictName = node.getTableName(self)
         lambda_index = "p"
         
-        assert len(node.aggregateOperations) == 1 and isinstance(node.aggregateOperations[0], SumAggrOperator)
-        
-        aggrContent = convert_expr_to_sdqlpy(node.aggregateOperations[0].child, f"{lambda_index}[0]", node.incomingColumns)
-        
         self.writeContent(
             f"{createdDictName} = {childTable}.sum(\n"
-            f"{TAB}lambda {lambda_index} : {aggrContent}\n"
+            f"{TAB}lambda {lambda_index} :"
         )
+        
+        # Output the RecordOutput
+        for output_line in node.outputRecord.generateSDQLpyOneLambda(
+            f"{lambda_index}[0]", node.incomingColumns
+        ):
+            self.writeContent(
+                f"{TAB}{output_line}"
+            )
         
         if node.filterContent != None:
             filterContent = convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
