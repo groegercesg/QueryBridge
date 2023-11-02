@@ -287,8 +287,7 @@ class SDQLpyRecordOutput():
                 case ColumnValue():
                     if value.sourceNode != None:
                         value.sourceNode = None
-                  
-                    
+        
         l_columns_str = set([x.codeName for x in l_columns])
         r_columns_str = set([x.codeName for x in r_columns])
         
