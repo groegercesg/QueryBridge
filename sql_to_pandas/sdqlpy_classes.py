@@ -237,15 +237,13 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
 
 # Classes for SDQLpy Constructs
 class SDQLpyRecordOutput():
-    def __init__(self, l_keys, r_keys, l_columns, r_columns):
-        assert isinstance(l_keys, list) and isinstance(r_keys, list)
-        self.l_keys = l_keys
-        self.r_keys = r_keys
-        assert isinstance(l_columns, list) and isinstance(r_columns, list)
-        self.l_columns = l_columns
-        self.r_columns = r_columns
+    def __init__(self, keys, columns):
+        assert isinstance(keys, list)
+        self.keys = keys
+        assert isinstance(columns, list)
+        self.columns = columns
         
-    def generateSDQLpy(self, lambda_index, zero_index=False):
+    def generateSDQLpy(self, lambda_index):
         output_content = []
         
         output_content.append(
@@ -254,11 +252,11 @@ class SDQLpyRecordOutput():
         
         # Process: Keys
         if len(self.keys) == 1:
-            keyFormatted = convert_expression_operator_to_sdqlpy(self.keys[0], lambda_index, zero_index)
+            keyFormatted = convert_expression_operator_to_sdqlpy(self.keys[0], lambda_index)
         else:
             keyContent = []
             for key in self.keys:
-                expr = convert_expression_operator_to_sdqlpy(key, lambda_index, zero_index)
+                expr = convert_expression_operator_to_sdqlpy(key, lambda_index)
                 keyContent.append(
                     f'"{key.codeName}": {expr}'
                 )
@@ -270,9 +268,9 @@ class SDQLpyRecordOutput():
         colContent = []
         for col in self.columns:
             if isinstance(col, ColumnValue):
-                expr = convert_expression_operator_to_sdqlpy(col, lambda_index, zero_index)
+                expr = convert_expression_operator_to_sdqlpy(col, lambda_index)
             else:
-                expr = convert_expression_operator_to_sdqlpy(col.child, lambda_index, zero_index)
+                expr = convert_expression_operator_to_sdqlpy(col.child, lambda_index)
             colContent.append(
                 f'"{col.codeName}": {expr}'
             )

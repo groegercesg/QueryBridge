@@ -147,9 +147,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                         # Set an output record for this node in new_op_tree
                         createdOutputRecord = SDQLpyRecordOutput(
                             new_op_tree.leftKeys,
-                            [],
-                            list(leftNode.left.columns),
-                            list(leftNode.right.columns),
+                            list(leftNode.left.columns.union(leftNode.right.columns))
                         )
                         new_op_tree.left.set_output_record(createdOutputRecord)
                     else:
@@ -203,21 +201,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         if isinstance(sdqlpy_tree, SDQLpyGroupNode) and isinstance(sdqlpy_tree.child, SDQLpyJoinNode):
             assert sdqlpy_tree.child.outputRecord == None
             
-            # Determine which side of the thing it came from
-            leftColumns = sdqlpy_tree.child.left.columns
-            rightColumns = sdqlpy_tree.child.right.columns
-            
-            # TODO: New, Better method for this, this is awful currently
-            for associateList in [sdqlpy_tree.keyExpressions, sdqlpy_tree.aggregateOperations]:
-                for value in associateList:
-                    # Have to surface all ColumnValue classes, then add this association\
-                    if value in leftColumns:
-                        value.associatedWith = "L"
-                    elif value in rightColumns:
-                        value.associatedWith = "R"
-                    else:
-                        raise Exception("Unable to determine which side the value was associated with")
-                
             createdOutputRecord = SDQLpyRecordOutput(
                 sdqlpy_tree.keyExpressions,
                 sdqlpy_tree.aggregateOperations
@@ -351,7 +334,7 @@ class UnparseSDQLpyTree():
                 f"{TAB}lambda {lambda_index}: True,"
             )
         else:
-            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, lambda_index)
+            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, f"{lambda_index}[0]")
             self.writeContent(
                 f"{TAB}lambda {lambda_index}: {filterContent},"
             )
@@ -398,7 +381,7 @@ class UnparseSDQLpyTree():
                 f"{TAB}lambda {lambda_index}: True,"
             )
         else:
-            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, lambda_index)
+            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, f"{lambda_index}[0]")
             self.writeContent(
                 f"{TAB}lambda {lambda_index}: {filterContent},"
             )
@@ -434,7 +417,7 @@ class UnparseSDQLpyTree():
         # Write keys
         keyContent = []
         for key in node.keyExpressions:
-            expr = convert_expression_operator_to_sdqlpy(key, lambda_index)
+            expr = convert_expression_operator_to_sdqlpy(key, f"{lambda_index}[0]")
             keyContent.append(
                 f'"{key.codeName}": {expr}'
             )
@@ -451,9 +434,9 @@ class UnparseSDQLpyTree():
             if not isinstance(aggr, AvgAggrOperator):
                 # And get the expr of the child
                 if isinstance(aggr, CountAllOperator):
-                    expr = convert_expression_operator_to_sdqlpy(aggr, lambda_index)
+                    expr = convert_expression_operator_to_sdqlpy(aggr, f"{lambda_index}[0]")
                 else:
-                    expr = convert_expression_operator_to_sdqlpy(aggr.child, lambda_index)
+                    expr = convert_expression_operator_to_sdqlpy(aggr.child, f"{lambda_index}[0]")
                 
                 aggrContent.append(
                     f'"{aggr.codeName}": {expr}'
@@ -466,7 +449,7 @@ class UnparseSDQLpyTree():
         
         # Write filterContent, if we have it
         if node.filterContent != None:
-            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, lambda_index)
+            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, f"{lambda_index}[0]")
             self.writeContent(
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{filterContent}\n"
@@ -492,7 +475,7 @@ class UnparseSDQLpyTree():
         
         assert len(node.aggregateOperations) == 1 and isinstance(node.aggregateOperations[0], SumAggrOperator)
         
-        aggrContent = convert_expression_operator_to_sdqlpy(node.aggregateOperations[0].child, lambda_index)
+        aggrContent = convert_expression_operator_to_sdqlpy(node.aggregateOperations[0].child, f"{lambda_index}[0]")
         
         self.writeContent(
             f"{createdDictName} = {childTable}.sum(\n"
@@ -500,7 +483,7 @@ class UnparseSDQLpyTree():
         )
         
         if node.filterContent != None:
-            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, lambda_index)
+            filterContent = convert_expression_operator_to_sdqlpy(node.filterContent, f"{lambda_index}[0]")
             self.writeContent(
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{filterContent}\n"
