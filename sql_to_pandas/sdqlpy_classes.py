@@ -243,6 +243,73 @@ class SDQLpyRecordOutput():
         assert isinstance(columns, list)
         self.columns = columns
         
+    def generateSDQLpyTwoLambda(self, l_lambda_idx, r_lambda_idx, l_columns, r_columns):
+        # Assign sourceNode to the Column Values
+        def setSourceNodeColumnValues(value, l_lambda_idx, r_lambda_idx, l_columns, r_columns):
+            if isinstance(value, BinaryExpressionOperator):
+                setSourceNodeColumnValues(value.left, l_lambda_idx, r_lambda_idx, l_columns, r_columns)
+                setSourceNodeColumnValues(value.right, l_lambda_idx, r_lambda_idx, l_columns, r_columns)
+            elif isinstance(value, UnaryExpressionOperator):
+                setSourceNodeColumnValues(value.child, l_lambda_idx, r_lambda_idx, l_columns, r_columns)
+            else:
+                # A value node
+                assert isinstance(value, LeafNode)
+                pass
+            
+            match value:
+                case ColumnValue():
+                    decidedSourceValue = None
+                    if value.codeName in l_columns:
+                        decidedSourceValue = l_lambda_idx
+                    elif value.codeName in r_columns:
+                        decidedSourceValue = r_lambda_idx
+                    else:
+                        raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
+                    
+                    assert decidedSourceValue != None
+                    if value.sourceNode == None:
+                        value.sourceNode = decidedSourceValue
+                    else:
+                        assert value.sourceNode == decidedSourceValue
+           
+        def resetColumnValues(value):
+            if isinstance(value, BinaryExpressionOperator):
+                resetColumnValues(value.left)
+                resetColumnValues(value.right)
+            elif isinstance(value, UnaryExpressionOperator):
+                resetColumnValues(value.child)
+            else:
+                # A value node
+                assert isinstance(value, LeafNode)
+                pass
+            
+            match value:
+                case ColumnValue():
+                    if value.sourceNode != None:
+                        value.sourceNode = None
+                  
+                    
+        l_columns_str = set([x.codeName for x in l_columns])
+        r_columns_str = set([x.codeName for x in r_columns])
+        
+        # Assert none are empty string
+        assert not any([True for x in l_columns_str if x == ""])
+        assert not any([True for x in r_columns_str if x == ""])
+        
+        for key in self.keys:
+            setSourceNodeColumnValues(key, l_lambda_idx, r_lambda_idx, l_columns_str, r_columns_str)
+        for col in self.columns:
+            setSourceNodeColumnValues(col, l_lambda_idx, r_lambda_idx, l_columns_str, r_columns_str)
+        
+        output_content = self.generateSDQLpy("")
+        
+        for key in self.keys:
+            resetColumnValues(key)
+        for col in self.columns:
+            resetColumnValues(col)
+            
+        return output_content
+        
     def generateSDQLpy(self, lambda_index):
         output_content = []
         

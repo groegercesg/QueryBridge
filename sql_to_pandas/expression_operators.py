@@ -72,6 +72,7 @@ class ColumnValue(ValueNode):
         super().__init__(value)
         self.essential = False
         self.codeName = value
+        self.sourceNode = None
         
     def setEssential(self, target):
         self.essential = target

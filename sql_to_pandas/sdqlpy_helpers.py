@@ -60,7 +60,10 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode, lambdaN
     expression_output = None
     match expr_tree:
         case ColumnValue():
-            expression_output = f"{lambdaName}.{expr_tree.value}"
+            if expr_tree.sourceNode != None:
+                expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
+            else:
+                expression_output = f"{lambdaName}.{expr_tree.value}"
         case ConstantValue():
             expression_output = handleConstantValue(expr_tree)
         case LessThanOperator():

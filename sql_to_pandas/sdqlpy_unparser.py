@@ -147,7 +147,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                         # Set an output record for this node in new_op_tree
                         createdOutputRecord = SDQLpyRecordOutput(
                             new_op_tree.leftKeys,
-                            list(leftNode.left.columns.union(leftNode.right.columns))
+                            list(leftNode.left.columns.union(leftNode.right.columns) - set(new_op_tree.leftKeys))
                         )
                         new_op_tree.left.set_output_record(createdOutputRecord)
                     else:
@@ -389,11 +389,15 @@ class UnparseSDQLpyTree():
         # Do outputRecord
         assert node.outputRecord != None
         
-        output_lambda_index = "probeDictKey"
+        left_lambda_index = "indexedDictValue"
+        right_lambda_index = "probeDictKey"
         self.writeContent(
-            f"{TAB}lambda indexedDictValue, {output_lambda_index}:"
+            f"{TAB}lambda {left_lambda_index}, {right_lambda_index}:"
         )
-        for output_line in node.outputRecord.generateSDQLpy(output_lambda_index):
+        for output_line in node.outputRecord.generateSDQLpyTwoLambda(
+            left_lambda_index, right_lambda_index,
+            node.left.columns, node.right.columns
+        ):
             self.writeContent(
                 f"{TAB}{output_line}"
             )    
