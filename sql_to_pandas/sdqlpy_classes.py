@@ -15,6 +15,11 @@ class SDQLpyBaseNode():
         self.nodeID = None
         self.sdqlrepr = None
         self.topNode = False
+        self.filterContent = None
+    
+    def addFilterContent(self, filterContent):
+        assert self.filterContent == None
+        self.filterContent = filterContent
         
     def addID(self, value):
         assert self.nodeID == None
@@ -38,11 +43,6 @@ class LeafSDQLpyNode(SDQLpyBaseNode):
 class PipelineBreakerNode(SDQLpyBaseNode):
     def __init__(self):
         super().__init__()
-        self.filterContent = None
-    
-    def addFilterContent(self, filterContent):
-        assert self.filterContent == None
-        self.filterContent = filterContent
         
 class UnarySDQLpyNode(PipelineBreakerNode):
     def __init__(self):
@@ -87,7 +87,8 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
         super().__init__()
         self.tableName = tableName
         self.sdqlrepr = tableName
-        self.tableColumns = tableColumns
+        # Filter for only essential columns
+        self.tableColumns = [x for x in tableColumns if x.essential == True]
         self.incomingColumns = set(self.tableColumns)
         self.outputColumns = set(self.tableColumns)
         
