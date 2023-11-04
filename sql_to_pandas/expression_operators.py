@@ -291,7 +291,7 @@ class SDQLpyThirdNodeWrapper(LeafNode):
         assert isinstance(target_key, ColumnValue)
         self.target_key = target_key
         self.sourceNode = None
-        
+        self.codeName = col.codeName
         
     def set_sourceValue(self, sourceValue):
         assert self.sourceNode == None

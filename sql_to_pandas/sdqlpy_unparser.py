@@ -149,6 +149,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             case SDQLpyGroupNode() | SDQLpyJoinNode():
                 assert sdqlpy_tree.outputRecord != None
                 ordering = {k:v for v,k in enumerate(output_cols_order)}
+                # Order keys as well
+                sdqlpy_tree.outputRecord.keys.sort(key = lambda x : ordering.get(x.codeName))
                 sdqlpy_tree.outputRecord.columns.sort(key = lambda x : ordering.get(x.codeName))
             case SDQLpyAggrNode():
                 # No ordering required, as it only returns a single value
@@ -309,6 +311,22 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     
         return sdqlpy_tree
     
+    def set_update_sum_for_highest_join(sdqlpy_tree):
+        match sdqlpy_tree:
+            case SDQLpyJoinNode():
+                sdqlpy_tree.update_update_sum(True)
+                return
+        
+        # Post Order traversal: Visit Children
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            set_update_sum_for_highest_join(sdqlpy_tree.left)
+            set_update_sum_for_highest_join(sdqlpy_tree.right)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            set_update_sum_for_highest_join(sdqlpy_tree.child)
+        else:
+            # A leaf node
+            pass
+    
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
@@ -318,6 +336,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     sdqlpy_tree = foldConditionsAndOutputRecords(sdqlpy_tree)
     # Push down join conditions
     sdqlpy_tree = joinPushDown(sdqlpy_tree)
+    # Set update sums correctly
+    set_update_sum_for_highest_join(sdqlpy_tree)
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)
     
@@ -503,6 +523,13 @@ class UnparseSDQLpyTree():
             self.writeContent(
                 f"{TAB}{output_line}"
             )    
+        
+        # Write the update sum
+        # Add comma to last part
+        self.sdqlpy_content[-1] += ","
+        self.writeContent(
+            f"{TAB}{node.is_update_sum}\n"
+        )
         
         self.writeContent(
             f")\n"

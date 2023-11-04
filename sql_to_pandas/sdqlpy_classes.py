@@ -154,10 +154,14 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.outputRecord = None
         self.sdqlrepr = "join"
         self.third_node = None
+        self.is_update_sum = False
         
     def set_output_record(self, incomingRecord):
         assert isinstance(incomingRecord, SDQLpyRecordOutput)
         self.outputRecord = incomingRecord
+        
+    def update_update_sum(self, newValue):
+        self.is_update_sum = newValue
         
     def set_columns_variable(self):
         match self.joinType:

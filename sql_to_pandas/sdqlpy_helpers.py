@@ -166,7 +166,6 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
     
     def handle_SDQLpyThirdNodeWrapper(expr_tree):
         outputString = f"{expr_tree.third_node.tableName}[{expr_tree.sourceNode}.{expr_tree.target_key.codeName}].{expr_tree.col.codeName}"
-        expr_tree.codeName = expr_tree.col.codeName
         return outputString
     
     # Visit Children
