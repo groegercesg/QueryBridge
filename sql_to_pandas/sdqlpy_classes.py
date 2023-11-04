@@ -153,6 +153,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.joinCondition = joinCondition
         self.outputRecord = None
         self.sdqlrepr = "join"
+        self.third_node = None
         
     def set_output_record(self, incomingRecord):
         assert isinstance(incomingRecord, SDQLpyRecordOutput)
@@ -208,6 +209,10 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             
         assert len(self.leftKeys) == len(self.rightKeys) == len(self.joinCondition)
 
+    def add_third_node(self, node):
+        assert self.third_node == None
+        self.third_node = node
+
 # Classes for SDQLpy Constructs
 class SDQLpyRecordOutput():
     def __init__(self, keys, columns):
@@ -215,6 +220,62 @@ class SDQLpyRecordOutput():
         self.keys = keys
         assert isinstance(columns, list)
         self.columns = columns
+        self.third_wrap_counter = 0
+        
+    def wrapColumns(self, col, third_node, third_cols, target_key):
+        left_col, right_col, child_col = None, None, None
+        if isinstance(col, BinaryExpressionOperator):
+            left_col = self.wrapColumns(col.left, third_node, third_cols, target_key)
+            right_col = self.wrapColumns(col.right, third_node, third_cols, target_key)
+        elif isinstance(col, UnaryExpressionOperator):
+            child_col = self.wrapColumns(col.child, third_node, third_cols, target_key)
+        else:
+            # A value node
+            assert isinstance(col, LeafNode)
+            pass
+        
+        # Assign previous changes
+        if (left_col != None) and (right_col != None):
+            col.left = left_col
+            col.right = right_col
+        elif (child_col != None):
+            col.child = child_col
+        else:
+            # A leaf node
+            pass
+        
+        match col:
+            case ColumnValue():
+                if col.codeName in third_cols != None:
+                    new_col = SDQLpyThirdNodeWrapper(col, third_node, target_key)
+                    self.third_wrap_counter += 1
+                    return new_col
+            
+        return col
+        
+    def checkForThirdNodeColumns(self, third_node, target_keys):
+        self.third_wrap_counter = 0
+        # Checks the keys and columns
+        # To see if theyre a part of the third node
+        # If they are, it wraps them up in a third node wrapper
+        # Increment the counter, so we know how many we've found
+        
+        assert len(target_keys) == 1
+        target_key = target_keys[0]
+        
+        third_cols_str = [x.codeName for x in third_node.outputColumns]
+        
+        for idx, key in enumerate(self.keys):
+            self.keys[idx] = self.wrapColumns(
+                key, third_node, third_cols_str, target_key
+            )
+        for idx, col in enumerate(self.columns):
+            self.columns[idx] = self.wrapColumns(
+                col, third_node, third_cols_str, target_key
+            )
+        
+        return self.third_wrap_counter
+        
         
     def generateSDQLpyTwoLambda(self, l_lambda_idx, r_lambda_idx, l_columns, r_columns):
         # Assign sourceNode to the Column Values

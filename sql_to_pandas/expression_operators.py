@@ -280,3 +280,19 @@ def join_statements_with_operator(statements: list[ExpressionBaseNode], join_ope
     current_node.addLeft(statements.pop())
     current_node.addRight(statements.pop())
     return current_op
+
+### SDQL specific ones
+
+class SDQLpyThirdNodeWrapper(LeafNode):
+    def __init__(self, col, third_node, target_key):
+        super().__init__()
+        self.col = col
+        self.third_node = third_node
+        assert isinstance(target_key, ColumnValue)
+        self.target_key = target_key
+        self.sourceNode = None
+        
+        
+    def set_sourceValue(self, sourceValue):
+        assert self.sourceNode == None
+        self.sourceNode = sourceValue

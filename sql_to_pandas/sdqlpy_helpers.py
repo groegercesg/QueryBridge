@@ -77,6 +77,13 @@ def setSourceNodeColumnValuesTwoLambda(value, l_lambda_idx, r_lambda_idx, l_colu
         pass
     
     match value:
+        case SDQLpyThirdNodeWrapper():
+            if value.target_key.codeName in l_columns:
+                value.set_sourceValue(l_lambda_idx)
+            elif value.target_key.codeName in r_columns:
+                value.set_sourceValue(r_lambda_idx)
+            else:
+                raise Exception("The ThirdNode Target Key must be in either Left or Right")
         case ColumnValue():
             decidedSourceValue = None
             if value.codeName in l_columns:
@@ -112,7 +119,7 @@ def resetColumnValues(value):
                 value.value.sourceNode = None
 
 def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
-    def handleConstantValue(expr: ConstantValue):
+    def handle_ConstantValue(expr: ConstantValue):
         if expr.type == "String":
             return f"'{expr.value}'"
         elif expr.type == "Float":
@@ -127,7 +134,7 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
         else:
             raise Exception(f"Unknown Constant Value Type: {expr.type}")
         
-    def handleIntervalNotion(expr: IntervalNotionOperator):
+    def handle_IntervalNotion(expr: IntervalNotionOperator):
         match expr.mode:
             case "[]":
                 leftExpr = GreaterThanEqOperator()
@@ -157,6 +164,11 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
         sdqlpyExpression = convert_expression_operator_to_sdqlpy(convertedExpression)
         return sdqlpyExpression
     
+    def handle_SDQLpyThirdNodeWrapper(expr_tree):
+        outputString = f"{expr_tree.third_node.tableName}[{expr_tree.sourceNode}.{expr_tree.target_key.codeName}].{expr_tree.col.codeName}"
+        expr_tree.codeName = expr_tree.col.codeName
+        return outputString
+    
     # Visit Children
     if isinstance(expr_tree, BinaryExpressionOperator):
         leftNode = convert_expression_operator_to_sdqlpy(expr_tree.left)
@@ -174,7 +186,7 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
             assert expr_tree.sourceNode != None
             expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
         case ConstantValue():
-            expression_output = handleConstantValue(expr_tree)
+            expression_output = handle_ConstantValue(expr_tree)
         case LessThanOperator():
             expression_output = f"({leftNode} < {rightNode})"
         case LessThanEqOperator():
@@ -184,7 +196,7 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
         case GreaterThanEqOperator():
             expression_output = f"({leftNode} >= {rightNode})"
         case IntervalNotionOperator():
-            expression_output = handleIntervalNotion(expr_tree)
+            expression_output = handle_IntervalNotion(expr_tree)
         case AndOperator():
             expression_output = f"{leftNode} and {rightNode}"
         case MulOperator():
@@ -197,6 +209,8 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
             expression_output = "1"
         case EqualsOperator():
             expression_output = f"({leftNode} == {rightNode})"
+        case SDQLpyThirdNodeWrapper():
+            expression_output = handle_SDQLpyThirdNodeWrapper(expr_tree)
         case _: 
             raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 

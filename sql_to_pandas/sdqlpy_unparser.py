@@ -233,30 +233,80 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                         sdqlpy_tree.left.tableColumns
                     )
                     left_joinBuild.addFilterContent(sdqlpy_tree.left.filterContent)
+                    sdqlpy_tree.left.filterContent = None
                     # Store the Record below
-                    left_joinBuild.addChild(leftNode)
+                    left_joinBuild.addChild(sdqlpy_tree.left)
                     sdqlpy_tree.left = left_joinBuild
-                elif isinstance(sdqlpy_tree.left, SDQLpyJoinNode):
+                
+                if isinstance(sdqlpy_tree.left, SDQLpyJoinNode):
                     # Set an output record for this node in new_op_tree
                     createdOutputRecord = SDQLpyRecordOutput(
                         sdqlpy_tree.leftKeys,
                         list(leftNode.left.outputColumns.union(leftNode.right.outputColumns) - set(sdqlpy_tree.leftKeys))
                     )
                     sdqlpy_tree.left.set_output_record(createdOutputRecord)
+                elif isinstance(sdqlpy_tree.right, SDQLpyJoinNode):
+                    # Set an output record for this node in new_op_tree
+                    createdOutputRecord = SDQLpyRecordOutput(
+                        sdqlpy_tree.rightKeys,
+                        list(rightNode.left.outputColumns.union(rightNode.right.outputColumns) - set(sdqlpy_tree.rightKeys))
+                    )
+                    sdqlpy_tree.right.set_output_record(createdOutputRecord)
                     
                 # Add right tableRestrictions
-                sdqlpy_tree.addFilterContent(sdqlpy_tree.right.filterContent)
-                
-                # Check everything is okay, and that it'll produce valid SDQL
-                if not(isinstance(sdqlpy_tree.right, SDQLpyRecordNode) and isinstance(sdqlpy_tree.left, (SDQLpyJoinNode, SDQLpyJoinBuildNode))):
-                    # Otherwise, we may have to do a join pushdown
-                    print("a")
-                    
-                
+                if sdqlpy_tree.right.filterContent != None:
+                    sdqlpy_tree.addFilterContent(sdqlpy_tree.right.filterContent)
+                    # And reset right
+                    sdqlpy_tree.right.filterContent = None
         else:
             assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
             
         # Return the tree, for the next iteration
+        return sdqlpy_tree
+
+    def joinPushDown(sdqlpy_tree):
+        # Post Order traversal: Visit Children
+        leftNode, rightNode, childNode = None, None, None
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = joinPushDown(sdqlpy_tree.left)
+            rightNode = joinPushDown(sdqlpy_tree.right)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = joinPushDown(sdqlpy_tree.child)
+        else:
+            # A leaf node
+            pass
+        
+        # Assign previous changes
+        if (leftNode != None) and (rightNode != None):
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif (childNode != None):
+            sdqlpy_tree.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        if (leftNode != None) and (rightNode != None):
+            if isinstance(sdqlpy_tree, SDQLpyJoinNode):
+                if not(isinstance(sdqlpy_tree.right, SDQLpyRecordNode) and isinstance(sdqlpy_tree.left, (SDQLpyJoinNode, SDQLpyJoinBuildNode))):
+                    # Otherwise, we may have to do a join pushdown
+                    assert isinstance(sdqlpy_tree.left, SDQLpyJoinBuildNode) and isinstance(sdqlpy_tree.right, SDQLpyJoinNode)
+                    
+                    # Make right a node that holds 3
+                    # Attach to left to a child of right
+                    sdqlpy_tree.right.add_third_node(sdqlpy_tree.left)
+                    # Augment the outputRecord, to specify that the column
+                        # Comes from 3rd child
+                    originalOutputRecord = sdqlpy_tree.outputRecord
+                    assert originalOutputRecord.checkForThirdNodeColumns(
+                        sdqlpy_tree.left, sdqlpy_tree.rightKeys
+                    ) >= 1
+                    
+                    # Push the outputRecord ontop of right's 
+                    sdqlpy_tree.right.outputRecord = originalOutputRecord
+                    # Set:
+                    sdqlpy_tree = sdqlpy_tree.right
+                    
         return sdqlpy_tree
     
     # Set the code names
@@ -266,6 +316,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     sdqlpy_tree = convert_trees(universal_tree)
     # Fold conditions and output records into subsequent nodes
     sdqlpy_tree = foldConditionsAndOutputRecords(sdqlpy_tree)
+    # Push down join conditions
+    sdqlpy_tree = joinPushDown(sdqlpy_tree)
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)
     
@@ -402,6 +454,10 @@ class UnparseSDQLpyTree():
         )
         
     def visit_SDQLpyJoinNode(self, node):
+        # If it has a third_node, we should run that
+        if node.third_node != None:
+            self.__walk_tree(node.third_node)
+        
         # Get child name
         leftTable, rightTable = node.getChildNames(self)
         
