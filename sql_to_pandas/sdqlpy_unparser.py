@@ -58,12 +58,12 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     )
                 else:
                     # A Group should be a Concat <- Group
-                    new_op_tree = SDQLpyConcatNode(
-                        op_tree.postAggregateOperations
-                    )
                     group_node = SDQLpyGroupNode(
                         op_tree.keyExpressions,
                         op_tree.postAggregateOperations
+                    )
+                    new_op_tree = SDQLpyConcatNode(
+                        group_node.outputColumns
                     )
                     new_op_tree.addChild(group_node)
             case OutputNode():
@@ -243,11 +243,16 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                         list(leftNode.left.outputColumns.union(leftNode.right.outputColumns) - set(sdqlpy_tree.leftKeys))
                     )
                     sdqlpy_tree.left.set_output_record(createdOutputRecord)
-                else:
-                    raise Exception("Unknown format for left/right of a JoinNode")
                     
                 # Add right tableRestrictions
                 sdqlpy_tree.addFilterContent(sdqlpy_tree.right.filterContent)
+                
+                # Check everything is okay, and that it'll produce valid SDQL
+                if not(isinstance(sdqlpy_tree.right, SDQLpyRecordNode) and isinstance(sdqlpy_tree.left, (SDQLpyJoinNode, SDQLpyJoinBuildNode))):
+                    # Otherwise, we may have to do a join pushdown
+                    print("a")
+                    
+                
         else:
             assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
             
@@ -405,6 +410,8 @@ class UnparseSDQLpyTree():
         
         # TODO: We only support an inner hash join at the moment
         assert node.joinType == "inner" and node.joinMethod == "hash"
+        
+        assert isinstance(node.right, SDQLpyRecordNode) and isinstance(node.left, (SDQLpyJoinNode, SDQLpyJoinBuildNode))
         
         assert len(node.rightKeys) == 1 and isinstance(node.rightKeys[0], ColumnValue)
         rightKey = node.rightKeys[0].codeName

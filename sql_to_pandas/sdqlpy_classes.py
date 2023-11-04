@@ -48,6 +48,7 @@ class UnarySDQLpyNode(PipelineBreakerNode):
     def __init__(self):
         super().__init__()
         self.child = None
+        self.incomingColumns = set()
         
     def addChild(self, child: SDQLpyBaseNode):
         assert self.child == None
@@ -102,6 +103,7 @@ class SDQLpyJoinBuildNode(UnarySDQLpyNode):
         assert isinstance(tableKeys, list) and len(tableKeys) == 1
         self.tableKey = tableKeys[0]
         assert isinstance(additionalColumns, list)
+        # Filter for additional columns not equal to the key column
         self.additionalColumns = additionalColumns
         self.sdqlrepr = "indexed"
         self.outputColumns = set([self.tableKey]).union(set(self.additionalColumns))
@@ -117,10 +119,10 @@ class SDQLpyAggrNode(UnarySDQLpyNode):
         self.outputColumns = set(aggregateOperations)
         
 class SDQLpyConcatNode(UnarySDQLpyNode):
-    def __init__(self, columns):
+    def __init__(self, outputColumns):
         super().__init__()
         self.sdqlrepr = "concat"
-        self.outputColumns = columns
+        self.outputColumns = outputColumns
         
 class SDQLpyGroupNode(UnarySDQLpyNode):
     def __init__(self, keyExpressions, aggregateOperations):

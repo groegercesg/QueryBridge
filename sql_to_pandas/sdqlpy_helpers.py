@@ -107,6 +107,9 @@ def resetColumnValues(value):
         case ColumnValue():
             if value.sourceNode != None:
                 value.sourceNode = None
+        case IntervalNotionOperator():
+            if value.value.sourceNode != None:
+                value.value.sourceNode = None
 
 def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
     def handleConstantValue(expr: ConstantValue):
