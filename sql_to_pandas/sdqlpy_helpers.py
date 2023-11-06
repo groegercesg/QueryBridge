@@ -1,7 +1,7 @@
 from expression_operators import *
 
-def convert_expr_to_sdqlpy(value, lambda_idx, node_columns):
-    setSourceNodeColumnValues(value, lambda_idx, node_columns)
+def convert_expr_to_sdqlpy(value, l_lambda_idx, l_node_columns, r_lambda_idx = None, r_node_columns = None):
+    setSourceNodeColumnValues(value, l_lambda_idx, l_node_columns, r_lambda_idx, r_node_columns)
     expr_content = convert_expression_operator_to_sdqlpy(value)
     resetColumnValues(value)
     
@@ -84,6 +84,20 @@ def setSourceNodeColumnValuesTwoLambda(value, l_lambda_idx, r_lambda_idx, l_colu
                 value.set_sourceValue(r_lambda_idx)
             else:
                 raise Exception("The ThirdNode Target Key must be in either Left or Right")
+        case InSetOperator():
+            if value.child.codeName in l_columns:
+                value.child.sourceNode = l_lambda_idx
+            elif value.child.codeName in r_columns:
+                value.child.sourceNode = r_lambda_idx
+            else:
+                raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
+        case IntervalNotionOperator():
+            if value.value.codeName in l_columns:
+                value.value.sourceNode = l_lambda_idx
+            elif value.value.codeName in r_columns:
+                value.value.sourceNode = r_lambda_idx
+            else:
+                raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
         case ColumnValue():
             decidedSourceValue = None
             if value.codeName in l_columns:

@@ -211,7 +211,17 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                             assert sdqlpy_tree.child.postJoinFilters == []
                             assert sdqlpy_tree.child.outputRecord == None
                             sdqlpy_tree.child.set_output_record(sdqlpy_tree.outputRecord)
+                            # Set the output columns to be consistent
+                            sdqlpy_tree.child.outputColumns = sdqlpy_tree.outputColumns
                             # Bump out the GroupNode
+                            sdqlpy_tree = sdqlpy_tree.child
+                        elif isinstance(sdqlpy_tree, SDQLpyAggrNode):
+                            # Join should have no outputRecord yet
+                            assert sdqlpy_tree.child.outputRecord == None
+                            sdqlpy_tree.child.set_output_record(sdqlpy_tree.outputRecord)
+                            # Set the output columns to be consistent
+                            sdqlpy_tree.child.outputColumns = sdqlpy_tree.outputColumns
+                            # Bump out the AggrNode
                             sdqlpy_tree = sdqlpy_tree.child
                         
                         # Joins have a postJoinFilter, this should be carried up
@@ -419,6 +429,7 @@ class UnparseSDQLpyTree():
         # We don't do anything for a record node
         node.getTableName(self)
         self.relations.add(node.tableName)
+        assert node.filterContent == None
         
     def visit_SDQLpyConcatNode(self, node):
         # Get child name
@@ -522,7 +533,20 @@ class UnparseSDQLpyTree():
         ):
             self.writeContent(
                 f"{TAB}{output_line}"
-            )    
+            )
+        
+        # Write the postJoinFilters
+        if node.postJoinFilters != None:
+            filterContent = convert_expr_to_sdqlpy(
+                node.postJoinFilters, left_lambda_index, node.left.outputColumns,
+                right_lambda_index, node.right.outputColumns
+            )
+            self.writeContent(
+                f"{TAB}if\n"
+                f"{TAB}{TAB}{filterContent}\n"
+                f"{TAB}else\n"
+                f"{TAB}{TAB}0.0"
+            )
         
         # Write the update sum
         # Add comma to last part

@@ -191,6 +191,12 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             self.postJoinFilters.extend(list(filter(lambda x: any(isinstance(x, op) for op in non_equi_join_operator_types), realNewConditions)))
             realNewConditions = list(filter(lambda x: not any(isinstance(x, op) for op in non_equi_join_operator_types), realNewConditions))
             assert len(realNewConditions) > 0
+            
+        # Fix postJoinFilters
+        if len(self.postJoinFilters) == 1:
+            self.postJoinFilters = self.postJoinFilters[0]
+        else:
+            raise Exception(f"Length of postJoinFilters wasn't 1, we should join it with and/or. Examine context to decide which")
         
         return realNewConditions
     
