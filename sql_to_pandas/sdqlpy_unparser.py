@@ -368,7 +368,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             # Left should be >= Should, otherwise we need to swap
             assert sdqlpy_tree.left.cardinality != None
             assert sdqlpy_tree.right.cardinality != None
-            if sdqlpy_tree.left.cardinality >= sdqlpy_tree.right.cardinality:
+            if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
                 # Suitable left and right situation
                 pass
             elif isinstance(sdqlpy_tree.left, SDQLpyRecordNode) and isinstance(sdqlpy_tree.right, SDQLpyRecordNode):
@@ -379,7 +379,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 sdqlpy_tree.left = new_left
                 sdqlpy_tree.right = new_right
                 
-                assert sdqlpy_tree.left.cardinality >= sdqlpy_tree.right.cardinality
+                assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
 
         return sdqlpy_tree        
     
@@ -413,6 +413,8 @@ class UnparseSDQLpyTree():
         self.nodeDict = {}
         self.gatherNodeDict(self.sdqlpy_tree)
         
+        # Variable dict
+        self.variableDict = {}
         # Set top node of the sdqlpy_tree to True
         sdqlpy_tree.topNode = True
         
@@ -435,7 +437,19 @@ class UnparseSDQLpyTree():
         self.sdqlpy_content.append(content)
         
     def getSDQLpyContent(self) -> list[str]:
-        return self.sdqlpy_content
+        # We need to return, with also the variableDict content
+        variableDictContent = []
+        for var_name, var_string in self.variableDict.items():
+            variableDictContent.append(
+                # Enclose the RHS in quotation marks
+                f"{var_name} = '{var_string}'"
+            )
+        
+        if variableDictContent != []:
+            # Add an empty string at the end, to create a newline
+            variableDictContent.append("")
+        
+        return variableDictContent + self.sdqlpy_content
     
     def gatherNodeDict(self, current_node):
         if isinstance(current_node, BinarySDQLpyNode):
@@ -599,7 +613,7 @@ class UnparseSDQLpyTree():
         # Add comma to last part
         self.sdqlpy_content[-1] += ","
         self.writeContent(
-            f"{TAB}{node.is_update_sum}\n"
+            f"{TAB}{node.is_update_sum}"
         )
         
         self.writeContent(
@@ -738,7 +752,19 @@ class UnparseSDQLpyTree():
     
     def __handle_ConstantValue(self, expr: ConstantValue):
         if expr.type == "String":
-            return f"'{expr.value}'"
+            # Save value in variableDict
+            variableString = str(expr.value)
+            newVariable = variableString.replace(" ", "_").replace("#", "").lower()
+            if newVariable in self.variableDict:
+                if self.variableDict.get(newVariable) == variableString:
+                    # The same string is happening twice, just use the existing created reference
+                    return f"{newVariable}"
+                else:
+                    # We need to complicate our variable naming futher
+                    raise Exception("Variable name corresponds to different strings")
+            else:
+                self.variableDict[newVariable] = variableString
+                return f"{newVariable}"
         elif expr.type == "Float":
             return expr.value
         elif expr.type == "Datetime":

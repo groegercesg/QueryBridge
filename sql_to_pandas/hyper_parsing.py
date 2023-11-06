@@ -173,7 +173,11 @@ def create_hyper_operator_tree(explain_json, all_nodes: dict):
     assert isinstance(operatorID, int)
     operator_class.setHyperID(operatorID)
     # Set cardinality
-    operator_class.setCardinality(explain_json["cardinality"])
+    if "selectivity" in explain_json:
+        cardValue = int(float(explain_json["cardinality"]) / float(explain_json["selectivity"]))
+    else: 
+        cardValue = int(explain_json["cardinality"])
+    operator_class.setCardinality(cardValue)
     # Add to all nodes
     assert operatorID not in all_nodes
     all_nodes[operatorID] = operator_class
