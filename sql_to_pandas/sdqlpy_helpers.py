@@ -168,6 +168,21 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
         outputString = f"{expr_tree.third_node.tableName}[{expr_tree.sourceNode}.{expr_tree.target_key.codeName}].{expr_tree.col.codeName}"
         return outputString
     
+    def handle_InSetOperator(expr: InSetOperator):
+        # rewrite as child == set[0] or child == set[1]
+        equating = []
+        for set_opt in expr.set:
+            eq_op = EqualsOperator()
+            eq_op.addLeft(expr.child)
+            eq_op.addRight(set_opt)
+            equating.append(
+                eq_op
+            )
+        
+        or_tree = join_statements_with_operator(equating, "OrOperator")
+        
+        return f"({convert_expression_operator_to_sdqlpy(or_tree)})"
+    
     # Visit Children
     if isinstance(expr_tree, BinaryExpressionOperator):
         leftNode = convert_expression_operator_to_sdqlpy(expr_tree.left)
@@ -198,6 +213,8 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
             expression_output = handle_IntervalNotion(expr_tree)
         case AndOperator():
             expression_output = f"{leftNode} and {rightNode}"
+        case OrOperator():
+            expression_output = f"{leftNode} or {rightNode}"
         case MulOperator():
             expression_output = f"{leftNode} * {rightNode}"
         case SubOperator():
@@ -210,6 +227,9 @@ def convert_expression_operator_to_sdqlpy(expr_tree: ExpressionBaseNode) -> str:
             expression_output = f"({leftNode} == {rightNode})"
         case SDQLpyThirdNodeWrapper():
             expression_output = handle_SDQLpyThirdNodeWrapper(expr_tree)
+        case InSetOperator():
+            expression_output = handle_InSetOperator(expr_tree)
+        
         case _: 
             raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
