@@ -172,6 +172,8 @@ def create_hyper_operator_tree(explain_json, all_nodes: dict):
     operatorID = explain_json["operatorId"]
     assert isinstance(operatorID, int)
     operator_class.setHyperID(operatorID)
+    # Set cardinality
+    operator_class.setCardinality(explain_json["cardinality"])
     # Add to all nodes
     assert operatorID not in all_nodes
     all_nodes[operatorID] = operator_class
@@ -529,6 +531,9 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
         # Add hyperID to new_op_node
         assert hasattr(op_node, "hyperID")
         new_op_node.addID(op_node.hyperID)
+        # Add cardinality to new_op_node
+        assert hasattr(op_node, "cardinality")
+        new_op_node.setCardinality(op_node.cardinality)
         
         return new_op_node
 

@@ -5,6 +5,7 @@ class HyperBaseNode():
     def __init__(self):
         self.child = None
         self.hyperID = None
+        self.cardinality = None
     
     def addChild(self, child):
         assert self.child == None
@@ -13,6 +14,10 @@ class HyperBaseNode():
     def setHyperID(self, id):
         assert self.hyperID == None
         self.hyperID = id
+        
+    def setCardinality(self, card):
+        assert self.cardinality == None and isinstance(card, int)
+        self.cardinality = card
         
 class mapNode(HyperBaseNode):
     def __init__(self, mapValues):

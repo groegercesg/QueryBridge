@@ -3,10 +3,15 @@ from expression_operators import *
 class UniversalBaseNode():
     def __init__(self):
         self.nodeID = None
+        self.cardinality = None
     
     def addID(self, value):
         assert self.nodeID == None
         self.nodeID = value
+    
+    def setCardinality(self, card):
+        assert self.cardinality == None and isinstance(card, int)
+        self.cardinality = card
         
 class LeafBaseNode(UniversalBaseNode):
     def __init__(self):

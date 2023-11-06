@@ -16,6 +16,11 @@ class SDQLpyBaseNode():
         self.sdqlrepr = None
         self.topNode = False
         self.filterContent = None
+        self.cardinality = None
+    
+    def setCardinality(self, card):
+        assert self.cardinality == None and isinstance(card, int)
+        self.cardinality = card
     
     def addFilterContent(self, filterContent):
         assert self.filterContent == None

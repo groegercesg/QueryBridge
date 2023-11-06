@@ -129,6 +129,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             else:
                 # We've already assigned one, don't overwrite it
                 pass
+            # Add cardinality to new_op_node
+            if new_op_tree.cardinality == None:
+                new_op_tree.setCardinality(op_tree.cardinality)
         
         return new_op_tree
     
@@ -336,12 +339,57 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         else:
             # A leaf node
             pass
+        
+    def order_joins(sdqlpy_tree):
+        # Post Order traversal: Visit Children
+        leftNode, rightNode, childNode = None, None, None
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = order_joins(sdqlpy_tree.left)
+            rightNode = order_joins(sdqlpy_tree.right)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = order_joins(sdqlpy_tree.child)
+        else:
+            # A leaf node
+            pass
+        
+        # Assign previous changes
+        if (leftNode != None) and (rightNode != None):
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif (childNode != None):
+            sdqlpy_tree.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        # Run on current node (sdqlpy_tree)
+        if isinstance(sdqlpy_tree, SDQLpyJoinNode):
+            # Check the cardinality of left and right
+            # Left should be >= Should, otherwise we need to swap
+            assert sdqlpy_tree.left.cardinality != None
+            assert sdqlpy_tree.right.cardinality != None
+            if sdqlpy_tree.left.cardinality >= sdqlpy_tree.right.cardinality:
+                # Suitable left and right situation
+                pass
+            else:
+                # Swap left and right
+                new_right = sdqlpy_tree.left
+                new_left = sdqlpy_tree.right
+                
+                sdqlpy_tree.left = new_left
+                sdqlpy_tree.right = new_right
+                
+                assert sdqlpy_tree.left.cardinality >= sdqlpy_tree.right.cardinality
+
+        return sdqlpy_tree        
     
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
     # Call convert trees
     sdqlpy_tree = convert_trees(universal_tree)
+    # Order joins, using cardinality information
+    sdqlpy_tree = order_joins(sdqlpy_tree)
     # Fold conditions and output records into subsequent nodes
     sdqlpy_tree = foldConditionsAndOutputRecords(sdqlpy_tree)
     # Push down join conditions
