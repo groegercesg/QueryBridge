@@ -211,7 +211,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                         # If the current is a group, then we should set the output
                         if isinstance(sdqlpy_tree, SDQLpyGroupNode):
                             # Join should have no outputRecord yet
-                            assert sdqlpy_tree.child.postJoinFilters == []
+                            assert sdqlpy_tree.child.postJoinFilters == None
                             assert sdqlpy_tree.child.outputRecord == None
                             sdqlpy_tree.child.set_output_record(sdqlpy_tree.outputRecord)
                             # Set the output columns to be consistent
@@ -371,7 +371,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             if sdqlpy_tree.left.cardinality >= sdqlpy_tree.right.cardinality:
                 # Suitable left and right situation
                 pass
-            else:
+            elif isinstance(sdqlpy_tree.left, SDQLpyRecordNode) and isinstance(sdqlpy_tree.right, SDQLpyRecordNode):
                 # Swap left and right
                 new_right = sdqlpy_tree.left
                 new_left = sdqlpy_tree.right
@@ -451,7 +451,6 @@ class UnparseSDQLpyTree():
             assert current_node.nodeID not in self.nodeDict
             self.nodeDict[current_node.nodeID] = current_node
     
-    
     def __walk_tree(self, current_node):
         # Walk to children Children
         if isinstance(current_node, BinarySDQLpyNode):
@@ -508,7 +507,7 @@ class UnparseSDQLpyTree():
                 f"{TAB}lambda {lambda_index}: True,"
             )
         else:
-            filterContent = convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
             self.writeContent(
                 f"{TAB}lambda {lambda_index}: {filterContent},"
             )
@@ -562,7 +561,7 @@ class UnparseSDQLpyTree():
                 f"{TAB}lambda {lambda_index}: True,"
             )
         else:
-            filterContent = convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
             self.writeContent(
                 f"{TAB}lambda {lambda_index}: {filterContent},"
             )
@@ -576,7 +575,7 @@ class UnparseSDQLpyTree():
             f"{TAB}lambda {left_lambda_index}, {right_lambda_index}:"
         )
         for output_line in node.outputRecord.generateSDQLpyTwoLambda(
-            left_lambda_index, right_lambda_index,
+            self, left_lambda_index, right_lambda_index,
             node.left.outputColumns, node.right.outputColumns
         ):
             self.writeContent(
@@ -585,7 +584,7 @@ class UnparseSDQLpyTree():
         
         # Write the postJoinFilters
         if node.postJoinFilters != None:
-            filterContent = convert_expr_to_sdqlpy(
+            filterContent = self.convert_expr_to_sdqlpy(
                 node.postJoinFilters, left_lambda_index, node.left.outputColumns,
                 right_lambda_index, node.right.outputColumns
             )
@@ -621,7 +620,7 @@ class UnparseSDQLpyTree():
         
         # Output the RecordOutput
         for output_line in node.outputRecord.generateSDQLpyOneLambda(
-            f"{lambda_index}[0]", node.incomingColumns
+            self, f"{lambda_index}[0]", node.incomingColumns
         ):
             self.writeContent(
                 f"{TAB}{output_line}"
@@ -629,7 +628,7 @@ class UnparseSDQLpyTree():
         
         # Write filterContent, if we have it
         if node.filterContent != None:
-            filterContent = convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
             self.writeContent(
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{filterContent}\n"
@@ -655,14 +654,14 @@ class UnparseSDQLpyTree():
         
         # Output the RecordOutput
         for output_line in node.outputRecord.generateSDQLpyOneLambda(
-            f"{lambda_index}[0]", node.incomingColumns
+            self,f"{lambda_index}[0]", node.incomingColumns
         ):
             self.writeContent(
                 f"{TAB}{output_line}"
             )
         
         if node.filterContent != None:
-            filterContent = convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
             self.writeContent(
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{filterContent}\n"
@@ -673,3 +672,131 @@ class UnparseSDQLpyTree():
         self.writeContent(
             f")"
         )
+    
+    # =========================
+    # Unparser helper functions
+    
+    def convert_expr_to_sdqlpy(self, value, l_lambda_idx, l_node_columns, r_lambda_idx = None, r_node_columns = None):
+        setSourceNodeColumnValues(value, l_lambda_idx, l_node_columns, r_lambda_idx, r_node_columns)
+        expr_content = self.__convert_expression_operator_to_sdqlpy(value)
+        resetColumnValues(value)
+        
+        return expr_content
+    
+    def __convert_expression_operator_to_sdqlpy(self, expr_tree: ExpressionBaseNode) -> str:
+        # Visit Children
+        if isinstance(expr_tree, BinaryExpressionOperator):
+            leftNode = self.__convert_expression_operator_to_sdqlpy(expr_tree.left)
+            rightNode = self.__convert_expression_operator_to_sdqlpy(expr_tree.right)
+        elif isinstance(expr_tree, UnaryExpressionOperator):
+            childNode = self.__convert_expression_operator_to_sdqlpy(expr_tree.child)
+        else:
+            # A value node
+            assert isinstance(expr_tree, LeafNode)
+            pass
+        
+        expression_output = None
+        match expr_tree:
+            case ColumnValue():
+                assert expr_tree.sourceNode != None
+                expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
+            case ConstantValue():
+                expression_output = self.__handle_ConstantValue(expr_tree)
+            case LessThanOperator():
+                expression_output = f"({leftNode} < {rightNode})"
+            case LessThanEqOperator():
+                expression_output = f"({leftNode} <= {rightNode})"
+            case GreaterThanOperator():
+                expression_output = f"({leftNode} > {rightNode})"
+            case GreaterThanEqOperator():
+                expression_output = f"({leftNode} >= {rightNode})"
+            case IntervalNotionOperator():
+                expression_output = self.__handle_IntervalNotion(expr_tree)
+            case AndOperator():
+                expression_output = f"{leftNode} and {rightNode}"
+            case OrOperator():
+                expression_output = f"{leftNode} or {rightNode}"
+            case MulOperator():
+                expression_output = f"{leftNode} * {rightNode}"
+            case SubOperator():
+                expression_output = f"({leftNode} - {rightNode})"
+            case AddOperator():
+                expression_output = f"({leftNode} + {rightNode})"
+            case CountAllOperator():
+                expression_output = "1"
+            case EqualsOperator():
+                expression_output = f"({leftNode} == {rightNode})"
+            case SDQLpyThirdNodeWrapper():
+                expression_output = self.__handle_SDQLpyThirdNodeWrapper(expr_tree)
+            case InSetOperator():
+                expression_output = self.__handle_InSetOperator(expr_tree)
+            
+            case _: 
+                raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
+
+        return expression_output
+    
+    def __handle_ConstantValue(self, expr: ConstantValue):
+        if expr.type == "String":
+            return f"'{expr.value}'"
+        elif expr.type == "Float":
+            return expr.value
+        elif expr.type == "Datetime":
+            year = str(expr.value.year).zfill(4)
+            month = str(expr.value.month).zfill(2)
+            day = str(expr.value.day).zfill(2)
+            return f"{year}{month}{day}"
+        elif expr.type == "Integer":
+            return f'{expr.value}.0'
+        else:
+            raise Exception(f"Unknown Constant Value Type: {expr.type}")
+            
+    def __handle_IntervalNotion(self, expr: IntervalNotionOperator):
+        match expr.mode:
+            case "[]":
+                leftExpr = GreaterThanEqOperator()
+                rightExpr = LessThanEqOperator()
+            case "()":
+                leftExpr = GreaterThanOperator()
+                rightExpr = LessThanOperator()
+            case "[)":
+                leftExpr = GreaterThanEqOperator()
+                rightExpr = LessThanOperator()
+            case "(]":
+                leftExpr = GreaterThanOperator()
+                rightExpr = LessThanEqOperator()
+            case _:
+                raise Exception(f"Unknown Internal Notion operator: {expr.mode}")
+        
+        leftExpr.left = expr.value
+        leftExpr.right = expr.left
+                
+        rightExpr.left = expr.value
+        rightExpr.right = expr.right
+        
+        convertedExpression = AndOperator()
+        convertedExpression.left = leftExpr
+        convertedExpression.right = rightExpr
+        
+        sdqlpyExpression = self.__convert_expression_operator_to_sdqlpy(convertedExpression)
+        return sdqlpyExpression
+        
+    def __handle_SDQLpyThirdNodeWrapper(self, expr_tree):
+        outputString = f"{expr_tree.third_node.tableName}[{expr_tree.sourceNode}.{expr_tree.target_key.codeName}].{expr_tree.col.codeName}"
+        return outputString
+        
+    def __handle_InSetOperator(self, expr: InSetOperator):
+        # rewrite as child == set[0] or child == set[1]
+        equating = []
+        for set_opt in expr.set:
+            eq_op = EqualsOperator()
+            eq_op.addLeft(expr.child)
+            eq_op.addRight(set_opt)
+            equating.append(
+                eq_op
+            )
+        
+        or_tree = join_statements_with_operator(equating, "OrOperator")
+        
+        return f"({self.__convert_expression_operator_to_sdqlpy(or_tree)})"
+

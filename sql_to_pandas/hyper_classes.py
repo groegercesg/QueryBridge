@@ -16,6 +16,9 @@ class HyperBaseNode():
         self.hyperID = id
         
     def setCardinality(self, card):
+        if isinstance(card, float):
+            card = int(card)
+        
         assert self.cardinality == None and isinstance(card, int)
         self.cardinality = card
         

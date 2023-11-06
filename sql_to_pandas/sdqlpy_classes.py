@@ -198,7 +198,10 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             assert len(realNewConditions) > 0
             
         # Fix postJoinFilters
-        if len(self.postJoinFilters) == 1:
+        if len(self.postJoinFilters) == 0:
+            # Skip if no 'postJoinFilters', set as None
+            self.postJoinFilters = None
+        elif len(self.postJoinFilters) == 1:
             self.postJoinFilters = self.postJoinFilters[0]
         else:
             raise Exception(f"Length of postJoinFilters wasn't 1, we should join it with and/or. Examine context to decide which")
@@ -292,14 +295,14 @@ class SDQLpyRecordOutput():
         return self.third_wrap_counter
         
         
-    def generateSDQLpyTwoLambda(self, l_lambda_idx, r_lambda_idx, l_columns, r_columns):
+    def generateSDQLpyTwoLambda(self, unparser, l_lambda_idx, r_lambda_idx, l_columns, r_columns):
         # Assign sourceNode to the Column Values
         for key in self.keys:
             setSourceNodeColumnValues(key, l_lambda_idx, l_columns, r_lambda_idx, r_columns)
         for col in self.columns:
             setSourceNodeColumnValues(col, l_lambda_idx, l_columns, r_lambda_idx, r_columns)
         
-        output_content = self.generateSDQLpyContent()
+        output_content = self.generateSDQLpyContent(unparser)
         
         for key in self.keys:
             resetColumnValues(key)
@@ -308,14 +311,14 @@ class SDQLpyRecordOutput():
             
         return output_content
     
-    def generateSDQLpyOneLambda(self, lambda_idx, columns):
+    def generateSDQLpyOneLambda(self, unparser, lambda_idx, columns):
         # Assign sourceNode to the Column Values
         for key in self.keys:
             setSourceNodeColumnValues(key, lambda_idx, columns)
         for col in self.columns:
             setSourceNodeColumnValues(col, lambda_idx, columns)
         
-        output_content = self.generateSDQLpyContent()
+        output_content = self.generateSDQLpyContent(unparser)
         
         for key in self.keys:
             resetColumnValues(key)
@@ -324,7 +327,7 @@ class SDQLpyRecordOutput():
             
         return output_content
         
-    def generateSDQLpyContent(self):
+    def generateSDQLpyContent(self, unparser):
         output_content = []
         
         if self.keys == []:
@@ -332,7 +335,7 @@ class SDQLpyRecordOutput():
             assert len(self.columns) == 1
             assert isinstance(self.columns[0], SumAggrOperator)
             output_content.append(
-                f"{TAB}{convert_expression_operator_to_sdqlpy(self.columns[0].child)}"
+                f"{TAB}{unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(self.columns[0].child)}"
             )
             return output_content
         
@@ -342,11 +345,11 @@ class SDQLpyRecordOutput():
         
         # Process: Keys
         if len(self.keys) == 1:
-            keyFormatted = convert_expression_operator_to_sdqlpy(self.keys[0])
+            keyFormatted = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(self.keys[0])
         else:
             keyContent = []
             for key in self.keys:
-                expr = convert_expression_operator_to_sdqlpy(key)
+                expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(key)
                 keyContent.append(
                     f'"{key.codeName}": {expr}'
                 )
@@ -357,10 +360,10 @@ class SDQLpyRecordOutput():
         # Process: Columns
         colContent = []
         for col in self.columns:
-            if isinstance(col, (ColumnValue, CountAllOperator)):
-                expr = convert_expression_operator_to_sdqlpy(col)
+            if isinstance(col, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper)):
+                expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(col)
             else:
-                expr = convert_expression_operator_to_sdqlpy(col.child)
+                expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(col.child)
             colContent.append(
                 f'"{col.codeName}": {expr}'
             )
