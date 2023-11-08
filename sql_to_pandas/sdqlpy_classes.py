@@ -232,6 +232,19 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.third_node = node
 
 # Classes for SDQLpy Constructs
+class SDQLpyNKeyJoin():
+    def __init__(self, leftNode, leftKeys, rightKeys):
+        self.leftNode = leftNode
+        assert (len(leftKeys) > 1)
+        self.leftKeys = leftKeys
+        assert (len(rightKeys) > 1)
+        self.rightKeys = rightKeys
+        self.tableName = None
+        
+    def setTableName(self, value):
+        assert self.tableName == None
+        self.tableName = value
+
 class SDQLpyRecordOutput():
     def __init__(self, keys, columns):
         assert isinstance(keys, list)
@@ -239,6 +252,10 @@ class SDQLpyRecordOutput():
         assert isinstance(columns, list)
         self.columns = columns
         self.third_wrap_counter = 0
+        self.unique = False
+        
+    def setUnique(self, value):
+        self.unique = value
         
     def wrapColumns(self, col, third_node, third_cols, target_key):
         left_col, right_col, child_col = None, None, None
@@ -344,33 +361,39 @@ class SDQLpyRecordOutput():
         )
         
         # Process: Keys
-        if len(self.keys) == 1:
-            keyFormatted = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(self.keys[0])
-        else:
-            keyContent = []
-            for key in self.keys:
-                expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(key)
-                keyContent.append(
-                    f'"{key.codeName}": {expr}'
-                )
-            keyFormatted = f"record({{{', '.join(keyContent)}}})"
+        keyContent = []
+        for key in self.keys:
+            expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(key)
+            keyContent.append(
+                f'"{key.codeName}": {expr}'
+            )
+        keyFormatted = f"record({{{', '.join(keyContent)}}})"
+        if self.unique == True:
+            keyFormatted = f"unique({keyFormatted})"
         output_content.append(
             f"{TAB}{keyFormatted}:"
         )
+        
         # Process: Columns
-        colContent = []
-        for col in self.columns:
-            if isinstance(col, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper)):
-                expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(col)
-            else:
-                expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(col.child)
-            colContent.append(
-                f'"{col.codeName}": {expr}'
+        if self.columns == []:
+            # If no columns, then write True
+            output_content.append(
+                f"{TAB}{True}"
             )
-        columnFormatted = f"record({{{', '.join(colContent)}}})"
-        output_content.append(
-            f"{TAB}{columnFormatted}"
-        )
+        else:
+            colContent = []
+            for col in self.columns:
+                if isinstance(col, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper)):
+                    expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(col)
+                else:
+                    expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(col.child)
+                colContent.append(
+                    f'"{col.codeName}": {expr}'
+                )
+            columnFormatted = f"record({{{', '.join(colContent)}}})"
+            output_content.append(
+                f"{TAB}{columnFormatted}"
+            )
         
         output_content.append(
             f"}}"
