@@ -404,14 +404,18 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     output_cols_order = universal_tree.outputNames
     # Call convert trees
     sdqlpy_tree = convert_trees(universal_tree)
+    
+    # Everything below is relating to optimisations
+    
     # Order joins, using cardinality information
-    sdqlpy_tree = order_joins(sdqlpy_tree)
+    # sdqlpy_tree = order_joins(sdqlpy_tree)
     # Fold conditions and output records into subsequent nodes
-    sdqlpy_tree = foldConditionsAndOutputRecords(sdqlpy_tree)
+    # sdqlpy_tree = foldConditionsAndOutputRecords(sdqlpy_tree)
     # Push down join conditions
-    sdqlpy_tree = joinPushDown(sdqlpy_tree)
+    # sdqlpy_tree = joinPushDown(sdqlpy_tree)
     # Set update sums correctly
-    set_update_sum_for_highest_join(sdqlpy_tree)
+    # set_update_sum_for_highest_join(sdqlpy_tree)
+    
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)
     
@@ -512,10 +516,38 @@ class UnparseSDQLpyTree():
             raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
         
     def visit_SDQLpyRecordNode(self, node):
-        # We don't do anything for a record node
-        node.getTableName(self)
         self.relations.add(node.tableName)
-        assert node.filterContent == None
+        
+        if node.filterContent != None:
+            originalTableName = node.tableName
+            createdDictName = node.getTableName(self)
+            lambda_index = "p"
+            
+            self.writeContent(
+                f"{createdDictName} = {originalTableName}.sum(\n"
+                f"{TAB}lambda {lambda_index} : "
+            )
+            
+            for output_line in node.outputRecord.generateSDQLpyOneLambda(
+                self, f"{lambda_index}[0]", node.incomingColumns
+            ):
+                self.writeContent(
+                    f"{TAB}{TAB}{output_line}"
+                )
+            
+            # If there's a filter, then carry it out
+            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+            
+            self.writeContent(
+                f"{TAB}if\n"
+                f"{TAB}{TAB}{filterContent}\n"
+                f"{TAB}else\n"
+                f"{TAB}{TAB}None\n"
+                f")"
+            )
+        else:
+            # We don't do anything for a record node
+            node.getTableName(self)
         
     def visit_SDQLpyConcatNode(self, node):
         # Get child name

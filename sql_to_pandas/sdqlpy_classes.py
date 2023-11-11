@@ -97,9 +97,18 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
         self.tableColumns = [x for x in tableColumns if x.essential == True]
         self.incomingColumns = set(self.tableColumns)
         self.outputColumns = set(self.tableColumns)
+        self.outputRecord = SDQLpyRecordOutput(
+            self.tableColumns,
+            list() 
+        )
         
-    def getTableName(self, unparser):
-        return self.sdqlrepr
+    def getTableName(self, unparser, filter=True):
+        if filter == True:
+            nodeNumber = unparser.nodesCounter[self.__class__.__name__]
+            self.tableName = f"filter_{str(nodeNumber)}"
+            return self.tableName
+        else:
+            return self.sdqlrepr
 
 class SDQLpyJoinBuildNode(UnarySDQLpyNode):
     def __init__(self, tableName, tableKeys, additionalColumns):
