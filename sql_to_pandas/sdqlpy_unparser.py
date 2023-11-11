@@ -165,6 +165,50 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             case _:
                 raise Exception(f"No ordering configured for node: {type(sdqlpy_tree)}")
             
+    def insert_join_probe_nodes(sdqlpy_tree):
+         # Post Order traversal: Visit Children
+        leftNode, rightNode, childNode = None, None, None
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = insert_join_probe_nodes(sdqlpy_tree.left)
+            rightNode = insert_join_probe_nodes(sdqlpy_tree.right)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = insert_join_probe_nodes(sdqlpy_tree.child)
+        else:
+            # A leaf node
+            pass
+        
+        # Assign previous changes
+        if (leftNode != None) and (rightNode != None):
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif (childNode != None):
+            sdqlpy_tree.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        # Work on current
+        if isinstance(sdqlpy_tree, SDQLpyJoinNode):
+            sdqlpy_tree.do_join_key_separation()
+            
+            assert isinstance(sdqlpy_tree.right, SDQLpyRecordNode)
+            
+            # Turn a Record or JoinNode on the left into a JoinBuildNode
+            if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode)):
+                # Make it a SDQLpyJoinBuildNode
+                jbNode = SDQLpyJoinBuildNode(
+                    sdqlpy_tree.leftKeys,
+                    list(sdqlpy_tree.left.outputColumns)
+                )
+                jbNode.addChild(sdqlpy_tree.left)
+                sdqlpy_tree.left = jbNode
+            else:
+                raise Exception("Unknown left of Join Node")
+        
+        # Return the tree, for the next iteration
+        return sdqlpy_tree
+        
+    
     def foldConditionsAndOutputRecords(sdqlpy_tree):
         # Post Order traversal: Visit Children
         leftNode, rightNode, childNode = None, None, None
@@ -259,7 +303,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     # Leave Right a ScanNode, a Propagate right filter up to here
                     if isinstance(sdqlpy_tree.left, SDQLpyRecordNode):
                         left_joinBuild = SDQLpyJoinBuildNode(
-                            sdqlpy_tree.left.tableName,
                             sdqlpy_tree.leftKeys,
                             sdqlpy_tree.left.tableColumns
                         )
@@ -404,11 +447,13 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     output_cols_order = universal_tree.outputNames
     # Call convert trees
     sdqlpy_tree = convert_trees(universal_tree)
+    # Order joins, using cardinality information
+    sdqlpy_tree = order_joins(sdqlpy_tree)
+    # Insert JoinProbe Nodes
+    sdqlpy_tree = insert_join_probe_nodes(sdqlpy_tree)
     
     # Everything below is relating to optimisations
     
-    # Order joins, using cardinality information
-    # sdqlpy_tree = order_joins(sdqlpy_tree)
     # Fold conditions and output records into subsequent nodes
     # sdqlpy_tree = foldConditionsAndOutputRecords(sdqlpy_tree)
     # Push down join conditions
@@ -569,37 +614,28 @@ class UnparseSDQLpyTree():
         lambda_index = "p"
         
         self.writeContent(
-            f"{createdDictName} = {childTable}.joinBuild(\n"
-            f'{TAB}"{node.tableKey.codeName}",'
+            f"{createdDictName} = {childTable}.sum(\n"
+            f"{TAB}lambda {lambda_index}:"
         )
         
-        if node.filterContent == None:
+        for output_line in node.outputRecord.generateSDQLpyOneLambda(
+            self, f"{lambda_index}[0]", node.incomingColumns
+        ):
             self.writeContent(
-                f"{TAB}lambda {lambda_index}: True,"
+                f"{TAB}{TAB}{output_line}"
             )
-        else:
+            
+        if node.filterContent != None:
             filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
             self.writeContent(
-                f"{TAB}lambda {lambda_index}: {filterContent},"
-            )
-        
-        # additionalColumns
-        if node.additionalColumns == []:
-            self.writeContent(
-                f"{TAB}[]"
-            )
-        else:
-            columnNames = []
-            for col in node.additionalColumns:
-                assert isinstance(col, ColumnValue)
-                columnNames.append(col.codeName)
-            columnContent = ", ".join(map(lambda x: f'"{x}"', columnNames))
-            self.writeContent(
-                f"{TAB}[{columnContent}]"
+                f"{TAB}if\n"
+                f"{TAB}{TAB}{filterContent}\n"
+                f"{TAB}else\n"
+                f"{TAB}{TAB}sr_dict()"
             )
         
         self.writeContent(
-            f")\n"
+            f")"
         )
         
     def visit_SDQLpyJoinNode(self, node):
@@ -616,80 +652,37 @@ class UnparseSDQLpyTree():
         # TODO: We only support an inner hash join at the moment
         assert node.joinType == "inner" and node.joinMethod == "hash"
         
-        assert isinstance(node.right, SDQLpyRecordNode) and isinstance(node.left, (SDQLpyJoinNode, SDQLpyJoinBuildNode))
+        assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, SDQLpyRecordNode) 
         
         assert len(node.rightKeys) == 1 and isinstance(node.rightKeys[0], ColumnValue)
         rightKey = node.rightKeys[0].codeName
         self.writeTempContent(
-            f"{createdDictName} = {rightTable}.joinProbe(\n"
-            f'{TAB}{leftTable},\n'
-            f'{TAB}"{rightKey}",'
+            f"{createdDictName} = {rightTable}.sum(\n"
+            f"{TAB}lambda {lambda_index} : "
         )
         
-        # Filter Content
-        if node.filterContent == None:
-            self.writeTempContent(
-                f"{TAB}lambda {lambda_index}: True,"
-            )
-        else:
-            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
-            self.writeTempContent(
-                f"{TAB}lambda {lambda_index}: {filterContent},"
-            )
-        
-        # Do outputRecord
-        assert node.outputRecord != None
-        
-        left_lambda_index = "indexedDictValue"
-        right_lambda_index = "probeDictKey"
-        self.writeTempContent(
-            f"{TAB}lambda {left_lambda_index}, {right_lambda_index}:"
-        )
-        for output_line in node.outputRecord.generateSDQLpyTwoLambda(
-            self, left_lambda_index, right_lambda_index,
+        # Write the output Record
+        for output_line in node.get_output_record().generateSDQLpyTwoLambda(
+            self, f"{leftTable}[{lambda_index}[0]['{rightKey}']]", f"{lambda_index}[0]",
             node.left.outputColumns, node.right.outputColumns
         ):
             self.writeTempContent(
-                f"{TAB}{output_line}"
+                f"{TAB}{TAB}{output_line}"
             )
         
-        # Write the postJoinFilters
-        if node.postJoinFilters != None:
-            elseValue = None
-            if isinstance(node.postJoinFilters, SDQLpyNKeyJoin):
-                filterContent = self.convert_nkeyjoin_to_sdqlpy(
-                    node.postJoinFilters, left_lambda_index, node.left.outputColumns,
-                    right_lambda_index, node.right.outputColumns
-                )
-                elseValue = "None"
-            else:
-                filterContent = self.convert_expr_to_sdqlpy(
-                    node.postJoinFilters, left_lambda_index, node.left.outputColumns,
-                    right_lambda_index, node.right.outputColumns
-                )
-                elseValue = "0.0"
-                
-            assert filterContent != None
-            assert elseValue != None
+        self.writeTempContent(
+            f"{TAB}if\n"
+            f"{TAB}{TAB}{leftTable}[{lambda_index}[0]['{rightKey}']] != None\n"
+            f"{TAB}else\n"
+            f"{TAB}{TAB}sr_dict()"
+        )
+        
+        # Filter Content
+        assert node.filterContent == None
             
-            self.writeTempContent(
-                f"{TAB}if\n"
-                f"{TAB}{TAB}{filterContent}\n"
-                f"{TAB}else\n"
-                f"{TAB}{TAB}{elseValue}"
-            )
-        
-        # Write the update sum
-        # Add comma to last part
-        self.sdqlpy_temp_content[-1] += ","
         self.writeTempContent(
-            f"{TAB}{node.is_update_sum}"
+            f")"
         )
-        
-        self.writeTempContent(
-            f")\n"
-        )
-        
         # Commit Temp Content, now that we're finished
         self.commitTempContent()
         

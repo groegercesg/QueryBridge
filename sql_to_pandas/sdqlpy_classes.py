@@ -111,9 +111,8 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
             return self.sdqlrepr
 
 class SDQLpyJoinBuildNode(UnarySDQLpyNode):
-    def __init__(self, tableName, tableKeys, additionalColumns):
+    def __init__(self, tableKeys, additionalColumns):
         super().__init__()
-        self.tableName = tableName
         assert isinstance(tableKeys, list) and len(tableKeys) == 1
         self.tableKey = tableKeys[0]
         assert isinstance(additionalColumns, list)
@@ -121,6 +120,10 @@ class SDQLpyJoinBuildNode(UnarySDQLpyNode):
         self.additionalColumns = additionalColumns
         self.sdqlrepr = "indexed"
         self.outputColumns = set([self.tableKey]).union(set(self.additionalColumns))
+        self.outputRecord = SDQLpyRecordOutput(
+            tableKeys,
+            list(self.outputColumns) 
+        )
 
 class SDQLpyAggrNode(UnarySDQLpyNode):
     def __init__(self, aggregateOperations):
@@ -169,6 +172,14 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.sdqlrepr = "join"
         self.third_node = None
         self.is_update_sum = False
+        
+    def get_output_record(self):
+        self.outputRecord = SDQLpyRecordOutput(
+            list(self.outputColumns),
+            list()
+        )
+        assert self.outputRecord != None
+        return self.outputRecord
         
     def set_output_record(self, incomingRecord):
         assert isinstance(incomingRecord, SDQLpyRecordOutput)
