@@ -74,6 +74,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     op_tree.joinType,
                     op_tree.joinCondition
                 )
+            case FilterNode():
+                new_op_tree = SDQLpyFilterNode()
+                new_op_tree.addFilterContent(op_tree.condition)
             case _:
                 raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
@@ -120,6 +123,10 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 case _:
                     # LeafSDQLpyNode
                     assert isinstance(lowest_node_pointer, LeafSDQLpyNode)
+                    
+        if isinstance(new_op_tree, SDQLpyFilterNode):
+            new_op_tree.incomingColumns = new_op_tree.child.outputColumns
+            new_op_tree.outputColumns = new_op_tree.incomingColumns
         
         # Add nodeID to new_op_node
         assert hasattr(op_tree, "nodeID")
@@ -191,10 +198,22 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
             sdqlpy_tree.do_join_key_separation()
             
+            if isinstance(sdqlpy_tree.left, SDQLpyRecordNode) and isinstance(sdqlpy_tree.right, SDQLpyJoinNode):
+                # Swap these around
+                # Swap the left and right keys in sdqlpy_tree
+                new_left = sdqlpy_tree.right
+                new_leftKeys = sdqlpy_tree.rightKeys
+                new_right = sdqlpy_tree.left
+                new_rightKeys = sdqlpy_tree.leftKeys
+                sdqlpy_tree.left = new_left
+                sdqlpy_tree.leftKeys = new_leftKeys
+                sdqlpy_tree.right = new_right
+                sdqlpy_tree.rightKeys = new_rightKeys
+            
             assert isinstance(sdqlpy_tree.right, SDQLpyRecordNode)
             
             # Turn a Record or JoinNode on the left into a JoinBuildNode
-            if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode)):
+            if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)):
                 # Make it a SDQLpyJoinBuildNode
                 jbNode = SDQLpyJoinBuildNode(
                     sdqlpy_tree.leftKeys,
@@ -560,12 +579,19 @@ class UnparseSDQLpyTree():
         else:
             raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
         
+    def visit_SDQLpyFilterNode(self, node):
+        # Get child name
+        childTable = node.getChildName(self)
+        
+        createdDictName = node.getTableName(self)
+        lambda_index = "p"
+    
     def visit_SDQLpyRecordNode(self, node):
         self.relations.add(node.tableName)
+        createdDictName = node.getTableName(self)
         
         if node.filterContent != None:
-            originalTableName = node.tableName
-            createdDictName = node.getTableName(self)
+            originalTableName = node.sdqlrepr
             lambda_index = "p"
             
             self.writeContent(
@@ -590,9 +616,6 @@ class UnparseSDQLpyTree():
                 f"{TAB}{TAB}None\n"
                 f")"
             )
-        else:
-            # We don't do anything for a record node
-            node.getTableName(self)
         
     def visit_SDQLpyConcatNode(self, node):
         # Get child name
@@ -654,16 +677,12 @@ class UnparseSDQLpyTree():
         
         assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, SDQLpyRecordNode) 
         
-        assert len(node.rightKeys) == 1 and isinstance(node.rightKeys[0], ColumnValue)
-        rightKey = node.rightKeys[0].codeName
         self.writeTempContent(
             f"{createdDictName} = {rightTable}.sum(\n"
             f"{TAB}lambda {lambda_index} : "
         )
         
-        assert len(node.leftKeys) == 1 and isinstance(node.leftKeys[0], ColumnValue)
-        leftKey = node.leftKeys[0].codeName
-        leftTableRef = f"{leftTable}[record({{'{leftKey}': {lambda_index}[0].{rightKey}}})]"
+        leftTableRef = node.make_leftTableRef(self, lambda_index)
         
         # Write the output Record
         for output_line in node.get_output_record().generateSDQLpyTwoLambda(

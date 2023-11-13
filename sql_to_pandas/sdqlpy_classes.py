@@ -102,8 +102,8 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
             list() 
         )
         
-    def getTableName(self, unparser, filter=True):
-        if filter == True:
+    def getTableName(self, unparser):
+        if self.filterContent != None:
             nodeNumber = unparser.nodesCounter[self.__class__.__name__]
             self.tableName = f"filter_{str(nodeNumber)}"
             return self.tableName
@@ -113,17 +113,27 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
 class SDQLpyJoinBuildNode(UnarySDQLpyNode):
     def __init__(self, tableKeys, additionalColumns):
         super().__init__()
-        assert isinstance(tableKeys, list) and len(tableKeys) == 1
-        self.tableKey = tableKeys[0]
+        assert isinstance(tableKeys, list)
+        self.tableKeys = tableKeys
         assert isinstance(additionalColumns, list)
         # Filter for additional columns not equal to the key column
         self.additionalColumns = additionalColumns
         self.sdqlrepr = "indexed"
-        self.outputColumns = set([self.tableKey]).union(set(self.additionalColumns))
+        self.outputColumns = set(self.tableKeys).union(set(self.additionalColumns))
         self.outputRecord = SDQLpyRecordOutput(
             tableKeys,
             list(self.outputColumns) 
         )
+
+class SDQLpyFilterNode(UnarySDQLpyNode):
+    def __init__(self):
+        super().__init__()
+        self.outputRecord = SDQLpyRecordOutput(
+            [],
+            []
+        )
+        self.sdqlrepr = "filter"
+        self.outputColumns = self.incomingColumns
 
 class SDQLpyAggrNode(UnarySDQLpyNode):
     def __init__(self, aggregateOperations):
@@ -156,7 +166,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         'hash'
     ])
     KNOWN_JOIN_TYPES = set([
-        'inner'
+        'inner', 'rightsemijoin'
     ])
     
     def __init__(self, joinMethod, joinType, joinCondition):
@@ -193,6 +203,8 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             case "inner":
                 assert (self.left != None) and (self.right != None)
                 self.outputColumns = self.left.outputColumns.union(self.right.outputColumns)
+            case "rightsemijoin":
+                self.outputColumns = self.right.outputColumns
             case _:
                 raise Exception(f"No columns variable set for joinType: {self.joinType}")
         
@@ -250,6 +262,17 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
     def add_third_node(self, node):
         assert self.third_node == None
         self.third_node = node
+        
+    def make_leftTableRef(self, unparser, lambda_index):
+        leftTable, rightTable = self.getChildNames(unparser)
+        # {'{leftKey}': {lambda_index}[0].{rightKey}}
+        lr_pairs = []
+        for idx, l_key in enumerate(self.leftKeys):
+            lr_pairs.append(
+                f"'{l_key}': {lambda_index}[0].{self.rightKeys[idx]}"
+            )
+        innerRecord = f"{{{', '.join(lr_pairs)}}}"
+        return f"{leftTable}[record({innerRecord})]"
 
 # Classes for SDQLpy Constructs
 class SDQLpyNKeyJoin():
