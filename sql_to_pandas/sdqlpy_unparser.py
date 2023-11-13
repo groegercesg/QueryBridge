@@ -631,7 +631,7 @@ class UnparseSDQLpyTree():
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{filterContent}\n"
                 f"{TAB}else\n"
-                f"{TAB}{TAB}sr_dict()"
+                f"{TAB}{TAB}None"
             )
         
         self.writeContent(
@@ -661,9 +661,13 @@ class UnparseSDQLpyTree():
             f"{TAB}lambda {lambda_index} : "
         )
         
+        assert len(node.leftKeys) == 1 and isinstance(node.leftKeys[0], ColumnValue)
+        leftKey = node.leftKeys[0].codeName
+        leftTableRef = f"{leftTable}[record({{'{leftKey}': {lambda_index}[0].{rightKey}}})]"
+        
         # Write the output Record
         for output_line in node.get_output_record().generateSDQLpyTwoLambda(
-            self, f"{leftTable}[{lambda_index}[0]['{rightKey}']]", f"{lambda_index}[0]",
+            self, leftTableRef, f"{lambda_index}[0]",
             node.left.outputColumns, node.right.outputColumns
         ):
             self.writeTempContent(
@@ -672,9 +676,9 @@ class UnparseSDQLpyTree():
         
         self.writeTempContent(
             f"{TAB}if\n"
-            f"{TAB}{TAB}{leftTable}[{lambda_index}[0]['{rightKey}']] != None\n"
+            f"{TAB}{TAB}{leftTableRef} != None\n"
             f"{TAB}else\n"
-            f"{TAB}{TAB}sr_dict()"
+            f"{TAB}{TAB}None"
         )
         
         # Filter Content
