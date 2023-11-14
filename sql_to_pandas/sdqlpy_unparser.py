@@ -198,19 +198,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
             sdqlpy_tree.do_join_key_separation()
             
-            if isinstance(sdqlpy_tree.left, SDQLpyRecordNode) and isinstance(sdqlpy_tree.right, SDQLpyJoinNode):
-                # Swap these around
-                # Swap the left and right keys in sdqlpy_tree
-                new_left = sdqlpy_tree.right
-                new_leftKeys = sdqlpy_tree.rightKeys
-                new_right = sdqlpy_tree.left
-                new_rightKeys = sdqlpy_tree.leftKeys
-                sdqlpy_tree.left = new_left
-                sdqlpy_tree.leftKeys = new_leftKeys
-                sdqlpy_tree.right = new_right
-                sdqlpy_tree.rightKeys = new_rightKeys
-            
-            assert isinstance(sdqlpy_tree.right, SDQLpyRecordNode)
+            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode))
             
             # Turn a Record or JoinNode on the left into a JoinBuildNode
             if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)):
@@ -220,9 +208,14 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     list(sdqlpy_tree.left.outputColumns)
                 )
                 jbNode.addChild(sdqlpy_tree.left)
+                jbNode.setCardinality(jbNode.child.cardinality)
                 sdqlpy_tree.left = jbNode
             else:
                 raise Exception("Unknown left of Join Node")
+            
+            # Check the cardinality is okay
+            # right must be >= left
+            assert (sdqlpy_tree.right.cardinality >= sdqlpy_tree.left.cardinality)
         
         # Return the tree, for the next iteration
         return sdqlpy_tree
@@ -675,7 +668,7 @@ class UnparseSDQLpyTree():
         # TODO: We only support an inner hash join at the moment
         assert node.joinType == "inner" and node.joinMethod == "hash"
         
-        assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, SDQLpyRecordNode) 
+        assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode)) 
         
         self.writeTempContent(
             f"{createdDictName} = {rightTable}.sum(\n"
