@@ -40,6 +40,9 @@ class SDQLpyBaseNode():
             self.tableName = f"{self.sdqlrepr}_{str(nodeNumber)}"
             
         return self.tableName
+    
+    def refreshNode(self):
+        pass
         
 class LeafSDQLpyNode(SDQLpyBaseNode):
     def __init__(self):
@@ -48,6 +51,10 @@ class LeafSDQLpyNode(SDQLpyBaseNode):
 class PipelineBreakerNode(SDQLpyBaseNode):
     def __init__(self):
         super().__init__()
+        
+    def set_output_record(self, incomingRecord):
+        assert isinstance(incomingRecord, SDQLpyRecordOutput)
+        self.outputRecord = incomingRecord
         
 class UnarySDQLpyNode(PipelineBreakerNode):
     def __init__(self):
@@ -64,6 +71,9 @@ class UnarySDQLpyNode(PipelineBreakerNode):
         childTableList = unparser.getChildTableNames(self)
         assert len(childTableList) == 1
         return childTableList[0]
+    
+    def refreshNode(self):
+        self.incomingColumns = self.child.outputColumns
         
 class BinarySDQLpyNode(PipelineBreakerNode):
     def __init__(self):
@@ -86,6 +96,10 @@ class BinarySDQLpyNode(PipelineBreakerNode):
         childTableList = unparser.getChildTableNames(self)
         assert len(childTableList) == 2
         return childTableList
+    
+    def refreshNode(self):
+        assert isinstance(self, SDQLpyJoinNode)
+        self.set_columns_variable()
 
 # Classes for Nodes
 class SDQLpyRecordNode(LeafSDQLpyNode):
@@ -134,6 +148,14 @@ class SDQLpyFilterNode(UnarySDQLpyNode):
         )
         self.sdqlrepr = "filter"
         self.outputColumns = self.incomingColumns
+        
+    def set_output_record(self, incomingRecord):
+        assert isinstance(incomingRecord, SDQLpyRecordOutput)
+        # A filter node should only have keys, no values
+        self.outputRecord = SDQLpyRecordOutput(
+            incomingRecord.keys + incomingRecord.columns,
+            []
+        )
 
 class SDQLpyAggrNode(UnarySDQLpyNode):
     def __init__(self, aggregateOperations):
@@ -190,10 +212,6 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         )
         assert self.outputRecord != None
         return self.outputRecord
-        
-    def set_output_record(self, incomingRecord):
-        assert isinstance(incomingRecord, SDQLpyRecordOutput)
-        self.outputRecord = incomingRecord
         
     def update_update_sum(self, newValue):
         self.is_update_sum = newValue
@@ -407,6 +425,11 @@ class SDQLpyRecordOutput():
         keyContent = []
         for key in self.keys:
             expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(key)
+            # Set codeName if None
+            if key.codeName == "":
+                unparser.handleEmptyCodeName(key)
+            
+            assert key.codeName != ''
             keyContent.append(
                 f'"{key.codeName}": {expr}'
             )
@@ -426,10 +449,15 @@ class SDQLpyRecordOutput():
         else:
             colContent = []
             for col in self.columns:
-                if isinstance(col, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper)):
+                if isinstance(col, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper, SumAggrOperator)):
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(col)
                 else:
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(col.child)
+                # Set codeName if None
+                if col.codeName == "":
+                    unparser.handleEmptyCodeName(col)
+                
+                assert col.codeName != ''
                 colContent.append(
                     f'"{col.codeName}": {expr}'
                 )

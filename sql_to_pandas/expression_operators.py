@@ -68,12 +68,33 @@ class ValueNode(LeafNode):
         return self.value
 
 class ColumnValue(ValueNode):
-    def __init__(self, value):
+    SUPPORTED_TYPES = ["Integer", "Double", "Varchar", "Date"]
+    def __init__(self, value, incomingType):
         super().__init__(value)
         self.essential = False
         self.codeName = value
+        self.handleTypes(incomingType)
         self.sourceNode = None
+    
+    def handleTypes(self, incomingType):
+        detectedType = None
+        if isinstance(incomingType, list):
+            if len(incomingType) == 1:
+                detectedType = incomingType[0]
+            elif len(incomingType) == 2:
+                detectedType = incomingType[0]
+                # Store type size
+                self.typeSize = incomingType[1]
+            else:
+                raise Exception(f"Unknown list type format, with {len(incomingType)} elements")
+        else:
+            raise Exception(f"Unexpected type format: {incomingType}")
         
+        assert detectedType in self.SUPPORTED_TYPES
+        
+        self.type = detectedType   
+        
+    
     def setEssential(self, target):
         self.essential = target
 
@@ -170,6 +191,7 @@ class IntervalNotionOperator(BinaryExpressionOperator):
 class AggregationOperators(UnaryExpressionOperator):
     def __init__(self):
         super().__init__()
+        self.sourceNode = None
         
 class MaxAggrOperator(AggregationOperators):
     def __init__(self):
@@ -296,3 +318,8 @@ class SDQLpyThirdNodeWrapper(LeafNode):
     def set_sourceValue(self, sourceValue):
         assert self.sourceNode == None
         self.sourceNode = sourceValue
+        
+class SDQLpyColumnValue(LeafNode):
+    def __init__(self):
+        super().__init__()
+        

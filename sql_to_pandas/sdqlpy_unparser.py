@@ -1,4 +1,5 @@
 from collections import defaultdict
+import random
 
 from universal_plan_nodes import *
 from expression_operators import *
@@ -123,10 +124,16 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 case _:
                     # LeafSDQLpyNode
                     assert isinstance(lowest_node_pointer, LeafSDQLpyNode)
-                    
+        
+        # Connect parts up        
         if isinstance(new_op_tree, SDQLpyFilterNode):
             new_op_tree.incomingColumns = new_op_tree.child.outputColumns
             new_op_tree.outputColumns = new_op_tree.incomingColumns
+            assert hasattr(new_op_tree.child, "outputRecord") and new_op_tree.child.outputRecord != None
+            new_op_tree.set_output_record(new_op_tree.child.outputRecord)
+        elif isinstance(new_op_tree, SDQLpyConcatNode):
+            assert hasattr(new_op_tree.child, "outputRecord") and new_op_tree.child.outputRecord != None
+            new_op_tree.set_output_record(new_op_tree.child.outputRecord)
         
         # Add nodeID to new_op_node
         assert hasattr(op_tree, "nodeID")
@@ -565,6 +572,8 @@ class UnparseSDQLpyTree():
         
         # Visit the current_node and add it to self.pandas_content
         targetVisitorMethod = f"visit_{current_node.__class__.__name__}"
+        # Refresh current_node, before running
+        current_node.refreshNode()
         if hasattr(self, targetVisitorMethod):
             # Count number of nodes
             self.nodesCounter[current_node.__class__.__name__] += 1
@@ -578,6 +587,29 @@ class UnparseSDQLpyTree():
         
         createdDictName = node.getTableName(self)
         lambda_index = "p"
+        
+        self.writeContent(
+            f"{createdDictName} = {childTable}.sum(\n"
+            f"{TAB}lambda {lambda_index} : "
+        )
+        
+        for output_line in node.outputRecord.generateSDQLpyOneLambda(
+                self, f"{lambda_index}[0]", node.incomingColumns
+            ):
+                self.writeContent(
+                    f"{TAB}{TAB}{output_line}"
+                )
+            
+        # If there's a filter, then carry it out
+        filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+        
+        self.writeContent(
+            f"{TAB}if\n"
+            f"{TAB}{TAB}{filterContent}\n"
+            f"{TAB}else\n"
+            f"{TAB}{TAB}None\n"
+            f")"
+        )
     
     def visit_SDQLpyRecordNode(self, node):
         self.relations.add(node.tableName)
@@ -666,7 +698,7 @@ class UnparseSDQLpyTree():
         lambda_index = "p"
         
         # TODO: We only support an inner hash join at the moment
-        assert node.joinType == "inner" and node.joinMethod == "hash"
+        assert node.joinType in ["inner", "rightsemijoin"] and node.joinMethod == "hash"
         
         assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode)) 
         
@@ -800,6 +832,51 @@ class UnparseSDQLpyTree():
     # =========================
     # Unparser helper functions
     
+    def handleEmptyCodeName(self, value):
+        # Takes a expr with no codename, at the top level
+        # Use the subnodes to create one
+        # If this already exists, add randomness
+        def getRelevantStrings(value):
+            # Preorder Traversal
+            # Current
+            current_strings = []
+            
+            match value:
+                case SumAggrOperator():
+                    current_strings.append("sum")
+                case ColumnValue():
+                    current_strings.append(value.codeName)
+                case _:
+                    raise Exception(f"Unknown operator: {type(value)}")
+            
+            # Visit Children
+            if isinstance(value, BinaryExpressionOperator):
+                leftStrings = getRelevantStrings(value.left)
+                rightStrings = getRelevantStrings(value.right)
+                
+                current_strings.extend(leftStrings)
+                current_strings.extend(rightStrings)
+            elif isinstance(value, UnaryExpressionOperator):
+                childStrings = getRelevantStrings(value.child)
+                
+                current_strings.extend(childStrings)
+            else:
+                # A value node
+                assert isinstance(value, LeafNode)
+                pass
+            
+            return current_strings
+        
+        assert value.codeName == ""
+        discovered_strings = getRelevantStrings(value)
+        initialCodeName = "_".join(discovered_strings)
+        while initialCodeName in self.parserCreatedColumns:
+            # It's in the parser Created set
+            # Add randomness
+            initialCodeName = f"{initialCodeName}{random.randint(0,9)}"
+        self.parserCreatedColumns.add(initialCodeName)
+        value.codeName = initialCodeName
+    
     def convert_nkeyjoin_to_sdqlpy(self, value, l_lambda_idx, l_node_columns, r_lambda_idx = None, r_node_columns = None):
         assert isinstance(value, SDQLpyNKeyJoin)
         self.visit_SDQLpyNKeyJoin(value)
@@ -834,7 +911,7 @@ class UnparseSDQLpyTree():
         expression_output = None
         match expr_tree:
             case ColumnValue():
-                assert expr_tree.sourceNode != None
+                # assert expr_tree.sourceNode != None
                 expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
             case ConstantValue():
                 expression_output = self.__handle_ConstantValue(expr_tree)
@@ -868,6 +945,14 @@ class UnparseSDQLpyTree():
                 expression_output = self.__handle_InSetOperator(expr_tree)
             case SDQLpyNKeyJoin():
                 expression_output = self.__handle_SDQLpyNKeyJoin(expr_tree)
+            case SumAggrOperator():
+                if expr_tree.codeName == "":
+                    return childNode
+                else:
+                    if expr_tree.sourceNode == None:
+                        return childNode
+                    else:
+                        return f"{expr_tree.sourceNode}.{expr_tree.codeName}"
             case _: 
                 raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 

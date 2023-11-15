@@ -32,7 +32,26 @@ def getCodeNameFromSetColumnValues(columns):
     return columns_str
 
 def setSourceNodeColumnValuesOneLambda(value, lambda_idx, columns):
+    def setSourceNode(value, lambda_idx, columns, col_check = True):
+        decidedSourceValue = None
+        if value.codeName in columns:
+            decidedSourceValue = lambda_idx
+        # else:
+        #     raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
+        
+        # assert decidedSourceValue != None
+        if value.sourceNode == None:
+            value.sourceNode = decidedSourceValue
+        else:
+            assert value.sourceNode == decidedSourceValue
+    
     assert isinstance(columns, set) and isinstance(next(iter(columns)), str)
+    
+    match value:
+        case ColumnValue() | SumAggrOperator():
+            setSourceNode(value, lambda_idx, columns)
+        case IntervalNotionOperator():
+            setSourceNodeColumnValuesOneLambda(value.value, lambda_idx, columns)
     
     if isinstance(value, BinaryExpressionOperator):
         setSourceNodeColumnValuesOneLambda(value.left, lambda_idx, columns)
@@ -44,21 +63,6 @@ def setSourceNodeColumnValuesOneLambda(value, lambda_idx, columns):
         assert isinstance(value, LeafNode)
         pass
     
-    match value:
-        case ColumnValue():
-            decidedSourceValue = None
-            if value.codeName in columns:
-                decidedSourceValue = lambda_idx
-            else:
-                raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
-            
-            assert decidedSourceValue != None
-            if value.sourceNode == None:
-                value.sourceNode = decidedSourceValue
-            else:
-                assert value.sourceNode == decidedSourceValue
-        case IntervalNotionOperator():
-            setSourceNodeColumnValuesOneLambda(value.value, lambda_idx, columns)
 
 def setSourceNodeColumnValuesTwoLambda(value, l_lambda_idx, r_lambda_idx, l_columns, r_columns):
     if isinstance(value, BinaryExpressionOperator):

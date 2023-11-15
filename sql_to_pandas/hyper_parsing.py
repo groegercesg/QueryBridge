@@ -863,12 +863,18 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
             for column in op_node.table_columns:
                 currentColumn = None
                 if column['iu'] != None:
-                    currentColumn = ColumnValue(column['name'])
+                    currentColumn = ColumnValue(
+                        column['name'],
+                        column["type"]
+                    )
                     iu_references[column['iu'][0]] = currentColumn
                     # Has an iu reference, so it's essential
                     currentColumn.setEssential(True)
                 else:
-                    currentColumn = ColumnValue(column['name'])
+                    currentColumn = ColumnValue(
+                        column['name'],
+                        column["type"]
+                    )
                 newTableColumns.append(currentColumn)
             op_node.table_columns = newTableColumns    
             newTableRestrictions = []
