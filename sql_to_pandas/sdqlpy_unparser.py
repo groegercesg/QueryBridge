@@ -118,7 +118,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     lowest_node_pointer.addLeft(leftNode)
                     lowest_node_pointer.addRight(rightNode)
                     if isinstance(lowest_node_pointer, SDQLpyJoinNode):
-                        lowest_node_pointer.set_columns_variable()
+                        lowest_node_pointer.create_output_dict()
                     else:
                         raise Exception("Binary with some Nones")
                 case _:
@@ -127,13 +127,11 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         
         # Connect parts up        
         if isinstance(new_op_tree, SDQLpyFilterNode):
-            new_op_tree.incomingColumns = new_op_tree.child.outputColumns
-            new_op_tree.outputColumns = new_op_tree.incomingColumns
-            assert hasattr(new_op_tree.child, "outputRecord") and new_op_tree.child.outputRecord != None
-            new_op_tree.set_output_record(new_op_tree.child.outputRecord)
+            assert hasattr(new_op_tree.child, "outputDict") and new_op_tree.child.outputDict != None
+            new_op_tree.set_output_dict(new_op_tree.child.outputDict)
         elif isinstance(new_op_tree, SDQLpyConcatNode):
-            assert hasattr(new_op_tree.child, "outputRecord") and new_op_tree.child.outputRecord != None
-            new_op_tree.set_output_record(new_op_tree.child.outputRecord)
+            assert hasattr(new_op_tree.child, "outputDict") and new_op_tree.child.outputDict != None
+            new_op_tree.set_output_dict(new_op_tree.child.outputDict)
         
         # Add nodeID to new_op_node
         assert hasattr(op_tree, "nodeID")
@@ -164,11 +162,11 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         match sdqlpy_tree:
             # Order things that have output records
             case SDQLpyGroupNode() | SDQLpyJoinNode():
-                assert sdqlpy_tree.outputRecord != None
+                assert sdqlpy_tree.outputDict != None
                 ordering = {k:v for v,k in enumerate(output_cols_order)}
                 # Order keys as well
-                sdqlpy_tree.outputRecord.keys.sort(key = lambda x : ordering.get(x.codeName))
-                sdqlpy_tree.outputRecord.columns.sort(key = lambda x : ordering.get(x.codeName))
+                sdqlpy_tree.outputDict.keys.sort(key = lambda x : ordering.get(x.codeName))
+                sdqlpy_tree.outputDict.values.sort(key = lambda x : ordering.get(x.codeName))
             case SDQLpyAggrNode():
                 # No ordering required, as it only returns a single value
                 pass
@@ -333,14 +331,14 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     
                     if isinstance(sdqlpy_tree.left, SDQLpyJoinNode):
                         # Set an output record for this node in new_op_tree
-                        createdOutputRecord = SDQLpyRecordOutput(
+                        createdOutputRecord = SDQLpySRDict(
                             sdqlpy_tree.leftKeys,
                             list(leftNode.left.outputColumns.union(leftNode.right.outputColumns))  # - set(sdqlpy_tree.leftKeys))
                         )  
                         sdqlpy_tree.left.set_output_record(createdOutputRecord)
                     elif isinstance(sdqlpy_tree.right, SDQLpyJoinNode):
                         # Set an output record for this node in new_op_tree
-                        createdOutputRecord = SDQLpyRecordOutput(
+                        createdOutputRecord = SDQLpySRDict(
                             sdqlpy_tree.rightKeys,
                             list(rightNode.left.outputColumns.union(rightNode.right.outputColumns)) # - set(sdqlpy_tree.rightKeys))
                         )
@@ -593,15 +591,19 @@ class UnparseSDQLpyTree():
             f"{TAB}lambda {lambda_index} : "
         )
         
-        for output_line in node.outputRecord.generateSDQLpyOneLambda(
-                self, f"{lambda_index}[0]", node.incomingColumns
+        for output_line in node.outputDict.generateSDQLpyOneLambda(
+                self, f"{lambda_index}[0]", node.incomingDict.flatCols()
             ):
                 self.writeContent(
                     f"{TAB}{TAB}{output_line}"
                 )
             
         # If there's a filter, then carry it out
-        filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+        filterContent = self.convert_expr_to_sdqlpy(
+            node.filterContent,
+            f"{lambda_index}[0]",
+            node.incomingDict.flatCols()
+        )
         
         self.writeContent(
             f"{TAB}if\n"
@@ -624,15 +626,15 @@ class UnparseSDQLpyTree():
                 f"{TAB}lambda {lambda_index} : "
             )
             
-            for output_line in node.outputRecord.generateSDQLpyOneLambda(
-                self, f"{lambda_index}[0]", node.incomingColumns
+            for output_line in node.outputDict.generateSDQLpyOneLambda(
+                self, f"{lambda_index}[0]", node.incomingDict.flatCols()
             ):
                 self.writeContent(
                     f"{TAB}{TAB}{output_line}"
                 )
             
             # If there's a filter, then carry it out
-            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingDict.flatCols())
             
             self.writeContent(
                 f"{TAB}if\n"
@@ -666,15 +668,15 @@ class UnparseSDQLpyTree():
             f"{TAB}lambda {lambda_index}:"
         )
         
-        for output_line in node.outputRecord.generateSDQLpyOneLambda(
-            self, f"{lambda_index}[0]", node.incomingColumns
+        for output_line in node.outputDict.generateSDQLpyOneLambda(
+            self, f"{lambda_index}[0]", node.incomingDict.flatCols()
         ):
             self.writeContent(
                 f"{TAB}{TAB}{output_line}"
             )
             
         if node.filterContent != None:
-            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingDict.flatCols())
             self.writeContent(
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{filterContent}\n"
@@ -710,9 +712,9 @@ class UnparseSDQLpyTree():
         leftTableRef = node.make_leftTableRef(self, lambda_index)
         
         # Write the output Record
-        for output_line in node.get_output_record().generateSDQLpyTwoLambda(
+        for output_line in node.get_output_dict().generateSDQLpyTwoLambda(
             self, leftTableRef, f"{lambda_index}[0]",
-            node.left.outputColumns, node.right.outputColumns
+            node.left.outputDict.flatCols(), node.right.outputDict.flatCols()
         ):
             self.writeTempContent(
                 f"{TAB}{TAB}{output_line}"
@@ -747,8 +749,8 @@ class UnparseSDQLpyTree():
         )
         
         # Output the RecordOutput
-        for output_line in node.outputRecord.generateSDQLpyOneLambda(
-            self, f"{lambda_index}[0]", node.incomingColumns
+        for output_line in node.outputDict.generateSDQLpyOneLambda(
+            self, f"{lambda_index}[0]", node.incomingDict.flatCols()
         ):
             self.writeContent(
                 f"{TAB}{output_line}"
@@ -756,7 +758,7 @@ class UnparseSDQLpyTree():
         
         # Write filterContent, if we have it
         if node.filterContent != None:
-            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingDict.flatCols())
             self.writeContent(
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{filterContent}\n"
@@ -771,7 +773,10 @@ class UnparseSDQLpyTree():
     def visit_SDQLpyNKeyJoin(self, node):
         # Make leftKeys a RecordOutput
         self.visit_SDQLpyRecordNode(node.leftNode)
-        leftRecord = SDQLpyRecordOutput(node.leftKeys, [])
+        leftRecord = SDQLpySRDict(
+            node.leftKeys,
+            []
+        )
         leftRecord.setUnique(True)
         
         childTable = node.leftNode.tableName
@@ -809,15 +814,15 @@ class UnparseSDQLpyTree():
         )
         
         # Output the RecordOutput
-        for output_line in node.outputRecord.generateSDQLpyOneLambda(
-            self,f"{lambda_index}[0]", node.incomingColumns
+        for output_line in node.outputDict.generateSDQLpyOneLambda(
+            self,f"{lambda_index}[0]", node.incomingDict.flatCols()
         ):
             self.writeContent(
                 f"{TAB}{output_line}"
             )
         
         if node.filterContent != None:
-            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingColumns)
+            filterContent = self.convert_expr_to_sdqlpy(node.filterContent, f"{lambda_index}[0]", node.incomingDict.flatCols())
             self.writeContent(
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{filterContent}\n"

@@ -10,8 +10,8 @@ TAB = "    "
 class SDQLpyBaseNode():
     def __init__(self):
         # The columns, as strs
-        self.incomingColumns = set()
-        self.outputColumns = set()
+        self.incomingDict = None
+        self.outputDict = None
         self.nodeID = None
         self.sdqlrepr = None
         self.topNode = False
@@ -44,6 +44,9 @@ class SDQLpyBaseNode():
     def refreshNode(self):
         pass
         
+    def set_output_dict(self):
+        raise Exception("We should never run this Base class version")
+
 class LeafSDQLpyNode(SDQLpyBaseNode):
     def __init__(self):
         super().__init__()
@@ -52,45 +55,39 @@ class PipelineBreakerNode(SDQLpyBaseNode):
     def __init__(self):
         super().__init__()
         
-    def set_output_record(self, incomingRecord):
-        assert isinstance(incomingRecord, SDQLpyRecordOutput)
-        self.outputRecord = incomingRecord
-        
 class UnarySDQLpyNode(PipelineBreakerNode):
     def __init__(self):
         super().__init__()
         self.child = None
-        self.incomingColumns = set()
+        self.incomingDict = None
         
     def addChild(self, child: SDQLpyBaseNode):
         assert self.child == None
         self.child = child
-        self.incomingColumns = self.child.outputColumns
+        assert self.incomingDict == None
+        self.incomingDict = self.child.outputDict
         
     def getChildName(self, unparser):
         childTableList = unparser.getChildTableNames(self)
         assert len(childTableList) == 1
         return childTableList[0]
-    
-    def refreshNode(self):
-        self.incomingColumns = self.child.outputColumns
         
 class BinarySDQLpyNode(PipelineBreakerNode):
     def __init__(self):
         super().__init__()
         self.left = None
         self.right = None
-        self.incomingColumns = set()
+        self.incomingDicts = []
         
     def addLeft(self, left: SDQLpyBaseNode):
         assert self.left == None
         self.left = left
-        self.incomingColumns = self.incomingColumns.union(self.left.outputColumns)
+        self.incomingDicts.append(self.left.outputDict)
         
     def addRight(self, right: SDQLpyBaseNode):
         assert self.right == None
         self.right = right
-        self.incomingColumns = self.incomingColumns.union(self.right.outputColumns)
+        self.incomingDicts.append(self.right.outputDict)
         
     def getChildNames(self, unparser):
         childTableList = unparser.getChildTableNames(self)
@@ -99,7 +96,7 @@ class BinarySDQLpyNode(PipelineBreakerNode):
     
     def refreshNode(self):
         assert isinstance(self, SDQLpyJoinNode)
-        self.set_columns_variable()
+        self.create_output_dict()
 
 # Classes for Nodes
 class SDQLpyRecordNode(LeafSDQLpyNode):
@@ -109,12 +106,17 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
         self.sdqlrepr = tableName
         # Filter for only essential columns
         self.tableColumns = [x for x in tableColumns if x.essential == True]
-        self.incomingColumns = set(self.tableColumns)
-        self.outputColumns = set(self.tableColumns)
-        self.outputRecord = SDQLpyRecordOutput(
+        self.incomingDict = SDQLpySRDict(
+            self.tableColumns,
+            list()
+        )
+        self.outputDict = self.outputDict = SDQLpySRDict(
             self.tableColumns,
             list() 
         )
+        
+    def set_output_dict(self):
+        pass
         
     def getTableName(self, unparser):
         if self.filterContent != None:
@@ -133,55 +135,56 @@ class SDQLpyJoinBuildNode(UnarySDQLpyNode):
         # Filter for additional columns not equal to the key column
         self.additionalColumns = additionalColumns
         self.sdqlrepr = "indexed"
-        self.outputColumns = set(self.tableKeys).union(set(self.additionalColumns))
-        self.outputRecord = SDQLpyRecordOutput(
-            tableKeys,
-            list(self.outputColumns) 
+        self.outputDict = None
+        
+    def set_output_dict(self):
+        self.outputDict = SDQLpySRDict(
+            self.tableKeys,
+            self.child.outputDict.flatCols() 
         )
 
 class SDQLpyFilterNode(UnarySDQLpyNode):
     def __init__(self):
         super().__init__()
-        self.outputRecord = SDQLpyRecordOutput(
-            [],
-            []
-        )
+        self.outputDict = None
         self.sdqlrepr = "filter"
-        self.outputColumns = self.incomingColumns
         
-    def set_output_record(self, incomingRecord):
-        assert isinstance(incomingRecord, SDQLpyRecordOutput)
+    def set_output_dict(self, incomingDict):
+        # TODO: Fix me!
+        assert isinstance(incomingDict, SDQLpySRDict)
+        assert self.outputDict == None
         # A filter node should only have keys, no values
-        self.outputRecord = SDQLpyRecordOutput(
-            incomingRecord.keys + incomingRecord.columns,
-            []
+        self.outputDict = SDQLpySRDict(
+            incomingDict.keys + incomingDict.values,
+            list()
         )
 
 class SDQLpyAggrNode(UnarySDQLpyNode):
     def __init__(self, aggregateOperations):
         super().__init__()
-        self.outputRecord = SDQLpyRecordOutput(
-            [],
+        self.outputDict = SDQLpySRDict(
+            list(),
             aggregateOperations
         )
         self.sdqlrepr = "aggr"
-        self.outputColumns = set(aggregateOperations)
         
 class SDQLpyConcatNode(UnarySDQLpyNode):
     def __init__(self, outputColumns):
         super().__init__()
         self.sdqlrepr = "concat"
-        self.outputColumns = outputColumns
+        self.outputDict = SDQLpySRDict(
+            list(),
+            list(outputColumns)
+        )
         
 class SDQLpyGroupNode(UnarySDQLpyNode):
     def __init__(self, keyExpressions, aggregateOperations):
         super().__init__()
-        self.outputRecord = SDQLpyRecordOutput(
+        self.outputDict = SDQLpySRDict(
             keyExpressions,
             aggregateOperations
         )
         self.sdqlrepr = "group"
-        self.outputColumns = set(aggregateOperations).union(set(keyExpressions))
         
 class SDQLpyJoinNode(BinarySDQLpyNode):
     KNOWN_JOIN_METHODS = set([
@@ -200,29 +203,32 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         joinCondition = self.__splitConditionsIntoList(joinCondition)
         assert isinstance(joinCondition, list)
         self.joinCondition = joinCondition
-        self.outputRecord = None
+        self.outputDict = None
         self.sdqlrepr = "join"
         self.third_node = None
         self.is_update_sum = False
         
-    def get_output_record(self):
-        self.outputRecord = SDQLpyRecordOutput(
-            list(self.outputColumns),
-            list()
-        )
-        assert self.outputRecord != None
-        return self.outputRecord
-        
     def update_update_sum(self, newValue):
+        assert isinstance(newValue, bool)
         self.is_update_sum = newValue
         
-    def set_columns_variable(self):
+    def get_output_dict(self):
+        self.create_output_dict()
+        return self.outputDict
+        
+    def create_output_dict(self):
         match self.joinType:
             case "inner":
                 assert (self.left != None) and (self.right != None)
-                self.outputColumns = self.left.outputColumns.union(self.right.outputColumns)
+                self.outputDict = SDQLpySRDict(
+                    self.left.outputDict.keys + self.right.outputDict.keys,
+                    self.left.outputDict.values + self.right.outputDict.values
+                )
             case "rightsemijoin":
-                self.outputColumns = self.right.outputColumns
+                self.outputDict = SDQLpySRDict(
+                    self.right.outputDict.keys,
+                    self.right.outputDict.values
+                )
             case _:
                 raise Exception(f"No columns variable set for joinType: {self.joinType}")
         
@@ -261,16 +267,16 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
     def do_join_key_separation(self):
         self.leftKeys, self.rightKeys = [], []
         for x in self.joinCondition:
-            if id(x.left) in [id(col) for col in self.left.outputColumns]:
+            if id(x.left) in [id(col) for col in self.left.outputDict.flatCols()]:
                 self.leftKeys.append(x.left)
-            elif id(x.left) in [id(col) for col in self.right.outputColumns]:
+            elif id(x.left) in [id(col) for col in self.right.outputDict.flatCols()]:
                 self.rightKeys.append(x.left)
             else:
                 raise Exception(f"Couldn't find the x.left value in either of the left and right tables!")
             
-            if id(x.right) in [id(col) for col in self.left.outputColumns]:
+            if id(x.right) in [id(col) for col in self.left.outputDict.flatCols()]:
                 self.leftKeys.append(x.right)
-            elif id(x.right) in [id(col) for col in self.right.outputColumns]:
+            elif id(x.right) in [id(col) for col in self.right.outputDict.flatCols()]:
                 self.rightKeys.append(x.right)
             else:
                 raise Exception(f"Couldn't find the x.right value in either of the left and right tables!")
@@ -306,14 +312,17 @@ class SDQLpyNKeyJoin():
         assert self.tableName == None
         self.tableName = value
 
-class SDQLpyRecordOutput():
-    def __init__(self, keys, columns):
+class SDQLpySRDict():
+    def __init__(self, keys, values):
         assert isinstance(keys, list)
         self.keys = keys
-        assert isinstance(columns, list)
-        self.columns = columns
+        assert isinstance(values, list)
+        self.values = values
         self.third_wrap_counter = 0
         self.unique = False
+        
+    def flatCols(self):
+        return list(self.keys + self.values)
         
     def setUnique(self, value):
         self.unique = value
@@ -366,7 +375,7 @@ class SDQLpyRecordOutput():
                 key, third_node, third_cols_str, target_key
             )
         for idx, col in enumerate(self.columns):
-            self.columns[idx] = self.wrapColumns(
+            self.values[idx] = self.wrapColumns(
                 col, third_node, third_cols_str, target_key
             )
         
@@ -377,14 +386,14 @@ class SDQLpyRecordOutput():
         # Assign sourceNode to the Column Values
         for key in self.keys:
             setSourceNodeColumnValues(key, l_lambda_idx, l_columns, r_lambda_idx, r_columns)
-        for col in self.columns:
+        for col in self.values:
             setSourceNodeColumnValues(col, l_lambda_idx, l_columns, r_lambda_idx, r_columns)
         
         output_content = self.generateSDQLpyContent(unparser)
         
         for key in self.keys:
             resetColumnValues(key)
-        for col in self.columns:
+        for col in self.values:
             resetColumnValues(col)
             
         return output_content
@@ -393,14 +402,14 @@ class SDQLpyRecordOutput():
         # Assign sourceNode to the Column Values
         for key in self.keys:
             setSourceNodeColumnValues(key, lambda_idx, columns)
-        for col in self.columns:
+        for col in self.values:
             setSourceNodeColumnValues(col, lambda_idx, columns)
         
         output_content = self.generateSDQLpyContent(unparser)
         
         for key in self.keys:
             resetColumnValues(key)
-        for col in self.columns:
+        for col in self.values:
             resetColumnValues(col)
             
         return output_content
@@ -440,26 +449,26 @@ class SDQLpyRecordOutput():
             f"{TAB}{keyFormatted}:"
         )
         
-        # Process: Columns
-        if self.columns == []:
+        # Process: Values
+        if self.values == []:
             # If no columns, then write True
             output_content.append(
                 f"{TAB}{True}"
             )
         else:
             colContent = []
-            for col in self.columns:
-                if isinstance(col, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper, SumAggrOperator)):
-                    expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(col)
+            for val in self.values:
+                if isinstance(val, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper, SumAggrOperator)):
+                    expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val)
                 else:
-                    expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(col.child)
+                    expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val.child)
                 # Set codeName if None
-                if col.codeName == "":
-                    unparser.handleEmptyCodeName(col)
+                if val.codeName == "":
+                    unparser.handleEmptyCodeName(val)
                 
-                assert col.codeName != ''
+                assert val.codeName != ''
                 colContent.append(
-                    f'"{col.codeName}": {expr}'
+                    f'"{val.codeName}": {expr}'
                 )
             columnFormatted = f"record({{{', '.join(colContent)}}})"
             output_content.append(
