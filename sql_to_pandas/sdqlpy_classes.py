@@ -178,8 +178,8 @@ class SDQLpyConcatNode(UnarySDQLpyNode):
         
     def set_output_dict(self):
         self.outputDict = SDQLpySRDict(
-            list(),
-            list(self.outputColumns)
+            list(self.child.outputDict.flatCols()),
+            list()
         )
     
 class SDQLpyGroupNode(UnarySDQLpyNode):
@@ -345,6 +345,12 @@ class SDQLpySRDict():
         
     def flatCols(self):
         return list(self.keys + self.values)
+    
+    def flatKeys(self):
+        return list(self.keys)
+    
+    def flatVals(self):
+        return list(self.values)
         
     def setUnique(self, value):
         self.unique = value
@@ -404,12 +410,17 @@ class SDQLpySRDict():
         return self.third_wrap_counter
         
         
-    def generateSDQLpyTwoLambda(self, unparser, l_lambda_idx, r_lambda_idx, l_columns, r_columns):
+    def generateSDQLpyTwoLambda(self, unparser, l_lambda_idx, r_lambda_idx_key, r_lambda_idx_val, l_node, r_node):
+        l_columns = l_node.outputDict.flatCols()
+        r_keys = r_node.outputDict.flatKeys()
+        r_values = r_node.outputDict.flatVals()
         # Assign sourceNode to the Column Values
         for key in self.keys:
-            setSourceNodeColumnValues(key, l_lambda_idx, l_columns, r_lambda_idx, r_columns)
+            setSourceNodeColumnValues(key, l_lambda_idx, l_columns,
+                                      r_lambda_idx_key, r_keys, r_lambda_idx_val, r_values)
         for col in self.values:
-            setSourceNodeColumnValues(col, l_lambda_idx, l_columns, r_lambda_idx, r_columns)
+            setSourceNodeColumnValues(col, l_lambda_idx, l_columns,
+                                      r_lambda_idx_key, r_keys, r_lambda_idx_val, r_values)
         
         output_content = self.generateSDQLpyContent(unparser)
         
@@ -420,12 +431,14 @@ class SDQLpySRDict():
             
         return output_content
     
-    def generateSDQLpyOneLambda(self, unparser, lambda_idx, columns):
+    def generateSDQLpyOneLambda(self, unparser, lambda_idx_key, lambda_idx_val, node):
+        keys = node.incomingDict.flatKeys()
+        values = node.incomingDict.flatVals()
         # Assign sourceNode to the Column Values
         for key in self.keys:
-            setSourceNodeColumnValues(key, lambda_idx, columns)
+            setSourceNodeColumnValues(key, lambda_idx_key, keys, lambda_idx_val, values)
         for col in self.values:
-            setSourceNodeColumnValues(col, lambda_idx, columns)
+            setSourceNodeColumnValues(col, lambda_idx_key, keys, lambda_idx_val, values)
         
         output_content = self.generateSDQLpyContent(unparser)
         
