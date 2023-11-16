@@ -68,7 +68,7 @@ class ValueNode(LeafNode):
         return self.value
 
 class ColumnValue(ValueNode):
-    SUPPORTED_TYPES = ["Integer", "Double", "Varchar", "Date"]
+    SUPPORTED_TYPES = ["Integer", "Double", "Varchar", "Date", "Char"]
     def __init__(self, value, incomingType):
         super().__init__(value)
         self.essential = False

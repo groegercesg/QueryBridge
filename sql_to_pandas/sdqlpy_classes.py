@@ -149,42 +149,52 @@ class SDQLpyFilterNode(UnarySDQLpyNode):
         self.outputDict = None
         self.sdqlrepr = "filter"
         
-    def set_output_dict(self, incomingDict):
-        # TODO: Fix me!
-        assert isinstance(incomingDict, SDQLpySRDict)
-        assert self.outputDict == None
+    def set_output_dict(self):
         # A filter node should only have keys, no values
         self.outputDict = SDQLpySRDict(
-            incomingDict.keys + incomingDict.values,
+            self.child.outputDict.keys + self.child.outputDict.values,
             list()
         )
 
 class SDQLpyAggrNode(UnarySDQLpyNode):
     def __init__(self, aggregateOperations):
         super().__init__()
+        self.aggregateOperations = aggregateOperations
+        self.sdqlrepr = "aggr"
+        self.outputDict = None
+        
+    def set_output_dict(self):
         self.outputDict = SDQLpySRDict(
             list(),
-            aggregateOperations
+            self.aggregateOperations
         )
-        self.sdqlrepr = "aggr"
         
 class SDQLpyConcatNode(UnarySDQLpyNode):
     def __init__(self, outputColumns):
         super().__init__()
         self.sdqlrepr = "concat"
+        self.outputColumns = outputColumns
+        self.outputDict = None
+        
+    def set_output_dict(self):
         self.outputDict = SDQLpySRDict(
             list(),
-            list(outputColumns)
+            list(self.outputColumns)
         )
-        
+    
 class SDQLpyGroupNode(UnarySDQLpyNode):
     def __init__(self, keyExpressions, aggregateOperations):
         super().__init__()
-        self.outputDict = SDQLpySRDict(
-            keyExpressions,
-            aggregateOperations
-        )
+        self.keyExpressions = keyExpressions
+        self.aggregateOperations = aggregateOperations
+        self.outputDict = None
         self.sdqlrepr = "group"
+        
+    def set_output_dict(self):
+        self.outputDict = SDQLpySRDict(
+            self.keyExpressions,
+            self.aggregateOperations
+        )
         
 class SDQLpyJoinNode(BinarySDQLpyNode):
     KNOWN_JOIN_METHODS = set([
@@ -213,22 +223,34 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.is_update_sum = newValue
         
     def get_output_dict(self):
-        self.create_output_dict()
+        self.set_output_dict()
         return self.outputDict
         
-    def create_output_dict(self):
+    def set_output_dict(self):
         match self.joinType:
             case "inner":
                 assert (self.left != None) and (self.right != None)
+                # Test version:
                 self.outputDict = SDQLpySRDict(
-                    self.left.outputDict.keys + self.right.outputDict.keys,
-                    self.left.outputDict.values + self.right.outputDict.values
+                    self.left.outputDict.keys + self.right.outputDict.keys +
+                    self.left.outputDict.values + self.right.outputDict.values,
+                    list()
                 )
+                # self.outputDict = SDQLpySRDict(
+                #     self.left.outputDict.keys + self.right.outputDict.keys,
+                #     self.left.outputDict.values + self.right.outputDict.values
+                # )
             case "rightsemijoin":
+                # Test version:
                 self.outputDict = SDQLpySRDict(
-                    self.right.outputDict.keys,
-                    self.right.outputDict.values
+                    self.right.outputDict.keys +
+                    self.right.outputDict.values,
+                    list()
                 )
+                # self.outputDict = SDQLpySRDict(
+                #     self.right.outputDict.keys,
+                #     self.right.outputDict.values
+                # )
             case _:
                 raise Exception(f"No columns variable set for joinType: {self.joinType}")
         
@@ -419,10 +441,10 @@ class SDQLpySRDict():
         
         if self.keys == []:
             # If there are no keys, this should be an aggr output
-            assert len(self.columns) == 1
-            assert isinstance(self.columns[0], SumAggrOperator)
+            assert len(self.values) == 1
+            assert isinstance(self.values[0], SumAggrOperator)
             output_content.append(
-                f"{TAB}{unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(self.columns[0].child)}"
+                f"{TAB}{unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(self.values[0].child)}"
             )
             return output_content
         

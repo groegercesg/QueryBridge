@@ -64,7 +64,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                         op_tree.postAggregateOperations
                     )
                     new_op_tree = SDQLpyConcatNode(
-                        group_node.outputColumns
+                        op_tree.keyExpressions + op_tree.postAggregateOperations
                     )
                     new_op_tree.addChild(group_node)
             case OutputNode():
@@ -118,20 +118,20 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     lowest_node_pointer.addLeft(leftNode)
                     lowest_node_pointer.addRight(rightNode)
                     if isinstance(lowest_node_pointer, SDQLpyJoinNode):
-                        lowest_node_pointer.create_output_dict()
+                        lowest_node_pointer.set_output_dict()
                     else:
                         raise Exception("Binary with some Nones")
                 case _:
                     # LeafSDQLpyNode
                     assert isinstance(lowest_node_pointer, LeafSDQLpyNode)
         
-        # Connect parts up        
-        if isinstance(new_op_tree, SDQLpyFilterNode):
-            assert hasattr(new_op_tree.child, "outputDict") and new_op_tree.child.outputDict != None
-            new_op_tree.set_output_dict(new_op_tree.child.outputDict)
-        elif isinstance(new_op_tree, SDQLpyConcatNode):
-            assert hasattr(new_op_tree.child, "outputDict") and new_op_tree.child.outputDict != None
-            new_op_tree.set_output_dict(new_op_tree.child.outputDict)
+        # # Connect parts up        
+        # if isinstance(new_op_tree, SDQLpyFilterNode):
+        #     assert hasattr(new_op_tree.child, "outputDict") and new_op_tree.child.outputDict != None
+        #     new_op_tree.set_output_dict(new_op_tree.child.outputDict)
+        # elif isinstance(new_op_tree, SDQLpyConcatNode):
+        #     assert hasattr(new_op_tree.child, "outputDict") and new_op_tree.child.outputDict != None
+        #     new_op_tree.set_output_dict(new_op_tree.child.outputDict)
         
         # Add nodeID to new_op_node
         assert hasattr(op_tree, "nodeID")
@@ -178,7 +178,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 raise Exception(f"No ordering configured for node: {type(sdqlpy_tree)}")
             
     def insert_join_probe_nodes(sdqlpy_tree):
-         # Post Order traversal: Visit Children
+        # Post Order traversal: Visit Children
         leftNode, rightNode, childNode = None, None, None
         if isinstance(sdqlpy_tree, BinarySDQLpyNode):
             leftNode = insert_join_probe_nodes(sdqlpy_tree.left)
@@ -210,7 +210,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 # Make it a SDQLpyJoinBuildNode
                 jbNode = SDQLpyJoinBuildNode(
                     sdqlpy_tree.leftKeys,
-                    list(sdqlpy_tree.left.outputColumns)
+                    list(sdqlpy_tree.left.outputDict.flatCols())
                 )
                 jbNode.addChild(sdqlpy_tree.left)
                 jbNode.setCardinality(jbNode.child.cardinality)
@@ -224,6 +224,31 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         
         # Return the tree, for the next iteration
         return sdqlpy_tree
+    
+    def wire_up_incoming_output_dicts(sdqlpy_tree):
+        # Post Order traversal: Visit Children
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            wire_up_incoming_output_dicts(sdqlpy_tree.left)
+            wire_up_incoming_output_dicts(sdqlpy_tree.right)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            wire_up_incoming_output_dicts(sdqlpy_tree.child)
+        else:
+            # A leaf node
+            assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
+            pass
+        
+        if isinstance(sdqlpy_tree, LeafSDQLpyNode):
+            # Incoming is already set
+            sdqlpy_tree.set_output_dict()
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            # Set incoming and run output dict
+            sdqlpy_tree.incomingDict = sdqlpy_tree.child.outputDict
+            sdqlpy_tree.set_output_dict()
+        else:
+            assert isinstance(sdqlpy_tree, BinarySDQLpyNode)
+            # Incoming dicts should already be set
+            assert len(sdqlpy_tree.incomingDicts) == 2
+            sdqlpy_tree.set_output_dict()
         
     
     def foldConditionsAndOutputRecords(sdqlpy_tree):
@@ -466,8 +491,12 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     sdqlpy_tree = convert_trees(universal_tree)
     # Order joins, using cardinality information
     sdqlpy_tree = order_joins(sdqlpy_tree)
+    # Wire up incoming/output Dicts
+    wire_up_incoming_output_dicts(sdqlpy_tree)
     # Insert JoinProbe Nodes
     sdqlpy_tree = insert_join_probe_nodes(sdqlpy_tree)
+    # Wire up incoming/output Dicts
+    wire_up_incoming_output_dicts(sdqlpy_tree)
     
     # Everything below is relating to optimisations
     
@@ -570,8 +599,9 @@ class UnparseSDQLpyTree():
         
         # Visit the current_node and add it to self.pandas_content
         targetVisitorMethod = f"visit_{current_node.__class__.__name__}"
-        # Refresh current_node, before running
-        current_node.refreshNode()
+        # Refresh current_node's outputDict, before running
+        assert hasattr(current_node, "set_output_dict")
+        current_node.set_output_dict()
         if hasattr(self, targetVisitorMethod):
             # Count number of nodes
             self.nodesCounter[current_node.__class__.__name__] += 1
