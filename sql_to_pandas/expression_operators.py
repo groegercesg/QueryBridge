@@ -77,6 +77,12 @@ class ColumnValue(ValueNode):
         self.sourceNode = None
     
     def handleTypes(self, incomingType):
+        # If the type is already good, we skip
+        if incomingType in self.SUPPORTED_TYPES:
+            self.type = incomingType
+            self.typeSize = None
+            return
+        
         detectedType = None
         if isinstance(incomingType, list):
             if len(incomingType) == 1:

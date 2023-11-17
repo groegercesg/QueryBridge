@@ -17,6 +17,8 @@ class SDQLpyBaseNode():
         self.topNode = False
         self.filterContent = None
         self.cardinality = None
+        
+        self.outputDictInsertValues = []
     
     def setCardinality(self, card):
         assert self.cardinality == None and isinstance(card, int)
@@ -227,30 +229,20 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         return self.outputDict
         
     def set_output_dict(self):
+        assert (self.left != None) and (self.right != None)
         match self.joinType:
             case "inner":
-                assert (self.left != None) and (self.right != None)
-                # Test version:
                 self.outputDict = SDQLpySRDict(
                     self.left.outputDict.keys + self.right.outputDict.keys +
                     self.left.outputDict.values + self.right.outputDict.values,
-                    list()
+                    self.outputDictInsertValues
                 )
-                # self.outputDict = SDQLpySRDict(
-                #     self.left.outputDict.keys + self.right.outputDict.keys,
-                #     self.left.outputDict.values + self.right.outputDict.values
-                # )
             case "rightsemijoin":
-                # Test version:
                 self.outputDict = SDQLpySRDict(
                     self.right.outputDict.keys +
                     self.right.outputDict.values,
-                    list()
+                    self.outputDictInsertValues
                 )
-                # self.outputDict = SDQLpySRDict(
-                #     self.right.outputDict.keys,
-                #     self.right.outputDict.values
-                # )
             case _:
                 raise Exception(f"No columns variable set for joinType: {self.joinType}")
         
@@ -493,7 +485,8 @@ class SDQLpySRDict():
         else:
             colContent = []
             for val in self.values:
-                if isinstance(val, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper, SumAggrOperator)):
+                if isinstance(val, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper,
+                                    SumAggrOperator, MulOperator, ConstantValue)):
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val)
                 else:
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val.child)

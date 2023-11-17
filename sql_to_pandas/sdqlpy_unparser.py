@@ -249,6 +249,36 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             # Incoming dicts should already be set
             assert len(sdqlpy_tree.incomingDicts) == 2
             sdqlpy_tree.set_output_dict()
+            
+    def duplicateFixTopGroupJoin(sdqlpy_tree):
+        match sdqlpy_tree:
+            # Order things that have output records
+            case SDQLpyGroupNode():
+                if isinstance(sdqlpy_tree.child, SDQLpyJoinNode):
+                    # Add the child
+                    assert len(sdqlpy_tree.child.outputDict.values) == 0
+                    counterValue = ConstantValue(1, "Integer")
+                    counterValue.codeName = "dupeCounter"
+                    
+                    sdqlpy_tree.child.outputDictInsertValues.append(counterValue)
+                    
+                    # Use the group
+                    for idx, previousValue in enumerate(sdqlpy_tree.outputDict.values):
+                        newMulNode = MulOperator()
+                        newMulNode.codeName = previousValue.codeName
+                        newMulNode.left = previousValue
+                        newMulNode.right = ColumnValue("dupeCounter", "Integer")
+                        sdqlpy_tree.outputDict.values[idx] = newMulNode
+            
+            case SDQLpyAggrNode():
+                # No ordering required, as it only returns a single value
+                pass
+            case SDQLpyConcatNode():
+                # This just concats the content from below
+                # So we need to run the order method again
+                duplicateFixTopGroupJoin(sdqlpy_tree.child)
+            case _:
+                raise Exception(f"No duplciateFix configured for node: {type(sdqlpy_tree)}")
         
     
     def foldConditionsAndOutputRecords(sdqlpy_tree):
@@ -495,6 +525,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     wire_up_incoming_output_dicts(sdqlpy_tree)
     # Insert JoinProbe Nodes
     sdqlpy_tree = insert_join_probe_nodes(sdqlpy_tree)
+    # solve Duplicates by multiplying by a counter
+    duplicateFixTopGroupJoin(sdqlpy_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
     

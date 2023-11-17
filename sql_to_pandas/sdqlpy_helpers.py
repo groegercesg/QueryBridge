@@ -7,7 +7,7 @@ def setSourceNodeColumnValues(value, l_lambda_idx, l_columns, r_lambda_idx, r_co
         elif (isinstance(columns, list) and (columns == [] or isinstance(columns[0], str))):
             return set(columns)
         elif isinstance(columns, list) and isinstance(columns[0], ExpressionBaseNode):
-            return getCodeNameFromSetColumnValues(set(columns))
+            return getCodeNameFromSetColumnValues(columns)
         elif isinstance(columns, str):
             return set([columns])
         else:
