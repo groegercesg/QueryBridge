@@ -311,6 +311,10 @@ def join_statements_with_operator(statements: list[ExpressionBaseNode], join_ope
 
 ### SDQL specific ones
 
+class SDQLpyLambdaReference(ValueNode):
+    def __init__(self, value):
+        super().__init__(value)
+
 class SDQLpyThirdNodeWrapper(LeafNode):
     def __init__(self, col, third_node, target_key):
         super().__init__()

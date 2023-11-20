@@ -17,8 +17,6 @@ class SDQLpyBaseNode():
         self.topNode = False
         self.filterContent = None
         self.cardinality = None
-        
-        self.outputDictInsertValues = []
     
     def setCardinality(self, card):
         assert self.cardinality == None and isinstance(card, int)
@@ -193,10 +191,17 @@ class SDQLpyGroupNode(UnarySDQLpyNode):
         self.sdqlrepr = "group"
         
     def set_output_dict(self):
+        # Track and carry previous outputDict value
+        if self.outputDict == None:
+            previousDuplicateUser = False
+        else:
+            previousDuplicateUser = self.outputDict.duplicateUser
+        
         self.outputDict = SDQLpySRDict(
             self.keyExpressions,
             self.aggregateOperations
         )
+        self.outputDict.set_duplicateUser(previousDuplicateUser)
         
 class SDQLpyJoinNode(BinarySDQLpyNode):
     KNOWN_JOIN_METHODS = set([
@@ -230,18 +235,30 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         
     def set_output_dict(self):
         assert (self.left != None) and (self.right != None)
+        # Track and carry previous outputDict value
+        if self.outputDict == None:
+            previousDuplicateCounter = False
+        else:
+            previousDuplicateCounter = self.outputDict.duplicateCounter
+        
         match self.joinType:
             case "inner":
                 self.outputDict = SDQLpySRDict(
                     self.left.outputDict.keys + self.right.outputDict.keys +
                     self.left.outputDict.values + self.right.outputDict.values,
-                    self.outputDictInsertValues
+                    list()
+                )
+                self.outputDict.set_duplicateCounter(
+                    previousDuplicateCounter
                 )
             case "rightsemijoin":
                 self.outputDict = SDQLpySRDict(
                     self.right.outputDict.keys +
                     self.right.outputDict.values,
-                    self.outputDictInsertValues
+                    list()
+                )
+                self.outputDict.set_duplicateCounter(
+                    previousDuplicateCounter
                 )
             case _:
                 raise Exception(f"No columns variable set for joinType: {self.joinType}")
@@ -334,6 +351,14 @@ class SDQLpySRDict():
         self.values = values
         self.third_wrap_counter = 0
         self.unique = False
+        self.duplicateCounter = False
+        self.duplicateUser = False
+        
+    def set_duplicateCounter(self, value):
+        self.duplicateCounter = value
+        
+    def set_duplicateUser(self, value):
+        self.duplicateUser = value
         
     def flatCols(self):
         return list(self.keys + self.values)
@@ -432,6 +457,16 @@ class SDQLpySRDict():
         for col in self.values:
             setSourceNodeColumnValues(col, lambda_idx_key, keys, lambda_idx_val, values)
         
+        # Update the self.values, if needed
+        if self.duplicateUser:
+            for idx, val in enumerate(self.values):
+                newValue = MulOperator()
+                newValue.codeName = val.codeName
+                newValue.addLeft(val)
+                rightValue = SDQLpyLambdaReference(lambda_idx_val)
+                newValue.addRight(rightValue)
+                self.values[idx] = newValue
+        
         output_content = self.generateSDQLpyContent(unparser)
         
         for key in self.keys:
@@ -478,10 +513,16 @@ class SDQLpySRDict():
         
         # Process: Values
         if self.values == []:
-            # If no columns, then write True
-            output_content.append(
-                f"{TAB}{True}"
-            )
+            if self.duplicateCounter == True:
+                # Insert a 1.0, so it can count up the duplicates
+                output_content.append(
+                    f"{TAB}{1.0}"
+                )
+            else:
+                # If no columns, then write True
+                output_content.append(
+                    f"{TAB}{True}"
+                )
         else:
             colContent = []
             for val in self.values:

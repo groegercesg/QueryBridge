@@ -257,18 +257,10 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 if isinstance(sdqlpy_tree.child, SDQLpyJoinNode):
                     # Add the child
                     assert len(sdqlpy_tree.child.outputDict.values) == 0
-                    counterValue = ConstantValue(1, "Integer")
-                    counterValue.codeName = "dupeCounter"
-                    
-                    sdqlpy_tree.child.outputDictInsertValues.append(counterValue)
+                    sdqlpy_tree.child.outputDict.set_duplicateCounter(True)
                     
                     # Use the group
-                    for idx, previousValue in enumerate(sdqlpy_tree.outputDict.values):
-                        newMulNode = MulOperator()
-                        newMulNode.codeName = previousValue.codeName
-                        newMulNode.left = previousValue
-                        newMulNode.right = ColumnValue("dupeCounter", "Integer")
-                        sdqlpy_tree.outputDict.values[idx] = newMulNode
+                    sdqlpy_tree.outputDict.set_duplicateUser(True)
             
             case SDQLpyAggrNode():
                 # No ordering required, as it only returns a single value
@@ -1049,6 +1041,8 @@ class UnparseSDQLpyTree():
                         return childNode
                     else:
                         return f"{expr_tree.sourceNode}.{expr_tree.codeName}"
+            case SDQLpyLambdaReference():
+                expression_output = f"{expr_tree.value}"
             case _: 
                 raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
