@@ -1,5 +1,5 @@
 from collections import defaultdict
-import random
+import copy
 
 from universal_plan_nodes import *
 from expression_operators import *
@@ -271,7 +271,76 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 duplicateFixTopGroupJoin(sdqlpy_tree.child)
             case _:
                 raise Exception(f"No duplciateFix configured for node: {type(sdqlpy_tree)}")
+            
+    def convertSumAggrOperatorToColumnNode(sdqlpy_tree):
+        parserCreatedColumns = set()
+        replacementDict = dict()
         
+        # Post Order traversal: Visit Children
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftCreated, leftReplaces = convertSumAggrOperatorToColumnNode(sdqlpy_tree.left)
+            rightCreated, rightReplaces = convertSumAggrOperatorToColumnNode(sdqlpy_tree.right)
+            parserCreatedColumns = leftCreated.union(rightCreated)
+            replacementDict.update(**leftReplaces, **rightReplaces)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            belowCreated, belowReplaces = convertSumAggrOperatorToColumnNode(sdqlpy_tree.child)
+            parserCreatedColumns = belowCreated
+            replacementDict.update(belowReplaces)
+        else:
+            # A leaf node
+            assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
+            pass
+        
+        assert sdqlpy_tree.outputDict != None
+        
+        for idx, val in enumerate(sdqlpy_tree.outputDict.values):
+            if isinstance(val, SumAggrOperator):
+                if str(id(val)) in replacementDict:
+                    # If it's in the replacementDict
+                    # Then use the previously created value
+                    sdqlpy_tree.outputDict.values[idx] = replacementDict[str(id(val))]
+                else:
+                    if val.codeName == "":
+                        handleEmptyCodeName(val, parserCreatedColumns)
+                    valueCopy = copy.deepcopy(val.child)
+                    valueCopy.codeName = val.codeName
+                    
+                    sdqlpy_tree.outputDict.values[idx] = valueCopy
+                    replacementDict[str(id(val))] = valueCopy
+                    
+        # replace it in filterContent as well
+        if sdqlpy_tree.filterContent != None:
+            newFilterContent = replaceInExpression(sdqlpy_tree.filterContent, replacementDict)
+            sdqlpy_tree.filterContent = newFilterContent
+                
+        return parserCreatedColumns, replacementDict
+    
+    def replaceInExpression(expression, replacements):
+        # Post Order traversal: Visit Children
+        leftNode, rightNode, childNode = None, None, None
+        if isinstance(expression, BinaryExpressionOperator):
+            leftNode = replaceInExpression(expression.left, replacements)
+            rightNode = replaceInExpression(expression.right, replacements)
+        elif isinstance(expression, UnaryExpressionOperator):
+            childNode = replaceInExpression(expression.child, replacements)
+        else:
+            # A leaf node
+            pass
+        
+        # Assign previous changes
+        if (leftNode != None) and (rightNode != None):
+            expression.left = leftNode
+            expression.right = rightNode
+        elif (childNode != None):
+            expression.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        if str(id(expression)) in replacements:
+            expression = replacements[str(id(expression))]
+            
+        return expression
     
     def foldConditionsAndOutputRecords(sdqlpy_tree):
         # Post Order traversal: Visit Children
@@ -517,8 +586,12 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     wire_up_incoming_output_dicts(sdqlpy_tree)
     # Insert JoinProbe Nodes
     sdqlpy_tree = insert_join_probe_nodes(sdqlpy_tree)
+    # Wire up incoming/output Dicts
+    wire_up_incoming_output_dicts(sdqlpy_tree)
     # solve Duplicates by multiplying by a counter
     duplicateFixTopGroupJoin(sdqlpy_tree)
+    # Convert SumAggrOperator to ColumnNode
+    convertSumAggrOperatorToColumnNode(sdqlpy_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
     
@@ -920,50 +993,6 @@ class UnparseSDQLpyTree():
     # =========================
     # Unparser helper functions
     
-    def handleEmptyCodeName(self, value):
-        # Takes a expr with no codename, at the top level
-        # Use the subnodes to create one
-        # If this already exists, add randomness
-        def getRelevantStrings(value):
-            # Preorder Traversal
-            # Current
-            current_strings = []
-            
-            match value:
-                case SumAggrOperator():
-                    current_strings.append("sum")
-                case ColumnValue():
-                    current_strings.append(value.codeName)
-                case _:
-                    raise Exception(f"Unknown operator: {type(value)}")
-            
-            # Visit Children
-            if isinstance(value, BinaryExpressionOperator):
-                leftStrings = getRelevantStrings(value.left)
-                rightStrings = getRelevantStrings(value.right)
-                
-                current_strings.extend(leftStrings)
-                current_strings.extend(rightStrings)
-            elif isinstance(value, UnaryExpressionOperator):
-                childStrings = getRelevantStrings(value.child)
-                
-                current_strings.extend(childStrings)
-            else:
-                # A value node
-                assert isinstance(value, LeafNode)
-                pass
-            
-            return current_strings
-        
-        assert value.codeName == ""
-        discovered_strings = getRelevantStrings(value)
-        initialCodeName = "_".join(discovered_strings)
-        while initialCodeName in self.parserCreatedColumns:
-            # It's in the parser Created set
-            # Add randomness
-            initialCodeName = f"{initialCodeName}{random.randint(0,9)}"
-        self.parserCreatedColumns.add(initialCodeName)
-        value.codeName = initialCodeName
     
     def convert_nkeyjoin_to_sdqlpy(self, value, l_lambda_idx, l_node_columns, r_lambda_idx = None, r_node_columns = None):
         assert isinstance(value, SDQLpyNKeyJoin)
@@ -1001,6 +1030,8 @@ class UnparseSDQLpyTree():
             case ColumnValue():
                 # assert expr_tree.sourceNode != None
                 expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
+                # Update the value after creation
+                expr_tree.value = expr_tree.codeName
             case ConstantValue():
                 expression_output = self.__handle_ConstantValue(expr_tree)
             case LessThanOperator():
@@ -1033,14 +1064,6 @@ class UnparseSDQLpyTree():
                 expression_output = self.__handle_InSetOperator(expr_tree)
             case SDQLpyNKeyJoin():
                 expression_output = self.__handle_SDQLpyNKeyJoin(expr_tree)
-            case SumAggrOperator():
-                if expr_tree.codeName == "":
-                    return childNode
-                else:
-                    if expr_tree.sourceNode == None:
-                        return childNode
-                    else:
-                        return f"{expr_tree.sourceNode}.{expr_tree.codeName}"
             case SDQLpyLambdaReference():
                 expression_output = f"{expr_tree.value}"
             case _: 

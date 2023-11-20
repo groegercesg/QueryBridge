@@ -482,9 +482,8 @@ class SDQLpySRDict():
         if self.keys == []:
             # If there are no keys, this should be an aggr output
             assert len(self.values) == 1
-            assert isinstance(self.values[0], SumAggrOperator)
             output_content.append(
-                f"{TAB}{unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(self.values[0].child)}"
+                f"{TAB}{unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(self.values[0])}"
             )
             return output_content
         
@@ -496,10 +495,7 @@ class SDQLpySRDict():
         keyContent = []
         for key in self.keys:
             expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(key)
-            # Set codeName if None
-            if key.codeName == "":
-                unparser.handleEmptyCodeName(key)
-            
+
             assert key.codeName != ''
             keyContent.append(
                 f'"{key.codeName}": {expr}'
@@ -531,10 +527,7 @@ class SDQLpySRDict():
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val)
                 else:
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val.child)
-                # Set codeName if None
-                if val.codeName == "":
-                    unparser.handleEmptyCodeName(val)
-                
+
                 assert val.codeName != ''
                 colContent.append(
                     f'"{val.codeName}": {expr}'

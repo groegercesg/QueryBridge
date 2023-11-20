@@ -1,4 +1,50 @@
+import random
+
 from expression_operators import *
+
+def handleEmptyCodeName(value, previousColumns):
+    # Takes a expr with no codename, at the top level
+    # Use the subnodes to create one
+    # If this already exists, add randomness
+    def getRelevantStrings(value):
+        # Preorder Traversal
+        # Current
+        current_strings = []
+        
+        match value:
+            case SumAggrOperator():
+                current_strings.append("sum")
+            case ColumnValue():
+                current_strings.append(value.codeName)
+            case _:
+                raise Exception(f"Unknown operator: {type(value)}")
+        
+        # Visit Children
+        if isinstance(value, BinaryExpressionOperator):
+            leftStrings = getRelevantStrings(value.left)
+            rightStrings = getRelevantStrings(value.right)
+            
+            current_strings.extend(leftStrings)
+            current_strings.extend(rightStrings)
+        elif isinstance(value, UnaryExpressionOperator):
+            childStrings = getRelevantStrings(value.child)
+            
+            current_strings.extend(childStrings)
+        else:
+            # A value node
+            assert isinstance(value, LeafNode)
+            pass
+        
+        return current_strings
+    
+    assert value.codeName == ""
+    discovered_strings = getRelevantStrings(value)
+    initialCodeName = "_".join(discovered_strings)
+    while initialCodeName in previousColumns:
+        # It's in the parser Created set
+        # Add randomness
+        initialCodeName = f"{initialCodeName}{random.randint(0,9)}"
+    value.codeName = initialCodeName
 
 def setSourceNodeColumnValues(value, l_lambda_idx, l_columns, r_lambda_idx, r_columns, r_lambda_val=None, r_columns_vals=None):
     def check_and_fix_columns(columns):
@@ -30,7 +76,7 @@ def setSourceNodeColumnValues(value, l_lambda_idx, l_columns, r_lambda_idx, r_co
     setSourceNodeColumnValuesNPairs(value, sourcePairs)
 
 def getCodeNameFromSetColumnValues(columns):
-    columns_str = set([x.codeName for x in columns])
+    columns_str = set([x.value for x in columns])
         
     # Assert none are empty string
     assert not any([True for x in columns_str if x == ""])
@@ -69,19 +115,20 @@ def setSourceNodeColumnValuesNPairs(value, sourcePairs):
             
             if set_index == False:
                 raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
-        case ColumnValue() | SumAggrOperator():
+        case ColumnValue():
             set_index = False
             for index_name, columns in sourcePairs:
-                if value.codeName in columns:
+                if value.value in columns:
                     assert set_index == False
                     if value.sourceNode == None:
                         value.sourceNode = index_name
                         set_index = True
                     else:
                         assert value.sourceNode == index_name
+                        set_index = True
             
-            # if set_index == False:
-            #     raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
+            if set_index == False and value.value != '':
+                raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
             
     if isinstance(value, BinaryExpressionOperator):
         setSourceNodeColumnValuesNPairs(value.left, sourcePairs)
@@ -105,7 +152,7 @@ def resetColumnValues(value):
         pass
     
     match value:
-        case ColumnValue() | SumAggrOperator():
+        case ColumnValue():
             if value.sourceNode != None:
                 value.sourceNode = None
         case IntervalNotionOperator():
