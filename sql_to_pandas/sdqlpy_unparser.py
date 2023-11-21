@@ -563,7 +563,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
                 # Suitable left and right situation
                 pass
-            elif isinstance(sdqlpy_tree.left, SDQLpyRecordNode) and isinstance(sdqlpy_tree.right, SDQLpyRecordNode):
+            else:
                 # Swap left and right
                 new_right = sdqlpy_tree.left
                 new_left = sdqlpy_tree.right

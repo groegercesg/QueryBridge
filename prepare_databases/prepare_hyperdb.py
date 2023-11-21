@@ -45,6 +45,17 @@ class PrepareHyperDB(PrepareDatabase):
         else:
             print(tables)
             return True
+        
+    def get_table_keys(self):
+        
+        with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU, parameters=self.hyper_parameters) as hyper:
+            with Connection(hyper.endpoint, self.connection_details, CreateMode.NONE) as connection:
+                schema_name = connection.catalog.get_schema_names()[0]
+                table_names = connection.catalog.get_table_names(schema_name)
+                for table_name in table_names:
+                    table_definition = connection.catalog.get_table_definition(table_name)
+                
+                    print("A")
     
     def execute_query(self, query_text):
         with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU, parameters=self.hyper_parameters) as hyper:
