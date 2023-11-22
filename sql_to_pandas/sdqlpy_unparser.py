@@ -218,10 +218,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             else:
                 raise Exception("Unknown left of Join Node")
             
-            # Check the cardinality is okay
-            # right must be >= left
-            assert (sdqlpy_tree.right.cardinality >= sdqlpy_tree.left.cardinality)
-        
         # Return the tree, for the next iteration
         return sdqlpy_tree
     
@@ -532,14 +528,38 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             # A leaf node
             pass
         
-    def order_joins(sdqlpy_tree):
+    def order_joins(sdqlpy_tree, table_keys):
+        def getPrimaryKeys(table_keys: dict) -> set:
+            allPrimaryKeys = set()
+            for key, value in table_keys.items():
+                assert isinstance(value[0], set)
+                allPrimaryKeys.update(
+                    value[0]
+                )
+            return allPrimaryKeys
+        
+        def countKeysInSet(list_keys: list, allKeys: set) -> int:
+            assert isinstance(list_keys, list)
+            for x in list_keys:
+                assert isinstance(x, ColumnValue)
+                assert x.value == x.codeName
+            
+            # Convert to set 
+            currentKeys = set(
+                [x.value for x in list_keys]
+            )
+            
+            # Get intersection, the number of currentKeys that are in
+            # allKeys
+            return len(allKeys.intersection(currentKeys))
+        
         # Post Order traversal: Visit Children
         leftNode, rightNode, childNode = None, None, None
         if isinstance(sdqlpy_tree, BinarySDQLpyNode):
-            leftNode = order_joins(sdqlpy_tree.left)
-            rightNode = order_joins(sdqlpy_tree.right)
+            leftNode = order_joins(sdqlpy_tree.left, table_keys)
+            rightNode = order_joins(sdqlpy_tree.right, table_keys)
         elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
-            childNode = order_joins(sdqlpy_tree.child)
+            childNode = order_joins(sdqlpy_tree.child, table_keys)
         else:
             # A leaf node
             pass
@@ -556,34 +576,63 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         
         # Run on current node (sdqlpy_tree)
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
+            sdqlpy_tree.do_join_key_separation()
+            
             # Check the cardinality of left and right
-            # Left should be >= Should, otherwise we need to swap
+            # Left should be <= right, otherwise we need to swap
             assert sdqlpy_tree.left.cardinality != None
             assert sdqlpy_tree.right.cardinality != None
-            if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
-                # Suitable left and right situation
+            
+            all_primary_keys = getPrimaryKeys(table_keys)
+            leftKeysThatArePrimary = countKeysInSet(
+                sdqlpy_tree.leftKeys, all_primary_keys
+            )
+            rightKeysThatArePrimary = countKeysInSet(
+                sdqlpy_tree.rightKeys, all_primary_keys
+            )           
+            
+            if leftKeysThatArePrimary > rightKeysThatArePrimary:
+                # We should index on Left
+                # No swap required
                 pass
+            elif leftKeysThatArePrimary < rightKeysThatArePrimary:
+                # We should index on Right
+                # Swap required
+                sdqlpy_tree.swapLeftAndRight()
+                
+                # Check the primary keys have resolved
+                leftKeysThatArePrimary = countKeysInSet(
+                    sdqlpy_tree.leftKeys, all_primary_keys
+                )
+                rightKeysThatArePrimary = countKeysInSet(
+                    sdqlpy_tree.rightKeys, all_primary_keys
+                )
+                
+                assert leftKeysThatArePrimary > rightKeysThatArePrimary
             else:
-                # Swap left and right
-                new_right = sdqlpy_tree.left
-                new_left = sdqlpy_tree.right
-                
-                sdqlpy_tree.left = new_left
-                sdqlpy_tree.right = new_right
-                
-                assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+                # number of Primary keys is the same
+                # Now order based on cardinality
+                if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
+                    # We should index on Left
+                    # No swap required
+                    pass
+                else:
+                    # We should index on Right
+                    # Swap required
+                    sdqlpy_tree.swapLeftAndRight()
+                    assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
 
-        return sdqlpy_tree        
+        return sdqlpy_tree     
     
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
     # Call convert trees
     sdqlpy_tree = convert_trees(universal_tree)
-    # Order joins, using cardinality information
-    sdqlpy_tree = order_joins(sdqlpy_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
+    # Order joins, using cardinality information
+    sdqlpy_tree = order_joins(sdqlpy_tree, table_keys)
     # Insert JoinProbe Nodes
     sdqlpy_tree = insert_join_probe_nodes(sdqlpy_tree)
     # Wire up incoming/output Dicts
@@ -871,6 +920,7 @@ class UnparseSDQLpyTree():
         
         # Filter Content
         assert node.filterContent == None
+        assert node.postJoinFilters == None
             
         self.writeTempContent(
             f")"

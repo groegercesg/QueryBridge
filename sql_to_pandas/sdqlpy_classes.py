@@ -329,6 +329,17 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         innerRecord = f"{{{', '.join(lr_pairs)}}}"
         return f"{leftTable}[record({innerRecord})]"
 
+    def swapLeftAndRight(self):
+        # Swap left and right
+        new_right = self.left
+        new_left = self.right
+        
+        self.left = new_left
+        self.right = new_right
+        
+        # Run do_join_key_separation again
+        self.do_join_key_separation()
+    
 # Classes for SDQLpy Constructs
 class SDQLpyNKeyJoin():
     def __init__(self, leftNode, leftKeys, rightKeys):
