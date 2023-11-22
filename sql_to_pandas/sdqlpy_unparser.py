@@ -624,6 +624,42 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
 
         return sdqlpy_tree     
     
+    def insertPostJoinFilterNodes(sdqlpy_tree):
+        # Post Order traversal: Visit Children
+        leftNode, rightNode, childNode = None, None, None
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = insertPostJoinFilterNodes(sdqlpy_tree.left)
+            rightNode = insertPostJoinFilterNodes(sdqlpy_tree.right)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = insertPostJoinFilterNodes(sdqlpy_tree.child)
+        else:
+            # A leaf node
+            pass
+        
+        # Assign previous changes
+        if (leftNode != None) and (rightNode != None):
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif (childNode != None):
+            sdqlpy_tree.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        # Run on current node (sdqlpy_tree)
+        if isinstance(sdqlpy_tree, SDQLpyJoinNode):
+            if sdqlpy_tree.postJoinFilters != None:
+                # Make a filterNode
+                newFilter = SDQLpyFilterNode()
+                newFilter.addFilterContent(sdqlpy_tree.postJoinFilters)
+                sdqlpy_tree.postJoinFilters = None
+                newFilter.setCardinality(sdqlpy_tree.cardinality)
+                newFilter.addChild(sdqlpy_tree)
+                newFilter.set_output_dict()
+                sdqlpy_tree = newFilter
+                
+        return sdqlpy_tree
+    
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
@@ -635,6 +671,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     sdqlpy_tree = order_joins(sdqlpy_tree, table_keys)
     # Insert JoinProbe Nodes
     sdqlpy_tree = insert_join_probe_nodes(sdqlpy_tree)
+    # move postJoinFilterNodes into a separate FilterNode
+    sdqlpy_tree = insertPostJoinFilterNodes(sdqlpy_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
     # solve Duplicates by multiplying by a counter

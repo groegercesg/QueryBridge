@@ -151,6 +151,7 @@ class SDQLpyFilterNode(UnarySDQLpyNode):
         
     def set_output_dict(self):
         # A filter node should only have keys, no values
+        assert self.child != None
         self.outputDict = SDQLpySRDict(
             self.child.outputDict.keys + self.child.outputDict.values,
             list()
