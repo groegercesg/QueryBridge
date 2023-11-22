@@ -78,6 +78,11 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             case FilterNode():
                 new_op_tree = SDQLpyFilterNode()
                 new_op_tree.addFilterContent(op_tree.condition)
+            case NewColumnNode():
+                assert isinstance(childNode, SDQLpyJoinNode)
+                new_op_tree = None
+                # Add the values to the child
+                childNode.outputDict.keys.append(op_tree.values)
             case _:
                 raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
@@ -153,10 +158,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         assert len(topNode.outputNames) == len(topNode.outputColumns)
         
         for idx, name in enumerate(topNode.outputNames):
-            if topNode.outputColumns[idx].codeName != "":
-                assert (name == topNode.outputColumns[idx].codeName)
-            else:
-                topNode.outputColumns[idx].codeName = name
+            topNode.outputColumns[idx].codeName = name
                 
     def orderTopNode(sdqlpy_tree, output_cols_order):
         match sdqlpy_tree:
@@ -1116,7 +1118,7 @@ class UnparseSDQLpyTree():
         expression_output = None
         match expr_tree:
             case ColumnValue():
-                # assert expr_tree.sourceNode != None
+                assert expr_tree.sourceNode != None
                 expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
                 # Update the value after creation
                 expr_tree.value = expr_tree.codeName
@@ -1154,10 +1156,35 @@ class UnparseSDQLpyTree():
                 expression_output = self.__handle_SDQLpyNKeyJoin(expr_tree)
             case SDQLpyLambdaReference():
                 expression_output = f"{expr_tree.value}"
+            case LikeOperator():
+                expression_output = self.__handle_LikeOperator(expr_tree)
+            case ExtractYearOperator():
+                expression_output = self.__handle_ExtractYearOperator(expr_tree)
             case _: 
                 raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
         return expression_output
+    
+    def __handle_ExtractYearOperator(self, expr: ExtractYearOperator):
+        childValue = self.__convert_expression_operator_to_sdqlpy(expr.child)
+        return f"extractYear({childValue})"
+    
+    def __handle_LikeOperator(self, expr: LikeOperator):
+        # Process the comparator
+        if expr.comparator.value.count("%") == 2:
+            assert isinstance(expr.comparator, ConstantValue)
+            assert isinstance(expr.value, ColumnValue)
+            
+            expr.comparator.value = expr.comparator.value.replace("%", "")
+            
+            # 2 percentages means "in"
+            comparator_value = self.__convert_expression_operator_to_sdqlpy(expr.comparator)
+            column_value = self.__convert_expression_operator_to_sdqlpy(expr.value)
+            return f"{comparator_value} in {column_value}"
+        else:
+            # Unknown number of percentages
+            # Should use "startsWith"/"endsWith" macros from SDQLpy
+            raise Exception(f"Unknown format of comparator: {expr.comparator.value}")
     
     def __handle_ConstantValue(self, expr: ConstantValue):
         if expr.type == "String":

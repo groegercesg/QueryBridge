@@ -105,7 +105,7 @@ def setSourceNodeColumnValuesNPairs(value, sourcePairs):
             
             if set_index == False:
                 raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
-        case IntervalNotionOperator():
+        case IntervalNotionOperator() | LikeOperator():
             set_index = False
             for index_name, columns in sourcePairs:
                 if value.value.codeName in columns:
