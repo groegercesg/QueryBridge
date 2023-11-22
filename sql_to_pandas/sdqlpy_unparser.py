@@ -30,7 +30,7 @@ def audit_sdqlpy_tree_recordnode(op_tree: SDQLpyBaseNode) -> bool:
     all_leaves = get_leaf_nodes(op_tree)
     return all(isinstance(leaf, SDQLpyRecordNode) for leaf in all_leaves)
 
-def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBaseNode:
+def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: dict[str, tuple]) -> SDQLpyBaseNode:
     def convert_trees(op_tree: UniversalBaseNode) -> SDQLpyBaseNode:
         # Visit Children
         leftNode, rightNode, childNode = None, None, None

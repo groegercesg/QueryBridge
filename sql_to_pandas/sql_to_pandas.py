@@ -379,8 +379,10 @@ def main():
             explain_tree = make_tree_from_duck(explain_json, explain_tree, last_query)   
         elif args.query_planner == "Hyper_DB":
             # Get Table Keys
-            db.get_table_keys()
-            unparse_content = generate_unparse_content_from_explain_and_query(explain_json, query_file, args.output_fmt)
+            table_keys = db.get_table_keys()
+            unparse_content = generate_unparse_content_from_explain_and_query(
+                explain_json, query_file, args.output_fmt, table_keys
+            )
             
             if isinstance(unparse_content, UnparsePandasTree):
                 with open(python_output_name, 'w') as fp:

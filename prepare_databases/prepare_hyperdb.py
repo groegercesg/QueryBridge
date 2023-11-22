@@ -47,15 +47,43 @@ class PrepareHyperDB(PrepareDatabase):
             return True
         
     def get_table_keys(self):
+        # Return a structure that looks like
+        # Map['table_name', tuple]
+        #   tuple(set(primary_keys), set(foreign_keys))
+        
+        table_keys_dict = {}
         
         with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU, parameters=self.hyper_parameters) as hyper:
             with Connection(hyper.endpoint, self.connection_details, CreateMode.NONE) as connection:
                 schema_name = connection.catalog.get_schema_names()[0]
                 table_names = connection.catalog.get_table_names(schema_name)
                 for table_name in table_names:
-                    table_definition = connection.catalog.get_table_definition(table_name)
-                
-                    print("A")
+                    key_content = list()
+                    
+                    # Get sets for primary and foreign keys
+                    for key_type in ['p', 'f']:
+                        current_keys = connection.execute_list_query(f"""
+                            SELECT a.attname
+                            FROM
+                                pg_catalog.pg_constraint AS c
+                                CROSS JOIN LATERAL UNNEST(c.conkey) AS cols(colnum) -- conkey is a list of the columns of the constraint; so we split it into rows so that we can join all column numbers onto their names in pg_attribute
+                                INNER JOIN pg_catalog.pg_attribute AS a ON a.attrelid = c.conrelid AND cols.colnum = a.attnum
+                            WHERE
+                                c.contype = '{key_type}' -- p = primary key constraint, f = foreign key constraint
+                                AND c.conrelid = '{schema_name.name.unescaped}.{table_name.name.unescaped}'::regclass
+                        """)
+                        key_content.append(
+                            set(
+                                # Flatten nested list
+                                [item for sublist in current_keys for item in sublist]
+                            )
+                        )
+                    
+                    assert len(key_content) == 2
+                    # Add to dictionary
+                    table_keys_dict[table_name.name.unescaped] = tuple(key_content)
+                    
+        return table_keys_dict
     
     def execute_query(self, query_text):
         with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU, parameters=self.hyper_parameters) as hyper:
