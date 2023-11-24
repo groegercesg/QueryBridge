@@ -555,6 +555,32 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             # allKeys
             return len(allKeys.intersection(currentKeys))
         
+        def calculateProblemColumns(indexKeys: list, outputDict: SDQLpySRDict, table_keys: dict) -> int:
+            def convertTableKeysToPrimaryOtherMapping(table_keys) -> dict:
+                primaryDict = dict()
+                for key, value in table_keys.items():
+                    for primary in value[0]:
+                        primaryDict[primary] = set(value[1].union(value[2]))
+                return primaryDict
+            
+            # Get the number of columns that will be a problem, if we index on the indexKeys
+            indexKeys_str = set(
+                [x.codeName for x in indexKeys]
+            )
+            assert len(outputDict.values) == 0
+            # Step 1: Carry forward keys that are type: Varchar/Date/Char
+            potentialProblemKeys_str = set(
+                [x.codeName for x in outputDict.keys if x.type in ['Varchar', 'Date', 'Char']]
+            )
+            primaryKeyMapping = convertTableKeysToPrimaryOtherMapping(table_keys)
+            
+            # Step 2: Remove keys that are mapped from the indexKeys
+            for index_key in indexKeys_str:
+                # Use set(), for none return
+                potentialProblemKeys_str = potentialProblemKeys_str - primaryKeyMapping.get(index_key, set())
+            
+            return len(potentialProblemKeys_str)
+        
         # Post Order traversal: Visit Children
         leftNode, rightNode, childNode = None, None, None
         if isinstance(sdqlpy_tree, BinarySDQLpyNode):
@@ -613,16 +639,38 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 assert leftKeysThatArePrimary > rightKeysThatArePrimary
             else:
                 # number of Primary keys is the same
-                # Now order based on cardinality
-                if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
-                    # We should index on Left
-                    # No swap required
-                    pass
+                # We should look at "Problem Keys", these are keys that will cause issues if we try
+                # to use them in the "value" section of a summation
+                
+                leftProblems = calculateProblemColumns(sdqlpy_tree.leftKeys, sdqlpy_tree.left.outputDict, table_keys)
+                rightProblems = calculateProblemColumns(sdqlpy_tree.rightKeys, sdqlpy_tree.right.outputDict, table_keys)
+             
+                if (leftProblems == 0) and (rightProblems == 0):
+                    # Problem keys are not an issue
+                    # Now order based on cardinality
+                    if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
+                        # We should index on Left
+                        # No swap required
+                        pass
+                    else:
+                        # We should index on Right
+                        # Swap required
+                        sdqlpy_tree.swapLeftAndRight()
+                        assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
                 else:
-                    # We should index on Right
-                    # Swap required
-                    sdqlpy_tree.swapLeftAndRight()
-                    assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+                    # Left or Right Problems exist
+                    if (leftProblems > 0) and (rightProblems == 0):
+                        # Left is an issue
+                        # We should index on Right
+                        # Swap Required
+                        sdqlpy_tree.swapLeftAndRight()
+                    elif (leftProblems == 0) and (rightProblems > 0):
+                        # Right is an issue
+                        # We should index on Left
+                        # No swap required
+                        pass
+                    else:
+                        raise Exception("We have problems on both Left and Right; this is an issue that cannot be resolved!")
 
         return sdqlpy_tree     
     

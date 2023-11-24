@@ -49,7 +49,7 @@ class PrepareHyperDB(PrepareDatabase):
     def get_table_keys(self):
         # Return a structure that looks like
         # Map['table_name', tuple]
-        #   tuple(set(primary_keys), set(foreign_keys))
+        #   tuple(set(primary_keys), set(foreign_keys), set(other_columns))
         
         table_keys_dict = {}
         
@@ -80,6 +80,19 @@ class PrepareHyperDB(PrepareDatabase):
                         )
                     
                     assert len(key_content) == 2
+                    
+                    # Get the other columns for table
+                    other_columns = (set([item for sublist in connection.execute_list_query(f"""
+                        SELECT a.attname
+                        FROM
+                            pg_catalog.pg_attribute AS a
+                        WHERE
+                            a.attrelid = '{schema_name.name.unescaped}.{table_name.name.unescaped}'::regclass
+                        """)
+                    for item in sublist]) - key_content[0]) - key_content[1]
+                    key_content.append(other_columns)
+                    
+                    assert len(key_content) == 3
                     # Add to dictionary
                     table_keys_dict[table_name.name.unescaped] = tuple(key_content)
                     
