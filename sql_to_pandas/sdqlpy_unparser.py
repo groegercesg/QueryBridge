@@ -291,20 +291,22 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         
         assert sdqlpy_tree.outputDict != None
         
-        for idx, val in enumerate(sdqlpy_tree.outputDict.values):
-            if isinstance(val, SumAggrOperator):
-                if str(id(val)) in replacementDict:
-                    # If it's in the replacementDict
-                    # Then use the previously created value
-                    sdqlpy_tree.outputDict.values[idx] = replacementDict[str(id(val))]
-                else:
-                    if val.codeName == "":
-                        handleEmptyCodeName(val, parserCreatedColumns)
-                    valueCopy = copy.deepcopy(val.child)
-                    valueCopy.codeName = val.codeName
-                    
-                    sdqlpy_tree.outputDict.values[idx] = valueCopy
-                    replacementDict[str(id(val))] = valueCopy
+        # Iterate through keys and values
+        for valuesLocation in [sdqlpy_tree.outputDict.keys, sdqlpy_tree.outputDict.values]:
+            for idx, val in enumerate(valuesLocation):
+                if isinstance(val, SumAggrOperator):
+                    if str(id(val)) in replacementDict:
+                        # If it's in the replacementDict
+                        # Then use the previously created value
+                        valuesLocation[idx] = replacementDict[str(id(val))]
+                    else:
+                        if val.codeName == "":
+                            handleEmptyCodeName(val, parserCreatedColumns)
+                        valueCopy = copy.deepcopy(val.child)
+                        valueCopy.codeName = val.codeName
+                        
+                        valuesLocation[idx] = valueCopy
+                        replacementDict[str(id(val))] = valueCopy
                     
         # replace it in filterContent as well
         if sdqlpy_tree.filterContent != None:
@@ -717,6 +719,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     sdqlpy_tree = convert_trees(universal_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
+    # Convert SumAggrOperator to ColumnNode
+    convertSumAggrOperatorToColumnNode(sdqlpy_tree)
     # Order joins, using cardinality information
     sdqlpy_tree = order_joins(sdqlpy_tree, table_keys)
     # Insert JoinProbe Nodes
@@ -727,8 +731,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     wire_up_incoming_output_dicts(sdqlpy_tree)
     # solve Duplicates by multiplying by a counter
     duplicateFixTopGroupJoin(sdqlpy_tree)
-    # Convert SumAggrOperator to ColumnNode
-    convertSumAggrOperatorToColumnNode(sdqlpy_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
     
