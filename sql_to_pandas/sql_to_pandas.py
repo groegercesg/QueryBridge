@@ -535,8 +535,20 @@ def main():
         # Remove view names from this
         cleaned_relations_subqueries = [x for x in relations_subqueries if x not in view_names]
         
-        line_prepender(python_output_name, "def q" + str(query_name) + "(" + str(cleaned_relations_subqueries)[1:-1].replace("'", "") + "):\n")
-        line_prepender(python_output_name, "import pandas as pd\n")
+        if args.output_fmt == "pandas":
+            line_prepender(python_output_name, "def q" + str(query_name) + "(" + str(cleaned_relations_subqueries)[1:-1].replace("'", "") + "):\n")
+            line_prepender(python_output_name, "import pandas as pd\n")
+        elif args.output_fmt == "sdqlpy":
+            inOrder_relations = sorted(cleaned_relations_subqueries)
+            line_prepender(python_output_name, "def q" + str(query_name) + "(" + str(inOrder_relations)[1:-1].replace("'", "") + "):\n")
+            #@sdql_compile({"lineitem": lineitem_type, "nation": nation_type, "orders": order_type, "part": part_type, "partsupp": partsupp_type, "supplier": supplier_type})
+            relation_type_dict = dict()
+            for relation in inOrder_relations:
+                relation_type_dict[relation] = f"{relation}_type"
+            sdql_decorator = f"@sdql_compile({relation_type_dict})\n"
+            line_prepender(python_output_name, sdql_decorator)
+        else:
+            raise Exception("Unrecognised output format option")
         
         if hasattr(args, "use_numpy"):
             if args.use_numpy != None and args.use_numpy == True:
