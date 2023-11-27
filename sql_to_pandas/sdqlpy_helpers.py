@@ -16,6 +16,14 @@ def handleEmptyCodeName(value, previousColumns):
                 current_strings.append("sum")
             case ColumnValue():
                 current_strings.append(value.codeName)
+            case MulOperator():
+                current_strings.append("mul")
+            case SubOperator():
+                current_strings.append("sub")
+            case ConstantValue():
+                pass
+            case MaxAggrOperator():
+                current_strings.append("max")
             case _:
                 raise Exception(f"Unknown operator: {type(value)}")
         
@@ -76,7 +84,12 @@ def setSourceNodeColumnValues(value, l_lambda_idx, l_columns, r_lambda_idx, r_co
     setSourceNodeColumnValuesNPairs(value, sourcePairs)
 
 def getCodeNameFromSetColumnValues(columns):
-    columns_str = set([x.value for x in columns])
+    columns_str = list()
+    for x in columns:
+        if isinstance(x, ColumnValue):
+            assert x.codeName == x.value
+        columns_str.append(x.codeName)
+    columns_str = set(columns_str)
         
     # Assert none are empty string
     assert not any([True for x in columns_str if x == ""])

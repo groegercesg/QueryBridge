@@ -148,10 +148,12 @@ class AddOperator(BinaryExpressionOperator):
 class MulOperator(BinaryExpressionOperator):
     def __init__(self):
         super().__init__()
+        self.type = "Double"
         
 class DivOperator(BinaryExpressionOperator):
     def __init__(self):
         super().__init__()
+        self.type = "Double"
         
 class NotEqualsOperator(BinaryExpressionOperator):
     def __init__(self):

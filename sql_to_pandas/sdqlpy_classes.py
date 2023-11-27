@@ -34,7 +34,7 @@ class SDQLpyBaseNode():
         assert self.sdqlrepr != None
         if self.topNode == True and not_output == False:
             # Default SDQL name for top level output
-            self.tableName =  "results"
+            self.tableName = "results"
         else:
             nodeNumber = unparser.nodesCounter[self.__class__.__name__]
             self.tableName = f"{self.sdqlrepr}_{str(nodeNumber)}"
@@ -168,6 +168,20 @@ class SDQLpyAggrNode(UnarySDQLpyNode):
         self.outputDict = SDQLpySRDict(
             list(),
             self.aggregateOperations
+        )
+        
+class SDQLpyRetrieveNode(LeafSDQLpyNode):
+    def __init__(self, tableColumns, targetID):
+        super().__init__()
+        self.tableColumns = tableColumns
+        self.targetID = targetID
+        self.outputDict = None
+        self.sdqlrepr = "retrieve"
+        
+    def set_output_dict(self):
+        self.outputDict = SDQLpySRDict(
+            list(self.tableColumns),
+            list()
         )
         
 class SDQLpyConcatNode(UnarySDQLpyNode):

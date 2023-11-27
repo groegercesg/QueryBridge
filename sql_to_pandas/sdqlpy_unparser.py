@@ -9,7 +9,7 @@ from sdqlpy_helpers import *
 
 TAB = "    "
 
-def audit_sdqlpy_tree_recordnode(op_tree: SDQLpyBaseNode) -> bool:
+def audit_sdqlpy_tree_leafnode(op_tree: SDQLpyBaseNode) -> bool:
     def get_leaf_nodes(op_tree: SDQLpyBaseNode) -> list[SDQLpyBaseNode]:
         leafs = []
         def _get_leaf_nodes(op_node: SDQLpyBaseNode):
@@ -26,9 +26,9 @@ def audit_sdqlpy_tree_recordnode(op_tree: SDQLpyBaseNode) -> bool:
         _get_leaf_nodes(op_tree)
         return leafs
     
-    # Get all leaves, make sure they're all SDQLpyRecordNode
+    # Get all leaves, make sure they're all LeafSDQLpyNode
     all_leaves = get_leaf_nodes(op_tree)
-    return all(isinstance(leaf, SDQLpyRecordNode) for leaf in all_leaves)
+    return all(isinstance(leaf, LeafSDQLpyNode) for leaf in all_leaves)
 
 def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: dict[str, tuple]) -> SDQLpyBaseNode:
     def convert_trees(op_tree: UniversalBaseNode) -> SDQLpyBaseNode:
@@ -87,6 +87,11 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 new_op_tree = None
                 # Add the values to the child
                 childNode.outputDict.keys.append(op_tree.values)
+            case RetrieveNode():
+                new_op_tree = SDQLpyRetrieveNode(
+                    op_tree.tableColumns,
+                    op_tree.retrieveTargetID
+                )
             case _:
                 raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
@@ -126,21 +131,13 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 case BinarySDQLpyNode():
                     lowest_node_pointer.addLeft(leftNode)
                     lowest_node_pointer.addRight(rightNode)
-                    if isinstance(lowest_node_pointer, SDQLpyJoinNode):
-                        lowest_node_pointer.set_output_dict()
-                    else:
-                        raise Exception("Binary with some Nones")
+                    # if isinstance(lowest_node_pointer, SDQLpyJoinNode):
+                    #     lowest_node_pointer.set_output_dict()
+                    # else:
+                    #     raise Exception("Binary with some Nones")
                 case _:
                     # LeafSDQLpyNode
                     assert isinstance(lowest_node_pointer, LeafSDQLpyNode)
-        
-        # # Connect parts up        
-        # if isinstance(new_op_tree, SDQLpyFilterNode):
-        #     assert hasattr(new_op_tree.child, "outputDict") and new_op_tree.child.outputDict != None
-        #     new_op_tree.set_output_dict(new_op_tree.child.outputDict)
-        # elif isinstance(new_op_tree, SDQLpyConcatNode):
-        #     assert hasattr(new_op_tree.child, "outputDict") and new_op_tree.child.outputDict != None
-        #     new_op_tree.set_output_dict(new_op_tree.child.outputDict)
         
         # Add nodeID to new_op_node
         assert hasattr(op_tree, "nodeID")
@@ -171,8 +168,11 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 assert sdqlpy_tree.outputDict != None
                 ordering = {k:v for v,k in enumerate(output_cols_order)}
                 # Order keys as well
-                sdqlpy_tree.outputDict.keys.sort(key = lambda x : ordering.get(x.codeName))
-                sdqlpy_tree.outputDict.values.sort(key = lambda x : ordering.get(x.codeName))
+                sdqlpy_tree.outputDict.keys.sort(key = lambda x : ordering.get(x.codeName, -1))
+                sdqlpy_tree.outputDict.values.sort(key = lambda x : ordering.get(x.codeName, -1))
+                # Drop keys that aren't in ordering
+                sdqlpy_tree.outputDict.keys = [x for x in sdqlpy_tree.outputDict.keys if ordering.get(x.codeName, None) != None]
+                sdqlpy_tree.outputDict.values = [x for x in sdqlpy_tree.outputDict.values if ordering.get(x.codeName, None) != None]
             case SDQLpyAggrNode():
                 # No ordering required, as it only returns a single value
                 pass
@@ -209,10 +209,10 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
             sdqlpy_tree.do_join_key_separation()
             
-            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode))
+            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyRetrieveNode))
             
             # Turn a Record or JoinNode on the left into a JoinBuildNode
-            if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)):
+            if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyAggrNode)):
                 # Make it a SDQLpyJoinBuildNode
                 jbNode = SDQLpyJoinBuildNode(
                     sdqlpy_tree.leftKeys,
@@ -263,7 +263,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     
                     # Use the group
                     sdqlpy_tree.outputDict.set_duplicateUser(True)
-            
+            case SDQLpyJoinNode():
+                # No duplicates, it's a Join
+                pass
             case SDQLpyAggrNode():
                 # No ordering required, as it only returns a single value
                 pass
@@ -272,7 +274,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 # So we need to run the order method again
                 duplicateFixTopGroupJoin(sdqlpy_tree.child)
             case _:
-                raise Exception(f"No duplciateFix configured for node: {type(sdqlpy_tree)}")
+                raise Exception(f"No duplicateFix configured for node: {type(sdqlpy_tree)}")
             
     def convertSumAggrOperatorToColumnNode(sdqlpy_tree):
         parserCreatedColumns = set()
@@ -298,7 +300,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         # Iterate through keys and values
         for valuesLocation in [sdqlpy_tree.outputDict.keys, sdqlpy_tree.outputDict.values]:
             for idx, val in enumerate(valuesLocation):
-                if isinstance(val, SumAggrOperator):
+                if isinstance(val, (SumAggrOperator, MaxAggrOperator)):
                     if str(id(val)) in replacementDict:
                         # If it's in the replacementDict
                         # Then use the previously created value
@@ -306,7 +308,11 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     else:
                         if val.codeName == "":
                             handleEmptyCodeName(val, parserCreatedColumns)
-                        valueCopy = copy.deepcopy(val.child)
+                        # What is the Aggregations are nested
+                        desiredChild = val.child
+                        while isinstance(desiredChild, (SumAggrOperator, MaxAggrOperator)):
+                            desiredChild = desiredChild.child
+                        valueCopy = copy.deepcopy(desiredChild)
                         valueCopy.codeName = val.codeName
                         
                         valuesLocation[idx] = valueCopy
@@ -315,12 +321,35 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         # Replace in SDQLpyGroupNode aggregateOperations
         if isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyAggrNode)):
             for idx, val in enumerate(sdqlpy_tree.aggregateOperations):
-                if isinstance(val, SumAggrOperator):
+                if isinstance(val, (SumAggrOperator, MaxAggrOperator)):
                     if str(id(val)) in replacementDict:
                         sdqlpy_tree.aggregateOperations[idx] = replacementDict[str(id(val))]
                     else:
                         raise Exception("we shouldn't find a SumAggrOperation in aggregateOperations that we don't already know about")
                     
+        # Replace in tableColumns of SDQLpyRetrieveNode
+        if isinstance(sdqlpy_tree, (SDQLpyRetrieveNode)):
+            for idx, val in enumerate(sdqlpy_tree.tableColumns):
+                if isinstance(val, (SumAggrOperator, MaxAggrOperator)):
+                    if str(id(val)) in replacementDict:
+                        sdqlpy_tree.tableColumns[idx] = replacementDict[str(id(val))]
+                    else:
+                        raise Exception("we shouldn't find a SumAggrOperation in tableColumns that we don't already know about")
+        
+        # Replace in the joinCondition of a JoinNode
+        if isinstance(sdqlpy_tree, SDQLpyJoinNode):
+            for idx, val in enumerate(sdqlpy_tree.joinCondition):
+                if isinstance(val.left, (SumAggrOperator, MaxAggrOperator)):
+                    if str(id(val.left)) in replacementDict:
+                        sdqlpy_tree.joinCondition[idx].left = replacementDict[str(id(val.left))]
+                    else:
+                        raise Exception("we shouldn't find a SumAggrOperation in the joinCondition that we don't already know about")
+
+                if isinstance(val.right, (SumAggrOperator, MaxAggrOperator)):
+                    if str(id(val.right)) in replacementDict:
+                        sdqlpy_tree.joinCondition[idx].right = replacementDict[str(id(val.right))]
+                    else:
+                        raise Exception("we shouldn't find a SumAggrOperation in the joinCondition that we don't already know about")
                 
         # replace it in filterContent as well
         if sdqlpy_tree.filterContent != None:
@@ -559,12 +588,12 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         def countKeysInSet(list_keys: list, allKeys: set) -> int:
             assert isinstance(list_keys, list)
             for x in list_keys:
-                assert isinstance(x, ColumnValue)
-                assert x.value == x.codeName
+                if isinstance(x, ColumnValue):
+                    assert x.value == x.codeName
             
             # Convert to set 
             currentKeys = set(
-                [x.value for x in list_keys]
+                [x.codeName for x in list_keys]
             )
             
             # Get intersection, the number of currentKeys that are in
@@ -583,10 +612,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             indexKeys_str = set(
                 [x.codeName for x in indexKeys]
             )
-            assert len(outputDict.values) == 0
             # Step 1: Carry forward keys that are type: Varchar/Date/Char
             potentialProblemKeys_str = set(
-                [x.codeName for x in outputDict.keys if x.type in ['Varchar', 'Date', 'Char']]
+                [x.codeName for x in outputDict.flatCols() if x.type in ['Varchar', 'Date', 'Char']]
             )
             primaryKeyMapping = convertTableKeysToPrimaryOtherMapping(table_keys)
             
@@ -867,6 +895,21 @@ class UnparseSDQLpyTree():
             getattr(self, targetVisitorMethod)(current_node)
         else:
             raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
+        
+    def visit_SDQLpyRetrieveNode(self, node):
+        assert node.retrieveTargetID in self.nodeDict
+        retrievedNode = self.nodeDict[node.retrieveTargetID]
+        
+        nodeTableColumnsCounter = Counter([type(x) for x in node.outputDict.flatCols()])
+        retrievedNodeColumnsCounter = Counter([type(x) for x in retrievedNode.outputDict.flatCols()])
+        
+        assert len(node.outputDict.flatCols()) == len(retrievedNode.outputDict.flatCols())
+        assert nodeTableColumnsCounter == retrievedNodeColumnsCounter
+        assert len(set(nodeTableColumnsCounter.values())) <= 1, "All should have the same value"
+        assert all(1 == x for x in nodeTableColumnsCounter.values()), "All should be 1"
+        
+        node.getTableName(self)
+        node.tableName = retrievedNode.tableName
         
     def visit_SDQLpyFilterNode(self, node):
         # Get child name
