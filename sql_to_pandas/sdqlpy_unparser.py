@@ -50,7 +50,11 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     op_tree.tableName,
                     op_tree.tableColumns
                 )
-                if op_tree.tableRestrictions != []:
+                if (op_tree.tableFilters != []) and (op_tree.tableRestrictions != []):
+                    raise Exception("Two types of filters, we need to add support for understanding this")
+                elif op_tree.tableFilters != []:
+                    new_op_tree.addFilterContent(op_tree.tableFilters)
+                elif op_tree.tableRestrictions != []:
                     new_op_tree.addFilterContent(op_tree.tableRestrictions)
             case GroupNode():
                 if op_tree.keyExpressions == []:
@@ -659,16 +663,25 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
              
                 if (leftProblems == 0) and (rightProblems == 0):
                     # Problem keys are not an issue
-                    # Now order based on cardinality
-                    if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
-                        # We should index on Left
-                        # No swap required
-                        pass
-                    else:
-                        # We should index on Right
-                        # Swap required
+                    
+                    # Check leftsemijoin
+                    if sdqlpy_tree.joinType == "leftsemijoin":
+                        sdqlpy_tree.joinType = "rightsemijoin"
+                        
                         sdqlpy_tree.swapLeftAndRight()
+                        # Assert cardinality okay
                         assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+                    else:
+                        # Now order based on cardinality
+                        if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
+                            # We should index on Left
+                            # No swap required
+                            pass
+                        else:
+                            # We should index on Right
+                            # Swap required
+                            sdqlpy_tree.swapLeftAndRight()
+                            assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
                 else:
                     # Left or Right Problems exist
                     if (leftProblems > 0) and (rightProblems == 0):
@@ -991,7 +1004,7 @@ class UnparseSDQLpyTree():
         lambda_index = "p"
         
         # TODO: We only support an inner hash join at the moment
-        assert node.joinType in ["inner", "rightsemijoin"] and node.joinMethod == "hash"
+        assert node.joinType in node.KNOWN_JOIN_TYPES and node.joinMethod == "hash"
         
         assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode)) 
         
@@ -1205,7 +1218,7 @@ class UnparseSDQLpyTree():
             case AddOperator():
                 expression_output = f"({leftNode} + {rightNode})"
             case CountAllOperator():
-                expression_output = "1"
+                expression_output = "1.0"
             case EqualsOperator():
                 expression_output = f"({leftNode} == {rightNode})"
             case SDQLpyThirdNodeWrapper():

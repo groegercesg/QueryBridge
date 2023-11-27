@@ -545,7 +545,11 @@ def main():
             relation_type_dict = dict()
             for relation in inOrder_relations:
                 relation_type_dict[relation] = f"{relation}_type"
-            sdql_decorator = f"@sdql_compile({relation_type_dict})\n"
+            relation_type_mapping = []
+            for key, value in relation_type_dict.items():
+                relation_type_mapping.append(f"'{key}': {value}")
+            relation_type_mapping = ", ".join(relation_type_mapping) 
+            sdql_decorator = f"@sdql_compile({{{relation_type_mapping}}})\n"
             line_prepender(python_output_name, sdql_decorator)
         else:
             raise Exception("Unrecognised output format option")
