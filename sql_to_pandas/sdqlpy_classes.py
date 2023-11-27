@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, defaultdict
 
 from universal_plan_nodes import *
 from expression_operators import *
@@ -358,13 +358,31 @@ class SDQLpyNKeyJoin():
 class SDQLpySRDict():
     def __init__(self, keys, values):
         assert isinstance(keys, list)
-        self.keys = keys
+        self.keys = self.reduceDuplicates(keys)
         assert isinstance(values, list)
-        self.values = values
+        self.values = self.reduceDuplicates(values)
         self.third_wrap_counter = 0
         self.unique = False
         self.duplicateCounter = False
         self.duplicateUser = False
+        
+    def reduceDuplicates(self, items):
+        # Remove duplicates in incoming list of items: either keys or values
+        itemsById = defaultdict(list)
+        itemIds = list()
+        for item in items:
+            itemIds.append(str(id(item)))
+            itemsById[str(id(item))].append(item)
+        
+        # Get unique id order: 
+        itemIdOrder = list(dict.fromkeys(itemIds))
+        
+        # Insert into newItems based of order of items
+        newItems = []
+        for itemId in itemIdOrder:
+            # Only use first item
+            newItems.append(itemsById.get(str(itemId))[0])
+        return newItems
         
     def set_duplicateCounter(self, value):
         self.duplicateCounter = value
@@ -443,6 +461,10 @@ class SDQLpySRDict():
         l_columns = l_node.outputDict.flatCols()
         r_keys = r_node.outputDict.flatKeys()
         r_values = r_node.outputDict.flatVals()
+        # Reduce keys and values
+        self.keys = self.reduceDuplicates(self.keys)
+        self.values = self.reduceDuplicates(self.values)
+        
         # Assign sourceNode to the Column Values
         for key in self.keys:
             setSourceNodeColumnValues(key, l_lambda_idx, l_columns,
@@ -463,6 +485,9 @@ class SDQLpySRDict():
     def generateSDQLpyOneLambda(self, unparser, lambda_idx_key, lambda_idx_val, node):
         keys = node.incomingDict.flatKeys()
         values = node.incomingDict.flatVals()
+        # Reduce keys and values
+        self.keys = self.reduceDuplicates(self.keys)
+        self.values = self.reduceDuplicates(self.values)
         # Assign sourceNode to the Column Values
         for key in self.keys:
             setSourceNodeColumnValues(key, lambda_idx_key, keys, lambda_idx_val, values)
@@ -487,6 +512,9 @@ class SDQLpySRDict():
             resetColumnValues(col)
             
         return output_content
+    
+    def counterAllValuesOne(self, counter):
+        return all([x == 1 for x in counter.values()])
         
     def generateSDQLpyContent(self, unparser):
         output_content = []
@@ -503,21 +531,32 @@ class SDQLpySRDict():
             f"{{"
         )
         
+        keyCounter = defaultdict(int)
+        writtenKeys = dict()
+        
         # Process: Keys
         keyContent = []
         for key in self.keys:
             expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(key)
 
             assert key.codeName != ''
-            keyContent.append(
-                f'"{key.codeName}": {expr}'
-            )
+            # Check if can write out key
+            if key.codeName in writtenKeys:
+                assert writtenKeys[key.codeName] == expr
+            else:
+                writtenKeys[key.codeName] = expr
+                keyCounter[key.codeName] += 1
+                keyContent.append(
+                    f'"{key.codeName}": {expr}'
+                )
         keyFormatted = f"record({{{', '.join(keyContent)}}})"
         if self.unique == True:
             keyFormatted = f"unique({keyFormatted})"
         output_content.append(
             f"{TAB}{keyFormatted}:"
         )
+        
+        assert self.counterAllValuesOne(keyCounter)
         
         # Process: Values
         if self.values == []:
@@ -532,6 +571,8 @@ class SDQLpySRDict():
                     f"{TAB}{True}"
                 )
         else:
+            valueCounter = defaultdict(int)
+            writtenValues = dict()
             colContent = []
             for val in self.values:
                 if isinstance(val, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper,
@@ -541,13 +582,21 @@ class SDQLpySRDict():
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val.child)
 
                 assert val.codeName != ''
-                colContent.append(
-                    f'"{val.codeName}": {expr}'
-                )
+                # Check if can write out key
+                if val.codeName in writtenValues:
+                    assert writtenValues[val.codeName] == expr
+                else:
+                    writtenValues[val.codeName] = expr
+                    valueCounter[val.codeName] += 1
+                    colContent.append(
+                        f'"{val.codeName}": {expr}'
+                    )
             columnFormatted = f"record({{{', '.join(colContent)}}})"
             output_content.append(
                 f"{TAB}{columnFormatted}"
             )
+            
+            assert self.counterAllValuesOne(Counter(valueCounter))
         
         output_content.append(
             f"}}"

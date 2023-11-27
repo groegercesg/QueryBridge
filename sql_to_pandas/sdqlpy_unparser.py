@@ -307,7 +307,17 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                         
                         valuesLocation[idx] = valueCopy
                         replacementDict[str(id(val))] = valueCopy
+        
+        # Replace in SDQLpyGroupNode aggregateOperations
+        if isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyAggrNode)):
+            for idx, val in enumerate(sdqlpy_tree.aggregateOperations):
+                if isinstance(val, SumAggrOperator):
+                    if str(id(val)) in replacementDict:
+                        sdqlpy_tree.aggregateOperations[idx] = replacementDict[str(id(val))]
+                    else:
+                        raise Exception("we shouldn't find a SumAggrOperation in aggregateOperations that we don't already know about")
                     
+                
         # replace it in filterContent as well
         if sdqlpy_tree.filterContent != None:
             newFilterContent = replaceInExpression(sdqlpy_tree.filterContent, replacementDict)
