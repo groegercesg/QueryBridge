@@ -23,7 +23,7 @@ where
         and r_name = 'EUROPE'
         and ps_supplycost = (
                 select
-                        min(ps_supplycost)
+                        ps_supplycost
                 from
                         partsupp,
                         supplier,

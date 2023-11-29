@@ -22,9 +22,4 @@ from
     revenue_view
 where
     s_suppkey = supplier_no
-    and total_revenue = (
-        select
-            max(total_revenue)
-        from
-            revenue_view
-    )
+    and total_revenue = 1772627.2087
