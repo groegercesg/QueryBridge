@@ -17,6 +17,67 @@ class SDQLpyBaseNode():
         self.topNode = False
         self.filterContent = None
         self.cardinality = None
+        self.replacementDict = {}
+        
+    def setReplacementDict(self, replacementDict):
+        assert self.replacementDict == {}
+        self.replacementDict = replacementDict
+        
+    def rd_outputDict(self, no_sumaggr_warn):
+        if hasattr(self, "outputDict") and self.outputDict != None:
+            for valuesLocation in [self.outputDict.keys, self.outputDict.values]:
+                for idx, val in enumerate(valuesLocation):
+                    if str(id(val)) in self.replacementDict:
+                        # If it's in the replacementDict
+                        # Then use the previously created value
+                        valuesLocation[idx] = self.replacementDict[str(id(val))]      
+                    elif isinstance(val, (SumAggrOperator)):
+                        if no_sumaggr_warn:
+                            pass
+                        else:
+                            print(str(id(val)))
+                            raise Exception("Discovered a SumAggr, but we don't have any known replacement for this!")
+                    elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+                        raise Exception("Max/Min/Avg operator detected, we don't have support for these")
+
+    def rd_filterContent(self, no_sumaggr_warn):
+        def replaceInExpression(expression, replacements):
+            # Post Order traversal: Visit Children
+            leftNode, rightNode, childNode = None, None, None
+            if isinstance(expression, BinaryExpressionOperator):
+                leftNode = replaceInExpression(expression.left, replacements)
+                rightNode = replaceInExpression(expression.right, replacements)
+            elif isinstance(expression, UnaryExpressionOperator):
+                childNode = replaceInExpression(expression.child, replacements)
+            else:
+                # A leaf node
+                pass
+            
+            # Assign previous changes
+            if (leftNode != None) and (rightNode != None):
+                expression.left = leftNode
+                expression.right = rightNode
+            elif (childNode != None):
+                expression.child = childNode
+            else:
+                # A leaf node
+                pass
+            
+            if str(id(expression)) in replacements:
+                expression = replacements[str(id(expression))]
+            elif isinstance(expression, (SumAggrOperator)):
+                if no_sumaggr_warn:
+                    pass
+                else:
+                    raise Exception("Discovered a SumAggr, but we don't have any known replacement for this!")
+            elif isinstance(expression, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+                raise Exception("Max/Min/Avg operator detected, we don't have support for these")
+                
+            return expression
+
+        if self.filterContent != None:
+            newFilterContent = replaceInExpression(self.filterContent, self.replacementDict)
+            self.filterContent = newFilterContent
     
     def setCardinality(self, card):
         assert self.cardinality == None and isinstance(card, int)
@@ -44,13 +105,26 @@ class SDQLpyBaseNode():
     def refreshNode(self):
         pass
         
-    def set_output_dict(self):
+    def set_output_dict(self, no_sumaggr_warn=False):
         raise Exception("We should never run this Base class version")
 
 class LeafSDQLpyNode(SDQLpyBaseNode):
     def __init__(self):
         super().__init__()
         
+    def rd_tableColumns(self, no_sumaggr_warn):
+        if hasattr(self, "tableColumns"):
+            for idx, val in enumerate(self.tableColumns):
+                if str(id(val)) in self.replacementDict:
+                    self.tableColumns[idx] = self.replacementDict[str(id(val))]
+                elif isinstance(val, (SumAggrOperator)):
+                    if no_sumaggr_warn:
+                        pass
+                    else:
+                        raise Exception("we shouldn't find a SumAggrOperation in tableColumns that we don't already know about")
+                elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+                    raise Exception("Max/Min/Avg operator detected, we don't have support for these")
+
 class PipelineBreakerNode(SDQLpyBaseNode):
     def __init__(self):
         super().__init__()
@@ -71,7 +145,20 @@ class UnarySDQLpyNode(PipelineBreakerNode):
         childTableList = unparser.getChildTableNames(self)
         assert len(childTableList) == 1
         return childTableList[0]
-        
+    
+    def rd_aggregateOperations(self, no_sumaggr_warn):
+        if hasattr(self, "aggregateOperations"):
+            for idx, val in enumerate(self.aggregateOperations):
+                if str(id(val)) in self.replacementDict:
+                    self.aggregateOperations[idx] = self.replacementDict[str(id(val))]
+                elif isinstance(val, (SumAggrOperator)):
+                    if no_sumaggr_warn:
+                        pass
+                    else:
+                        raise Exception("we shouldn't find a SumAggrOperation in aggregateOperations that we don't already know about")
+                elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+                    raise Exception("Max/Min/Avg operator detected, we don't have support for these")
+
 class BinarySDQLpyNode(PipelineBreakerNode):
     def __init__(self):
         super().__init__()
@@ -97,6 +184,30 @@ class BinarySDQLpyNode(PipelineBreakerNode):
     def refreshNode(self):
         assert isinstance(self, SDQLpyJoinNode)
         self.create_output_dict()
+        
+    def rd_joinCondition(self, no_sumaggr_warn):
+        if hasattr(self, "joinCondition"):
+            for idx, val in enumerate(self.joinCondition):
+                if str(id(val.left)) in self.replacementDict:
+                        self.joinCondition[idx].left = self.replacementDict[str(id(val.left))]
+                elif isinstance(val.left, (SumAggrOperator)):
+                    if no_sumaggr_warn:
+                        pass
+                    else:
+                        raise Exception("we shouldn't find a SumAggrOperation in the joinCondition that we don't already know about")
+                elif isinstance(val.left, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+                    raise Exception("Max/Min/Avg operator detected, we don't have support for these")
+
+                if str(id(val.right)) in self.replacementDict:
+                    self.joinCondition[idx].right = self.replacementDict[str(id(val.right))]
+
+                if isinstance(val.right, (SumAggrOperator)):
+                    if no_sumaggr_warn:
+                        pass
+                    else:
+                        raise Exception("we shouldn't find a SumAggrOperation in the joinCondition that we don't already know about")
+                elif isinstance(val.right, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+                    raise Exception("Max/Min/Avg operator detected, we don't have support for these")
 
 # Classes for Nodes
 class SDQLpyRecordNode(LeafSDQLpyNode):
@@ -115,7 +226,10 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
             list() 
         )
         
-    def set_output_dict(self):
+    def set_output_dict(self, no_sumaggr_warn=False):
+        self.rd_outputDict(no_sumaggr_warn)
+        self.rd_filterContent(no_sumaggr_warn)
+        self.rd_tableColumns(no_sumaggr_warn)
         pass
         
     def getTableName(self, unparser):
@@ -137,11 +251,14 @@ class SDQLpyJoinBuildNode(UnarySDQLpyNode):
         self.sdqlrepr = "indexed"
         self.outputDict = None
         
-    def set_output_dict(self):
+    def set_output_dict(self, no_sumaggr_warn=False):
         self.outputDict = SDQLpySRDict(
             self.tableKeys,
             self.child.outputDict.flatCols() 
         )
+        
+        self.rd_outputDict(no_sumaggr_warn)
+        self.rd_filterContent(no_sumaggr_warn)
 
 class SDQLpyFilterNode(UnarySDQLpyNode):
     def __init__(self):
@@ -149,13 +266,16 @@ class SDQLpyFilterNode(UnarySDQLpyNode):
         self.outputDict = None
         self.sdqlrepr = "filter"
         
-    def set_output_dict(self):
+    def set_output_dict(self, no_sumaggr_warn=False):
         # A filter node should only have keys, no values
         assert self.child != None
         self.outputDict = SDQLpySRDict(
             self.child.outputDict.keys + self.child.outputDict.values,
             list()
         )
+        
+        self.rd_outputDict(no_sumaggr_warn)
+        self.rd_filterContent(no_sumaggr_warn)
 
 class SDQLpyAggrNode(UnarySDQLpyNode):
     def __init__(self, aggregateOperations):
@@ -164,11 +284,15 @@ class SDQLpyAggrNode(UnarySDQLpyNode):
         self.sdqlrepr = "aggr"
         self.outputDict = None
         
-    def set_output_dict(self):
+    def set_output_dict(self, no_sumaggr_warn=False):
+        self.rd_aggregateOperations(no_sumaggr_warn)
         self.outputDict = SDQLpySRDict(
             list(),
             self.aggregateOperations
         )
+        
+        self.rd_outputDict(no_sumaggr_warn)
+        self.rd_filterContent(no_sumaggr_warn)
         
 class SDQLpyRetrieveNode(LeafSDQLpyNode):
     def __init__(self, tableColumns, targetID):
@@ -178,11 +302,15 @@ class SDQLpyRetrieveNode(LeafSDQLpyNode):
         self.outputDict = None
         self.sdqlrepr = "retrieve"
         
-    def set_output_dict(self):
+    def set_output_dict(self, no_sumaggr_warn=False):
+        self.rd_filterContent(no_sumaggr_warn)
+        self.rd_tableColumns(no_sumaggr_warn)
         self.outputDict = SDQLpySRDict(
             list(self.tableColumns),
             list()
         )
+        
+        self.rd_outputDict(no_sumaggr_warn)
         
 class SDQLpyConcatNode(UnarySDQLpyNode):
     def __init__(self, outputColumns):
@@ -191,11 +319,14 @@ class SDQLpyConcatNode(UnarySDQLpyNode):
         self.outputColumns = outputColumns
         self.outputDict = None
         
-    def set_output_dict(self):
+    def set_output_dict(self, no_sumaggr_warn=False):
         self.outputDict = SDQLpySRDict(
             list(self.child.outputDict.flatCols()),
             list()
         )
+        
+        self.rd_outputDict(no_sumaggr_warn)
+        self.rd_filterContent(no_sumaggr_warn)
     
 class SDQLpyGroupNode(UnarySDQLpyNode):
     def __init__(self, keyExpressions, aggregateOperations):
@@ -205,7 +336,8 @@ class SDQLpyGroupNode(UnarySDQLpyNode):
         self.outputDict = None
         self.sdqlrepr = "group"
         
-    def set_output_dict(self):
+    def set_output_dict(self, no_sumaggr_warn=False):
+        self.rd_aggregateOperations(no_sumaggr_warn)
         # Track and carry previous outputDict value
         if self.outputDict == None:
             previousDuplicateUser = False
@@ -217,6 +349,9 @@ class SDQLpyGroupNode(UnarySDQLpyNode):
             self.aggregateOperations
         )
         self.outputDict.set_duplicateUser(previousDuplicateUser)
+        
+        self.rd_outputDict(no_sumaggr_warn)
+        self.rd_filterContent(no_sumaggr_warn)
         
 class SDQLpyJoinNode(BinarySDQLpyNode):
     KNOWN_JOIN_METHODS = set([
@@ -248,7 +383,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.set_output_dict()
         return self.outputDict
         
-    def set_output_dict(self):
+    def set_output_dict(self, no_sumaggr_warn=False):
         assert (self.left != None) and (self.right != None)
         # Track and carry previous outputDict value
         if self.outputDict == None:
@@ -286,6 +421,10 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                 )
             case _:
                 raise Exception(f"No columns variable set for joinType: {self.joinType}")
+
+        self.rd_outputDict(no_sumaggr_warn)
+        self.rd_filterContent(no_sumaggr_warn)
+        self.rd_joinCondition(no_sumaggr_warn)
         
     def __splitConditionsIntoList(self, joinCondition: ExpressionBaseNode) -> list[ExpressionBaseNode]:
         newConditions = []

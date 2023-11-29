@@ -209,7 +209,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
             sdqlpy_tree.do_join_key_separation()
             
-            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyRetrieveNode))
+            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyRetrieveNode))
             
             # Turn a Record or JoinNode on the left into a JoinBuildNode
             if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyAggrNode)):
@@ -227,13 +227,13 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         # Return the tree, for the next iteration
         return sdqlpy_tree
     
-    def wire_up_incoming_output_dicts(sdqlpy_tree):
+    def wire_up_incoming_output_dicts(sdqlpy_tree, no_sumaggr_warn=False):
         # Post Order traversal: Visit Children
         if isinstance(sdqlpy_tree, BinarySDQLpyNode):
-            wire_up_incoming_output_dicts(sdqlpy_tree.left)
-            wire_up_incoming_output_dicts(sdqlpy_tree.right)
+            wire_up_incoming_output_dicts(sdqlpy_tree.left, no_sumaggr_warn)
+            wire_up_incoming_output_dicts(sdqlpy_tree.right, no_sumaggr_warn)
         elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
-            wire_up_incoming_output_dicts(sdqlpy_tree.child)
+            wire_up_incoming_output_dicts(sdqlpy_tree.child, no_sumaggr_warn)
         else:
             # A leaf node
             assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
@@ -241,16 +241,16 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         
         if isinstance(sdqlpy_tree, LeafSDQLpyNode):
             # Incoming is already set
-            sdqlpy_tree.set_output_dict()
+            sdqlpy_tree.set_output_dict(no_sumaggr_warn)
         elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
             # Set incoming and run output dict
             sdqlpy_tree.incomingDict = sdqlpy_tree.child.outputDict
-            sdqlpy_tree.set_output_dict()
+            sdqlpy_tree.set_output_dict(no_sumaggr_warn)
         else:
             assert isinstance(sdqlpy_tree, BinarySDQLpyNode)
             # Incoming dicts should already be set
             assert len(sdqlpy_tree.incomingDicts) == 2
-            sdqlpy_tree.set_output_dict()
+            sdqlpy_tree.set_output_dict(no_sumaggr_warn)
             
     def duplicateFixTopGroupJoin(sdqlpy_tree):
         match sdqlpy_tree:
@@ -297,93 +297,58 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         
         assert sdqlpy_tree.outputDict != None
         
+        after_current_node_values = list()
+        
         # Iterate through keys and values
+        # Create the options for the replacementDict
         for valuesLocation in [sdqlpy_tree.outputDict.keys, sdqlpy_tree.outputDict.values]:
             for idx, val in enumerate(valuesLocation):
-                if isinstance(val, (SumAggrOperator, MaxAggrOperator)):
-                    if str(id(val)) in replacementDict:
-                        # If it's in the replacementDict
-                        # Then use the previously created value
-                        valuesLocation[idx] = replacementDict[str(id(val))]
-                    else:
+                if isinstance(val, (SumAggrOperator)):
+                    if str(id(val)) not in replacementDict:
+                        # Create a new one in the replacementDict
                         if val.codeName == "":
                             handleEmptyCodeName(val, parserCreatedColumns)
                         # What is the Aggregations are nested
                         desiredChild = val.child
-                        while isinstance(desiredChild, (SumAggrOperator, MaxAggrOperator)):
+                        while isinstance(desiredChild, (SumAggrOperator)):
                             desiredChild = desiredChild.child
                         valueCopy = copy.deepcopy(desiredChild)
                         valueCopy.codeName = val.codeName
                         
-                        valuesLocation[idx] = valueCopy
+                        assert valueCopy.type != ''
+                        newValue = ColumnValue(valueCopy.codeName, valueCopy.type)
+                        newValue.codeName = valueCopy.codeName
+                        
                         replacementDict[str(id(val))] = valueCopy
+                        after_current_node_values.extend(
+                            [
+                                (str(id(val)), newValue),
+                                (str(id(valueCopy)), newValue)
+                            ]
+                        )
+                elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+                    raise Exception("Max/Min/Avg operator detected, we don't have support for these")
         
-        # Replace in SDQLpyGroupNode aggregateOperations
-        if isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyAggrNode)):
-            for idx, val in enumerate(sdqlpy_tree.aggregateOperations):
-                if isinstance(val, (SumAggrOperator, MaxAggrOperator)):
-                    if str(id(val)) in replacementDict:
-                        sdqlpy_tree.aggregateOperations[idx] = replacementDict[str(id(val))]
-                    else:
-                        raise Exception("we shouldn't find a SumAggrOperation in aggregateOperations that we don't already know about")
-                    
-        # Replace in tableColumns of SDQLpyRetrieveNode
-        if isinstance(sdqlpy_tree, (SDQLpyRetrieveNode)):
-            for idx, val in enumerate(sdqlpy_tree.tableColumns):
-                if isinstance(val, (SumAggrOperator, MaxAggrOperator)):
-                    if str(id(val)) in replacementDict:
-                        sdqlpy_tree.tableColumns[idx] = replacementDict[str(id(val))]
-                    else:
-                        raise Exception("we shouldn't find a SumAggrOperation in tableColumns that we don't already know about")
+        # Set the replacementDict
+        sdqlpy_tree.setReplacementDict(replacementDict)
         
-        # Replace in the joinCondition of a JoinNode
-        if isinstance(sdqlpy_tree, SDQLpyJoinNode):
-            for idx, val in enumerate(sdqlpy_tree.joinCondition):
-                if isinstance(val.left, (SumAggrOperator, MaxAggrOperator)):
-                    if str(id(val.left)) in replacementDict:
-                        sdqlpy_tree.joinCondition[idx].left = replacementDict[str(id(val.left))]
-                    else:
-                        raise Exception("we shouldn't find a SumAggrOperation in the joinCondition that we don't already know about")
-
-                if isinstance(val.right, (SumAggrOperator, MaxAggrOperator)):
-                    if str(id(val.right)) in replacementDict:
-                        sdqlpy_tree.joinCondition[idx].right = replacementDict[str(id(val.right))]
-                    else:
-                        raise Exception("we shouldn't find a SumAggrOperation in the joinCondition that we don't already know about")
+        # Use the replacementDict
+        sdqlpy_tree.set_output_dict()
+        
+        # Update the replacementDict
+        # We want to set the current_node to solely the ValueCopy,
+        # but we want all subsequent to use the created version of that node
+        # This is what we store along with the key in this list
+        
+        newReplacementDict = dict()
+        # Fill with current dict values
+        for key, value in replacementDict.items():
+            newReplacementDict[key] = value
+        if after_current_node_values != []:
+            for key, value in after_current_node_values:
+                newReplacementDict[key] = value
                 
-        # replace it in filterContent as well
-        if sdqlpy_tree.filterContent != None:
-            newFilterContent = replaceInExpression(sdqlpy_tree.filterContent, replacementDict)
-            sdqlpy_tree.filterContent = newFilterContent
-                
-        return parserCreatedColumns, replacementDict
-    
-    def replaceInExpression(expression, replacements):
-        # Post Order traversal: Visit Children
-        leftNode, rightNode, childNode = None, None, None
-        if isinstance(expression, BinaryExpressionOperator):
-            leftNode = replaceInExpression(expression.left, replacements)
-            rightNode = replaceInExpression(expression.right, replacements)
-        elif isinstance(expression, UnaryExpressionOperator):
-            childNode = replaceInExpression(expression.child, replacements)
-        else:
-            # A leaf node
-            pass
-        
-        # Assign previous changes
-        if (leftNode != None) and (rightNode != None):
-            expression.left = leftNode
-            expression.right = rightNode
-        elif (childNode != None):
-            expression.child = childNode
-        else:
-            # A leaf node
-            pass
-        
-        if str(id(expression)) in replacements:
-            expression = replacements[str(id(expression))]
-            
-        return expression
+        return parserCreatedColumns, newReplacementDict
     
     def foldConditionsAndOutputRecords(sdqlpy_tree):
         # Post Order traversal: Visit Children
@@ -769,7 +734,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     # Call convert trees
     sdqlpy_tree = convert_trees(universal_tree)
     # Wire up incoming/output Dicts
-    wire_up_incoming_output_dicts(sdqlpy_tree)
+    wire_up_incoming_output_dicts(sdqlpy_tree, no_sumaggr_warn=True)
     # Convert SumAggrOperator to ColumnNode
     convertSumAggrOperatorToColumnNode(sdqlpy_tree)
     # Order joins, using cardinality information
@@ -1049,7 +1014,7 @@ class UnparseSDQLpyTree():
         # TODO: We only support an inner hash join at the moment
         assert node.joinType in node.KNOWN_JOIN_TYPES and node.joinMethod == "hash"
         
-        assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode)) 
+        assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)) 
         
         self.writeTempContent(
             f"{createdDictName} = {rightTable}.sum(\n"
