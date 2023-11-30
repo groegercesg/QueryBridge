@@ -140,10 +140,12 @@ class AndOperator(BinaryExpressionOperator):
 class SubOperator(BinaryExpressionOperator):
     def __init__(self):
         super().__init__()
+        self.type = "Double"
         
 class AddOperator(BinaryExpressionOperator):
     def __init__(self):
         super().__init__()
+        self.type = "Double"
 
 class MulOperator(BinaryExpressionOperator):
     def __init__(self):

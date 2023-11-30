@@ -380,6 +380,7 @@ def main():
         elif args.query_planner == "Hyper_DB":
             # Get Table Keys
             table_keys = db.get_table_keys()
+            # content = db.execute_query(query_file_data)
             unparse_content = generate_unparse_content_from_explain_and_query(
                 explain_json, query_file, args.output_fmt, table_keys
             )

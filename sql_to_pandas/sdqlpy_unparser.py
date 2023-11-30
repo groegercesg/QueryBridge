@@ -85,7 +85,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             case NewColumnNode():
                 assert isinstance(childNode, SDQLpyJoinNode)
                 new_op_tree = None
-                # Add the values to the child
                 childNode.outputDict.keys.append(op_tree.values)
             case RetrieveNode():
                 new_op_tree = SDQLpyRetrieveNode(
@@ -138,6 +137,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 case _:
                     # LeafSDQLpyNode
                     assert isinstance(lowest_node_pointer, LeafSDQLpyNode)
+                    
+        # Create the output_dict
+        wire_up_incoming_output_dicts(new_op_tree, True)
         
         # Add nodeID to new_op_node
         assert hasattr(op_tree, "nodeID")
@@ -654,41 +656,41 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 leftProblems = calculateProblemColumns(sdqlpy_tree.leftKeys, sdqlpy_tree.left.outputDict, table_keys)
                 rightProblems = calculateProblemColumns(sdqlpy_tree.rightKeys, sdqlpy_tree.right.outputDict, table_keys)
              
-                if (leftProblems == 0) and (rightProblems == 0):
+                # if (leftProblems == 0) and (rightProblems == 0):
                     # Problem keys are not an issue
                     
-                    # Check leftsemijoin
-                    if sdqlpy_tree.joinType == "leftsemijoin":
-                        sdqlpy_tree.joinType = "rightsemijoin"
-                        
-                        sdqlpy_tree.swapLeftAndRight()
-                        # Assert cardinality okay
-                        assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
-                    else:
-                        # Now order based on cardinality
-                        if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
-                            # We should index on Left
-                            # No swap required
-                            pass
-                        else:
-                            # We should index on Right
-                            # Swap required
-                            sdqlpy_tree.swapLeftAndRight()
-                            assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+                # Check leftsemijoin
+                if sdqlpy_tree.joinType == "leftsemijoin":
+                    sdqlpy_tree.joinType = "rightsemijoin"
+                    
+                    sdqlpy_tree.swapLeftAndRight()
+                    # Assert cardinality okay
+                    #assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
                 else:
-                    # Left or Right Problems exist
-                    if (leftProblems > 0) and (rightProblems == 0):
-                        # Left is an issue
-                        # We should index on Right
-                        # Swap Required
-                        sdqlpy_tree.swapLeftAndRight()
-                    elif (leftProblems == 0) and (rightProblems > 0):
-                        # Right is an issue
+                    # Now order based on cardinality
+                    if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
                         # We should index on Left
                         # No swap required
                         pass
                     else:
-                        raise Exception("We have problems on both Left and Right; this is an issue that cannot be resolved!")
+                        # We should index on Right
+                        # Swap required
+                        sdqlpy_tree.swapLeftAndRight()
+                        assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+                # else:
+                #     # Left or Right Problems exist
+                #     if (leftProblems > 0) and (rightProblems == 0):
+                #         # Left is an issue
+                #         # We should index on Right
+                #         # Swap Required
+                #         sdqlpy_tree.swapLeftAndRight()
+                #     elif (leftProblems == 0) and (rightProblems > 0):
+                #         # Right is an issue
+                #         # We should index on Left
+                #         # No swap required
+                #         pass
+                #     else:
+                #         raise Exception("We have problems on both Left and Right; this is an issue that cannot be resolved!")
 
         return sdqlpy_tree     
     
@@ -805,7 +807,8 @@ class UnparseSDQLpyTree():
     
     def commitTempContent(self) -> None:
         assert (self.sdqlpy_temp_content != [])
-        self.sdqlpy_content.extend(self.sdqlpy_temp_content)
+        for row in self.sdqlpy_temp_content:
+            self.writeContent(row)
         self.sdqlpy_temp_content = []
         
     def getSDQLpyContent(self) -> list[str]:

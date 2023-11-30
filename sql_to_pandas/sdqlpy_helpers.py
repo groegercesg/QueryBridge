@@ -86,8 +86,8 @@ def setSourceNodeColumnValues(value, l_lambda_idx, l_columns, r_lambda_idx, r_co
 def getCodeNameFromSetColumnValues(columns):
     columns_str = list()
     for x in columns:
-        if isinstance(x, ColumnValue):
-            assert x.codeName == x.value
+        # if isinstance(x, ColumnValue):
+        #     assert x.codeName == x.value
         columns_str.append(x.codeName)
     columns_str = set(columns_str)
         
@@ -132,6 +132,14 @@ def setSourceNodeColumnValuesNPairs(value, sourcePairs):
             set_index = False
             for index_name, columns in sourcePairs:
                 if value.value in columns:
+                    assert set_index == False
+                    if value.sourceNode == None:
+                        value.sourceNode = index_name
+                        set_index = True
+                    else:
+                        assert value.sourceNode == index_name
+                        set_index = True
+                elif value.codeName in columns:
                     assert set_index == False
                     if value.sourceNode == None:
                         value.sourceNode = index_name
