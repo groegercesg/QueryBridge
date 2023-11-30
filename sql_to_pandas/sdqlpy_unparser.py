@@ -1035,9 +1035,13 @@ class UnparseSDQLpyTree():
                 f"{TAB}{TAB}{output_line}"
             )
         
+        joinComparator = "!="
+        if "anti" in node.joinType:
+            joinComparator = "=="
+        
         self.writeTempContent(
             f"{TAB}if\n"
-            f"{TAB}{TAB}{leftTableRef} != None\n"
+            f"{TAB}{TAB}{leftTableRef} {joinComparator} None\n"
             f"{TAB}else\n"
             f"{TAB}{TAB}None"
         )
@@ -1232,6 +1236,8 @@ class UnparseSDQLpyTree():
                 expression_output = "1.0"
             case EqualsOperator():
                 expression_output = f"({leftNode} == {rightNode})"
+            case NotEqualsOperator():
+                expression_output = f"({leftNode} != {rightNode})"
             case SDQLpyThirdNodeWrapper():
                 expression_output = self.__handle_SDQLpyThirdNodeWrapper(expr_tree)
             case InSetOperator():
@@ -1240,14 +1246,28 @@ class UnparseSDQLpyTree():
                 expression_output = self.__handle_SDQLpyNKeyJoin(expr_tree)
             case SDQLpyLambdaReference():
                 expression_output = f"{expr_tree.value}"
+            case NotOperator():
+                expression_output = f"not ({childNode})"
+            case CountDistinctAggrOperator():
+                expression_output = f"dictSize({childNode})"
             case LikeOperator():
                 expression_output = self.__handle_LikeOperator(expr_tree)
             case ExtractYearOperator():
                 expression_output = self.__handle_ExtractYearOperator(expr_tree)
+            case SDQLpyFirstIndex():
+                expression_output = self.__handle_SDQLpyFirstIndex(expr_tree, leftNode, rightNode)
+            case SDQLpyStartsWith():
+                expression_output = self.__handle_SDQLpyStartsWith(expr_tree, leftNode, rightNode)
             case _: 
                 raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
         return expression_output
+    
+    def __handle_SDQLpyFirstIndex(self, expr: SDQLpyFirstIndex, leftValue: str, rightValue: str) -> str:
+        return f"firstIndex({leftValue}, {rightValue})"
+    
+    def __handle_SDQLpyStartsWith(self, expr: SDQLpyStartsWith, leftValue: str, rightValue: str) -> str:
+        return f"startsWith({leftValue}, {rightValue})"
     
     def __handle_ExtractYearOperator(self, expr: ExtractYearOperator):
         childValue = self.__convert_expression_operator_to_sdqlpy(expr.child)
@@ -1255,7 +1275,15 @@ class UnparseSDQLpyTree():
     
     def __handle_LikeOperator(self, expr: LikeOperator):
         # Process the comparator
-        if expr.comparator.value.count("%") == 2:
+        if expr.comparator.value.count("%") == 1 and expr.comparator.value[-1] == "%":
+            # startsWith(p[0].p_type, medpol) == False
+            expr.comparator.value = expr.comparator.value.replace("%", "")
+            
+            startsWith = SDQLpyStartsWith()
+            startsWith.addLeft(expr.value)
+            startsWith.addRight(expr.comparator)
+            return self.__convert_expression_operator_to_sdqlpy(startsWith)
+        elif expr.comparator.value.count("%") == 2:
             assert isinstance(expr.comparator, ConstantValue)
             assert isinstance(expr.value, ColumnValue)
             
@@ -1265,6 +1293,53 @@ class UnparseSDQLpyTree():
             comparator_value = self.__convert_expression_operator_to_sdqlpy(expr.comparator)
             column_value = self.__convert_expression_operator_to_sdqlpy(expr.value)
             return f"{comparator_value} in {column_value}"
+        elif expr.comparator.value.count("%") > 2:
+            assert expr.comparator.value[0] == "%" and expr.comparator.value[-1] == "%"
+            # use FirstIndex
+            # Split comparator into many values
+            many_comparators = list(filter(None, expr.comparator.value.split("%")))
+            
+            comparator_values = []
+            for comparator_string in many_comparators:
+                comparator = ConstantValue(comparator_string, expr.comparator.type)
+                comparator_values.append(comparator)
+            
+            # Check the First Index of Each aren't -1
+            comparators_checks = []
+            for comparator in comparator_values:
+                # Create comparator Value
+                firstIndex = SDQLpyFirstIndex()
+                firstIndex.left = expr.value
+                firstIndex.right = comparator
+                notEqual = NotEqualsOperator()
+                notEqual.left = firstIndex
+                minusOne = ConstantValue(-1, "Integer")
+                notEqual.right = minusOne
+                comparators_checks.append(notEqual)
+                
+            # Reverse comparator_values
+            comparator_values.reverse()
+            # Check for each comparator, the firstIndex is > firstIndex of the Next + (len(next) - 1)
+            for i in range(0, len(comparator_values) - 1):
+                leftPosition = SDQLpyFirstIndex()
+                leftPosition.left = expr.value
+                leftPosition.right = comparator_values[i]
+                rightPostion = SDQLpyFirstIndex()
+                rightPostion.left = expr.value
+                rightPostion.right = comparator_values[i + 1]
+                rightLocation = AddOperator()
+                rightLocation.left = rightPostion
+                rightSize = ConstantValue(len(comparator_values[i + 1].value) - 1, "Integer")
+                rightLocation.right = rightSize
+                positionCompare = GreaterThanOperator()
+                positionCompare.left = leftPosition
+                positionCompare.right = rightLocation
+                comparators_checks.append(positionCompare)
+            
+            # Join with ANDs
+            and_join = join_statements_with_operator(comparators_checks, "AndOperator")
+            
+            return self.__convert_expression_operator_to_sdqlpy(and_join)
         else:
             # Unknown number of percentages
             # Should use "startsWith"/"endsWith" macros from SDQLpy
@@ -1294,6 +1369,8 @@ class UnparseSDQLpyTree():
             return f"{year}{month}{day}"
         elif expr.type == "Integer":
             return f'{expr.value}.0'
+        elif expr.type == "Bool":
+            return expr.value
         else:
             raise Exception(f"Unknown Constant Value Type: {expr.type}")
             

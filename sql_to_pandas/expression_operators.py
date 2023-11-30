@@ -315,6 +315,14 @@ def join_statements_with_operator(statements: list[ExpressionBaseNode], join_ope
 
 ### SDQL specific ones
 
+class SDQLpyFirstIndex(BinaryExpressionOperator):
+    def __init__(self):
+        super().__init__()
+        
+class SDQLpyStartsWith(BinaryExpressionOperator):
+    def __init__(self):
+        super().__init__()
+
 class SDQLpyLambdaReference(ValueNode):
     def __init__(self, value):
         super().__init__(value)

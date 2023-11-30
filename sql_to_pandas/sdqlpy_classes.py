@@ -358,7 +358,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         'hash'
     ])
     KNOWN_JOIN_TYPES = set([
-        'inner', 'rightsemijoin', 'leftsemijoin'
+        'inner', 'rightsemijoin', 'leftsemijoin', 'rightantijoin', 'leftantijoin'
     ])
     
     def __init__(self, joinMethod, joinType, joinCondition):
@@ -414,6 +414,24 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                 self.outputDict = SDQLpySRDict(
                     self.right.outputDict.keys +
                     self.right.outputDict.values,
+                    list()
+                )
+                self.outputDict.set_duplicateCounter(
+                    previousDuplicateCounter
+                )
+            case "rightantijoin":
+                self.outputDict = SDQLpySRDict(
+                    self.right.outputDict.keys +
+                    self.right.outputDict.values,
+                    list()
+                )
+                self.outputDict.set_duplicateCounter(
+                    previousDuplicateCounter
+                )
+            case "leftantijoin":
+                self.outputDict = SDQLpySRDict(
+                    self.left.outputDict.keys +
+                    self.left.outputDict.values,
                     list()
                 )
                 self.outputDict.set_duplicateCounter(
