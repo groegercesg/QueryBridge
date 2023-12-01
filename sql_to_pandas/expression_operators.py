@@ -3,6 +3,10 @@ import sys
 class ExpressionBaseNode():
     def __init__(self):
         self.codeName = ""
+        self.created = False
+        
+    def setCreated(self):
+        self.created = True
         
     def setCodeName(self, inName):
         assert self.codeName == ""
@@ -257,6 +261,7 @@ class CaseOperator(LeafNode):
         super().__init__()
         self.caseInstances = []
         self.elseExpr = []
+        self.type = "Integer"
         
     def addToCase(self, toAdd: CaseInstance):
         self.caseInstances.append(toAdd)

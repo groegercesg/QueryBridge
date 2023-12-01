@@ -83,7 +83,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 new_op_tree = SDQLpyFilterNode()
                 new_op_tree.addFilterContent(op_tree.condition)
             case NewColumnNode():
-                assert isinstance(childNode, SDQLpyJoinNode)
+                assert childNode.outputDict != None and len(childNode.outputDict.flatCols()) > 0
                 new_op_tree = None
                 childNode.outputDict.keys.append(op_tree.values)
             case RetrieveNode():
@@ -730,6 +730,59 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 
         return sdqlpy_tree
     
+    def solveDuplicateColumnsNames(sdqlpy_tree):
+        def getProblemCodeNamesFromSRDict(sr_dict: SDQLpySRDict) -> list:
+            # Check that the codeNames are unique
+            nameDict = defaultdict(int)
+            for col in sr_dict.flatKeys():
+                nameDict[col.codeName] += 1
+                
+            problemCodeNames = [k for k, v in nameDict.items() if v > 1]
+            return problemCodeNames, nameDict
+        
+        # Post Order traversal: Visit Children
+        leftNode, rightNode, childNode = None, None, None
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = solveDuplicateColumnsNames(sdqlpy_tree.left)
+            rightNode = solveDuplicateColumnsNames(sdqlpy_tree.right)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = solveDuplicateColumnsNames(sdqlpy_tree.child)
+        else:
+            # A leaf node
+            pass
+        
+        # Assign previous changes
+        if (leftNode != None) and (rightNode != None):
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif (childNode != None):
+            sdqlpy_tree.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        # Run on current node (sdqlpy_tree)
+        if isinstance(sdqlpy_tree, SDQLpyJoinNode):
+            assert sdqlpy_tree.outputDict != None and len(sdqlpy_tree.outputDict.flatCols()) > 0
+              
+            # Any values are > 1, we have a problem and need to resolve duplicates
+            problemCodeNames, problemCodeNameDict = getProblemCodeNamesFromSRDict(sdqlpy_tree.outputDict)
+            if len(problemCodeNames) > 0:
+                for badCodeName in problemCodeNames:
+                    filtered_SRDictKeys = [x for x in sdqlpy_tree.outputDict.flatKeys() if x.codeName == badCodeName]
+                    assert len(filtered_SRDictKeys) == problemCodeNameDict[badCodeName] and problemCodeNameDict[badCodeName] == 2
+                    
+                    # Change the codenames, for those in filtered
+                    nameAffixes = ["_x", "_y"]
+                    for idx, affix in enumerate(nameAffixes):
+                        filtered_SRDictKeys[idx].codeName = f"{filtered_SRDictKeys[idx].codeName}{affix}"
+                
+                # Check this has resolved things
+                problemCodeNames, _ = getProblemCodeNamesFromSRDict(sdqlpy_tree.outputDict)
+                assert len(problemCodeNames) == 0
+                
+        return sdqlpy_tree
+    
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
@@ -749,6 +802,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     wire_up_incoming_output_dicts(sdqlpy_tree)
     # solve Duplicates by multiplying by a counter
     duplicateFixTopGroupJoin(sdqlpy_tree)
+    # solve duplicate column names in outputDicts
+    sdqlpy_tree = solveDuplicateColumnsNames(sdqlpy_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
     
@@ -778,6 +833,8 @@ class UnparseSDQLpyTree():
         self.parserCreatedColumns = set()
         self.nodeDict = {}
         self.gatherNodeDict(self.sdqlpy_tree)
+        
+        self.codeNameUpdates = []
         
         # Variable dict
         self.variableDict = {}
@@ -1209,7 +1266,10 @@ class UnparseSDQLpyTree():
                 assert expr_tree.sourceNode != None
                 expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
                 # Update the value after creation
-                expr_tree.value = expr_tree.codeName
+                # Add to codeNameUpdates
+                self.codeNameUpdates.append(
+                    (expr_tree)
+                )
             case ConstantValue():
                 expression_output = self.__handle_ConstantValue(expr_tree)
             case LessThanOperator():
@@ -1258,10 +1318,20 @@ class UnparseSDQLpyTree():
                 expression_output = self.__handle_SDQLpyFirstIndex(expr_tree, leftNode, rightNode)
             case SDQLpyStartsWith():
                 expression_output = self.__handle_SDQLpyStartsWith(expr_tree, leftNode, rightNode)
+            case CaseOperator():
+                expression_output = self.__handle_CaseOperator(expr_tree)
             case _: 
                 raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
         return expression_output
+    
+    def __handle_CaseOperator(self, expr: CaseOperator) -> str:
+        assert len(expr.caseInstances) == 1
+        outputValue = self.__convert_expression_operator_to_sdqlpy(expr.caseInstances[0].outputValue)
+        caseValue = self.__convert_expression_operator_to_sdqlpy(expr.caseInstances[0].case)
+        elseValue = self.__convert_expression_operator_to_sdqlpy(expr.elseExpr)
+        # [caseInstances[0].outputValue] if [caseInstances[0].case] else [elseExpr] 
+        return f"{outputValue} if {caseValue} else {elseValue}"
     
     def __handle_SDQLpyFirstIndex(self, expr: SDQLpyFirstIndex, leftValue: str, rightValue: str) -> str:
         return f"firstIndex({leftValue}, {rightValue})"

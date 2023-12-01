@@ -635,8 +635,7 @@ class SDQLpySRDict():
             )
         
         return self.third_wrap_counter
-        
-        
+    
     def generateSDQLpyTwoLambda(self, unparser, l_lambda_idx, r_lambda_idx_key, r_lambda_idx_val, l_node, r_node):
         l_columns = l_node.outputDict.flatCols()
         r_keys = r_node.outputDict.flatKeys()
@@ -781,5 +780,16 @@ class SDQLpySRDict():
         output_content.append(
             f"}}"
         )
+        
+        # Do codeName updates
+        for expr in unparser.codeNameUpdates:
+            expr.value = expr.codeName
+        unparser.codeNameUpdates = []
+        
+        # Set all vals and keys to be created
+        for key in self.keys:
+            key.setCreated()
+        for val in self.values:
+            val.setCreated()
         
         return output_content

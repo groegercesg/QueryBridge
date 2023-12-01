@@ -24,6 +24,8 @@ def handleEmptyCodeName(value, previousColumns):
                 pass
             case MaxAggrOperator():
                 current_strings.append("max")
+            case CaseOperator():
+                current_strings.append("case")
             case _:
                 raise Exception(f"Unknown operator: {type(value)}")
         
@@ -88,7 +90,12 @@ def getCodeNameFromSetColumnValues(columns):
     for x in columns:
         # if isinstance(x, ColumnValue):
         #     assert x.codeName == x.value
-        columns_str.append(x.codeName)
+        if x.created == False:
+            columns_str.append(x.value)
+        elif x.created == True:
+            columns_str.append(x.codeName)
+        else:
+            raise Exception("Unexpected value for column creation")
     columns_str = set(columns_str)
         
     # Assert none are empty string
@@ -98,6 +105,13 @@ def getCodeNameFromSetColumnValues(columns):
     
 def setSourceNodeColumnValuesNPairs(value, sourcePairs):
     match value:
+        case CaseOperator():
+            # run on the case and outputValue of every caseInstance
+            for caseInst in value.caseInstances:
+                setSourceNodeColumnValuesNPairs(caseInst.case, sourcePairs)
+                setSourceNodeColumnValuesNPairs(caseInst.outputValue, sourcePairs)
+            # run on elseExpr
+            setSourceNodeColumnValuesNPairs(value.elseExpr, sourcePairs)
         case SDQLpyThirdNodeWrapper():
             set_index = False
             for index_name, columns in sourcePairs:
