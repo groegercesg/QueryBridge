@@ -34,10 +34,12 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     def convert_trees(op_tree: UniversalBaseNode) -> SDQLpyBaseNode:
         # Visit Children
         leftNode, rightNode, childNode = None, None, None
+        wasAChild = False
         if isinstance(op_tree, BinaryBaseNode):
             leftNode = convert_trees(op_tree.left)
             rightNode = convert_trees(op_tree.right)
         elif isinstance(op_tree, UnaryBaseNode):
+            wasAChild = True
             childNode = convert_trees(op_tree.child)
         else:
             # A leaf node
@@ -84,8 +86,28 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 new_op_tree.addFilterContent(op_tree.condition)
             case NewColumnNode():
                 assert childNode.outputDict != None and len(childNode.outputDict.flatCols()) > 0
-                new_op_tree = None
-                childNode.outputDict.keys.append(op_tree.values)
+                if isinstance(childNode, SDQLpyConcatNode):
+                    assert isinstance(childNode.child, SDQLpyGroupNode)
+                    # We need to add a Aggr Node
+                    newKeyExpressions = []
+                    for keyExpr in childNode.child.keyExpressions:
+                        newKeyExpressions.append(
+                            # Guess at the type, not that useful
+                            ColumnValue(keyExpr.codeName, "Varchar")
+                        )
+                    newGroup = SDQLpyGroupNode(
+                        newKeyExpressions,
+                        op_tree.values
+                    )
+                    newGroup.addChild(childNode.child)
+                    new_op_tree = SDQLpyConcatNode(
+                        newGroup.keyExpressions + newGroup.aggregateOperations
+                    )
+                    new_op_tree.addChild(newGroup)
+                    childNode = None
+                else:
+                    new_op_tree = None
+                    childNode.outputDict.keys.append(op_tree.values)
             case RetrieveNode():
                 new_op_tree = SDQLpyRetrieveNode(
                     op_tree.tableColumns,
@@ -107,6 +129,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 raise Exception("Trying to replace for a Binary situation")
             else:
                 raise Exception("Child and a Binary, impossible")
+        elif childNode == None and wasAChild == True:
+            # Don't add the childNode if we've set it to None
+            pass
         else:
             # Only add to the lowest node
             # Find the lowest node
@@ -656,41 +681,41 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 leftProblems = calculateProblemColumns(sdqlpy_tree.leftKeys, sdqlpy_tree.left.outputDict, table_keys)
                 rightProblems = calculateProblemColumns(sdqlpy_tree.rightKeys, sdqlpy_tree.right.outputDict, table_keys)
              
-                # if (leftProblems == 0) and (rightProblems == 0):
+                if (leftProblems == 0) and (rightProblems == 0):
                     # Problem keys are not an issue
                     
-                # Check leftsemijoin
-                if sdqlpy_tree.joinType == "leftsemijoin":
-                    sdqlpy_tree.joinType = "rightsemijoin"
-                    
-                    sdqlpy_tree.swapLeftAndRight()
-                    # Assert cardinality okay
-                    #assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+                    # Check leftsemijoin
+                    if sdqlpy_tree.joinType == "leftsemijoin":
+                        sdqlpy_tree.joinType = "rightsemijoin"
+                        
+                        sdqlpy_tree.swapLeftAndRight()
+                        # Assert cardinality okay
+                        #assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+                    else:
+                        # Now order based on cardinality
+                        if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
+                            # We should index on Left
+                            # No swap required
+                            pass
+                        else:
+                            # We should index on Right
+                            # Swap required
+                            sdqlpy_tree.swapLeftAndRight()
+                            assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
                 else:
-                    # Now order based on cardinality
-                    if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
+                    # Left or Right Problems exist
+                    if (leftProblems > 0) and (rightProblems == 0):
+                        # Left is an issue
+                        # We should index on Right
+                        # Swap Required
+                        sdqlpy_tree.swapLeftAndRight()
+                    elif (leftProblems == 0) and (rightProblems > 0):
+                        # Right is an issue
                         # We should index on Left
                         # No swap required
                         pass
                     else:
-                        # We should index on Right
-                        # Swap required
-                        sdqlpy_tree.swapLeftAndRight()
-                        assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
-                # else:
-                #     # Left or Right Problems exist
-                #     if (leftProblems > 0) and (rightProblems == 0):
-                #         # Left is an issue
-                #         # We should index on Right
-                #         # Swap Required
-                #         sdqlpy_tree.swapLeftAndRight()
-                #     elif (leftProblems == 0) and (rightProblems > 0):
-                #         # Right is an issue
-                #         # We should index on Left
-                #         # No swap required
-                #         pass
-                #     else:
-                #         raise Exception("We have problems on both Left and Right; this is an issue that cannot be resolved!")
+                        raise Exception("We have problems on both Left and Right; this is an issue that cannot be resolved!")
 
         return sdqlpy_tree     
     
@@ -1286,6 +1311,8 @@ class UnparseSDQLpyTree():
                 expression_output = f"{leftNode} and {rightNode}"
             case OrOperator():
                 expression_output = f"{leftNode} or {rightNode}"
+            case DivOperator():
+                expression_output = f"{leftNode} / {rightNode}"
             case MulOperator():
                 expression_output = f"{leftNode} * {rightNode}"
             case SubOperator():

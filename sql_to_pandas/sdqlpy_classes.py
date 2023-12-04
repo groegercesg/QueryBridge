@@ -40,43 +40,43 @@ class SDQLpyBaseNode():
                     elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
                         raise Exception("Max/Min/Avg operator detected, we don't have support for these")
 
-    def rd_filterContent(self, no_sumaggr_warn):
-        def replaceInExpression(expression, replacements):
-            # Post Order traversal: Visit Children
-            leftNode, rightNode, childNode = None, None, None
-            if isinstance(expression, BinaryExpressionOperator):
-                leftNode = replaceInExpression(expression.left, replacements)
-                rightNode = replaceInExpression(expression.right, replacements)
-            elif isinstance(expression, UnaryExpressionOperator):
-                childNode = replaceInExpression(expression.child, replacements)
-            else:
-                # A leaf node
+    def replaceInExpression(self, expression, replacements, no_sumaggr_warn):
+        # Post Order traversal: Visit Children
+        leftNode, rightNode, childNode = None, None, None
+        if isinstance(expression, BinaryExpressionOperator):
+            leftNode = self.replaceInExpression(expression.left, replacements, no_sumaggr_warn)
+            rightNode = self.replaceInExpression(expression.right, replacements, no_sumaggr_warn)
+        elif isinstance(expression, UnaryExpressionOperator):
+            childNode = self.replaceInExpression(expression.child, replacements, no_sumaggr_warn)
+        else:
+            # A leaf node
+            pass
+        
+        # Assign previous changes
+        if (leftNode != None) and (rightNode != None):
+            expression.left = leftNode
+            expression.right = rightNode
+        elif (childNode != None):
+            expression.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        if str(id(expression)) in replacements:
+            expression = replacements[str(id(expression))]
+        elif isinstance(expression, (SumAggrOperator)):
+            if no_sumaggr_warn:
                 pass
-            
-            # Assign previous changes
-            if (leftNode != None) and (rightNode != None):
-                expression.left = leftNode
-                expression.right = rightNode
-            elif (childNode != None):
-                expression.child = childNode
             else:
-                # A leaf node
-                pass
+                raise Exception("Discovered a SumAggr, but we don't have any known replacement for this!")
+        elif isinstance(expression, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+            raise Exception("Max/Min/Avg operator detected, we don't have support for these")
             
-            if str(id(expression)) in replacements:
-                expression = replacements[str(id(expression))]
-            elif isinstance(expression, (SumAggrOperator)):
-                if no_sumaggr_warn:
-                    pass
-                else:
-                    raise Exception("Discovered a SumAggr, but we don't have any known replacement for this!")
-            elif isinstance(expression, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
-                raise Exception("Max/Min/Avg operator detected, we don't have support for these")
-                
-            return expression
+        return expression
 
+    def rd_filterContent(self, no_sumaggr_warn):
         if self.filterContent != None:
-            newFilterContent = replaceInExpression(self.filterContent, self.replacementDict)
+            newFilterContent = self.replaceInExpression(self.filterContent, self.replacementDict, no_sumaggr_warn)
             self.filterContent = newFilterContent
     
     def setCardinality(self, card):
@@ -149,16 +149,8 @@ class UnarySDQLpyNode(PipelineBreakerNode):
     def rd_aggregateOperations(self, no_sumaggr_warn):
         if hasattr(self, "aggregateOperations"):
             for idx, val in enumerate(self.aggregateOperations):
-                if str(id(val)) in self.replacementDict:
-                    self.aggregateOperations[idx] = self.replacementDict[str(id(val))]
-                elif isinstance(val, (SumAggrOperator)):
-                    if no_sumaggr_warn:
-                        pass
-                    else:
-                        raise Exception("we shouldn't find a SumAggrOperation in aggregateOperations that we don't already know about")
-                elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
-                    raise Exception("Max/Min/Avg operator detected, we don't have support for these")
-
+                self.aggregateOperations[idx] = self.replaceInExpression(val, self.replacementDict, no_sumaggr_warn)
+                    
 class BinarySDQLpyNode(PipelineBreakerNode):
     def __init__(self):
         super().__init__()
@@ -755,7 +747,7 @@ class SDQLpySRDict():
             colContent = []
             for val in self.values:
                 if isinstance(val, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper,
-                                    SumAggrOperator, MulOperator, ConstantValue)):
+                                    SumAggrOperator, MulOperator, ConstantValue, CaseOperator, DivOperator)):
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val)
                 else:
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val.child)
