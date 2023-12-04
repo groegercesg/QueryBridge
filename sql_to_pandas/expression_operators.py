@@ -101,9 +101,7 @@ class ColumnValue(ValueNode):
             raise Exception(f"Unexpected type format: {incomingType}")
         
         assert detectedType in self.SUPPORTED_TYPES
-        
-        self.type = detectedType   
-        
+        self.type = detectedType
     
     def setEssential(self, target):
         self.essential = target
@@ -114,6 +112,7 @@ class ConstantValue(ValueNode):
         super().__init__(value)
         assert type in self.SUPPORTED_TYPES
         self.type = type
+        self.forceInteger = False
         
     def __eq__(self, other): 
         if not isinstance(other, ConstantValue):
@@ -122,6 +121,9 @@ class ConstantValue(ValueNode):
 
         return (isinstance(other, self.__class__) and self.value == other.value 
                 and self.type == other.type and self.codeName == other.codeName)
+        
+    def setForceInteger(self, value):
+        self.forceInteger = value
 
 # Unary Operators
 class NotOperator(UnaryExpressionOperator):

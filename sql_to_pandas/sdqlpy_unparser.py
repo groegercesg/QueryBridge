@@ -808,6 +808,57 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 
         return sdqlpy_tree
     
+    def solveCountDistinctOperator(sdqlpy_tree): 
+        replacementDict = dict()
+               
+        # Post Order traversal: Visit Children
+        leftNode, rightNode, childNode = None, None, None
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode, leftReplaces = solveCountDistinctOperator(sdqlpy_tree.left)
+            rightNode, rightReplaces = solveCountDistinctOperator(sdqlpy_tree.right)
+            replacementDict.update(**leftReplaces, **rightReplaces)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode, childReplaces = solveCountDistinctOperator(sdqlpy_tree.child)
+            replacementDict.update(childReplaces)
+        else:
+            # A leaf node
+            pass
+        
+        # Assign previous changes
+        if (leftNode != None) and (rightNode != None):
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif (childNode != None):
+            sdqlpy_tree.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        # Run on current node (sdqlpy_tree)
+        for valuesLocation in [sdqlpy_tree.outputDict.keys, sdqlpy_tree.outputDict.values]:
+            for idx, val in enumerate(valuesLocation):
+                if isinstance(val, (CountDistinctAggrOperator)):
+                    # If we have a countDistinctAggrOperator,
+                    # We need to set somethings to support this
+                    assert isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyConcatNode))
+                    
+                    # Turn off duplicateUser and counter
+                    sdqlpy_tree.outputDict.duplicateUser = False
+                    sdqlpy_tree.child.outputDict.duplicateCounter = False
+                    
+                    newValue = ConstantValue(1.0, "Float")
+                    newValue.codeName = val.codeName
+                    
+                    replacementDict[str(id(val))] = newValue
+                    
+                    # Set the replacementDict
+                    sdqlpy_tree.setReplacementDict(replacementDict)
+                    
+                    # Use the replacementDict
+                    sdqlpy_tree.set_output_dict()
+                
+        return sdqlpy_tree, replacementDict
+    
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
@@ -829,6 +880,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     duplicateFixTopGroupJoin(sdqlpy_tree)
     # solve duplicate column names in outputDicts
     sdqlpy_tree = solveDuplicateColumnsNames(sdqlpy_tree)
+    # solve CountDistinctOperator
+    sdqlpy_tree, _ = solveCountDistinctOperator(sdqlpy_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
     
@@ -1334,7 +1387,7 @@ class UnparseSDQLpyTree():
             case SDQLpyLambdaReference():
                 expression_output = f"{expr_tree.value}"
             case NotOperator():
-                expression_output = f"not ({childNode})"
+                expression_output = f"({childNode} == False)"
             case CountDistinctAggrOperator():
                 expression_output = f"dictSize({childNode})"
             case LikeOperator():
@@ -1411,6 +1464,7 @@ class UnparseSDQLpyTree():
                 notEqual = NotEqualsOperator()
                 notEqual.left = firstIndex
                 minusOne = ConstantValue(-1, "Integer")
+                minusOne.setForceInteger(True)
                 notEqual.right = minusOne
                 comparators_checks.append(notEqual)
                 
@@ -1427,6 +1481,7 @@ class UnparseSDQLpyTree():
                 rightLocation = AddOperator()
                 rightLocation.left = rightPostion
                 rightSize = ConstantValue(len(comparator_values[i + 1].value) - 1, "Integer")
+                rightSize.setForceInteger(True)
                 rightLocation.right = rightSize
                 positionCompare = GreaterThanOperator()
                 positionCompare.left = leftPosition
@@ -1465,7 +1520,10 @@ class UnparseSDQLpyTree():
             day = str(expr.value.day).zfill(2)
             return f"{year}{month}{day}"
         elif expr.type == "Integer":
-            return f'{expr.value}.0'
+            if expr.forceInteger == True:
+                return f'{expr.value}'
+            else:
+                return f'{expr.value}.0'
         elif expr.type == "Bool":
             return expr.value
         else:

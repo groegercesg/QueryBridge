@@ -19,6 +19,9 @@ class SDQLpyBaseNode():
         self.cardinality = None
         self.replacementDict = {}
         
+    def updateReplacementDict(self, update_dictionary: dict):
+        self.replacementDict.update(update_dictionary)
+        
     def setReplacementDict(self, replacementDict):
         assert self.replacementDict == {}
         self.replacementDict = replacementDict
