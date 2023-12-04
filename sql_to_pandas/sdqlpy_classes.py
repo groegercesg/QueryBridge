@@ -183,26 +183,8 @@ class BinarySDQLpyNode(PipelineBreakerNode):
     def rd_joinCondition(self, no_sumaggr_warn):
         if hasattr(self, "joinCondition"):
             for idx, val in enumerate(self.joinCondition):
-                if str(id(val.left)) in self.replacementDict:
-                        self.joinCondition[idx].left = self.replacementDict[str(id(val.left))]
-                elif isinstance(val.left, (SumAggrOperator)):
-                    if no_sumaggr_warn:
-                        pass
-                    else:
-                        raise Exception("we shouldn't find a SumAggrOperation in the joinCondition that we don't already know about")
-                elif isinstance(val.left, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
-                    raise Exception("Max/Min/Avg operator detected, we don't have support for these")
-
-                if str(id(val.right)) in self.replacementDict:
-                    self.joinCondition[idx].right = self.replacementDict[str(id(val.right))]
-
-                if isinstance(val.right, (SumAggrOperator)):
-                    if no_sumaggr_warn:
-                        pass
-                    else:
-                        raise Exception("we shouldn't find a SumAggrOperation in the joinCondition that we don't already know about")
-                elif isinstance(val.right, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
-                    raise Exception("Max/Min/Avg operator detected, we don't have support for these")
+                self.joinCondition[idx].left = self.replaceInExpression(val.left, self.replacementDict, no_sumaggr_warn)
+                self.joinCondition[idx].right = self.replaceInExpression(val.right, self.replacementDict, no_sumaggr_warn)
 
 # Classes for Nodes
 class SDQLpyRecordNode(LeafSDQLpyNode):
@@ -472,18 +454,20 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         return realNewConditions
     
     def do_join_key_separation(self):
+        leftColumns = self.left.outputDict.flatCols()
+        rightColumns = self.right.outputDict.flatCols()
         self.leftKeys, self.rightKeys = [], []
         for x in self.joinCondition:
-            if id(x.left) in [id(col) for col in self.left.outputDict.flatCols()]:
+            if id(x.left) in [id(col) for col in leftColumns]:
                 self.leftKeys.append(x.left)
-            elif id(x.left) in [id(col) for col in self.right.outputDict.flatCols()]:
+            elif id(x.left) in [id(col) for col in rightColumns]:
                 self.rightKeys.append(x.left)
             else:
                 raise Exception(f"Couldn't find the x.left value in either of the left and right tables!")
             
-            if id(x.right) in [id(col) for col in self.left.outputDict.flatCols()]:
+            if id(x.right) in [id(col) for col in leftColumns]:
                 self.leftKeys.append(x.right)
-            elif id(x.right) in [id(col) for col in self.right.outputDict.flatCols()]:
+            elif id(x.right) in [id(col) for col in rightColumns]:
                 self.rightKeys.append(x.right)
             else:
                 raise Exception(f"Couldn't find the x.right value in either of the left and right tables!")
