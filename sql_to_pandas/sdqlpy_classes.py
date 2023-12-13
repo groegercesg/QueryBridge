@@ -19,6 +19,26 @@ class SDQLpyBaseNode():
         self.cardinality = None
         self.replacementDict = {}
         
+        self.primaryKey = None
+        self.foreignKeys = set()
+        
+        self.waitingForeignKeys = dict()
+        
+        self.completedTables = set()
+        
+    def setPrimary(self, primary):
+        assert isinstance(primary, (tuple, str))
+        self.primaryKey = primary
+        
+    def addForeign(self, foreign):
+        assert isinstance(foreign, (dict, set))
+        if isinstance(foreign, set):
+            self.foreignKeys.update(foreign)
+        else:
+            for fkey in foreign.keys():
+                self.foreignKeys.add(fkey)
+            self.waitingForeignKeys.update(foreign)
+    
     def updateReplacementDict(self, update_dictionary: dict):
         self.replacementDict.update(update_dictionary)
         
@@ -499,6 +519,21 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         
         # Run do_join_key_separation again
         self.do_join_key_separation()
+        
+    def resolveForeignKeys(self):
+        # Also do completedTables
+        self.completedTables.update(self.left.completedTables)
+        self.completedTables.update(self.right.completedTables)
+        
+        toPopKeys = []
+        
+        for key in self.waitingForeignKeys.keys():
+            if self.waitingForeignKeys[key][1] in self.completedTables:
+                self.foreignKeys.add(self.waitingForeignKeys[key][0])
+                toPopKeys.append(key)
+                
+        for tpKey in toPopKeys:
+            self.waitingForeignKeys.pop(tpKey)
     
 # Classes for SDQLpy Constructs
 class SDQLpyNKeyJoin():

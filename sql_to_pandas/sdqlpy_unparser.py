@@ -617,6 +617,22 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             
             return len(potentialProblemKeys_str)
         
+        def whatTypeAreKeys(joinKeys: list, childNode):
+            joinKeys_str = [x.codeName for x in joinKeys]
+            
+            outcomes = []
+            
+            for jKey in list(joinKeys_str):
+                # Check primary
+                if jKey == childNode.primaryKey:
+                    outcomes.append("P")
+                elif jKey in childNode.foreignKeys:
+                    outcomes.append("F")
+                else:
+                    raise Exception
+            
+            return outcomes
+        
         # Post Order traversal: Visit Children
         leftNode, rightNode, childNode = None, None, None
         if isinstance(sdqlpy_tree, BinarySDQLpyNode):
@@ -647,76 +663,122 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             assert sdqlpy_tree.left.cardinality != None
             assert sdqlpy_tree.right.cardinality != None
             
-            all_primary_keys = getPrimaryKeys(table_keys)
-            leftKeysThatArePrimary = countKeysInSet(
-                sdqlpy_tree.leftKeys, all_primary_keys
-            )
-            rightKeysThatArePrimary = countKeysInSet(
-                sdqlpy_tree.rightKeys, all_primary_keys
-            )           
+            # Check which is primary and foreign, to set primary/foreign for current node
+            leftType = whatTypeAreKeys(sdqlpy_tree.leftKeys, sdqlpy_tree.left)
+            rightType = whatTypeAreKeys(sdqlpy_tree.rightKeys, sdqlpy_tree.right)
             
-            if leftKeysThatArePrimary > rightKeysThatArePrimary:
+            if leftType == ["P"] and rightType == ["F"]:
+                # Index on Left
                 # We should index on Left
                 # No swap required
                 pass
-            elif leftKeysThatArePrimary < rightKeysThatArePrimary:
+            elif leftType == ["F"] and rightType == ["P"]:
                 # We should index on Right
                 # Swap required
                 sdqlpy_tree.swapLeftAndRight()
-                
-                # Check the primary keys have resolved
-                leftKeysThatArePrimary = countKeysInSet(
-                    sdqlpy_tree.leftKeys, all_primary_keys
-                )
-                rightKeysThatArePrimary = countKeysInSet(
-                    sdqlpy_tree.rightKeys, all_primary_keys
-                )
-                
-                assert leftKeysThatArePrimary > rightKeysThatArePrimary
             else:
-                # number of Primary keys is the same
-                # We should look at "Problem Keys", these are keys that will cause issues if we try
-                # to use them in the "value" section of a summation
+                raise Exception
+            
+            # Set the primary/foreignKeys
+            # The primary will be the primary of right
+            sdqlpy_tree.setPrimary(sdqlpy_tree.right.primaryKey)
                 
-                leftProblems = calculateProblemColumns(sdqlpy_tree.leftKeys, sdqlpy_tree.left.outputDict, table_keys)
-                rightProblems = calculateProblemColumns(sdqlpy_tree.rightKeys, sdqlpy_tree.right.outputDict, table_keys)
+            # Set foreign keys
+            sdqlpy_tree.addForeign(sdqlpy_tree.left.foreignKeys)
+            sdqlpy_tree.addForeign(sdqlpy_tree.left.waitingForeignKeys)
+            sdqlpy_tree.addForeign(sdqlpy_tree.right.foreignKeys)
+            sdqlpy_tree.addForeign(sdqlpy_tree.right.waitingForeignKeys)
+            sdqlpy_tree.resolveForeignKeys()
+            
+            # all_primary_keys = getPrimaryKeys(table_keys)
+            # leftKeysThatArePrimary = countKeysInSet(
+            #     sdqlpy_tree.leftKeys, all_primary_keys
+            # )
+            # rightKeysThatArePrimary = countKeysInSet(
+            #     sdqlpy_tree.rightKeys, all_primary_keys
+            # )           
+            
+            # if leftKeysThatArePrimary > rightKeysThatArePrimary:
+            #     # We should index on Left
+            #     # No swap required
+            #     pass
+            # elif leftKeysThatArePrimary < rightKeysThatArePrimary:
+            #     # We should index on Right
+            #     # Swap required
+            #     sdqlpy_tree.swapLeftAndRight()
+                
+            #     # Check the primary keys have resolved
+            #     leftKeysThatArePrimary = countKeysInSet(
+            #         sdqlpy_tree.leftKeys, all_primary_keys
+            #     )
+            #     rightKeysThatArePrimary = countKeysInSet(
+            #         sdqlpy_tree.rightKeys, all_primary_keys
+            #     )
+                
+            #     assert leftKeysThatArePrimary > rightKeysThatArePrimary
+            # else:
+            #     # number of Primary keys is the same
+            #     # We should look at "Problem Keys", these are keys that will cause issues if we try
+            #     # to use them in the "value" section of a summation
+                
+            #     leftProblems = calculateProblemColumns(sdqlpy_tree.leftKeys, sdqlpy_tree.left.outputDict, table_keys)
+            #     rightProblems = calculateProblemColumns(sdqlpy_tree.rightKeys, sdqlpy_tree.right.outputDict, table_keys)
              
-                if (leftProblems == 0) and (rightProblems == 0):
-                    # Problem keys are not an issue
+            #     if (leftProblems == 0) and (rightProblems == 0):
+            #         # Problem keys are not an issue
                     
-                    # Check leftsemijoin
-                    if sdqlpy_tree.joinType == "leftsemijoin":
-                        sdqlpy_tree.joinType = "rightsemijoin"
+            #         # Check leftsemijoin
+            #         if sdqlpy_tree.joinType == "leftsemijoin":
+            #             sdqlpy_tree.joinType = "rightsemijoin"
                         
-                        sdqlpy_tree.swapLeftAndRight()
-                        # Assert cardinality okay
-                        #assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
-                    else:
-                        # Now order based on cardinality
-                        if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
-                            # We should index on Left
-                            # No swap required
-                            pass
-                        else:
-                            # We should index on Right
-                            # Swap required
-                            sdqlpy_tree.swapLeftAndRight()
-                            assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+            #             sdqlpy_tree.swapLeftAndRight()
+            #             # Assert cardinality okay
+            #             #assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+            #         else:
+            #             # Now order based on cardinality
+            #             if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
+            #                 # We should index on Left
+            #                 # No swap required
+            #                 pass
+            #             else:
+            #                 # We should index on Right
+            #                 # Swap required
+            #                 sdqlpy_tree.swapLeftAndRight()
+            #                 assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+            #     else:
+            #         # Left or Right Problems exist
+            #         if (leftProblems > 0) and (rightProblems == 0):
+            #             # Left is an issue
+            #             # We should index on Right
+            #             # Swap Required
+            #             sdqlpy_tree.swapLeftAndRight()
+            #         elif (leftProblems == 0) and (rightProblems > 0):
+            #             # Right is an issue
+            #             # We should index on Left
+            #             # No swap required
+            #             pass
+            #         else:
+            #             raise Exception("We have problems on both Left and Right; this is an issue that cannot be resolved!")
+        else:
+            if isinstance(sdqlpy_tree, SDQLpyRecordNode):
+                # Add primary/foreign
+                getPrimary = table_keys[sdqlpy_tree.tableName][0]
+                assert len(getPrimary) == 1
+                sdqlpy_tree.setPrimary(list(getPrimary)[0])
+                getForeign = table_keys[sdqlpy_tree.tableName][1]
+                sdqlpy_tree.addForeign(getForeign)
+                sdqlpy_tree.completedTables.add(sdqlpy_tree.tableName)
+            else:
+                if isinstance(sdqlpy_tree, SDQLpyGroupNode):
+                    # Set the index as primary
+                    pass
                 else:
-                    # Left or Right Problems exist
-                    if (leftProblems > 0) and (rightProblems == 0):
-                        # Left is an issue
-                        # We should index on Right
-                        # Swap Required
-                        sdqlpy_tree.swapLeftAndRight()
-                    elif (leftProblems == 0) and (rightProblems > 0):
-                        # Right is an issue
-                        # We should index on Left
-                        # No swap required
-                        pass
-                    else:
-                        raise Exception("We have problems on both Left and Right; this is an issue that cannot be resolved!")
-
+                    # Propagate forwards
+                    pass
+                
+                # Carry forward completedTables
+                
+        
         return sdqlpy_tree     
     
     def insertPostJoinFilterNodes(sdqlpy_tree):

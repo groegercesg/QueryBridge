@@ -1,6 +1,8 @@
 from prepare_databases.prepare_database import PrepareDatabase
 from tableauhyperapi import HyperProcess, Telemetry, CreateMode, Connection, TableDefinition, SqlType, NOT_NULLABLE
 from enum import Enum
+from collections import defaultdict
+from difflib import SequenceMatcher
 import json
 
 class DatabaseReference():        
@@ -61,36 +63,106 @@ class PrepareHyperDB(PrepareDatabase):
                     key_content = list()
                     
                     # Get sets for primary and foreign keys
-                    for key_type in ['p', 'f']:
-                        current_keys = connection.execute_list_query(f"""
+                    # Do Primary Keys
+                    primary_keys = connection.execute_list_query(f"""
                             SELECT a.attname
                             FROM
                                 pg_catalog.pg_constraint AS c
                                 CROSS JOIN LATERAL UNNEST(c.conkey) AS cols(colnum) -- conkey is a list of the columns of the constraint; so we split it into rows so that we can join all column numbers onto their names in pg_attribute
                                 INNER JOIN pg_catalog.pg_attribute AS a ON a.attrelid = c.conrelid AND cols.colnum = a.attnum
                             WHERE
-                                c.contype = '{key_type}' -- p = primary key constraint, f = foreign key constraint
+                                c.contype = 'p' -- p = primary key constraint, f = foreign key constraint
                                 AND c.conrelid = '{schema_name.name.unescaped}.{table_name.name.unescaped}'::regclass
                         """)
+                    
+                    # Flatten nested list
+                    primary_keys = [item for sublist in primary_keys for item in sublist]
+                    
+                    primary_key_set = set()
+                    if len(primary_keys) > 1:
+                        primary_keys = tuple(primary_keys)
+                        primary_key_set.add(primary_keys)
+                    else:
+                        primary_key_set.update(primary_keys)
+                    
+                    key_content.append(
+                        primary_key_set
+                    )
+                    
+                    # Do Foreign Keys
+                    foreign_keys = connection.execute_list_query(f"""
+                            SELECT conname AS constraint_name, pg_m.relname AS table_name, ta.attname AS column_name,
+        pg_a.relname AS foreign_table_name, fa.attname AS foreign_column_name
+  FROM (
+   SELECT conname, conrelid, confrelid,
+          unnest(conkey) AS conkey, unnest(confkey) AS confkey
+     FROM pg_catalog.pg_constraint
+    WHERE conrelid = '{schema_name.name.unescaped}.{table_name.name.unescaped}'::regclass
+      --and contype = 'f'
+  ) sub
+  JOIN pg_catalog.pg_attribute AS ta ON ta.attrelid = conrelid AND ta.attnum = conkey
+  JOIN pg_catalog.pg_attribute AS fa ON fa.attrelid = confrelid AND fa.attnum = confkey  
+  JOIN pg_catalog.pg_class AS pg_m ON pg_m.oid = conrelid   
+  JOIN pg_catalog.pg_class AS pg_a ON pg_a.oid = confrelid                                 
+                        """)
+                    
+                    if len(foreign_keys) == 0:
                         key_content.append(
-                            set(
-                                # Flatten nested list
-                                [item for sublist in current_keys for item in sublist]
-                            )
+                            dict()
                         )
+                    else:
+                        # Look at unique key contraints
+                        uniqueFirstColumn = set([row[0] for row in foreign_keys])
+                        mapDict = dict()
+                        if len(uniqueFirstColumn) == len(foreign_keys):
+                            for fkey in foreign_keys:
+                                mapDict[fkey[2]] = (fkey[4], fkey[3])
+                        else:
+                            # We have to do some grouping here!
+                            fromKeys = defaultdict(set)
+                            toKeys = defaultdict(set)
+                            toTables = defaultdict(set)
+                            for fkey in foreign_keys:
+                                fromKeys[fkey[0]].add(fkey[2])
+                                toKeys[fkey[0]].add(fkey[4])
+                                toTables[fkey[0]].add(fkey[3])
+                                
+                            # A Compound FKey should only map to one table
+                            assert all(len(x) == 1 for x in toTables.values())
+                            
+                            # Add to mapDict
+                            for key in fromKeys.keys():
+                                # Sort alphabetically
+                                newFromKey = tuple(sorted(list(fromKeys[key])))
+                                if len(newFromKey) == 1:
+                                    newFromKey = newFromKey[0]
+                                newToKeys = tuple(sorted(list(toKeys[key])))
+                                mapDict[newFromKey] = (list(toTables[key])[0], newToKeys)
+                            
+                            # Special hack for TPC-H; 
+                            for _, _, fromKey, toTable, toKey in foreign_keys:
+                                def similar(a, b):
+                                    return SequenceMatcher(None, a, b).ratio()
+                                if similar(fromKey, toKey) > 0.8:
+                                    mapDict[fromKey] = (toTable, toKey)
+                            
+                        key_content.append(
+                            mapDict
+                        )
+                    
                     
                     assert len(key_content) == 2
                     
                     # Get the other columns for table
-                    other_columns = (set([item for sublist in connection.execute_list_query(f"""
+                    all_columns = [item for sublist in connection.execute_list_query(f"""
                         SELECT a.attname
                         FROM
                             pg_catalog.pg_attribute AS a
                         WHERE
                             a.attrelid = '{schema_name.name.unescaped}.{table_name.name.unescaped}'::regclass
                         """)
-                    for item in sublist]) - key_content[0]) - key_content[1]
-                    key_content.append(other_columns)
+                    for item in sublist]
+                    key_content.append(all_columns)
                     
                     assert len(key_content) == 3
                     # Add to dictionary
