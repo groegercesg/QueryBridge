@@ -52,8 +52,12 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     op_tree.tableName,
                     op_tree.tableColumns
                 )
+                
                 if (op_tree.tableFilters != []) and (op_tree.tableRestrictions != []):
-                    raise Exception("Two types of filters, we need to add support for understanding this")
+                    overallFilter = AndOperator()
+                    overallFilter.addLeft(op_tree.tableFilters)
+                    overallFilter.addRight(op_tree.tableRestrictions)
+                    new_op_tree.addFilterContent(overallFilter)
                 elif op_tree.tableFilters != []:
                     new_op_tree.addFilterContent(op_tree.tableFilters)
                 elif op_tree.tableRestrictions != []:
@@ -677,27 +681,59 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             leftType = whatTypeAreKeys(sdqlpy_tree.leftKeys, sdqlpy_tree.left)
             rightType = whatTypeAreKeys(sdqlpy_tree.rightKeys, sdqlpy_tree.right)
             
-            if "P" in leftType:
-                # Check that all of right are "F"
-                assert len(set(rightType)) == 1 and set(rightType) == set("F")
-                # That there's only 1 P in left and the rest are F
-                assert Counter(leftType)["P"] == 1 and Counter(leftType)["F"] == len(leftType) - 1
-                
-                # Index on Left
-                # We should index on Left
-                # No swap required
-                pass
-            elif "P" in rightType:
-                # Check that all of left are "F"
-                assert len(set(leftType)) == 1 and set(leftType) == set("F")
-                # And, that there's only 1 P in right and the rest are F
-                assert Counter(rightType)["P"] == 1 and Counter(rightType)["F"] == len(rightType) - 1
-                
-                # We should index on Right
-                # Swap required
+            if sdqlpy_tree.joinType == "leftsemijoin":
+                sdqlpy_tree.joinType = "rightsemijoin"
                 sdqlpy_tree.swapLeftAndRight()
             else:
-                raise Exception
+                leftKeys_str = [x.codeName for x in sdqlpy_tree.leftKeys]
+                rightKeys_str = [x.codeName for x in sdqlpy_tree.rightKeys]
+                
+                if "P" in leftType and "P" in rightType:
+                    # Both left and right are primary
+                    # Prefer the one with lower cardinality
+                    if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
+                        # We should index on Left
+                        # No swap required
+                        pass
+                    else:
+                        # We should index on Right
+                        # Swap required
+                        sdqlpy_tree.swapLeftAndRight()
+                        assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+                elif "P" in leftType:
+                    # Check that all of right are "F"
+                    assert len(set(rightType)) == 1 and set(rightType) == set("F")
+                    # That there's only 1 P in left and the rest are F
+                    assert Counter(leftType)["P"] == 1 and Counter(leftType)["F"] == len(leftType) - 1
+                    
+                    # Index on Left
+                    # We should index on Left
+                    # No swap required
+                    pass
+                elif "P" in rightType:
+                    # Check that all of left are "F"
+                    assert len(set(leftType)) == 1 and set(leftType) == set("F")
+                    # And, that there's only 1 P in right and the rest are F
+                    assert Counter(rightType)["P"] == 1 and Counter(rightType)["F"] == len(rightType) - 1
+                    
+                    # We should index on Right
+                    # Swap required
+                    sdqlpy_tree.swapLeftAndRight()
+                elif leftKeys_str == rightKeys_str:
+                    # If we are joining on identical keys, even if they're not primary, it's still okay
+                    # We'll use cardinality to decide
+                    # Prefer the one with lower cardinality
+                    if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
+                        # We should index on Left
+                        # No swap required
+                        pass
+                    else:
+                        # We should index on Right
+                        # Swap required
+                        sdqlpy_tree.swapLeftAndRight()
+                        assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+                else:
+                    raise Exception
             
             # Set the primary/foreignKeys
             # The primary will be the primary of right
@@ -1590,7 +1626,13 @@ class UnparseSDQLpyTree():
         if expr.type == "String":
             # Save value in variableDict
             variableString = str(expr.value)
-            newVariable = variableString.replace(" ", "_").replace("#", "").lower()
+            newVariable = variableString.replace(" ", "_").replace("#", "").replace("-", "").lower()
+            # Check it's not all integers
+            assert not newVariable.isdigit()
+            # Fix start with integer
+            while newVariable[0].isdigit():
+                oldStart = newVariable[0]
+                newVariable = newVariable[1:] + oldStart
             if newVariable in self.variableDict:
                 if self.variableDict.get(newVariable) == variableString:
                     # The same string is happening twice, just use the existing created reference
