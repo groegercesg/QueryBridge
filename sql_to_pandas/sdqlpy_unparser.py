@@ -619,14 +619,24 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         
         def whatTypeAreKeys(joinKeys: list, childNode):
             joinKeys_str = [x.codeName for x in joinKeys]
+            nextJoinKeys = joinKeys_str
             
             outcomes = []
+            primaryKeys = childNode.primaryKey
+            primaryKeyCounter = 0
             
+            # Check for primary first
             for jKey in list(joinKeys_str):
-                # Check primary
-                if jKey == childNode.primaryKey:
-                    outcomes.append("P")
-                elif jKey in childNode.foreignKeys:
+                if jKey in primaryKeys:
+                    primaryKeyCounter += 1
+                    if primaryKeyCounter == len(primaryKeys):
+                        outcomes.append("P")
+                        for pkey in primaryKeys:
+                            nextJoinKeys.remove(pkey)
+            
+            # Check for foreign keys after
+            for jKey in list(nextJoinKeys):
+                if jKey in childNode.foreignKeys:
                     outcomes.append("F")
                 else:
                     raise Exception
@@ -667,12 +677,22 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             leftType = whatTypeAreKeys(sdqlpy_tree.leftKeys, sdqlpy_tree.left)
             rightType = whatTypeAreKeys(sdqlpy_tree.rightKeys, sdqlpy_tree.right)
             
-            if leftType == ["P"] and rightType == ["F"]:
+            if "P" in leftType:
+                # Check that all of right are "F"
+                assert len(set(rightType)) == 1 and set(rightType) == set("F")
+                # That there's only 1 P in left and the rest are F
+                assert Counter(leftType)["P"] == 1 and Counter(leftType)["F"] == len(leftType) - 1
+                
                 # Index on Left
                 # We should index on Left
                 # No swap required
                 pass
-            elif leftType == ["F"] and rightType == ["P"]:
+            elif "P" in rightType:
+                # Check that all of left are "F"
+                assert len(set(leftType)) == 1 and set(leftType) == set("F")
+                # And, that there's only 1 P in right and the rest are F
+                assert Counter(rightType)["P"] == 1 and Counter(rightType)["F"] == len(rightType) - 1
+                
                 # We should index on Right
                 # Swap required
                 sdqlpy_tree.swapLeftAndRight()
@@ -771,10 +791,17 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             else:
                 if isinstance(sdqlpy_tree, SDQLpyGroupNode):
                     # Set the index as primary
-                    pass
+                    assert len(sdqlpy_tree.keyExpressions) > 0
+                    primaryKeys = tuple([x.codeName for x in sdqlpy_tree.keyExpressions])
+                    sdqlpy_tree.setPrimary(primaryKeys)
+                    sdqlpy_tree.addForeign(sdqlpy_tree.child.foreignKeys)
+                    sdqlpy_tree.addForeign(sdqlpy_tree.child.waitingForeignKeys)
                 else:
                     # Propagate forwards
-                    pass
+                    assert len(sdqlpy_tree.child.primaryKey) > 0
+                    sdqlpy_tree.setPrimary(sdqlpy_tree.child.primaryKey)
+                    sdqlpy_tree.addForeign(sdqlpy_tree.child.foreignKeys)
+                    sdqlpy_tree.addForeign(sdqlpy_tree.child.waitingForeignKeys)
                 
                 # Carry forward completedTables
                 

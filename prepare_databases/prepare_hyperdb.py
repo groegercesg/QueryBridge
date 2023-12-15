@@ -79,11 +79,7 @@ class PrepareHyperDB(PrepareDatabase):
                     primary_keys = [item for sublist in primary_keys for item in sublist]
                     
                     primary_key_set = set()
-                    if len(primary_keys) > 1:
-                        primary_keys = tuple(primary_keys)
-                        primary_key_set.add(primary_keys)
-                    else:
-                        primary_key_set.update(primary_keys)
+                    primary_key_set.add(tuple(primary_keys))
                     
                     key_content.append(
                         primary_key_set
@@ -139,7 +135,7 @@ class PrepareHyperDB(PrepareDatabase):
                                 newToKeys = tuple(sorted(list(toKeys[key])))
                                 mapDict[newFromKey] = (list(toTables[key])[0], newToKeys)
                             
-                            # Special hack for TPC-H; 
+                            # Special hack for TPC-H: 
                             for _, _, fromKey, toTable, toKey in foreign_keys:
                                 def similar(a, b):
                                     return SequenceMatcher(None, a, b).ratio()
