@@ -358,15 +358,15 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         'inner', 'rightsemijoin', 'leftsemijoin', 'rightantijoin', 'leftantijoin'
     ])
     
-    def __init__(self, joinMethod, joinType, joinCondition):
+    def __init__(self, joinMethod, joinType, incomingJoinCondition):
         super().__init__()
         assert joinMethod in self.KNOWN_JOIN_METHODS, f"{joinMethod} is not in the known join methods"
         self.joinMethod = joinMethod
         assert joinType in self.KNOWN_JOIN_TYPES, f"{joinType} is not in the known join types"
         self.joinType = joinType
-        joinCondition = self.__splitConditionsIntoList(joinCondition)
-        assert isinstance(joinCondition, list)
-        self.joinCondition = joinCondition
+        parsedJoinCondition = self.__splitConditionsIntoList(incomingJoinCondition)
+        assert isinstance(parsedJoinCondition, list) and len(parsedJoinCondition) > 0
+        self.joinCondition = parsedJoinCondition
         self.outputDict = None
         self.sdqlrepr = "join"
         self.third_node = None
@@ -443,7 +443,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         
     def __splitConditionsIntoList(self, joinCondition: ExpressionBaseNode) -> list[ExpressionBaseNode]:
         newConditions = []
-        joiningNodes = [AndOperator]
+        joiningNodes = [AndOperator, OrOperator]
         currentJoinCondition = joinCondition
         while any(isinstance(currentJoinCondition, x) for x in joiningNodes):
             newConditions.append(currentJoinCondition.left)

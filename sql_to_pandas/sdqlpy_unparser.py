@@ -1287,6 +1287,8 @@ class UnparseSDQLpyTree():
             f"{TAB}lambda {lambda_index}:"
         )
         
+        assert len(node.outputDict.keys) > 0
+        
         for output_line in node.outputDict.generateSDQLpyOneLambda(
             self, f"{lambda_index}[0]", f"{lambda_index}[1]", node
         ):
