@@ -31,6 +31,55 @@ def audit_sdqlpy_tree_leafnode(op_tree: SDQLpyBaseNode) -> bool:
     return all(isinstance(leaf, LeafSDQLpyNode) for leaf in all_leaves)
 
 def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: dict[str, tuple]) -> SDQLpyBaseNode:
+    def convert_join_bnl_to_inner(op_tree: UniversalBaseNode) -> UniversalBaseNode:
+        # Visit Children
+        if isinstance(op_tree, BinaryBaseNode):
+            convert_join_bnl_to_inner(op_tree.left)
+            convert_join_bnl_to_inner(op_tree.right)
+        elif isinstance(op_tree, UnaryBaseNode):
+            convert_join_bnl_to_inner(op_tree.child)
+        else:
+            # A leaf node
+            pass
+        
+        if isinstance(op_tree, JoinNode):
+            if op_tree.joinMethod == "bnl":
+                # Convert a joinCondition for BNL to one suitable for inner
+                assert isinstance(op_tree.joinCondition, LookupOperator)
+                assert op_tree.joinType == "inner"
+                
+                assert len(op_tree.joinCondition.comparisons) / len(op_tree.joinCondition.values) % 2 == 0
+                assert all(isinstance(x, EqualsOperator) for x in op_tree.joinCondition.modes)
+                
+                leftEquals = []
+                for i in range(len(op_tree.joinCondition.values)):
+                    newEq = EqualsOperator()
+                    newEq.addLeft(op_tree.joinCondition.values[i])
+                    newEq.addRight(op_tree.joinCondition.comparisons[i])
+                    leftEquals.append(newEq)
+                rightEquals = []
+                for i in range(len(op_tree.joinCondition.values)):
+                    newEq = EqualsOperator()
+                    newEq.addLeft(op_tree.joinCondition.values[i])
+                    newEq.addRight(op_tree.joinCondition.comparisons[i+len(op_tree.joinCondition.values)])
+                    rightEquals.append(newEq)
+                    
+                assert len(leftEquals) == 2
+                assert len(rightEquals) == 2
+                
+                leftAnd = AndOperator()
+                leftAnd.addLeft(leftEquals[0])
+                leftAnd.addRight(leftEquals[1])
+                rightAnd = AndOperator()
+                rightAnd.addLeft(rightEquals[0])
+                rightAnd.addRight(rightEquals[1])
+                newCondition = OrOperator()
+                newCondition.addLeft(leftAnd)
+                newCondition.addRight(rightAnd)
+                
+                op_tree.joinCondition = newCondition
+                op_tree.joinMethod = "hash"
+    
     def convert_trees(op_tree: UniversalBaseNode) -> SDQLpyBaseNode:
         # Visit Children
         leftNode, rightNode, childNode = None, None, None
@@ -987,6 +1036,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
+    # Convert BNL to Inner with condition
+    convert_join_bnl_to_inner(universal_tree)
     # Call convert trees
     sdqlpy_tree = convert_trees(universal_tree)
     # Wire up incoming/output Dicts
