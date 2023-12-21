@@ -406,6 +406,29 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                                 (str(id(valueCopy)), newValue)
                             ]
                         )
+                elif isinstance(val, CountAggrOperator):
+                    if str(id(val)) not in replacementDict:
+                        # Create a new one in the replacementDict
+                        if val.codeName == "":
+                            handleEmptyCodeName(val, parserCreatedColumns)
+                        # What is the Aggregations are nested
+                        desiredChild = val.child
+                        while isinstance(desiredChild, (CountAggrOperator)):
+                            desiredChild = desiredChild.child
+                        valueCopy = copy.deepcopy(desiredChild)
+                        valueCopy.codeName = val.codeName
+                        
+                        assert valueCopy.type != ''
+                        newValue = ColumnValue(valueCopy.codeName, valueCopy.type)
+                        newValue.codeName = valueCopy.codeName
+                        
+                        replacementDict[str(id(val))] = valueCopy
+                        after_current_node_values.extend(
+                            [
+                                (str(id(val)), newValue),
+                                (str(id(valueCopy)), newValue)
+                            ]
+                        )
                 elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
                     raise Exception("Max/Min/Avg operator detected, we don't have support for these")
         
@@ -931,6 +954,23 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 
         return sdqlpy_tree
     
+    def solveCountAllOperator(sdqlpy_tree):
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            solveCountAllOperator(sdqlpy_tree.left)
+            solveCountAllOperator(sdqlpy_tree.right)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            solveCountAllOperator(sdqlpy_tree.child)
+        else:
+            # A leaf node
+            pass
+        
+        # Run on current node (sdqlpy_tree)
+        for col in sdqlpy_tree.outputDict.flatCols():
+            if isinstance(col, CountAllOperator) and col.codeName == "":
+                incomingColumnStrings = sorted([x.codeName for x in sdqlpy_tree.incomingDict.flatCols()])
+                # Choose the first one
+                col.setCodeName(f"{incomingColumnStrings[0]}_count")
+    
     def solveDuplicateColumnsNames(sdqlpy_tree):
         def getProblemCodeNamesFromJoinKeys(leftKeys: list, rightKeys: list) -> list:
             # Use left/rightKeys to determine this
@@ -1088,6 +1128,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     sdqlpy_tree = solveDuplicateColumnsNames(sdqlpy_tree)
     # solve CountDistinctOperator
     sdqlpy_tree, _ = solveCountDistinctOperator(sdqlpy_tree)
+    # solve CountAllOperator
+    solveCountAllOperator(sdqlpy_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
     
@@ -1358,7 +1400,8 @@ class UnparseSDQLpyTree():
         lambda_index = "p"
         
         # TODO: We only support an inner hash join at the moment
-        assert node.joinType in node.KNOWN_JOIN_TYPES and node.joinMethod == "hash"
+        assert node.joinType in node.KNOWN_JOIN_TYPES
+        # assert node.joinMethod == "hash"
         
         assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)) 
         

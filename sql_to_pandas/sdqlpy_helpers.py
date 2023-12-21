@@ -164,7 +164,7 @@ def setSourceNodeColumnValuesNPairs(value, sourcePairs):
             
             if set_index == False and value.value != '':
                 raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
-            
+    
     if isinstance(value, BinaryExpressionOperator):
         setSourceNodeColumnValuesNPairs(value.left, sourcePairs)
         setSourceNodeColumnValuesNPairs(value.right, sourcePairs)

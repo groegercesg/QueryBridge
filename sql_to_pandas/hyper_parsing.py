@@ -489,6 +489,8 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
                         equal_left_right_keys(op_node.leftKey, op_node.rightKey)
                     )
                 )
+                assert hasattr(op_node, "cardinality")
+                new_op_node.child.setCardinality(op_node.cardinality)
             case selectNode():
                 new_op_node = FilterNode(
                     op_node.selectCondition

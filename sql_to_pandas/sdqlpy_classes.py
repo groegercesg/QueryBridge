@@ -352,14 +352,16 @@ class SDQLpyGroupNode(UnarySDQLpyNode):
         
 class SDQLpyJoinNode(BinarySDQLpyNode):
     KNOWN_JOIN_METHODS = set([
-        'hash'
+        'hash', 'merge'
     ])
     KNOWN_JOIN_TYPES = set([
-        'inner', 'rightsemijoin', 'leftsemijoin', 'rightantijoin', 'leftantijoin'
+        'inner', 'rightsemijoin', 'leftsemijoin', 'rightantijoin', 'leftantijoin', 'outer'
     ])
     
     def __init__(self, joinMethod, joinType, incomingJoinCondition):
         super().__init__()
+        if joinMethod == None:
+            joinMethod = "merge"
         assert joinMethod in self.KNOWN_JOIN_METHODS, f"{joinMethod} is not in the known join methods"
         self.joinMethod = joinMethod
         assert joinType in self.KNOWN_JOIN_TYPES, f"{joinType} is not in the known join types"
@@ -389,7 +391,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             previousDuplicateCounter = self.outputDict.duplicateCounter
         
         match self.joinType:
-            case "inner":
+            case "inner" | "outer":
                 self.outputDict = SDQLpySRDict(
                     self.left.outputDict.keys + self.right.outputDict.keys +
                     self.left.outputDict.values + self.right.outputDict.values,
