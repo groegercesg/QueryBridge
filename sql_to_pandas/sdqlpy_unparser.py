@@ -769,6 +769,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     # Swap required
                     sdqlpy_tree.swapLeftAndRight()
                 elif leftKeys_str == rightKeys_str:
+                    # They are entirely foreign
+                    assert set(leftType) == set("F") and set(rightType) == set("F")
                     # If we are joining on identical keys, even if they're not primary, it's still okay
                     # We'll use cardinality to decide
                     # Prefer the one with lower cardinality
@@ -930,6 +932,18 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         return sdqlpy_tree
     
     def solveDuplicateColumnsNames(sdqlpy_tree):
+        def getProblemCodeNamesFromJoinKeys(leftKeys: list, rightKeys: list) -> list:
+            # Use left/rightKeys to determine this
+            # Check that the codeNames are unique
+            nameDict = defaultdict(int)
+            for col in leftKeys:
+                nameDict[col.codeName] += 1
+            for col in rightKeys:
+                nameDict[col.codeName] += 1
+                
+            problemCodeNames = [k for k, v in nameDict.items() if v > 1]
+            return problemCodeNames, nameDict
+        
         def getProblemCodeNamesFromSRDict(sr_dict: SDQLpySRDict) -> list:
             # Check that the codeNames are unique
             nameDict = defaultdict(int)
@@ -979,7 +993,23 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 # Check this has resolved things
                 problemCodeNames, _ = getProblemCodeNamesFromSRDict(sdqlpy_tree.outputDict)
                 assert len(problemCodeNames) == 0
+            
+            # Check joinCondition for duplicates
+            problemCodeNames, problemCodeNameDict = getProblemCodeNamesFromJoinKeys(sdqlpy_tree.leftKeys, sdqlpy_tree.rightKeys)
+            if len(problemCodeNames) > 0:
+                for badCodeName in problemCodeNames:
+                    filtered_SRDictKeys = [x for x in (sdqlpy_tree.leftKeys + sdqlpy_tree.rightKeys) if x.codeName == badCodeName]
+                    assert len(filtered_SRDictKeys) == problemCodeNameDict[badCodeName] and problemCodeNameDict[badCodeName] == 2
+                    
+                    # Change the codenames, for those in filtered
+                    nameAffixes = ["_x", "_y"]
+                    for idx, affix in enumerate(nameAffixes):
+                        filtered_SRDictKeys[idx].codeName = f"{filtered_SRDictKeys[idx].codeName}{affix}"
                 
+                # Check this has resolved things
+                problemCodeNames, _ = getProblemCodeNamesFromJoinKeys(sdqlpy_tree.leftKeys, sdqlpy_tree.rightKeys)
+                assert len(problemCodeNames) == 0
+            
         return sdqlpy_tree
     
     def solveCountDistinctOperator(sdqlpy_tree): 
@@ -1342,7 +1372,7 @@ class UnparseSDQLpyTree():
         # Write the output Record
         for output_line in node.get_output_dict().generateSDQLpyTwoLambda(
             self, leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]",
-            node.left, node.right
+            node
         ):
             self.writeTempContent(
                 f"{TAB}{TAB}{output_line}"

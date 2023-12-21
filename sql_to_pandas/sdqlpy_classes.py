@@ -650,10 +650,23 @@ class SDQLpySRDict():
         
         return self.third_wrap_counter
     
-    def generateSDQLpyTwoLambda(self, unparser, l_lambda_idx, r_lambda_idx_key, r_lambda_idx_val, l_node, r_node):
-        l_columns = l_node.outputDict.flatCols()
-        r_keys = r_node.outputDict.flatKeys()
-        r_values = r_node.outputDict.flatVals()
+    def generateSDQLpyTwoLambda(self, unparser, l_lambda_idx, r_lambda_idx_key, r_lambda_idx_val, node):
+        l_node, r_node = node.left, node.right
+        
+        # Create l/r_columns based on join type
+        if "left" in node.joinType:
+            l_columns = l_node.outputDict.flatCols()
+            r_keys = []
+            r_values = []
+        elif "right" in node.joinType:
+            l_columns = []
+            r_keys = r_node.outputDict.flatKeys()
+            r_values = r_node.outputDict.flatVals()
+        else:
+            l_columns = l_node.outputDict.flatCols()
+            r_keys = r_node.outputDict.flatKeys()
+            r_values = r_node.outputDict.flatVals()
+            
         # Reduce keys and values
         self.keys = self.reduceDuplicates(self.keys)
         self.values = self.reduceDuplicates(self.values)
