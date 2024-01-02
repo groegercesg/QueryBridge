@@ -721,7 +721,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 if jKey in childNode.foreignKeys:
                     outcomes.append("F")
                 else:
-                    raise Exception
+                    # Joining on keys that are neither Primary nor Foreign
+                    outcomes.append("N")
             
             return outcomes
         
@@ -766,7 +767,14 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 leftKeys_str = [x.codeName for x in sdqlpy_tree.leftKeys]
                 rightKeys_str = [x.codeName for x in sdqlpy_tree.rightKeys]
                 
-                if "P" in leftType and "P" in rightType:
+                if "N" in leftType or "N" in rightType:
+                    # Joining on keys that are neither Primary nor Foreign
+                    # We expect them both to be record nodes and that they're of the same table
+                    assert isinstance(leftNode, SDQLpyRecordNode) and isinstance(rightNode, SDQLpyRecordNode) and leftNode.tableName == rightNode.tableName
+                    # Double check that cardinalities are the same and leave it as we found it
+                    assert leftNode.cardinality == rightNode.cardinality
+                    pass
+                elif "P" in leftType and "P" in rightType:
                     # Both left and right are primary
                     # Prefer the one with lower cardinality
                     if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:

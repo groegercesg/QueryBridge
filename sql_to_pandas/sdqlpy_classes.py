@@ -496,33 +496,103 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         return realNewConditions
     
     def do_join_key_separation(self):
-        leftColumns = self.left.outputDict.flatCols()
-        rightColumns = self.right.outputDict.flatCols()
+        def expr_to_string(columns: list) -> list:
+            returningList = []
+            for col in columns:
+                returningList.append(
+                    col.value if hasattr(col, "value") else col.codeName
+                )
+            return returningList
+                
+        def gather_column_or_created(joinCondition) -> list:
+            gathering_items = []
+            if joinCondition.created == True:
+                # Don't go any lower, as it's already been created
+                pass  
+            elif isinstance(joinCondition, BinaryExpressionOperator):
+                left_items = gather_column_or_created(joinCondition.left)
+                gathering_items.extend(left_items)
+                right_items = gather_column_or_created(joinCondition.right)
+                gathering_items.extend(right_items)
+            elif isinstance(joinCondition, UnaryExpressionOperator):
+                child_items = gather_column_or_created(joinCondition.child)
+                gathering_items.extend(child_items)
+            else:
+                # A leaf node
+                pass
+            
+            # Add item
+            if joinCondition.created == True:
+                gathering_items.append(joinCondition)
+            elif isinstance(joinCondition, ColumnValue):
+                gathering_items.append(joinCondition)
+            
+            return gathering_items
+        
+        leftColumns = expr_to_string(self.left.outputDict.flatCols())
+        rightColumns = expr_to_string(self.right.outputDict.flatCols())
         self.leftKeys, self.rightKeys = [], []
+        
+        # Gather all ColumnValues/Things that are created
+        gathered_items = []
         for x in self.joinCondition:
-            if id(x.left) in [id(col) for col in leftColumns]:
-                self.leftKeys.append(x.left)
-            elif id(x.left) in [id(col) for col in rightColumns]:
-                self.rightKeys.append(x.left)
-            elif x.left.codeName in [str(col.codeName) for col in leftColumns]:
-                self.leftKeys.append(x.left)
-            elif x.left.codeName in [str(col.codeName) for col in rightColumns]:
-                self.rightKeys.append(x.left)
-            else:
-                raise Exception(f"Couldn't find the x.left ({x.left.codeName}) value in either of the left and right tables!")
+            gathered_items.extend(
+                gather_column_or_created(x)
+            )
             
-            if id(x.right) in [id(col) for col in leftColumns]:
-                self.leftKeys.append(x.right)
-            elif id(x.right) in [id(col) for col in rightColumns]:
-                self.rightKeys.append(x.right)
-            elif x.right.codeName in [str(col.codeName) for col in leftColumns]:
-                self.leftKeys.append(x.right)
-            elif x.right.codeName in [str(col.codeName) for col in rightColumns]:
-                self.rightKeys.append(x.right)
+        # Remove duplicates
+        gathered_items = list(set(gathered_items))
+        
+        bothTracker = defaultdict(int)
+        
+        # Filter them into the left/rightKeys
+        for item in gathered_items:
+            assert hasattr(item, "value") and item.value != "" and item.value != None
+            if item.value in leftColumns and item.value in rightColumns:
+                # In both!
+                if bothTracker[item.value] == 0:
+                    # First time, do left
+                    bothTracker[item.value] += 1
+                    self.leftKeys.append(item)
+                elif bothTracker[item.value] == 1:
+                    # Second time, do right
+                    bothTracker[item.value] += 1
+                    self.rightKeys.append(item)
+                else:
+                    raise Exception("Trying to do a bothTracker replace with too many (>2)")
+            elif item.value in leftColumns:
+                self.leftKeys.append(item)
+            elif item.value in rightColumns:
+                self.rightKeys.append(item)
             else:
-                raise Exception(f"Couldn't find the x.right ({x.right.codeName}) value in either of the left and right tables!")
+                raise Exception(f"Couldn't find value ({item.value}) in either left or right")
+        
+        #assert len(self.leftKeys) == len(self.rightKeys)
+        
+        # for x in self.joinCondition:
+        #     if id(x.left) in [id(col) for col in leftColumns]:
+        #         self.leftKeys.append(x.left)
+        #     elif id(x.left) in [id(col) for col in rightColumns]:
+        #         self.rightKeys.append(x.left)
+        #     elif x.left.codeName in [str(col.codeName) for col in leftColumns]:
+        #         self.leftKeys.append(x.left)
+        #     elif x.left.codeName in [str(col.codeName) for col in rightColumns]:
+        #         self.rightKeys.append(x.left)
+        #     else:
+        #         raise Exception(f"Couldn't find the x.left ({x.left.codeName}) value in either of the left and right tables!")
             
-        assert len(self.leftKeys) == len(self.rightKeys) == len(self.joinCondition)
+        #     if id(x.right) in [id(col) for col in leftColumns]:
+        #         self.leftKeys.append(x.right)
+        #     elif id(x.right) in [id(col) for col in rightColumns]:
+        #         self.rightKeys.append(x.right)
+        #     elif x.right.codeName in [str(col.codeName) for col in leftColumns]:
+        #         self.leftKeys.append(x.right)
+        #     elif x.right.codeName in [str(col.codeName) for col in rightColumns]:
+        #         self.rightKeys.append(x.right)
+        #     else:
+        #         raise Exception(f"Couldn't find the x.right ({x.right.codeName}) value in either of the left and right tables!")
+            
+        # assert len(self.leftKeys) == len(self.rightKeys) == len(self.joinCondition)
 
     def add_third_node(self, node):
         assert self.third_node == None
