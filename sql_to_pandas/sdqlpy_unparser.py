@@ -1326,6 +1326,8 @@ class UnparseSDQLpyTree():
             node.incomingDict.flatVals()
         )
         
+        node.outputDict.set_created(self)
+        
         self.writeContent(
             f"{TAB}if\n"
             f"{TAB}{TAB}{filterContent}\n"
@@ -1362,6 +1364,8 @@ class UnparseSDQLpyTree():
                 f"{lambda_index}[1]",
                 node.incomingDict.flatVals()
             )
+            
+            node.outputDict.set_created(self)
             
             self.writeContent(
                 f"{TAB}if\n"
@@ -1419,6 +1423,8 @@ class UnparseSDQLpyTree():
                 f"{TAB}else\n"
                 f"{TAB}{TAB}None"
             )
+        
+        node.outputDict.set_created(self)
         
         self.writeContent(
             f")"
@@ -1482,6 +1488,8 @@ class UnparseSDQLpyTree():
                 f"{TAB}else\n"
                 f"{TAB}{TAB}None"
             )
+            
+        node.outputDict.set_created(self)
         
         # Filter Content
         assert node.filterContent == None
@@ -1498,7 +1506,6 @@ class UnparseSDQLpyTree():
         childTable = node.getChildName(self)
         
         initialDictName = node.getTableName(self, not_output = True)
-        createdDictName = node.getTableName(self)
         lambda_index = "p"
         
         self.writeContent(
@@ -1530,40 +1537,11 @@ class UnparseSDQLpyTree():
                 f"{TAB}{TAB}None"
             )
         
+        node.outputDict.set_created(self)
+        
         self.writeContent(
             f")"
         )
-        
-    # def visit_SDQLpyNKeyJoin(self, node):
-    #     # Make leftKeys a RecordOutput
-    #     self.visit_SDQLpyRecordNode(node.leftNode)
-    #     leftRecord = SDQLpySRDict(
-    #         node.leftKeys,
-    #         []
-    #     )
-    #     leftRecord.setUnique(True)
-        
-    #     childTable = node.leftNode.tableName
-        
-    #     createdDictName = f"{childTable}_project"
-    #     lambda_index = "p"
-        
-    #     self.writeContent(
-    #         f"{createdDictName} = {childTable}.sum(lambda {lambda_index}:"
-    #     )
-        
-    #     for codeRow in leftRecord.generateSDQLpyOneLambda(
-    #         self, f"{lambda_index}[0]", node.leftKeys
-    #     ):
-    #         self.writeContent(
-    #             f"{TAB}{codeRow}"
-    #         )
-        
-    #     self.writeContent(
-    #         f")\n"
-    #     )
-        
-    #     node.setTableName(createdDictName)
             
     def visit_SDQLpyAggrNode(self, node):        
         # Get child name
@@ -1600,6 +1578,8 @@ class UnparseSDQLpyTree():
                 f"{TAB}else\n"
                 f"{TAB}{TAB}0.0"
             )
+            
+        node.outputDict.set_created(self)
         
         self.writeContent(
             f")"

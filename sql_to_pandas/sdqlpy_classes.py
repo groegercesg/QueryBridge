@@ -526,10 +526,14 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                 pass
             
             # Add item
-            if joinCondition.created == True:
-                gathering_items.append(joinCondition)
-            elif isinstance(joinCondition, ColumnValue):
-                gathering_items.append(joinCondition)
+            if isinstance(joinCondition, BinaryExpressionOperator):
+                if (
+                    (isinstance(joinCondition.left, ColumnValue) or joinCondition.left.created == True) and 
+                    (isinstance(joinCondition.right, ColumnValue) or joinCondition.right.created == True)
+                ):
+                    # Add both
+                    gathering_items.append(joinCondition.left)
+                    gathering_items.append(joinCondition.right)
             
             return gathering_items
         
@@ -590,20 +594,34 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             else:
                 pass
             
-            if comparing.created == True or isinstance(comparing, ColumnValue):
+            if comparing.created == True or isinstance(comparing, (ColumnValue, IntervalNotionOperator, LikeOperator)):
+            
                 # Set the sourceNode
                 leftColumns = [str(col.codeName) for col in self.left.outputDict.flatCols()]
                 rightKeys = [str(col.codeName) for col in self.right.outputDict.flatKeys()]
                 rightValues = [str(col.codeName) for col in self.right.outputDict.flatVals()]
-                
-                if comparing.codeName in leftColumns:
-                    comparing.sourceNode = left_source
-                elif comparing.codeName in rightKeys:
-                    comparing.sourceNode = right_key
-                elif comparing.codeName in rightValues:
-                    comparing.sourceNode = right_value
+            
+                if comparing.created == True or isinstance(comparing, ColumnValue):
+                    
+                    if comparing.codeName in leftColumns:
+                        comparing.sourceNode = left_source
+                    elif comparing.codeName in rightKeys:
+                        comparing.sourceNode = right_key
+                    elif comparing.codeName in rightValues:
+                        comparing.sourceNode = right_value
+                    else:
+                        raise Exception(f"The comparing ({comparing.sourceNode}) was not found in either Left or Right.")
+                elif isinstance(comparing, (IntervalNotionOperator, LikeOperator)):
+                    if comparing.value.codeName in leftColumns:
+                        comparing.value.sourceNode = left_source
+                    elif comparing.value.codeName in rightKeys:
+                        comparing.value.sourceNode = right_key
+                    elif comparing.value.codeName in rightValues:
+                        comparing.value.sourceNode = right_value
+                    else:
+                        raise Exception(f"The comparing ({comparing.sourceNode}) was not found in either Left or Right.")
                 else:
-                    raise Exception(f"The comparing ({comparing.sourceNode}) was not found in either Left or Right.")
+                    raise Exception("Unknown error")
             
         traverse_tree(self.comparingTree)
         
@@ -626,6 +644,14 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         
         # The left table ref ones should be equating columns (== or !=)
         # The comparator ones should be anything else
+        def expr_to_string(columns: list) -> list:
+            returningList = []
+            for col in columns:
+                returningList.append(
+                    col.codeName
+                )
+            return returningList
+        
         def extract_column_equating(condition):
             current_equating = []
             
@@ -681,6 +707,22 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         equating_types = Counter(equating)
         assert len(equating_types) == 1 and (equating_types[EqualsOperator()] > 0 or equating_types[NotEqualsOperator()] > 0)
         
+        leftColumns = expr_to_string(self.left.outputDict.flatCols())
+        rightColumns = expr_to_string(self.right.outputDict.flatCols())
+        
+        # Rotate equating if needed
+        for x in equating:
+            if x.left.codeName in leftColumns and x.right.codeName in rightColumns:
+                # No rotate needed, all good
+                pass
+            elif x.left.codeName in rightColumns and x.right.codeName in leftColumns:
+                oldLeft = x.left
+                oldRight = x.right
+                x.left = oldRight
+                x.right = oldLeft
+            else:
+                raise Exception(f"Unknown format for x")
+        
         # Rebalance stripped_join_condition    
         stripped_join_condition = rebalance_and_or_tree(stripped_join_condition)
          
@@ -699,8 +741,14 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         lr_pairs = []
         # Iterate through equatingConditions
         for cond in self.equatingConditions:
+            rightName = None
+            if cond.right.created == False:
+                rightName = cond.right.value
+            else:
+                rightName = cond.right.codeName
+            
             lr_pairs.append(
-                f"'{cond.left.codeName}': {lambda_index}[0].{cond.right.codeName}"
+                f"'{cond.left.codeName}': {lambda_index}[0].{rightName}"
             )
         innerRecord = f"{{{', '.join(lr_pairs)}}}"
         return f"{leftTable}[record({innerRecord})]"
@@ -1008,6 +1056,9 @@ class SDQLpySRDict():
             f"}}"
         )
         
+        return output_content
+    
+    def set_created(self, unparser):
         # Do codeName updates
         for expr in unparser.codeNameUpdates:
             expr.value = expr.codeName
@@ -1019,4 +1070,3 @@ class SDQLpySRDict():
         for val in self.values:
             val.setCreated()
         
-        return output_content
