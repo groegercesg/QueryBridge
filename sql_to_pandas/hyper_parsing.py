@@ -17,8 +17,8 @@ from sdqlpy_unparser import *
 def generate_hyperdb_explains():
     db = PrepareHyperDB('hyperdb_tpch.hyper')
     db.prepare_database('data_storage')
-    query_directory = 'sql_to_pandas/tpch_queries'
-    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain'
+    query_directory = 'sql_to_pandas/tpch_no_limit_order'
+    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order'
     
     onlyfiles = [f for f in listdir(query_directory) if isfile(join(query_directory, f))]
     
@@ -63,7 +63,7 @@ def gather_operators(explain_node):
     return operators
 
 def inspect_explain_plans():
-    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain'
+    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order'
     
     onlyfiles = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
     
@@ -240,10 +240,42 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
         
     assert unparse_content != None
     return unparse_content
+
+def convert_explain_plan_to_x(desired_format):
+    query_directory = 'sql_to_pandas/tpch_no_limit_order'
+    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order'
+    
+    # Ignore Query 15 for now
+    query_files = [f for f in listdir(query_directory) if isfile(join(query_directory, f)) and str(f).split(".")[0] != "15"]
+    explain_files = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
+    
+    combined_sql_content = list(zip(query_files, explain_files))
+    
+    if desired_format == "sdqlpy":
+        db = PrepareHyperDB('hyperdb_tpch.hyper')
+        db.prepare_database('data_storage')
+        table_keys = db.get_table_keys()
+    else:
+        table_keys = None
+    
+    for sql_file, explain_file in combined_sql_content:
+        if sql_file.split(".")[0] not in ["1", "3" ,"4", "5", "6", "8", "9", "10", "12", "16", "18", "19", "20"]:
+            continue
+        
+        with open(f'{explain_directory}/{explain_file}') as r:
+            explain_content = json.loads(r.read())
+            
+            unparse_content = generate_unparse_content_from_explain_and_query(
+                explain_content,
+                f'{query_directory}/{sql_file}',
+                desired_format,
+                table_keys)
+            
+            print(unparse_content)
     
 def parse_explain_plans():
     query_directory = 'sql_to_pandas/tpch_queries'
-    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain'
+    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order'
     
     # Ignore Query 15 for now
     query_files = [f for f in listdir(query_directory) if isfile(join(query_directory, f)) and str(f).split(".")[0] != "15"]
@@ -1014,3 +1046,4 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
 #generate_hyperdb_explains()
 #inspect_explain_plans()
 #parse_explain_plans()
+convert_explain_plan_to_x("sdqlpy")
