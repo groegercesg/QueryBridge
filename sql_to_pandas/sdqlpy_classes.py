@@ -1,4 +1,5 @@
 from collections import Counter, defaultdict
+import difflib
 
 from universal_plan_nodes import *
 from expression_operators import *
@@ -374,6 +375,9 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.third_node = None
         self.is_update_sum = False
         
+        self.equatingConditions = []
+        self.comparingTree = None
+        
     def update_update_sum(self, newValue):
         assert isinstance(newValue, bool)
         self.is_update_sum = newValue
@@ -464,43 +468,43 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                 self.outputDict.values.pop(val_pos)
         
     def __splitConditionsIntoList(self, joinCondition: ExpressionBaseNode) -> list[ExpressionBaseNode]:
-        newConditions = []
-        joiningNodes = [AndOperator, OrOperator]
-        currentJoinCondition = joinCondition
-        while any(isinstance(currentJoinCondition, x) for x in joiningNodes):
-            newConditions.append(currentJoinCondition.left)
-            currentJoinCondition = currentJoinCondition.right
-        newConditions.append(currentJoinCondition)
-        # At this stage, we should scoop up any postJoinFilters
-        self.postJoinFilters = list(filter(lambda x: isinstance(x, OrOperator), newConditions))
-        realNewConditions = list(filter(lambda x: not isinstance(x, OrOperator), newConditions))
+        # newConditions = []
+        # joiningNodes = [AndOperator, OrOperator]
+        # currentJoinCondition = joinCondition
+        # while any(isinstance(currentJoinCondition, x) for x in joiningNodes):
+        #     newConditions.append(currentJoinCondition.left)
+        #     currentJoinCondition = currentJoinCondition.right
+        # newConditions.append(currentJoinCondition)
+        # # At this stage, we should scoop up any postJoinFilters
+        # self.postJoinFilters = list(filter(lambda x: isinstance(x, OrOperator), newConditions))
+        # realNewConditions = list(filter(lambda x: not isinstance(x, OrOperator), newConditions))
         
-        # Extract a 'LessThanOperator' from a list of >= 1 EqualsOperator
-        operatorCount = Counter(realNewConditions)
-        non_equi_join_operators = [LessThanOperator(), LessThanEqOperator(), GreaterThanOperator()]
-        non_equi_join_operator_types = [LessThanOperator, LessThanEqOperator, GreaterThanOperator]
-        if (operatorCount[EqualsOperator()] > 0) and any(operatorCount[x] > 0 for x in non_equi_join_operators):
-            self.postJoinFilters.extend(list(filter(lambda x: any(isinstance(x, op) for op in non_equi_join_operator_types), realNewConditions)))
-            realNewConditions = list(filter(lambda x: not any(isinstance(x, op) for op in non_equi_join_operator_types), realNewConditions))
-            assert len(realNewConditions) > 0
+        # # Extract a 'LessThanOperator' from a list of >= 1 EqualsOperator
+        # operatorCount = Counter(realNewConditions)
+        # non_equi_join_operators = [LessThanOperator(), LessThanEqOperator(), GreaterThanOperator()]
+        # non_equi_join_operator_types = [LessThanOperator, LessThanEqOperator, GreaterThanOperator]
+        # if (operatorCount[EqualsOperator()] > 0) and any(operatorCount[x] > 0 for x in non_equi_join_operators):
+        #     self.postJoinFilters.extend(list(filter(lambda x: any(isinstance(x, op) for op in non_equi_join_operator_types), realNewConditions)))
+        #     realNewConditions = list(filter(lambda x: not any(isinstance(x, op) for op in non_equi_join_operator_types), realNewConditions))
+        #     assert len(realNewConditions) > 0
             
-        # Fix postJoinFilters
-        if len(self.postJoinFilters) == 0:
-            # Skip if no 'postJoinFilters', set as None
-            self.postJoinFilters = None
-        elif len(self.postJoinFilters) == 1:
-            self.postJoinFilters = self.postJoinFilters[0]
-        else:
-            raise Exception(f"Length of postJoinFilters wasn't 1, we should join it with and/or. Examine context to decide which")
+        # # Fix postJoinFilters
+        # if len(self.postJoinFilters) == 0:
+        #     # Skip if no 'postJoinFilters', set as None
+        #     self.postJoinFilters = None
+        # elif len(self.postJoinFilters) == 1:
+        #     self.postJoinFilters = self.postJoinFilters[0]
+        # else:
+        #     raise Exception(f"Length of postJoinFilters wasn't 1, we should join it with and/or. Examine context to decide which")
         
-        return realNewConditions
+        return [joinCondition]
     
     def do_join_key_separation(self):
         def expr_to_string(columns: list) -> list:
             returningList = []
             for col in columns:
                 returningList.append(
-                    col.value if hasattr(col, "value") else col.codeName
+                    col.codeName
                 )
             return returningList
                 
@@ -547,64 +551,156 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         
         # Filter them into the left/rightKeys
         for item in gathered_items:
-            assert hasattr(item, "value") and item.value != "" and item.value != None
-            if item.value in leftColumns and item.value in rightColumns:
+            if item.codeName in leftColumns and item.codeName in rightColumns:
                 # In both!
-                if bothTracker[item.value] == 0:
+                if bothTracker[item.codeName] == 0:
                     # First time, do left
-                    bothTracker[item.value] += 1
+                    bothTracker[item.codeName] += 1
                     self.leftKeys.append(item)
-                elif bothTracker[item.value] == 1:
+                elif bothTracker[item.codeName] == 1:
                     # Second time, do right
-                    bothTracker[item.value] += 1
+                    bothTracker[item.codeName] += 1
                     self.rightKeys.append(item)
                 else:
                     raise Exception("Trying to do a bothTracker replace with too many (>2)")
-            elif item.value in leftColumns:
+            elif item.codeName in leftColumns:
                 self.leftKeys.append(item)
-            elif item.value in rightColumns:
+            elif item.codeName in rightColumns:
                 self.rightKeys.append(item)
             else:
-                raise Exception(f"Couldn't find value ({item.value}) in either left or right")
-        
-        #assert len(self.leftKeys) == len(self.rightKeys)
-        
-        # for x in self.joinCondition:
-        #     if id(x.left) in [id(col) for col in leftColumns]:
-        #         self.leftKeys.append(x.left)
-        #     elif id(x.left) in [id(col) for col in rightColumns]:
-        #         self.rightKeys.append(x.left)
-        #     elif x.left.codeName in [str(col.codeName) for col in leftColumns]:
-        #         self.leftKeys.append(x.left)
-        #     elif x.left.codeName in [str(col.codeName) for col in rightColumns]:
-        #         self.rightKeys.append(x.left)
-        #     else:
-        #         raise Exception(f"Couldn't find the x.left ({x.left.codeName}) value in either of the left and right tables!")
-            
-        #     if id(x.right) in [id(col) for col in leftColumns]:
-        #         self.leftKeys.append(x.right)
-        #     elif id(x.right) in [id(col) for col in rightColumns]:
-        #         self.rightKeys.append(x.right)
-        #     elif x.right.codeName in [str(col.codeName) for col in leftColumns]:
-        #         self.leftKeys.append(x.right)
-        #     elif x.right.codeName in [str(col.codeName) for col in rightColumns]:
-        #         self.rightKeys.append(x.right)
-        #     else:
-        #         raise Exception(f"Couldn't find the x.right ({x.right.codeName}) value in either of the left and right tables!")
-            
-        # assert len(self.leftKeys) == len(self.rightKeys) == len(self.joinCondition)
+                raise Exception(f"Couldn't find value ({item.codeName}) in either left or right")
 
     def add_third_node(self, node):
         assert self.third_node == None
         self.third_node = node
         
+    def set_sources_for_comparing_condition(self, left_source, right_key, right_value):
+        
+        # And those that should be used as part of the joinComparator
+        # Set these this for ColumnValues or ones that are created
+        
+        def traverse_tree(comparing):
+            if comparing.created == True:
+                pass
+            elif isinstance(comparing, BinaryExpressionOperator):
+                traverse_tree(comparing.left)
+                traverse_tree(comparing.right)
+            elif isinstance(comparing, UnaryExpressionOperator):
+                traverse_tree(comparing.child)
+            else:
+                pass
+            
+            if comparing.created == True or isinstance(comparing, ColumnValue):
+                # Set the sourceNode
+                leftColumns = [str(col.codeName) for col in self.left.outputDict.flatCols()]
+                rightKeys = [str(col.codeName) for col in self.right.outputDict.flatKeys()]
+                rightValues = [str(col.codeName) for col in self.right.outputDict.flatVals()]
+                
+                if comparing.codeName in leftColumns:
+                    comparing.sourceNode = left_source
+                elif comparing.codeName in rightKeys:
+                    comparing.sourceNode = right_key
+                elif comparing.codeName in rightValues:
+                    comparing.sourceNode = right_value
+                else:
+                    raise Exception(f"The comparing ({comparing.sourceNode}) was not found in either Left or Right.")
+            
+        traverse_tree(self.comparingTree)
+        
+    def handle_equating_conditions_zero(self):
+        assert isinstance(self.left, SDQLpyJoinBuildNode) and isinstance(self.right, SDQLpyRecordNode)
+        # Make it NotEqualCondition between the primaryKeys of each
+        newCondition = NotEqualsOperator()
+        assert len(self.left.outputDict.keys) > 0
+        newCondition.left = self.left.outputDict.keys[0]
+        rightKeys = [col for col in self.right.outputDict.flatCols()]
+        assert len(rightKeys)
+        sorted(rightKeys, key=lambda x: difflib.SequenceMatcher(None, x.codeName, newCondition.left.codeName).ratio())
+        newCondition.right = rightKeys[-1]
+        
+        return [newCondition]
+        
+    def decompose_join_condition(self):
+        # We have the joinConditions all bundled up
+        # We need to split these into, conditions for the leftTableRef
+        
+        # The left table ref ones should be equating columns (== or !=)
+        # The comparator ones should be anything else
+        def extract_column_equating(condition):
+            current_equating = []
+            
+            if isinstance(condition, (AndOperator, OrOperator)):
+                left_equating, left_condition = extract_column_equating(condition.left)
+                right_equating, right_condition = extract_column_equating(condition.right)
+                
+                current_equating.extend(left_equating)
+                current_equating.extend(right_equating)
+                
+                condition.left = left_condition
+                condition.right = right_condition
+            else:
+                # Should be a workable value
+                if isinstance(condition, (EqualsOperator, NotEqualsOperator)) and (
+                    isinstance(condition.left, ColumnValue) and isinstance(condition.right, ColumnValue)
+                ):
+                    current_equating.append(condition)
+                    condition = None
+                    
+            return current_equating, condition
+        
+        def rebalance_and_or_tree(condition):
+            if isinstance(condition, BinaryExpressionOperator):
+                left_condition = rebalance_and_or_tree(condition.left)
+                right_condition = rebalance_and_or_tree(condition.right)
+            
+                condition.left = left_condition
+                condition.right = right_condition
+            else:
+                pass
+            
+            if isinstance(condition, (AndOperator, OrOperator)):
+                if (condition.left == None) and (condition.right == None):
+                    return None
+                elif condition.left == None:
+                    condition = condition.right
+                elif condition.right == None:
+                    condition = condition.left
+                else:
+                    # No reworking needed
+                    pass
+                
+            return condition
+        
+        assert len(self.joinCondition) == 1
+        equating, stripped_join_condition = extract_column_equating(self.joinCondition[0])
+        
+        if equating == []:
+            equating = self.handle_equating_conditions_zero()
+        
+        # Audit before assigning
+        equating_types = Counter(equating)
+        assert len(equating_types) == 1 and (equating_types[EqualsOperator()] > 0 or equating_types[NotEqualsOperator()] > 0)
+        
+        # Rebalance stripped_join_condition    
+        stripped_join_condition = rebalance_and_or_tree(stripped_join_condition)
+         
+        assert self.equatingConditions == [] and self.comparingTree == None
+        self.equatingConditions = equating
+        self.comparingTree = stripped_join_condition
+        
     def make_leftTableRef(self, unparser, lambda_index):
+        self.decompose_join_condition()
+        
+        # Now we have decomposed the joinCondition into equating columns and comparing Conditions
+        # For the leftTableRef, we use equating
+        
         leftTable, rightTable = self.getChildNames(unparser)
         # {'{leftKey}': {lambda_index}[0].{rightKey}}
         lr_pairs = []
-        for idx, l_key in enumerate(self.leftKeys):
+        # Iterate through equatingConditions
+        for cond in self.equatingConditions:
             lr_pairs.append(
-                f"'{l_key}': {lambda_index}[0].{self.rightKeys[idx]}"
+                f"'{cond.left.codeName}': {lambda_index}[0].{cond.right.codeName}"
             )
         innerRecord = f"{{{', '.join(lr_pairs)}}}"
         return f"{leftTable}[record({innerRecord})]"

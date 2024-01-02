@@ -300,6 +300,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             # Turn a Record or JoinNode on the left into a JoinBuildNode
             if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyAggrNode)):
                 # Make it a SDQLpyJoinBuildNode
+                assert len(set([str(id(x)) for x in sdqlpy_tree.leftKeys]) - set([str(id(x)) for x in sdqlpy_tree.left.outputDict.flatCols()])) == 0
+                
                 jbNode = SDQLpyJoinBuildNode(
                     sdqlpy_tree.leftKeys,
                     list(sdqlpy_tree.left.outputDict.flatCols())
@@ -767,7 +769,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 leftKeys_str = [x.codeName for x in sdqlpy_tree.leftKeys]
                 rightKeys_str = [x.codeName for x in sdqlpy_tree.rightKeys]
                 
-                if "N" in leftType or "N" in rightType:
+                if leftType == ["N"] or rightType == ["N"]:
                     # Joining on keys that are neither Primary nor Foreign
                     # We expect them both to be record nodes and that they're of the same table
                     assert isinstance(leftNode, SDQLpyRecordNode) and isinstance(rightNode, SDQLpyRecordNode) and leftNode.tableName == rightNode.tableName
@@ -797,8 +799,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     # No swap required
                     pass
                 elif "P" in rightType:
-                    # Check that all of left are "F"
-                    assert len(set(leftType)) == 1 and set(leftType) == set("F")
+                    # Check that all of left are "F" or "N"
+                    leftCounter = Counter(leftType)
+                    assert (leftCounter["F"] > 0 or leftCounter["N"] > 0) and (leftCounter["P"] == 0)
                     # And, that there's only 1 P in right and the rest are F
                     assert Counter(rightType)["P"] == 1 and Counter(rightType)["F"] == len(rightType) - 1
                     
@@ -956,7 +959,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         
         # Run on current node (sdqlpy_tree)
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
-            if sdqlpy_tree.postJoinFilters != None:
+            if hasattr(sdqlpy_tree, "postJoinFilters") and sdqlpy_tree.postJoinFilters != None:
                 # Make a filterNode
                 newFilter = SDQLpyFilterNode()
                 newFilter.addFilterContent(sdqlpy_tree.postJoinFilters)
@@ -1458,16 +1461,31 @@ class UnparseSDQLpyTree():
         if "anti" in node.joinType:
             joinComparator = "=="
         
-        self.writeTempContent(
-            f"{TAB}if\n"
-            f"{TAB}{TAB}{leftTableRef} {joinComparator} None\n"
-            f"{TAB}else\n"
-            f"{TAB}{TAB}None"
-        )
+        # Add the other joinComparison
+        if node.comparingTree == None:
+            self.writeTempContent(
+                f"{TAB}if\n"
+                f"{TAB}{TAB}{leftTableRef} {joinComparator} None\n"
+                f"{TAB}else\n"
+                f"{TAB}{TAB}None"
+            )
+        else:
+            # Assign sources for the comparing condition
+            node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
+            otherJoinComparison = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+            # reset sources, so as to not cause issues later down the line
+            resetColumnValues(node.comparingTree)
+            
+            self.writeTempContent(
+                f"{TAB}if\n"
+                f"{TAB}{TAB}{leftTableRef} {joinComparator} None and ({otherJoinComparison})\n"
+                f"{TAB}else\n"
+                f"{TAB}{TAB}None"
+            )
         
         # Filter Content
         assert node.filterContent == None
-        assert node.postJoinFilters == None
+        assert hasattr(node, "postJoinFilters") == False
             
         self.writeTempContent(
             f")"
