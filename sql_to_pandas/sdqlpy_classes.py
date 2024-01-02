@@ -232,7 +232,7 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
     def getTableName(self, unparser):
         if self.filterContent != None:
             nodeNumber = unparser.nodesCounter[self.__class__.__name__]
-            self.tableName = f"filter_{str(nodeNumber)}"
+            self.tableName = f"scan_{str(nodeNumber)}"
             return self.tableName
         else:
             return self.sdqlrepr
@@ -443,6 +443,26 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.rd_filterContent(no_sumaggr_warn)
         self.rd_joinCondition(no_sumaggr_warn)
         
+        # Check for topNode and filter based on IDs
+        if self.topNode == True:
+            assert len(self.topNodeIds) > 0
+            removeKeys = []
+            removeValues = []
+            for idx, key in enumerate(self.outputDict.keys):
+                if id(key) not in self.topNodeIds:
+                    removeKeys.append(idx)
+            for idx, val in enumerate(self.outputDict.values):
+                if id(val) not in self.topNodeIds:
+                    removeValues.append(idx)
+            
+            removeKeys.sort(reverse=True)
+            removeValues.sort(reverse=True)
+            
+            for key_pos in removeKeys:
+                self.outputDict.keys.pop(key_pos)
+            for val_pos in removeValues:
+                self.outputDict.values.pop(val_pos)
+        
     def __splitConditionsIntoList(self, joinCondition: ExpressionBaseNode) -> list[ExpressionBaseNode]:
         newConditions = []
         joiningNodes = [AndOperator, OrOperator]
@@ -484,15 +504,23 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                 self.leftKeys.append(x.left)
             elif id(x.left) in [id(col) for col in rightColumns]:
                 self.rightKeys.append(x.left)
+            elif x.left.codeName in [str(col.codeName) for col in leftColumns]:
+                self.leftKeys.append(x.left)
+            elif x.left.codeName in [str(col.codeName) for col in rightColumns]:
+                self.rightKeys.append(x.left)
             else:
-                raise Exception(f"Couldn't find the x.left value in either of the left and right tables!")
+                raise Exception(f"Couldn't find the x.left ({x.left.codeName}) value in either of the left and right tables!")
             
             if id(x.right) in [id(col) for col in leftColumns]:
                 self.leftKeys.append(x.right)
             elif id(x.right) in [id(col) for col in rightColumns]:
                 self.rightKeys.append(x.right)
+            elif x.right.codeName in [str(col.codeName) for col in leftColumns]:
+                self.leftKeys.append(x.right)
+            elif x.right.codeName in [str(col.codeName) for col in rightColumns]:
+                self.rightKeys.append(x.right)
             else:
-                raise Exception(f"Couldn't find the x.right value in either of the left and right tables!")
+                raise Exception(f"Couldn't find the x.right ({x.right.codeName}) value in either of the left and right tables!")
             
         assert len(self.leftKeys) == len(self.rightKeys) == len(self.joinCondition)
 
@@ -691,6 +719,10 @@ class SDQLpySRDict():
         return output_content
     
     def generateSDQLpyOneLambda(self, unparser, lambda_idx_key, lambda_idx_val, node):
+        # Balance values
+        if len(self.keys) == 0 and len(self.values) > 1:
+            self.keys.append(self.values.pop(0))
+        
         keys = node.incomingDict.flatKeys()
         values = node.incomingDict.flatVals()
         # Reduce keys and values

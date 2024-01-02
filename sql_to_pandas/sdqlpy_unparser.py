@@ -158,6 +158,10 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     )
                     new_op_tree.addChild(newGroup)
                     childNode = None
+                elif isinstance(childNode, SDQLpyAggrNode):
+                    new_op_tree = SDQLpyAggrNode(
+                        op_tree.values
+                    )
                 else:
                     new_op_tree = None
                     childNode.outputDict.keys.append(op_tree.values)
@@ -253,6 +257,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 # Drop keys that aren't in ordering
                 sdqlpy_tree.outputDict.keys = [x for x in sdqlpy_tree.outputDict.keys if ordering.get(x.codeName, None) != None]
                 sdqlpy_tree.outputDict.values = [x for x in sdqlpy_tree.outputDict.values if ordering.get(x.codeName, None) != None]
+                # Save topNode ids
+                sdqlpy_tree.topNodeIds = [id(col) for col in sdqlpy_tree.outputDict.flatCols()]
             case SDQLpyAggrNode():
                 # No ordering required, as it only returns a single value
                 pass
@@ -289,7 +295,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
             sdqlpy_tree.do_join_key_separation()
             
-            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyRetrieveNode))
+            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyRetrieveNode, SDQLpyConcatNode))
             
             # Turn a Record or JoinNode on the left into a JoinBuildNode
             if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyAggrNode)):
@@ -971,6 +977,23 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 # Choose the first one
                 col.setCodeName(f"{incomingColumnStrings[0]}_count")
     
+    def solveOutputDictEmptyCodename(sdqlpy_tree, parserCreatedColumns):
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            solveOutputDictEmptyCodename(sdqlpy_tree.left, parserCreatedColumns)
+            solveOutputDictEmptyCodename(sdqlpy_tree.right, parserCreatedColumns)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            solveOutputDictEmptyCodename(sdqlpy_tree.child, parserCreatedColumns)
+        else:
+            # A leaf node
+            pass
+        
+        # Run on current node (sdqlpy_tree)
+        for col in sdqlpy_tree.outputDict.flatCols():
+            if col.codeName == "":
+                handleEmptyCodeName(col, parserCreatedColumns)
+                assert col.codeName != ""
+                parserCreatedColumns.add(col.codeName)
+    
     def solveDuplicateColumnsNames(sdqlpy_tree):
         def getProblemCodeNamesFromJoinKeys(leftKeys: list, rightKeys: list) -> list:
             # Use left/rightKeys to determine this
@@ -1113,7 +1136,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree, no_sumaggr_warn=True)
     # Convert SumAggrOperator to ColumnNode
-    convertSumAggrOperatorToColumnNode(sdqlpy_tree)
+    parserCreatedColumns, _ = convertSumAggrOperatorToColumnNode(sdqlpy_tree)
     # Order joins, using cardinality information
     sdqlpy_tree = order_joins(sdqlpy_tree, table_keys)
     # Insert JoinProbe Nodes
@@ -1130,6 +1153,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     sdqlpy_tree, _ = solveCountDistinctOperator(sdqlpy_tree)
     # solve CountAllOperator
     solveCountAllOperator(sdqlpy_tree)
+    # Solve empty outputDict codenames
+    solveOutputDictEmptyCodename(sdqlpy_tree, parserCreatedColumns)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
     
@@ -1403,7 +1428,7 @@ class UnparseSDQLpyTree():
         assert node.joinType in node.KNOWN_JOIN_TYPES
         # assert node.joinMethod == "hash"
         
-        assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)) 
+        assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode)) 
         
         self.writeTempContent(
             f"{createdDictName} = {rightTable}.sum(\n"
@@ -1579,7 +1604,9 @@ class UnparseSDQLpyTree():
     
     def __convert_expression_operator_to_sdqlpy(self, expr_tree: ExpressionBaseNode) -> str:
         # Visit Children
-        if isinstance(expr_tree, BinaryExpressionOperator):
+        if expr_tree.created == True and isinstance(expr_tree, MulOperator):
+            pass
+        elif isinstance(expr_tree, BinaryExpressionOperator):
             leftNode = self.__convert_expression_operator_to_sdqlpy(expr_tree.left)
             rightNode = self.__convert_expression_operator_to_sdqlpy(expr_tree.right)
         elif isinstance(expr_tree, UnaryExpressionOperator):
@@ -1618,7 +1645,10 @@ class UnparseSDQLpyTree():
             case DivOperator():
                 expression_output = f"{leftNode} / {rightNode}"
             case MulOperator():
-                expression_output = f"{leftNode} * {rightNode}"
+                if expr_tree.created == False:
+                    expression_output = f"{leftNode} * {rightNode}"
+                else:
+                    expression_output = f"{expr_tree.sourceNode}.{expr_tree.codeName}"
             case SubOperator():
                 expression_output = f"({leftNode} - {rightNode})"
             case AddOperator():
