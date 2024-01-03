@@ -281,6 +281,7 @@ class SDQLpyAggrNode(UnarySDQLpyNode):
         self.aggregateOperations = aggregateOperations
         self.sdqlrepr = "aggr"
         self.outputDict = None
+        self.repeated_aggr = False
         
     def set_output_dict(self, no_sumaggr_warn=False):
         self.rd_aggregateOperations(no_sumaggr_warn)
@@ -291,6 +292,9 @@ class SDQLpyAggrNode(UnarySDQLpyNode):
         
         self.rd_outputDict(no_sumaggr_warn)
         self.rd_filterContent(no_sumaggr_warn)
+        
+    def set_repeated_aggr(self):
+        self.repeated_aggr = True
         
 class SDQLpyRetrieveNode(LeafSDQLpyNode):
     def __init__(self, tableColumns, targetID):

@@ -1042,7 +1042,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         if isinstance(sdqlpy_tree, UnarySDQLpyNode) and isinstance(sdqlpy_tree.child, UnarySDQLpyNode):
             if isinstance(sdqlpy_tree, SDQLpyAggrNode) and isinstance(sdqlpy_tree.child, SDQLpyAggrNode):
                 # We have detected repeated aggrs
-                pass
+                sdqlpy_tree.set_repeated_aggr()
     
     def solveCountDistinctOperator(sdqlpy_tree): 
         replacementDict = dict()
@@ -1164,6 +1164,7 @@ class UnparseSDQLpyTree():
         self.variableDict = {}
         # Set top node of the sdqlpy_tree to True
         sdqlpy_tree.topNode = True
+        self.doing_repeated_aggr = False
         
         self.__walk_tree(self.sdqlpy_tree)
         
@@ -1439,10 +1440,17 @@ class UnparseSDQLpyTree():
             )
         elif node.equatingConditions == [] and node.comparingTree != None:
             # A Non-equi join
-            
             # Assign sources for the comparing condition
             node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
-            nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+            
+            if isinstance(node.left, SDQLpyAggrNode) and node.left.repeated_aggr == True:
+                # Change the codeName when the sourceNode is
+                self.traverse_to_change_codeName_when_sourceNode(node.comparingTree, leftTable, leftTableRef)
+                # Convert the equation
+                nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+            else:
+                nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+            
             # reset sources, so as to not cause issues later down the line
             resetColumnValues(node.comparingTree)
             
@@ -1453,7 +1461,7 @@ class UnparseSDQLpyTree():
                 f"{TAB}{TAB}None"
             )
             
-        elif node.equatingConditions != [] and node.comparingTree == None:
+        elif node.equatingConditions != [] and node.comparingTree != None:
             # Assign sources for the comparing condition
             node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
             otherJoinComparison = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
@@ -1531,20 +1539,44 @@ class UnparseSDQLpyTree():
         createdDictName = node.getTableName(self)
         lambda_index = "p"
         
-        self.writeContent(
-            f"{createdDictName} = {childTable}.sum(\n"
-            f"{TAB}lambda {lambda_index} :"
-        )
-        
-        # Output the RecordOutput
-        for output_line in node.outputDict.generateSDQLpyOneLambda(
-            self, f"{lambda_index}[0]", f"{lambda_index}[1]", node
-        ):
+        if node.repeated_aggr == True:
+            # Do repeated aggr mode
+            # This is essentially just the equation
+            
+            # Check that the current node and child are the right size
+            assert len(node.outputDict.flatCols()) == 1
+            assert len(node.outputDict.flatKeys()) == 0
+            assert len(node.child.outputDict.flatCols()) == 1
+            
+            # Convert the codeName for all columnValues or created to the childTable
+            equation_to_output = node.outputDict.values[0]
+            self.traverse_to_change_codeName(equation_to_output, childTable)
+            # Convert the equation
+            self.doing_repeated_aggr = True
+            aggr_equation = self.__convert_expression_operator_to_sdqlpy(equation_to_output)
+            self.doing_repeated_aggr = False
+            
             self.writeContent(
-                f"{TAB}{output_line}"
+                f"{createdDictName} = {aggr_equation}"
             )
+            
+        else:
+        
+            self.writeContent(
+                f"{createdDictName} = {childTable}.sum(\n"
+                f"{TAB}lambda {lambda_index} :"
+            )
+            
+            # Output the RecordOutput
+            for output_line in node.outputDict.generateSDQLpyOneLambda(
+                self, f"{lambda_index}[0]", f"{lambda_index}[1]", node
+            ):
+                self.writeContent(
+                    f"{TAB}{output_line}"
+                )
         
         if node.filterContent != None:
+            assert node.repeated_aggr == False
             filterContent = self.convert_expr_to_sdqlpy(
                 node.filterContent,
                 f"{lambda_index}[0]",
@@ -1562,13 +1594,40 @@ class UnparseSDQLpyTree():
             
         node.outputDict.set_created(self)
         
-        self.writeContent(
-            f")"
-        )
+        if node.repeated_aggr != True:
+            self.writeContent(
+                f")"
+            )
     
     # =========================
     # Unparser helper functions
     
+    def traverse_to_change_codeName_when_sourceNode(self, value, newCodeName, checkingSourceNode):
+        if isinstance(value, BinaryExpressionOperator):
+            self.traverse_to_change_codeName_when_sourceNode(value.left, newCodeName, checkingSourceNode)
+            self.traverse_to_change_codeName_when_sourceNode(value.right, newCodeName, checkingSourceNode)
+        elif isinstance(value, UnaryExpressionOperator):
+            self.traverse_to_change_codeName_when_sourceNode(value.child, newCodeName, checkingSourceNode)
+        else:
+            pass
+            
+        if hasattr(value, "sourceNode") and value.sourceNode == checkingSourceNode:
+            value.codeName = newCodeName
+            value.no_source = True
+    
+    def traverse_to_change_codeName(self, value, newCodeName):
+        if value.created == True:
+            pass
+        elif isinstance(value, BinaryExpressionOperator):
+            self.traverse_to_change_codeName(value.left, newCodeName)
+            self.traverse_to_change_codeName(value.right, newCodeName)
+        elif isinstance(value, UnaryExpressionOperator):
+            self.traverse_to_change_codeName(value.child, newCodeName)
+        else:
+            pass
+            
+        if value.created == True or isinstance(value, ColumnValue):
+            value.codeName = newCodeName
     
     def convert_nkeyjoin_to_sdqlpy(self, value, l_lambda_idx, l_node_columns, r_lambda_idx = None, r_node_columns = None):
         assert isinstance(value, SDQLpyNKeyJoin)
@@ -1606,13 +1665,16 @@ class UnparseSDQLpyTree():
         expression_output = None
         match expr_tree:
             case ColumnValue():
-                assert expr_tree.sourceNode != None
-                expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
-                # Update the value after creation
-                # Add to codeNameUpdates
-                self.codeNameUpdates.append(
-                    (expr_tree)
-                )
+                if self.doing_repeated_aggr == True or expr_tree.no_source == True:
+                    expression_output = f"{expr_tree.codeName}"
+                else:
+                    assert expr_tree.sourceNode != None
+                    expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
+                    # Update the value after creation
+                    # Add to codeNameUpdates
+                    self.codeNameUpdates.append(
+                        (expr_tree)
+                    )
             case ConstantValue():
                 expression_output = self.__handle_ConstantValue(expr_tree)
             case LessThanOperator():
@@ -1634,6 +1696,8 @@ class UnparseSDQLpyTree():
             case MulOperator():
                 if expr_tree.created == False:
                     expression_output = f"{leftNode} * {rightNode}"
+                elif expr_tree.no_source == True:
+                    expression_output = f"{expr_tree.codeName}"
                 else:
                     expression_output = f"{expr_tree.sourceNode}.{expr_tree.codeName}"
             case SubOperator():
