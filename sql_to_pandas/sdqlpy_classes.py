@@ -700,12 +700,13 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         assert len(self.joinCondition) == 1
         equating, stripped_join_condition = extract_column_equating(self.joinCondition[0])
         
-        if equating == []:
-            equating = self.handle_equating_conditions_zero()
+        # if equating == []:
+        #     equating = self.handle_equating_conditions_zero()
         
         # Audit before assigning
-        equating_types = Counter(equating)
-        assert len(equating_types) == 1 and (equating_types[EqualsOperator()] > 0 or equating_types[NotEqualsOperator()] > 0)
+        if equating != []:
+            equating_types = Counter(equating)
+            assert len(equating_types) == 1 and (equating_types[EqualsOperator()] > 0 or equating_types[NotEqualsOperator()] > 0)
         
         leftColumns = expr_to_string(self.left.outputDict.flatCols())
         rightColumns = expr_to_string(self.right.outputDict.flatCols())

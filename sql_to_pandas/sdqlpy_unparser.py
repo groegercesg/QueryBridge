@@ -298,7 +298,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyRetrieveNode, SDQLpyConcatNode))
             
             # Turn a Record or JoinNode on the left into a JoinBuildNode
-            if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyAggrNode)):
+            if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)):
                 # Make it a SDQLpyJoinBuildNode
                 assert len(set([str(id(x)) for x in sdqlpy_tree.leftKeys]) - set([str(id(x)) for x in sdqlpy_tree.left.outputDict.flatCols()])) == 0
                 
@@ -309,6 +309,10 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 jbNode.addChild(sdqlpy_tree.left)
                 jbNode.setCardinality(jbNode.child.cardinality)
                 sdqlpy_tree.left = jbNode
+            elif isinstance(sdqlpy_tree.left, SDQLpyAggrNode):
+                # We shouldn't index on an aggr node
+                assert len(sdqlpy_tree.left.outputDict.flatCols()) == 1
+                pass
             else:
                 raise Exception("Unknown left of Join Node")
             
@@ -769,7 +773,14 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 leftKeys_str = [x.codeName for x in sdqlpy_tree.leftKeys]
                 rightKeys_str = [x.codeName for x in sdqlpy_tree.rightKeys]
                 
-                if leftType == ["N"] or rightType == ["N"]:
+                if leftType == [] and rightType == []:
+                    # This means its a non-equi join
+                    conditionType = set([type(cond) for cond in sdqlpy_tree.joinCondition]) 
+                    assert len(conditionType) == 1 and GreaterThanOperator in conditionType
+                    # We check that the cardinality is okay
+                    assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
+                    pass
+                elif leftType == ["N"] or rightType == ["N"]:
                     # Joining on keys that are neither Primary nor Foreign
                     # We expect them both to be record nodes and that they're of the same table
                     assert isinstance(leftNode, SDQLpyRecordNode) and isinstance(rightNode, SDQLpyRecordNode) and leftNode.tableName == rightNode.tableName
@@ -837,75 +848,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             sdqlpy_tree.addForeign(sdqlpy_tree.right.waitingForeignKeys)
             sdqlpy_tree.resolveForeignKeys()
             
-            # all_primary_keys = getPrimaryKeys(table_keys)
-            # leftKeysThatArePrimary = countKeysInSet(
-            #     sdqlpy_tree.leftKeys, all_primary_keys
-            # )
-            # rightKeysThatArePrimary = countKeysInSet(
-            #     sdqlpy_tree.rightKeys, all_primary_keys
-            # )           
-            
-            # if leftKeysThatArePrimary > rightKeysThatArePrimary:
-            #     # We should index on Left
-            #     # No swap required
-            #     pass
-            # elif leftKeysThatArePrimary < rightKeysThatArePrimary:
-            #     # We should index on Right
-            #     # Swap required
-            #     sdqlpy_tree.swapLeftAndRight()
-                
-            #     # Check the primary keys have resolved
-            #     leftKeysThatArePrimary = countKeysInSet(
-            #         sdqlpy_tree.leftKeys, all_primary_keys
-            #     )
-            #     rightKeysThatArePrimary = countKeysInSet(
-            #         sdqlpy_tree.rightKeys, all_primary_keys
-            #     )
-                
-            #     assert leftKeysThatArePrimary > rightKeysThatArePrimary
-            # else:
-            #     # number of Primary keys is the same
-            #     # We should look at "Problem Keys", these are keys that will cause issues if we try
-            #     # to use them in the "value" section of a summation
-                
-            #     leftProblems = calculateProblemColumns(sdqlpy_tree.leftKeys, sdqlpy_tree.left.outputDict, table_keys)
-            #     rightProblems = calculateProblemColumns(sdqlpy_tree.rightKeys, sdqlpy_tree.right.outputDict, table_keys)
-             
-            #     if (leftProblems == 0) and (rightProblems == 0):
-            #         # Problem keys are not an issue
-                    
-            #         # Check leftsemijoin
-            #         if sdqlpy_tree.joinType == "leftsemijoin":
-            #             sdqlpy_tree.joinType = "rightsemijoin"
-                        
-            #             sdqlpy_tree.swapLeftAndRight()
-            #             # Assert cardinality okay
-            #             #assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
-            #         else:
-            #             # Now order based on cardinality
-            #             if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
-            #                 # We should index on Left
-            #                 # No swap required
-            #                 pass
-            #             else:
-            #                 # We should index on Right
-            #                 # Swap required
-            #                 sdqlpy_tree.swapLeftAndRight()
-            #                 assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
-            #     else:
-            #         # Left or Right Problems exist
-            #         if (leftProblems > 0) and (rightProblems == 0):
-            #             # Left is an issue
-            #             # We should index on Right
-            #             # Swap Required
-            #             sdqlpy_tree.swapLeftAndRight()
-            #         elif (leftProblems == 0) and (rightProblems > 0):
-            #             # Right is an issue
-            #             # We should index on Left
-            #             # No swap required
-            #             pass
-            #         else:
-            #             raise Exception("We have problems on both Left and Right; this is an issue that cannot be resolved!")
         else:
             if isinstance(sdqlpy_tree, SDQLpyRecordNode):
                 # Add primary/foreign
@@ -1086,6 +1028,22 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             
         return sdqlpy_tree
     
+    def solveRepeatedAggrs(sdqlpy_tree):
+        # Post Order traversal: Visit Children
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            solveRepeatedAggrs(sdqlpy_tree.left)
+            solveRepeatedAggrs(sdqlpy_tree.right)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            solveRepeatedAggrs(sdqlpy_tree.child)
+        else:
+            # A leaf node
+            pass
+        
+        if isinstance(sdqlpy_tree, UnarySDQLpyNode) and isinstance(sdqlpy_tree.child, UnarySDQLpyNode):
+            if isinstance(sdqlpy_tree, SDQLpyAggrNode) and isinstance(sdqlpy_tree.child, SDQLpyAggrNode):
+                # We have detected repeated aggrs
+                pass
+    
     def solveCountDistinctOperator(sdqlpy_tree): 
         replacementDict = dict()
                
@@ -1148,6 +1106,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     wire_up_incoming_output_dicts(sdqlpy_tree, no_sumaggr_warn=True)
     # Convert SumAggrOperator to ColumnNode
     parserCreatedColumns, _ = convertSumAggrOperatorToColumnNode(sdqlpy_tree)
+    # Solve empty outputDict codenames
+    solveOutputDictEmptyCodename(sdqlpy_tree, parserCreatedColumns)
     # Order joins, using cardinality information
     sdqlpy_tree = order_joins(sdqlpy_tree, table_keys)
     # Insert JoinProbe Nodes
@@ -1166,6 +1126,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     solveCountAllOperator(sdqlpy_tree)
     # Solve empty outputDict codenames
     solveOutputDictEmptyCodename(sdqlpy_tree, parserCreatedColumns)
+    # Solve aggr after an aggr
+    solveRepeatedAggrs(sdqlpy_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
     
@@ -1445,7 +1407,7 @@ class UnparseSDQLpyTree():
         assert node.joinType in node.KNOWN_JOIN_TYPES
         # assert node.joinMethod == "hash"
         
-        assert isinstance(node.left, SDQLpyJoinBuildNode) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode)) 
+        assert isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode)) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode)) 
         
         self.writeTempContent(
             f"{createdDictName} = {rightTable}.sum(\n"
@@ -1468,14 +1430,30 @@ class UnparseSDQLpyTree():
             joinComparator = "=="
         
         # Add the other joinComparison
-        if node.comparingTree == None:
+        if node.equatingConditions != [] and node.comparingTree == None:
             self.writeTempContent(
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{leftTableRef} {joinComparator} None\n"
                 f"{TAB}else\n"
                 f"{TAB}{TAB}None"
             )
-        else:
+        elif node.equatingConditions == [] and node.comparingTree != None:
+            # A Non-equi join
+            
+            # Assign sources for the comparing condition
+            node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
+            nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+            # reset sources, so as to not cause issues later down the line
+            resetColumnValues(node.comparingTree)
+            
+            self.writeTempContent(
+                f"{TAB}if\n"
+                f"{TAB}{TAB}{nonEquiJoinCondition}\n"
+                f"{TAB}else\n"
+                f"{TAB}{TAB}None"
+            )
+            
+        elif node.equatingConditions != [] and node.comparingTree == None:
             # Assign sources for the comparing condition
             node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
             otherJoinComparison = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
@@ -1488,6 +1466,9 @@ class UnparseSDQLpyTree():
                 f"{TAB}else\n"
                 f"{TAB}{TAB}None"
             )
+        else:
+            assert node.equatingConditions == [] and node.comparingTree == None
+            raise Exception(f"Illogical format of join")
             
         node.outputDict.set_created(self)
         
