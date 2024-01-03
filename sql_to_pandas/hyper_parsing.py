@@ -258,8 +258,12 @@ def convert_explain_plan_to_x(desired_format):
     else:
         table_keys = None
     
+    supported_queries = ["1", "3" ,"4", "5", "6", "8", "9", "10", "11", "12", "16", "18", "19", "20"]
+    
+    print(f"We currently support {len(supported_queries)} out of a total of 22")
+    
     for sql_file, explain_file in combined_sql_content:
-        if sql_file.split(".")[0] not in ["1", "3" ,"4", "5", "6", "8", "9", "10", "12", "16", "18", "19", "20"]:
+        if sql_file.split(".")[0] not in supported_queries:
             continue
         
         with open(f'{explain_directory}/{explain_file}') as r:
@@ -272,6 +276,8 @@ def convert_explain_plan_to_x(desired_format):
                 table_keys)
             
             print(unparse_content)
+            assert len(unparse_content.getSDQLpyContent()) > 0
+            print(f"Generated {len(unparse_content.getSDQLpyContent())} lines of SDQLpy code")
     
 def parse_explain_plans():
     query_directory = 'sql_to_pandas/tpch_queries'
@@ -1046,4 +1052,4 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
 #generate_hyperdb_explains()
 #inspect_explain_plans()
 #parse_explain_plans()
-#convert_explain_plan_to_x("sdqlpy")
+convert_explain_plan_to_x("sdqlpy")
