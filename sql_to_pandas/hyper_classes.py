@@ -1,5 +1,5 @@
 # Classes for HyperDB
-SUPPORTED_HYPER_OPERATORS = {'leftsemijoin', 'map', 'sort', 'join', 'groupby', 'leftantijoin', 'groupjoin', 'rightsemijoin', 'executiontarget', 'select', 'rightantijoin', 'tablescan', 'explicitscan'}
+SUPPORTED_HYPER_OPERATORS = {'leftsemijoin', 'map', 'sort', 'join', 'groupby', 'leftantijoin', 'groupjoin', 'rightsemijoin', 'executiontarget', 'select', 'rightantijoin', 'tablescan', 'explicitscan', 'leftsinglejoin'}
 
 class HyperBaseNode():
     def __init__(self):

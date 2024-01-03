@@ -143,6 +143,9 @@ def create_hyper_operator_tree(explain_json, all_nodes: dict):
         operator_class = joinNode("inner", explain_json["method"], explain_json["condition"])
     elif operator_name in ["leftsemijoin", "leftantijoin", "rightsemijoin", "rightantijoin"]:
         operator_class = joinNode(operator_name, explain_json["method"], explain_json["condition"])
+    elif operator_name == "leftsinglejoin":
+        # Remap a left singlejoin to an inner join
+        operator_class = joinNode("inner", explain_json["method"], explain_json["condition"])
     elif operator_name == "explicitscan":
         operator_class = explicitscanNode(explain_json["mapping"])
     else:
@@ -1052,4 +1055,4 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
 #generate_hyperdb_explains()
 #inspect_explain_plans()
 #parse_explain_plans()
-convert_explain_plan_to_x("sdqlpy")
+#convert_explain_plan_to_x("sdqlpy")
