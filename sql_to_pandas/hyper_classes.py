@@ -77,6 +77,16 @@ class JoinBaseNode(HyperBaseNode):
         self.left = None
         self.right = None
         self.joinType = joinType
+        self.leftKeys = []
+        self.rightKeys = []
+        
+    def setLeftKeys(self, incomingKeys: list) -> None:
+        assert self.leftKeys == []
+        self.leftKeys = incomingKeys
+        
+    def setRightKeys(self, incomingKeys: list) -> None:
+        assert self.rightKeys == []
+        self.rightKeys = incomingKeys
     
     def addLeft(self, left: HyperBaseNode):
         assert self.left == None

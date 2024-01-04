@@ -49,13 +49,16 @@ class JoinNode(BinaryBaseNode):
         'leftsemijoin', 'rightsemijoin',
         'leftantijoin', 'rightantijoin'
     ])
-    def __init__(self, joinMethod, joinType, joinCondition):
+    def __init__(self, joinMethod, joinType, joinCondition, leftKeys, rightKeys):
         super().__init__()
         assert joinMethod in self.KNOWN_JOIN_METHODS, f"{joinMethod} is not in the known join methods"
         self.joinMethod = joinMethod
         assert joinType in self.KNOWN_JOIN_TYPES, f"{joinType} is not in the known join types"
         self.joinType = joinType
         self.joinCondition = joinCondition
+        assert isinstance(leftKeys, list) and isinstance(rightKeys, list)
+        self.leftKeys = leftKeys
+        self.rightKeys = rightKeys
         
 class SortNode(UnaryBaseNode):
     def __init__(self, sortCriteria):

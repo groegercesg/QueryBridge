@@ -56,9 +56,6 @@ def gather_operators(explain_node):
     if has_below == False and explain_node["operator"] != "tablescan":
         raise Exception(f"New leaf node discovered: { explain_node['operator'] }")
     
-    if explain_node["operator"] == "select":
-        print("a")
-    
     operators.add(explain_node["operator"])
     return operators
 
@@ -219,11 +216,11 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
         print(f"Converted Universal Plan Tree of {query_name} into Pandas Tree")
 
         # Unparse Pandas Tree
-        try:
-            unparse_content = UnparsePandasTree(op_tree)
-        except:
-            print(f"Pandas Generation for Query '{query_name}' Failed.")
-            raise Exception("Failed Pandas Generation")
+        # try:
+        unparse_content = UnparsePandasTree(op_tree)
+        # except:
+        #     print(f"Pandas Generation for Query '{query_name}' Failed.")
+        #     raise Exception("Failed Pandas Generation")
     elif output_format == "sdqlpy":
         # Convert Universal Plan Tree to SDQLpy Tree
         sdqlpy_tree = convert_universal_to_sdqlpy(op_tree, table_keys)
@@ -279,8 +276,16 @@ def convert_explain_plan_to_x(desired_format):
                 table_keys)
             
             print(unparse_content)
-            assert len(unparse_content.getSDQLpyContent()) > 0
-            print(f"Generated {len(unparse_content.getSDQLpyContent())} lines of SDQLpy code")
+            content_size = 0
+            if desired_format == "pandas":
+                content_size = len(unparse_content.getPandasContent())
+            elif desired_format == "sdqlpy":
+                content_size = len(unparse_content.getSDQLpyContent())
+            else:
+                raise Exception("Unrecognised desired format")
+            
+            assert content_size > 0
+            print(f"Generated {content_size} lines of SDQLpy code")
     
 def parse_explain_plans():
     query_directory = 'sql_to_pandas/tpch_queries'
@@ -493,7 +498,9 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
                 new_op_node = JoinNode(
                     op_node.joinMethod,
                     op_node.joinType,
-                    op_node.joinCondition
+                    op_node.joinCondition,
+                    op_node.leftKeys,
+                    op_node.rightKeys
                 )
             case sortNode():
                 sort_node = SortNode(
@@ -527,7 +534,9 @@ def transform_hyper_to_universal_plan(op_tree: HyperBaseNode) -> UniversalBaseNo
                     JoinNode(
                         None,
                         op_node.joinType,
-                        equal_left_right_keys(op_node.leftKey, op_node.rightKey)
+                        equal_left_right_keys(op_node.leftKey, op_node.rightKey),
+                        op_node.leftKey,
+                        op_node.rightKey
                     )
                 )
                 assert hasattr(op_node, "cardinality")
@@ -887,6 +896,64 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
                 raise Exception(f"Unknown aggregation operator, it was {aggr_op['operation']}")        
         return newAggregateOperations
     
+    def determine_join_left_right_keys(op_node: HyperBaseNode, left_ius: dict, right_ius: dict) -> None:
+        # Set the left and right keys for the JoinNode
+        determined_left_keys = []
+        determined_right_keys = []
+        
+        # Get all join keys - these are things not in the following list
+        notJoinKeyTypes = set([type(x) for x in [AndOperator(), OrOperator(), EqualsOperator(), NotEqualsOperator(), GreaterThanEqOperator(),
+                           GreaterThanOperator(), LessThanEqOperator(), LessThanOperator(), ConstantValue("", "String")]])
+        def traverse_to_surface_keys(joinCondition: ExpressionBaseNode, initial_keys = []) -> list:
+            gathering_surfaces = []
+            if type(joinCondition) not in notJoinKeyTypes:
+                pass
+            elif isinstance(joinCondition, BinaryExpressionOperator): 
+                left_surfaces = traverse_to_surface_keys(joinCondition.left, gathering_surfaces)
+                right_surfaces = traverse_to_surface_keys(joinCondition.right, gathering_surfaces)
+                gathering_surfaces.extend(left_surfaces)
+                gathering_surfaces.extend(right_surfaces)
+            elif isinstance(joinCondition, UnaryExpressionOperator):
+                child_surfaces = traverse_to_surface_keys(joinCondition.child, gathering_surfaces)
+                gathering_surfaces.extend(child_surfaces)
+            else:
+                pass    
+            
+            if type(joinCondition) not in notJoinKeyTypes:
+                if isinstance(joinCondition, InSetOperator):
+                    gathering_surfaces.append(joinCondition.child)
+                elif isinstance(joinCondition, IntervalNotionOperator):
+                    gathering_surfaces.append(joinCondition.value)
+                elif isinstance(joinCondition, LookupOperator):
+                    gathering_surfaces.extend(joinCondition.values)
+                else:
+                    gathering_surfaces.append(joinCondition)
+                
+            return gathering_surfaces
+            
+        all_join_keys = traverse_to_surface_keys(op_node.joinCondition)
+        
+        # Double check correct - there should be none of the notJoinKey types in the output
+        assert (set([type(x) for x in all_join_keys]).intersection(notJoinKeyTypes)) == set()
+         
+        # Filter using IU information for left and right
+        leftIUColumnIDs = [id(x) for x in left_ius.values()]
+        rightIUColumnIDs = [id(x) for x in right_ius.values()]
+        
+        for join_key in all_join_keys:
+            if id(join_key) in leftIUColumnIDs:
+                determined_left_keys.append(join_key)
+            elif id(join_key) in rightIUColumnIDs:
+                determined_right_keys.append(join_key)
+            else:
+                raise Exception("Join Key not found in either left or right")
+    
+        assert len(determined_left_keys) > 0 and len(determined_right_keys) > 0
+    
+        # Avoid duplicates
+        op_node.setLeftKeys(list(set(determined_left_keys)))
+        op_node.setRightKeys(list(set(determined_right_keys)))
+    
     def visit_solve_iu_references(op_node: HyperBaseNode , iu_references: dict):
         # Visit Children
         if isinstance(op_node, JoinBaseNode) and op_node.isJoinNode == True:
@@ -969,6 +1036,8 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
         elif isinstance(op_node, joinNode):
             newJoinConditionList = hyper_expression_parsing(op_node.joinCondition, iu_references)
             op_node.joinCondition = newJoinConditionList
+            # Determine if the keys come from the left or right
+            determine_join_left_right_keys(op_node, left_dict, right_dict)
         elif isinstance(op_node, sortNode):
             newSortCriteria = []
             for sortCriterion in op_node.sortCriteria:
@@ -1052,7 +1121,7 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
     iu_references = dict()
     visit_solve_iu_references(op_tree, iu_references)
 
-#generate_hyperdb_explains()
-#inspect_explain_plans()
+generate_hyperdb_explains()
+inspect_explain_plans()
 #parse_explain_plans()
-#convert_explain_plan_to_x("sdqlpy")
+convert_explain_plan_to_x("sdqlpy")

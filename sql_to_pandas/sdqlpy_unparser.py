@@ -132,7 +132,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 new_op_tree = SDQLpyJoinNode(
                     op_tree.joinMethod,
                     op_tree.joinType,
-                    op_tree.joinCondition
+                    op_tree.joinCondition,
+                    op_tree.leftKeys,
+                    op_tree.rightKeys
                 )
             case FilterNode():
                 new_op_tree = SDQLpyFilterNode()
@@ -293,8 +295,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         
         # Work on current
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
-            sdqlpy_tree.do_join_key_separation()
-            
             assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyRetrieveNode, SDQLpyConcatNode))
             
             # Turn a Record or JoinNode on the left into a JoinBuildNode
@@ -535,9 +535,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     raise Exception()
         elif (leftNode != None) and (rightNode != None):
             if isinstance(sdqlpy_tree, SDQLpyJoinNode):
-                # Run the join key separation now
-                sdqlpy_tree.do_join_key_separation()
-                
                 # Catch more than 1 keys for a join, turn into a SDQLpyNKeyJoin Node
                 if (len(sdqlpy_tree.leftKeys) > 1) or (len(sdqlpy_tree.rightKeys) > 1):
                     assert len(sdqlpy_tree.leftKeys) == len(sdqlpy_tree.rightKeys)
@@ -755,10 +752,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         
         # Run on current node (sdqlpy_tree)
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
-            sdqlpy_tree.do_join_key_separation()
-            
-            # Check the cardinality of left and right
-            # Left should be <= right, otherwise we need to swap
+            # Check the cardinality information for left and right exists
             assert sdqlpy_tree.left.cardinality != None
             assert sdqlpy_tree.right.cardinality != None
             
@@ -782,11 +776,17 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     pass
                 elif leftType == ["N"] or rightType == ["N"]:
                     # Joining on keys that are neither Primary nor Foreign
-                    # We expect them both to be record nodes and that they're of the same table
-                    assert isinstance(leftNode, SDQLpyRecordNode) and isinstance(rightNode, SDQLpyRecordNode) and leftNode.tableName == rightNode.tableName
-                    # Double check that cardinalities are the same and leave it as we found it
-                    assert leftNode.cardinality == rightNode.cardinality
-                    pass
+                    if isinstance(leftNode, SDQLpyRecordNode) and isinstance(rightNode, SDQLpyRecordNode):
+                        # We expect them both to be record nodes and that they're of the same table
+                        assert leftNode.tableName == rightNode.tableName
+                        # Double check that cardinalities are the same and leave it as we found it
+                        assert leftNode.cardinality == rightNode.cardinality
+                    else:
+                        # That it's a non-equi join, verify that it is - by looking at the operators
+                        joinConditionTypes = set([type(x) for x in sdqlpy_tree.joinCondition])
+                        nonEquiJoinTypes = set([type(x) for x in [GreaterThanEqOperator(), GreaterThanOperator(), LessThanEqOperator(), LessThanOperator()]])
+                        # Subset - all items of A are present in B
+                        assert joinConditionTypes.issubset(nonEquiJoinTypes)
                 elif "P" in leftType and "P" in rightType:
                     # Both left and right are primary
                     # Prefer the one with lower cardinality
@@ -813,8 +813,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     # Check that all of left are "F" or "N"
                     leftCounter = Counter(leftType)
                     assert (leftCounter["F"] > 0 or leftCounter["N"] > 0) and (leftCounter["P"] == 0)
-                    # And, that there's only 1 P in right and the rest are F
-                    assert Counter(rightType)["P"] == 1 and Counter(rightType)["F"] == len(rightType) - 1
+                    # And, that there's only 1 P in right and the rest are F or N
+                    assert Counter(rightType)["P"] == 1 and ((Counter(rightType)["F"] == len(rightType) - 1) or (Counter(rightType)["N"] == len(rightType) - 1))
                     
                     # We should index on Right
                     # Swap required

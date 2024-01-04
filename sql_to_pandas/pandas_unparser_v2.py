@@ -312,7 +312,9 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
             new_op_tree = PandasJoinNode(
                 updateJoinMethod,
                 op_tree.joinType,
-                op_tree.joinCondition
+                op_tree.joinCondition,
+                op_tree.leftKeys,
+                op_tree.rightKeys
             )
             
             # Handle join, filters
@@ -542,7 +544,7 @@ class PandasJoinNode(BinaryPandasNode):
         'leftsemijoin', 'rightsemijoin', 
         'leftantijoin', 'rightantijoin'
     ])
-    def __init__(self, joinMethod, joinType, joinCondition):
+    def __init__(self, joinMethod, joinType, joinCondition, incomingLeftKeys, incomingRightKeys):
         super().__init__()
         if (joinMethod == 'bnl') and (joinType != 'inner'):
             raise Exception("Trying to do a BNL ('Block-nested loop) join that's not an inner")
@@ -554,6 +556,8 @@ class PandasJoinNode(BinaryPandasNode):
         joinCondition = self.__splitConditionsIntoList(joinCondition)
         assert isinstance(joinCondition, list)
         self.joinCondition = joinCondition
+        self.leftKeys = []
+        self.rightKeys = []
         
     def __splitConditionsIntoList(self, joinCondition: ExpressionBaseNode) -> list[ExpressionBaseNode]:
         newConditions = []
@@ -608,27 +612,6 @@ def join_overlap_column_renaming_list(options: list[ExpressionBaseNode], columnO
         if col.codeName in [x.codeName for x in columnOverlap] and not col.codeName in yGivenCols:
             yGivenCols.add(col.codeName)
             col.codeName = f"{col.codeName}_y"
-
-def do_join_key_separation(node: JoinNode):
-    leftValues = []
-    rightValues = []
-    for x in node.joinCondition:
-        if id(x.left) in [id(col) for col in node.left.columns]:
-            leftValues.append(x.left)
-        elif id(x.left) in [id(col) for col in node.right.columns]:
-            rightValues.append(x.left)
-        else:
-            raise Exception(f"Couldn't find the x.left value in either of the left and right tables!")
-        
-        if id(x.right) in [id(col) for col in node.left.columns]:
-            leftValues.append(x.right)
-        elif id(x.right) in [id(col) for col in node.right.columns]:
-            rightValues.append(x.right)
-        else:
-            raise Exception(f"Couldn't find the x.right value in either of the left and right tables!")
-        
-    assert len(leftValues) == len(rightValues) == len(node.joinCondition)
-    return (leftValues, rightValues)
 
 # Unparser
 class UnparsePandasTree():
@@ -1000,25 +983,20 @@ class UnparsePandasTree():
                 assert node.joinType == "inner"
                 node.joinType = "non-equi"
                 
-        if node.joinMethod != "bnl":                
-            leftKeys, rightKeys = do_join_key_separation(node)
-            
-            leftKeysString = [self.__getPandasRepresentationForColumn(x) for x in leftKeys]
-            rightKeysString = [self.__getPandasRepresentationForColumn(x) for x in rightKeys]
-            
-            assert node.checkLeftRightKeysValid(leftKeysString, rightKeysString)
-        else:
-            # Initialise as sets for proper form
-            leftKeys, rightKeys = set(), set()
+        # Create the string representations for the keys
+        leftKeysString = [self.__getPandasRepresentationForColumn(x) for x in node.leftKeys]
+        rightKeysString = [self.__getPandasRepresentationForColumn(x) for x in node.rightKeys]
+        
+        assert node.checkLeftRightKeysValid(leftKeysString, rightKeysString)
                
         # And set the table columns
         match node.joinType:
             case "inner":
                 # Check for column overlap at the start
-                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))
+                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(node.leftKeys) | set(node.rightKeys))
                 if columnOverlap:
                     join_overlap_column_renaming(node, columnOverlap)
-                    assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
+                    assert len(node.left.columns.intersection(node.right.columns) - set(set(node.leftKeys) | set(node.rightKeys))) == 0
                     
                 self.writeContent(
                     f"{createdDataFrameName} = {leftTable}.merge({rightTable}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'inner'}', sort={joinMethod})"
@@ -1068,10 +1046,10 @@ class UnparsePandasTree():
                 assert len(node.joinCondition) == 1
                 
                 # Check for column overlap at the start
-                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))
+                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(node.leftKeys) | set(node.rightKeys))
                 if columnOverlap:
                     join_overlap_column_renaming(node, columnOverlap)
-                    assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
+                    assert len(node.left.columns.intersection(node.right.columns) - set(set(node.leftKeys) | set(node.rightKeys))) == 0
                 
                 joinCondition = convert_expression_operator_to_pandas(node.joinCondition[0], createdDataFrameName)
                 self.writeContent(
@@ -1083,10 +1061,10 @@ class UnparsePandasTree():
                 node.columns = node.left.columns.union(node.right.columns)
             case "outer":
                 # Check for column overlap at the start
-                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))
+                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(node.leftKeys) | set(node.rightKeys))
                 if columnOverlap:
                     join_overlap_column_renaming(node, columnOverlap)
-                    assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
+                    assert len(node.left.columns.intersection(node.right.columns) - set(set(node.leftKeys) | set(node.rightKeys))) == 0
                 
                 self.writeContent(
                     f"{createdDataFrameName} = {leftTable}.merge({rightTable}, left_on={leftKeysString}, right_on={rightKeysString}, how='{'outer'}', sort={joinMethod})"
@@ -1094,13 +1072,14 @@ class UnparsePandasTree():
                 node.columns = node.left.columns.union(node.right.columns)
             case "bnl":
                 # Check for column overlap at the start
-                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))
+                columnOverlap = node.left.columns.intersection(node.right.columns) - set(set(node.leftKeys) | set(node.rightKeys))
                 if columnOverlap:
                     join_overlap_column_renaming(node, columnOverlap)
-                    assert len(node.left.columns.intersection(node.right.columns) - set(set(leftKeys) | set(rightKeys))) == 0
+                    assert len(node.left.columns.intersection(node.right.columns) - set(set(node.leftKeys) | set(node.rightKeys))) == 0
                 
                 defaultBlockSize = 10
                 intermediateDataframeName = "joined_block"
+                assert len(node.joinCondition) == 1
                 joinCondition = convert_expression_operator_to_pandas(node.joinCondition[0], intermediateDataframeName)
                 self.writeContent(
                     f"result_blocks = []\n"

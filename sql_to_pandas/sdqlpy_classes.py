@@ -363,7 +363,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         'inner', 'rightsemijoin', 'leftsemijoin', 'rightantijoin', 'leftantijoin', 'outer'
     ])
     
-    def __init__(self, joinMethod, joinType, incomingJoinCondition):
+    def __init__(self, joinMethod, joinType, incomingJoinCondition, incomingLeftKeys, incomingRightKeys):
         super().__init__()
         if joinMethod == None:
             joinMethod = "merge"
@@ -371,7 +371,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.joinMethod = joinMethod
         assert joinType in self.KNOWN_JOIN_TYPES, f"{joinType} is not in the known join types"
         self.joinType = joinType
-        parsedJoinCondition = self.__splitConditionsIntoList(incomingJoinCondition)
+        parsedJoinCondition = [incomingJoinCondition]
         assert isinstance(parsedJoinCondition, list) and len(parsedJoinCondition) > 0
         self.joinCondition = parsedJoinCondition
         self.outputDict = None
@@ -381,6 +381,9 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         
         self.equatingConditions = []
         self.comparingTree = None
+        
+        self.leftKeys = incomingLeftKeys
+        self.rightKeys = incomingRightKeys
         
     def update_update_sum(self, newValue):
         assert isinstance(newValue, bool)
@@ -470,113 +473,6 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                 self.outputDict.keys.pop(key_pos)
             for val_pos in removeValues:
                 self.outputDict.values.pop(val_pos)
-        
-    def __splitConditionsIntoList(self, joinCondition: ExpressionBaseNode) -> list[ExpressionBaseNode]:
-        # newConditions = []
-        # joiningNodes = [AndOperator, OrOperator]
-        # currentJoinCondition = joinCondition
-        # while any(isinstance(currentJoinCondition, x) for x in joiningNodes):
-        #     newConditions.append(currentJoinCondition.left)
-        #     currentJoinCondition = currentJoinCondition.right
-        # newConditions.append(currentJoinCondition)
-        # # At this stage, we should scoop up any postJoinFilters
-        # self.postJoinFilters = list(filter(lambda x: isinstance(x, OrOperator), newConditions))
-        # realNewConditions = list(filter(lambda x: not isinstance(x, OrOperator), newConditions))
-        
-        # # Extract a 'LessThanOperator' from a list of >= 1 EqualsOperator
-        # operatorCount = Counter(realNewConditions)
-        # non_equi_join_operators = [LessThanOperator(), LessThanEqOperator(), GreaterThanOperator()]
-        # non_equi_join_operator_types = [LessThanOperator, LessThanEqOperator, GreaterThanOperator]
-        # if (operatorCount[EqualsOperator()] > 0) and any(operatorCount[x] > 0 for x in non_equi_join_operators):
-        #     self.postJoinFilters.extend(list(filter(lambda x: any(isinstance(x, op) for op in non_equi_join_operator_types), realNewConditions)))
-        #     realNewConditions = list(filter(lambda x: not any(isinstance(x, op) for op in non_equi_join_operator_types), realNewConditions))
-        #     assert len(realNewConditions) > 0
-            
-        # # Fix postJoinFilters
-        # if len(self.postJoinFilters) == 0:
-        #     # Skip if no 'postJoinFilters', set as None
-        #     self.postJoinFilters = None
-        # elif len(self.postJoinFilters) == 1:
-        #     self.postJoinFilters = self.postJoinFilters[0]
-        # else:
-        #     raise Exception(f"Length of postJoinFilters wasn't 1, we should join it with and/or. Examine context to decide which")
-        
-        return [joinCondition]
-    
-    def do_join_key_separation(self):
-        def expr_to_string(columns: list) -> list:
-            returningList = []
-            for col in columns:
-                returningList.append(
-                    col.codeName
-                )
-            return returningList
-                
-        def gather_column_or_created(joinCondition) -> list:
-            gathering_items = []
-            if joinCondition.created == True:
-                # Don't go any lower, as it's already been created
-                pass  
-            elif isinstance(joinCondition, BinaryExpressionOperator):
-                left_items = gather_column_or_created(joinCondition.left)
-                gathering_items.extend(left_items)
-                right_items = gather_column_or_created(joinCondition.right)
-                gathering_items.extend(right_items)
-            elif isinstance(joinCondition, UnaryExpressionOperator):
-                child_items = gather_column_or_created(joinCondition.child)
-                gathering_items.extend(child_items)
-            else:
-                # A leaf node
-                pass
-            
-            # Add item
-            if isinstance(joinCondition, BinaryExpressionOperator):
-                if (
-                    (isinstance(joinCondition.left, ColumnValue) or joinCondition.left.created == True) and 
-                    (isinstance(joinCondition.right, ColumnValue) or joinCondition.right.created == True)
-                ):
-                    # Add both
-                    gathering_items.append(joinCondition.left)
-                    gathering_items.append(joinCondition.right)
-            
-            return gathering_items
-        
-        leftColumns = expr_to_string(self.left.outputDict.flatCols())
-        rightColumns = expr_to_string(self.right.outputDict.flatCols())
-        self.leftKeys, self.rightKeys = [], []
-        
-        # Gather all ColumnValues/Things that are created
-        gathered_items = []
-        for x in self.joinCondition:
-            gathered_items.extend(
-                gather_column_or_created(x)
-            )
-            
-        # Remove duplicates
-        gathered_items = list(set(gathered_items))
-        
-        bothTracker = defaultdict(int)
-        
-        # Filter them into the left/rightKeys
-        for item in gathered_items:
-            if item.codeName in leftColumns and item.codeName in rightColumns:
-                # In both!
-                if bothTracker[item.codeName] == 0:
-                    # First time, do left
-                    bothTracker[item.codeName] += 1
-                    self.leftKeys.append(item)
-                elif bothTracker[item.codeName] == 1:
-                    # Second time, do right
-                    bothTracker[item.codeName] += 1
-                    self.rightKeys.append(item)
-                else:
-                    raise Exception("Trying to do a bothTracker replace with too many (>2)")
-            elif item.codeName in leftColumns:
-                self.leftKeys.append(item)
-            elif item.codeName in rightColumns:
-                self.rightKeys.append(item)
-            else:
-                raise Exception(f"Couldn't find value ({item.codeName}) in either left or right")
 
     def add_third_node(self, node):
         assert self.third_node == None
@@ -763,11 +659,15 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         new_right = self.left
         new_left = self.right
         
+        # Swap the keys as well
+        oldLeftKeys = self.leftKeys
+        oldRightKeys = self.rightKeys
+        
         self.left = new_left
         self.right = new_right
         
-        # Run do_join_key_separation again
-        self.do_join_key_separation()
+        self.leftKeys = oldRightKeys
+        self.rightKeys = oldLeftKeys
         
     def resolveForeignKeys(self):
         # Also do completedTables
