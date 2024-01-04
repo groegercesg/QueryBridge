@@ -206,6 +206,15 @@ class BinarySDQLpyNode(PipelineBreakerNode):
             for idx, val in enumerate(self.joinCondition):
                 self.joinCondition[idx].left = self.replaceInExpression(val.left, self.replacementDict, no_sumaggr_warn)
                 self.joinCondition[idx].right = self.replaceInExpression(val.right, self.replacementDict, no_sumaggr_warn)
+                
+    def rd_leftRightKeys(self, no_sumaggr_warn):
+        if hasattr(self, "leftKeys"):
+            for idx, val in enumerate(self.leftKeys):
+                self.leftKeys[idx] = self.replaceInExpression(val, self.replacementDict, no_sumaggr_warn)
+        
+        if hasattr(self, "rightKeys"):
+            for idx, val in enumerate(self.rightKeys):
+                self.rightKeys[idx] = self.replaceInExpression(val, self.replacementDict, no_sumaggr_warn)
 
 # Classes for Nodes
 class SDQLpyRecordNode(LeafSDQLpyNode):
@@ -453,6 +462,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.rd_outputDict(no_sumaggr_warn)
         self.rd_filterContent(no_sumaggr_warn)
         self.rd_joinCondition(no_sumaggr_warn)
+        self.rd_leftRightKeys(no_sumaggr_warn)
         
         # Check for topNode and filter based on IDs
         if self.topNode == True:
@@ -473,6 +483,11 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                 self.outputDict.keys.pop(key_pos)
             for val_pos in removeValues:
                 self.outputDict.values.pop(val_pos)
+                
+            # Order it as well
+            ordering = {k:v for v,k in enumerate(self.topNodeIds)}
+            self.outputDict.keys.sort(key = lambda x : ordering.get(id(x), -1))
+            self.outputDict.values.sort(key = lambda x : ordering.get(id(x), -1))
 
     def add_third_node(self, node):
         assert self.third_node == None

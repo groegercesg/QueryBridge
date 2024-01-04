@@ -800,10 +800,10 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                         sdqlpy_tree.swapLeftAndRight()
                         assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
                 elif "P" in leftType:
-                    # Check that all of right are "F"
-                    assert len(set(rightType)) == 1 and set(rightType) == set("F")
-                    # That there's only 1 P in left and the rest are F
-                    assert Counter(leftType)["P"] == 1 and Counter(leftType)["F"] == len(leftType) - 1
+                    # Check that all of right are "F" or "N"
+                    assert len(set(rightType)) > 0 and Counter(rightType)["P"] == 0
+                    # That there's only 1 P in left and the rest are F or N
+                    assert Counter(leftType)["P"] == 1 and (Counter(leftType)["F"] + Counter(leftType)["N"] == len(leftType) - 1)
                     
                     # Index on Left
                     # We should index on Left
@@ -814,7 +814,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     leftCounter = Counter(leftType)
                     assert (leftCounter["F"] > 0 or leftCounter["N"] > 0) and (leftCounter["P"] == 0)
                     # And, that there's only 1 P in right and the rest are F or N
-                    assert Counter(rightType)["P"] == 1 and ((Counter(rightType)["F"] == len(rightType) - 1) or (Counter(rightType)["N"] == len(rightType) - 1))
+                    assert Counter(rightType)["P"] == 1 and (Counter(rightType)["F"] + Counter(rightType)["N"] == len(rightType) - 1)
                     
                     # We should index on Right
                     # Swap required
@@ -1730,6 +1730,8 @@ class UnparseSDQLpyTree():
                 expression_output = self.__handle_SDQLpyFirstIndex(expr_tree, leftNode, rightNode)
             case SDQLpyStartsWith():
                 expression_output = self.__handle_SDQLpyStartsWith(expr_tree, leftNode, rightNode)
+            case SDQLpyEndsWith():
+                expression_output = self.__handle_SDQLpyEndsWith(expr_tree, leftNode, rightNode)
             case CaseOperator():
                 expression_output = self.__handle_CaseOperator(expr_tree)
             case _: 
@@ -1751,20 +1753,35 @@ class UnparseSDQLpyTree():
     def __handle_SDQLpyStartsWith(self, expr: SDQLpyStartsWith, leftValue: str, rightValue: str) -> str:
         return f"startsWith({leftValue}, {rightValue})"
     
+    def __handle_SDQLpyEndsWith(self, expr: SDQLpyEndsWith, leftValue: str, rightValue: str) -> str:
+        return f"endsWith({leftValue}, {rightValue})"
+    
     def __handle_ExtractYearOperator(self, expr: ExtractYearOperator):
         childValue = self.__convert_expression_operator_to_sdqlpy(expr.child)
         return f"extractYear({childValue})"
     
     def __handle_LikeOperator(self, expr: LikeOperator):
         # Process the comparator
-        if expr.comparator.value.count("%") == 1 and expr.comparator.value[-1] == "%":
-            # startsWith(p[0].p_type, medpol) == False
-            expr.comparator.value = expr.comparator.value.replace("%", "")
+        if expr.comparator.value.count("%") == 1:
+            if expr.comparator.value[-1] == "%":
+                # startsWith(p[0].p_type, medpol) == False
+                expr.comparator.value = expr.comparator.value.replace("%", "")
+                
+                startsWith = SDQLpyStartsWith()
+                startsWith.addLeft(expr.value)
+                startsWith.addRight(expr.comparator)
+                return self.__convert_expression_operator_to_sdqlpy(startsWith)
+            elif expr.comparator.value[0] == "%":
+                # endsWith(p[0].p_type, brass) == False
+                expr.comparator.value = expr.comparator.value.replace("%", "")
+                
+                startsWith = SDQLpyEndsWith()
+                startsWith.addLeft(expr.value)
+                startsWith.addRight(expr.comparator)
+                return self.__convert_expression_operator_to_sdqlpy(startsWith)
             
-            startsWith = SDQLpyStartsWith()
-            startsWith.addLeft(expr.value)
-            startsWith.addRight(expr.comparator)
-            return self.__convert_expression_operator_to_sdqlpy(startsWith)
+            else:
+                raise Exception("Unexpected format of Universal LikeOperator expression")
         elif expr.comparator.value.count("%") == 2:
             assert isinstance(expr.comparator, ConstantValue)
             assert isinstance(expr.value, ColumnValue)

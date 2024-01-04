@@ -330,6 +330,10 @@ class SDQLpyFirstIndex(BinaryExpressionOperator):
 class SDQLpyStartsWith(BinaryExpressionOperator):
     def __init__(self):
         super().__init__()
+        
+class SDQLpyEndsWith(BinaryExpressionOperator):
+    def __init__(self):
+        super().__init__()
 
 class SDQLpyLambdaReference(ValueNode):
     def __init__(self, value):
