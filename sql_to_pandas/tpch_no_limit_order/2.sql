@@ -23,7 +23,7 @@ where
         and r_name = 'EUROPE'
         and ps_supplycost = (
                 select
-                        ps_supplycost
+                        sum(ps_supplycost)
                 from
                         partsupp,
                         supplier,
