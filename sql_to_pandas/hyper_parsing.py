@@ -258,7 +258,7 @@ def convert_explain_plan_to_x(desired_format):
     else:
         table_keys = None
     
-    supported_queries = ["1", "3" ,"4", "5", "6", "8", "9", "10", "11", "12", "16", "18", "19", "20"]
+    supported_queries = ["1", "2", "3" ,"4", "5", "6", "8", "9", "10", "11", "12", "16", "18", "19", "20"]
     
     print(f"We currently support {len(supported_queries)} out of a total of 22")
     
@@ -1121,7 +1121,7 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
     iu_references = dict()
     visit_solve_iu_references(op_tree, iu_references)
 
-# generate_hyperdb_explains()
-# inspect_explain_plans()
-# #parse_explain_plans()
-# convert_explain_plan_to_x("sdqlpy")
+generate_hyperdb_explains()
+inspect_explain_plans()
+#parse_explain_plans()
+convert_explain_plan_to_x("pandas")
