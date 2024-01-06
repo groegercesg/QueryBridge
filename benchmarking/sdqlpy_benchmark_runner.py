@@ -30,7 +30,7 @@ def bench_runner(iterations, func, args, query_columns, data_write_path):
     
     if isinstance(results, float):
         assert len(query_columns) == 1
-        result_dict[query_columns[0]] = results
+        result_dict[query_columns[0]] = [results]
     elif isinstance(results, fastd):
         temp_location = 'temporary_fastd_data.txt'
         

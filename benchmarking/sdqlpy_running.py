@@ -80,7 +80,7 @@ from sdqlpy_benchmark_runner import bench_runner
 
 print("Starting to Load Data")
 
-dataset_path = "/home/callum/Documents/Academia/University/Year4/PROJ/dataframe-sql-benchmark/tpch-dbgen/"
+dataset_path = "/home/callum/Documents/Academia/University/Year4/PROJ/dataframe-sql-benchmark/data_storage/"
 
 lineitem_type = {record({"l_orderkey": int, "l_partkey": int, "l_suppkey": int, "l_linenumber": int, "l_quantity": float, "l_extendedprice": float, "l_discount": float, "l_tax": float, "l_returnflag": string(1), "l_linestatus": string(1), "l_shipdate": date, "l_commitdate": date, "l_receiptdate": date, "l_shipinstruct": string(25), "l_shipmode": string(10), "l_comment": string(44), "l_NA": string(1)}): bool}
 customer_type = {record({"c_custkey": int, "c_name": string(25), "c_address": string(40), "c_nationkey": int, "c_phone": string(15), "c_acctbal": float, "c_mktsegment": string(10), "c_comment": string(117), "c_NA": string(1)}): bool}
@@ -137,8 +137,8 @@ sdqlpy_init(1, 2)"""
         query_results = json.load(f)
     
     # Remove data_json and query_file
-    os.remove(data_json_path)
-    os.remove(overall_query_path)
+    # os.remove(data_json_path)
+    # os.remove(overall_query_path)
     
     # Return Query results
     return query_results

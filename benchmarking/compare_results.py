@@ -60,7 +60,7 @@ def get_columns(query):
         split_query[i] = str(split_query[i]).replace(" ", "")
     return split_query
 
-def compare(query_file, pandas_result, sql_result, decimal_places, order_checking):
+def compare(query_file, exec_result, sql_result, decimal_places, order_checking):
     # Compare Result
     compare_result = True
     
@@ -79,21 +79,39 @@ def compare(query_file, pandas_result, sql_result, decimal_places, order_checkin
         columns[i] = str(str(columns[i]).replace("(", "")).replace(")", "")
     
     # Convert Pandas indexes to not be indexes, and instead be normal columns
-    pandas_result = pandas_result.reset_index()
-        
-    # Check if same number of columns    
-    if len(columns) == len(pandas_result.columns):
+    if isinstance(exec_result, pd.DataFrame):
+        exec_result = exec_result.reset_index()
+    elif isinstance(exec_result, dict):
         pass
     else:
-        if "index" in list(pandas_result.columns) and len(columns) == len(pandas_result.columns) - 1:
+        raise Exception("Unexpected exec_result format")
+        
+    # Check if same number of columns
+    if isinstance(exec_result, pd.DataFrame):
+        if len(columns) == len(exec_result.columns):
+            pass
+        else:
+            if "index" in list(exec_result.columns) and len(columns) == len(exec_result.columns) - 1:
+                pass
+            else:
+                print(columns)
+                print(len(columns))
+                print(exec_result.columns)
+                print(len(exec_result.columns))
+                compare_result = False
+                return compare_result, columns
+    elif isinstance(exec_result, dict):
+        if len(columns) == len(exec_result):
             pass
         else:
             print(columns)
             print(len(columns))
-            print(pandas_result.columns)
-            len(pandas_result.columns)
+            print(exec_result.keys())
+            print(len(exec_result))
             compare_result = False
             return compare_result, columns
+    else:
+        raise Exception("Unexpected exec_result format")
         
     # Ensure SQL and Columns have same number
     if len(columns) != len(sql_result[0]):
@@ -101,12 +119,22 @@ def compare(query_file, pandas_result, sql_result, decimal_places, order_checkin
         return compare_result, columns
          
     # Iterate through Columnns of SQL_Result
-    # Compare the column to the columns[idx] of pandas_result
+    # Compare the column to the columns[idx] of exec_result
     for i in range(len(columns)):
-        if order_checking == True:
-            column_compare = compare_column([row[i] for row in sql_result], pandas_result[columns[i]].tolist(), decimal_places)
+        exec_col = None
+        if isinstance(exec_result, pd.DataFrame):
+            exec_col = exec_result[columns[i]].tolist()
+        elif isinstance(exec_result, dict):
+            exec_col = list(exec_result[columns[i]])
         else:
-            column_compare = compare_column_no_order([row[i] for row in sql_result], pandas_result[columns[i]].tolist(), decimal_places)
+            raise Exception("Unexpected exec_result format")
+        
+        assert exec_col != None and isinstance(exec_col, list)
+        
+        if order_checking == True:
+            column_compare = compare_column([row[i] for row in sql_result], exec_col, decimal_places)
+        else:
+            column_compare = compare_column_no_order([row[i] for row in sql_result], exec_col, decimal_places)
         # Only propagate decision forward, if is "False"
         # I.e. Don't give a decision of True, as this will overwrite previous Falses
         if column_compare == False:

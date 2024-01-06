@@ -245,7 +245,7 @@ def main():
             
             # Store SQL and Pandas results
             sql_results_list = []
-            pandas_results_list = []            
+            execution_results_list = []            
             
             default_sql_file_path = make_sql_file_path(manifest_json["SQL Queries Location"], query["SQL Name"])
             
@@ -469,10 +469,10 @@ def main():
                         else:
                             results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("Yes"), pandas_run_times])
                         
-                        # Append to pandas_results_list, in a tuple
+                        # Append to execution_results_list, in a tuple
                         # If we were able to convert and run the query
                         if (bad_query == False) and (bad_exec == False):
-                            pandas_results_list.append((query_option["Results Name"], pandas_result))
+                            execution_results_list.append((query_option["Results Name"], pandas_result))
                     else:
                         # It's a bad query, so do the bare minimum
                         
@@ -517,28 +517,32 @@ def main():
                     if args.verbose:
                         print(f'The returncode for generating the query was: {result.returncode}')
                     
-                    sdqlpy_results = run_sdqlpy(f"{manifest_json['Temporary Directory']}/{query_option['Converted Name']}",
-                                                manifest_json["Number of Query Runs"],
-                                                manifest_json["SDQLpy Setup"])
+                    try:
+                        sdqlpy_results = run_sdqlpy(f"{manifest_json['Temporary Directory']}/{query_option['Converted Name']}",
+                                                    manifest_json["Number of Query Runs"],
+                                                    manifest_json["SDQLpy Setup"])
+                        bad_exec = False
+                    except:
+                        sdqlpy_results = dict()
+                        sdqlpy_results["Times"] = []
+                        sdqlpy_results["Result"] = []
+                        bad_exec = True
                     
-                    print(sdqlpy_results)
+                    sdqlpy_run_times = sdqlpy_results["Times"]
+                               
+                    if args.verbose:   
+                        print(sdqlpy_run_times)
+                    avg_3sf = round_sig(sum(sdqlpy_run_times)/len(sdqlpy_run_times), 3)
+                    print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
+                    if bad_exec == True:
+                        results_array.append(["SDQLpy", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("No"), sdqlpy_run_times])
+                    else:
+                        results_array.append(["SDQLpy", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("Yes"), sdqlpy_run_times])
                     
-                    # if args.verbose:   
-                    #     print(pandas_run_times)
-                    # avg_3sf = round_sig(sum(pandas_run_times)/len(pandas_run_times), 3)
-                    # print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
-                    # if bad_exec == True:
-                    #     results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("No"), pandas_run_times])
-                    # else:
-                    #     results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("Yes"), pandas_run_times])
-                    
-                    # # Append to pandas_results_list, in a tuple
-                    # # If we were able to convert and run the query
-                    # if (bad_query == False) and (bad_exec == False):
-                    #     pandas_results_list.append((query_option["Results Name"], pandas_result))
-                    
-                    raise Exception("SDQLpy")
-                      
+                    # Append to execution_results_list, in a tuple
+                    # If we were able to convert and run the query
+                    if (bad_query == False) and (bad_exec == False):
+                        execution_results_list.append((query_option["Results Name"], sdqlpy_results["Result"]))                     
                 else:
                     raise Exception("Unable to Benchmark a query type: " + str(query_option["Type"]) + " that we are unfamiliar with.")
                 
@@ -547,9 +551,9 @@ def main():
             compare_decision = False
             for sql_name, sql_result in sql_results_list:
                 assert sql_result != None
-                for pandas_name, pandas_result in pandas_results_list:
-                    assert isinstance(pandas_result, pd.DataFrame)
-                    # We should check if pandas_result is the same as sql_result
+                for exec_name, exec_result in execution_results_list:
+                    assert isinstance(exec_result, (pd.DataFrame, dict))
+                    # We should check if exec_result is the same as sql_result
                     
                     compare_order_checking = None
                     if "Order Checking" in manifest_json:
@@ -558,22 +562,22 @@ def main():
                         # Default is we check the order
                         compare_order_checking = True
                     
-                    compare_decision, columns = compare(sql_file_path, pandas_result, sql_result, manifest_json["Results Precision"], compare_order_checking)
+                    compare_decision, columns = compare(sql_file_path, exec_result, sql_result, manifest_json["Results Precision"], compare_order_checking)
                     compare_decisions_list.append(compare_decision)
                     
                     if not compare_decision:
-                        print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(pandas_name) + " and " + str(sql_name) + "." + color.END)
-                        print("Pandas Data:")
-                        print(pandas_result)
+                        print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(exec_name) + " and " + str(sql_name) + "." + color.END)
+                        print("Execution Data:")
+                        print(exec_result)
                         print("SQL Data:")
                         print(columns)
                         for row in sql_result:
                             print(row)
                     else:
-                        print(color.GREEN + str(query["Query Name"]) + ": The returned data was correct and the same!" + "\n" + "Between " + str(pandas_name) + " and " + str(sql_name) + "." + color.END)
+                        print(color.GREEN + str(query["Query Name"]) + ": The returned data was correct and the same!" + "\n" + "Between " + str(exec_name) + " and " + str(sql_name) + "." + color.END)
                         # if args.verbose:
                         #     print("Pandas Data:")
-                        #     print(pandas_result)
+                        #     print(exec_result)
                         #     print("SQL Data:")
                         #     print(columns)
                         #     for row in sql_result:
@@ -592,7 +596,7 @@ def main():
                 print(color.BOLD + str(query["Query Name"]) + ": The returned data was equivalent for both SQL and Pandas" + color.END)
                 
             delete_temp_folder()
-            teardown_sdqlpy(manifest_json["SDQLpy Setup"]["Location"])
+            # teardown_sdqlpy(manifest_json["SDQLpy Setup"]["Location"])
     
     print(color.GREEN + "Testing is complete and results have been written to: " + str(manifest_json["Results Location"]) + color.END)    
     
