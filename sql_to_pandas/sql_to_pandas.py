@@ -140,6 +140,10 @@ def line_prepender(filename, line):
         f.seek(0, 0)
         f.write(line.rstrip('\r\n') + '\n' + content)
         
+def add_line_at_end(filename, line):
+    with open(filename, "a") as f:
+        f.write('\n' + line.rstrip('\r\n'))
+        
 def do_main_pandas_compilation(python_output_name, tree_pandas_output, query_file, args, tree, relations_subqueries, treeHelp, last_tree, set_value=None, output_index=None):
     from pandas_tree import make_pandas_tree
     from visualising_tree import plot_pandas_tree
@@ -404,6 +408,12 @@ def main():
                     if args.benchmarking:
                         fp.write(f"{potentialTab}return {unparse_content.pandas_tree.tableName}\n")
             elif isinstance(unparse_content, UnparseSDQLpyTree):
+                query_output_columns = []
+                for expr in unparse_content.sdqlpy_tree.outputDict.flatCols():
+                    query_output_columns.append(
+                        expr.codeName
+                    )
+                
                 with open(python_output_name, 'w') as fp:
                     for line in unparse_content.getSDQLpyContent():
                         if "\n" in line:
@@ -552,6 +562,18 @@ def main():
             relation_type_mapping = ", ".join(relation_type_mapping) 
             sdql_decorator = f"@sdql_compile({{{relation_type_mapping}}})\n"
             line_prepender(python_output_name, sdql_decorator)
+            
+            # Add stuff at end
+            benchmark_start = f"################"
+            add_line_at_end(python_output_name, benchmark_start)
+            query_function = f"query_function = q{str(query_name)}"
+            add_line_at_end(python_output_name, query_function)
+            cleaned_relations = str(inOrder_relations).replace("'", "")
+            query_tables = f"query_tables = {cleaned_relations}"
+            add_line_at_end(python_output_name, query_tables)
+            query_columns = f"query_columns = {str(query_output_columns)}"
+            add_line_at_end(python_output_name, query_columns)
+            
         else:
             raise Exception("Unrecognised output format option")
         

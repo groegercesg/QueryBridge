@@ -20,3 +20,4 @@ sqlconv_env/
 debugging/
 hyperd.log
 hyperdb_tpch.hyper
+SDQLPY/

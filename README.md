@@ -219,7 +219,7 @@ export TPCH_DATASET=$PWD'/'
 
 ### Setting up Python
 
-This project requires python version 3.10 or higher, check this by running:
+This project requires python version 3.10 exactly, check this by running:
 
 ```bash
 python --version

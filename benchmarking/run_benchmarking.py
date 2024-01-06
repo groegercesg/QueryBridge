@@ -22,6 +22,7 @@ import importlib.util
 import sys
 import re
 import pandas as pd
+from sdqlpy_running import run_sdqlpy, setup_sdqlpy, teardown_sdqlpy
 
 class HiddenPrinting:
     def __enter__(self):
@@ -175,7 +176,12 @@ def main():
             first_run = False
         else:
             importlib.reload(data_loaded)
-        print("Data Imported, now Running Queries")
+        print("Pandas Data Imported, now Running Queries")
+        
+        # Setup SDQLpy environment
+        print("Setting up SDQLpy Environment")
+        setup_sdqlpy(manifest_json["SDQLpy Setup"])
+        print("SDQLpy Environment Imported")
     
         # We will run the converter to create our pandas files from our sql files
         # We want this to output the converted queries to a given directory
@@ -477,7 +483,62 @@ def main():
                             
                         # Add to results_array
                         results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), 0, str("Not added yet"), str("No"), [0]])
-                        
+                
+                elif query_option["Type"] == "SDQLpy":
+                    # We first convert the SQL to a SDQLpy Query, and then run it!
+                    # Run converter
+                    if query_option["Query Plan"] == "Postgres":
+                        cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Postgres", "--planner_file", manifest_json["Postgres Connection Details"], "--output_fmt", "sdqlpy"]
+                    elif query_option["Query Plan"] == "Duck DB":
+                        cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Duck_DB", "--planner_file", duck_db_details, "--output_fmt", "sdqlpy"]
+                    elif query_option["Query Plan"] == "Hyper DB":
+                        cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Hyper_DB", "--planner_file", hyper_db_details, "--output_fmt", "sdqlpy"]
+                    else:
+                        raise Exception("Unrecognised option")
+                    
+                    if "Conversion Options" in query_option:
+                        if args.verbose:
+                            print("Adding conversion options: " + str(query_option["Conversion Options"]))
+                        cmd += query_option["Conversion Options"]
+                    
+                    try:
+                        if args.verbose:
+                            print("We are running the converter, with the following command: " + str(cmd))
+                        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=600)
+                        bad_query = False
+                    except Exception as ex:
+                        bad_query = True
+                        # We print the error
+                        # But still output to CSV and to the query file
+                        print(color.RED + str(query["Query Name"]) + ": SDQLpy conversion error!" + "\n" + color.END)
+                        print(ex)
+                    
+                    # Print returncode
+                    if args.verbose:
+                        print(f'The returncode for generating the query was: {result.returncode}')
+                    
+                    sdqlpy_results = run_sdqlpy(f"{manifest_json['Temporary Directory']}/{query_option['Converted Name']}",
+                                                manifest_json["Number of Query Runs"],
+                                                manifest_json["SDQLpy Setup"])
+                    
+                    print(sdqlpy_results)
+                    
+                    # if args.verbose:   
+                    #     print(pandas_run_times)
+                    # avg_3sf = round_sig(sum(pandas_run_times)/len(pandas_run_times), 3)
+                    # print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
+                    # if bad_exec == True:
+                    #     results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("No"), pandas_run_times])
+                    # else:
+                    #     results_array.append(["Pandas", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("Yes"), pandas_run_times])
+                    
+                    # # Append to pandas_results_list, in a tuple
+                    # # If we were able to convert and run the query
+                    # if (bad_query == False) and (bad_exec == False):
+                    #     pandas_results_list.append((query_option["Results Name"], pandas_result))
+                    
+                    raise Exception("SDQLpy")
+                      
                 else:
                     raise Exception("Unable to Benchmark a query type: " + str(query_option["Type"]) + " that we are unfamiliar with.")
                 
@@ -531,6 +592,7 @@ def main():
                 print(color.BOLD + str(query["Query Name"]) + ": The returned data was equivalent for both SQL and Pandas" + color.END)
                 
             delete_temp_folder()
+            teardown_sdqlpy(manifest_json["SDQLpy Setup"]["Location"])
     
     print(color.GREEN + "Testing is complete and results have been written to: " + str(manifest_json["Results Location"]) + color.END)    
     
