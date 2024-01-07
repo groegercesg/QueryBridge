@@ -532,12 +532,12 @@ def main():
                     sdqlpy_run_times = sdqlpy_results["Times"]
                                
                     if args.verbose:   
-                        print(sdqlpy_run_times)
-                    avg_3sf = round_sig(sum(sdqlpy_run_times)/len(sdqlpy_run_times), 3)
-                    print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
+                        print(f"SDQLpy Run Times: {sdqlpy_run_times}")
                     if bad_exec == True:
-                        results_array.append(["SDQLpy", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("No"), sdqlpy_run_times])
+                        results_array.append(["SDQLpy", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), 0.0, str("Not added yet"), str("No"), sdqlpy_run_times])
                     else:
+                        avg_3sf = round_sig(sum(sdqlpy_run_times)/len(sdqlpy_run_times), 3)
+                        print(str(query_option["Results Name"]) + ": " + str(avg_3sf))
                         results_array.append(["SDQLpy", str(scaling_factor), str(query_option["Results Name"]), str(query["Query Name"]), avg_3sf, str("Not added yet"), str("Yes"), sdqlpy_run_times])
                     
                     # Append to execution_results_list, in a tuple

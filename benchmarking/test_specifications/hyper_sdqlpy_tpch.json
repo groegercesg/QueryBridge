@@ -17,6 +17,38 @@
                     "Converted Name": "hyper_q6_sdqlpy.py",
                     "Results Name": "SDQLpy Converted (Hyper DB)",
                     "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q6_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 19",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "19.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q19_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q19_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
                 }
             ]
         }
@@ -26,7 +58,7 @@
     "SQL Queries Location": "benchmarking/tpch_no_limit_order",
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 1,
+    "Number of Query Runs": 10,
     "Results Location": "benchmarking/test_results/hyper_tpch_test_results.csv",
     "Postgres Connection Details": "postgres_connection.json",
     "Duck DB Connection": "duckdb_tpch.duckdb",

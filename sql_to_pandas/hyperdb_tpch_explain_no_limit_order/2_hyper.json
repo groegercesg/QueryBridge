@@ -1022,11 +1022,11 @@
                             "mode": "=",
                             "left": {
                                 "expression": "iuref",
-                                "iu": "v26"
+                                "iu": "v24"
                             },
                             "right": {
                                 "expression": "iuref",
-                                "iu": "v24"
+                                "iu": "v26"
                             }
                         },
                         {

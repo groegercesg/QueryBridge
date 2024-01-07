@@ -223,7 +223,18 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
         self.tableName = tableName
         self.sdqlrepr = tableName
         # Filter for only essential columns
-        self.tableColumns = [x for x in tableColumns if x.essential == True]
+        self.oldTableColumns = tableColumns
+        self.tableColumns = tableColumns
+        # self.tableColumns = [x for x in self.oldTableColumns if x.essential == True]
+        self.createInputOutputDicts()
+        
+    def filterTableColumns(self):
+        # Filter tableColumns
+        self.oldTableColumns = self.tableColumns
+        self.tableColumns = [x for x in self.oldTableColumns if (x.essential == True) or (x.codeName in self.primaryKey)]
+        self.createInputOutputDicts()
+        
+    def createInputOutputDicts(self):
         self.incomingDict = SDQLpySRDict(
             self.tableColumns,
             list()
@@ -647,8 +658,6 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.comparingTree = stripped_join_condition
         
     def make_leftTableRef(self, unparser, lambda_index):
-        self.decompose_join_condition()
-        
         # Now we have decomposed the joinCondition into equating columns and comparing Conditions
         # For the leftTableRef, we use equating
         
@@ -683,6 +692,13 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         
         self.leftKeys = oldRightKeys
         self.rightKeys = oldLeftKeys
+        
+        # Swap equatingConditions
+        for x in self.equatingConditions:
+            oldLeft = x.left
+            oldRight = x.right
+            x.left = oldRight
+            x.right = oldLeft
         
     def resolveForeignKeys(self):
         # Also do completedTables

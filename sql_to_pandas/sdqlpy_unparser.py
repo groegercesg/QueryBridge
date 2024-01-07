@@ -302,14 +302,24 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 # Make it a SDQLpyJoinBuildNode
                 assert len(set([str(id(x)) for x in sdqlpy_tree.leftKeys]) - set([str(id(x)) for x in sdqlpy_tree.left.outputDict.flatCols()])) == 0
                 
+                # Only set tableKeys as only the leftKeys that are in equatingConditions
+                tableKeys = []
+                for x in sdqlpy_tree.equatingConditions:
+                    if id(x.left) in [id(x) for x in sdqlpy_tree.leftKeys]:
+                        tableKeys.append(x.left)
+                    elif id(x.right) in [id(x) for x in sdqlpy_tree.leftKeys]:
+                        tableKeys.append(x.right)
+                    else:
+                        raise Exception("Not found")
+                
                 jbNode = SDQLpyJoinBuildNode(
-                    sdqlpy_tree.leftKeys,
+                    tableKeys,
                     list(sdqlpy_tree.left.outputDict.flatCols())
                 )
                 jbNode.addChild(sdqlpy_tree.left)
                 jbNode.setCardinality(jbNode.child.cardinality)
                 # Set primary and foreign
-                jbNode.setPrimary(tuple([x.codeName for x in sdqlpy_tree.leftKeys]))
+                jbNode.setPrimary(tuple([x.codeName for x in tableKeys]))
                 jbNode.foreignKeys = sdqlpy_tree.left.foreignKeys
                 jbNode.waitingForeignKeys = sdqlpy_tree.left.waitingForeignKeys
                 sdqlpy_tree.left = jbNode
@@ -656,56 +666,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             # A leaf node
             pass
         
-    def order_joins(sdqlpy_tree, table_keys):
-        def getPrimaryKeys(table_keys: dict) -> set:
-            allPrimaryKeys = set()
-            for key, value in table_keys.items():
-                assert isinstance(value[0], set)
-                allPrimaryKeys.update(
-                    value[0]
-                )
-            return allPrimaryKeys
-        
-        def countKeysInSet(list_keys: list, allKeys: set) -> int:
-            assert isinstance(list_keys, list)
-            for x in list_keys:
-                if isinstance(x, ColumnValue):
-                    assert x.value == x.codeName
-            
-            # Convert to set 
-            currentKeys = set(
-                [x.codeName for x in list_keys]
-            )
-            
-            # Get intersection, the number of currentKeys that are in
-            # allKeys
-            return len(allKeys.intersection(currentKeys))
-        
-        def calculateProblemColumns(indexKeys: list, outputDict: SDQLpySRDict, table_keys: dict) -> int:
-            def convertTableKeysToPrimaryOtherMapping(table_keys) -> dict:
-                primaryDict = dict()
-                for key, value in table_keys.items():
-                    for primary in value[0]:
-                        primaryDict[primary] = set(value[1].union(value[2]))
-                return primaryDict
-            
-            # Get the number of columns that will be a problem, if we index on the indexKeys
-            indexKeys_str = set(
-                [x.codeName for x in indexKeys]
-            )
-            # Step 1: Carry forward keys that are type: Varchar/Date/Char
-            potentialProblemKeys_str = set(
-                [x.codeName for x in outputDict.flatCols() if x.type in ['Varchar', 'Date', 'Char']]
-            )
-            primaryKeyMapping = convertTableKeysToPrimaryOtherMapping(table_keys)
-            
-            # Step 2: Remove keys that are mapped from the indexKeys
-            for index_key in indexKeys_str:
-                # Use set(), for none return
-                potentialProblemKeys_str = potentialProblemKeys_str - primaryKeyMapping.get(index_key, set())
-            
-            return len(potentialProblemKeys_str)
-        
+    def order_joins(sdqlpy_tree, table_keys):        
         def whatTypeAreKeys(joinKeys: list, childNode):
             joinKeys_str = [x.codeName for x in joinKeys]
             nextJoinKeys = joinKeys_str
@@ -756,6 +717,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         
         # Run on current node (sdqlpy_tree)
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
+            # Decompose
+            sdqlpy_tree.decompose_join_condition()
+
             # Check the cardinality information for left and right exists
             assert sdqlpy_tree.left.cardinality != None
             assert sdqlpy_tree.right.cardinality != None
@@ -861,6 +825,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 getForeign = table_keys[sdqlpy_tree.tableName][1]
                 sdqlpy_tree.addForeign(getForeign)
                 sdqlpy_tree.completedTables.add(sdqlpy_tree.tableName)
+                # Recreate input/output dicts
+                sdqlpy_tree.filterTableColumns()                
             else:
                 if isinstance(sdqlpy_tree, SDQLpyGroupNode):
                     # Set the index as primary
@@ -1081,7 +1047,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         # Determine if the current node is a suitable filter location
         # Get all codeNames for keys
         all_codeNames = [x.codeName for x in sdqlpy_tree.outputDict.flatKeys()]
-        if (not set(sdqlpy_tree.primaryKey).issubset(set(all_codeNames))) and (not isinstance(sdqlpy_tree, SDQLpyAggrNode)):
+        if (not set(sdqlpy_tree.primaryKey).issubset(set(all_codeNames))) and (not isinstance(sdqlpy_tree, (SDQLpyAggrNode, SDQLpyJoinNode))):
             # IF all items of A are NOT present in B
             # This is a cause for concern - as a filter shouldn't be applied in this scenario
             if sdqlpy_tree.filterContent != None:
@@ -1102,17 +1068,30 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 # No eligible belowFilter, all good
                 pass
             else:
-                # We have a belowFilter to add to the current node, does it have a filter already
-                if sdqlpy_tree.filterContent == None:
-                    # No filter at the moment, all good - just add it
-                    sdqlpy_tree.filterContent = belowFilter
+                if isinstance(sdqlpy_tree, SDQLpyJoinNode):
+                    # Add for a JoinNode, add to comparing tree
+                    if sdqlpy_tree.comparingTree == None:
+                        # No comparingTree, all good - just add it
+                        sdqlpy_tree.comparingTree = belowFilter
+                    else:
+                        # We need to construct an AndOperator
+                        oldComparingTree = sdqlpy_tree.comparingTree
+                        newComparingTree = AndOperator()
+                        newComparingTree.addLeft(oldComparingTree)
+                        newComparingTree.addRight(belowFilter)
+                        sdqlpy_tree.comparingTree = newComparingTree
                 else:
-                    # We need to construct an AndOperator
-                    oldFilterContent = sdqlpy_tree.filterContent
-                    newFilterContent = AndOperator()
-                    newFilterContent.addLeft(oldFilterContent)
-                    newFilterContent.addRight(belowFilter)
-                    sdqlpy_tree.filterContent = newFilterContent
+                    # We have a belowFilter to add to the current node, does it have a filter already
+                    if sdqlpy_tree.filterContent == None:
+                        # No filter at the moment, all good - just add it
+                        sdqlpy_tree.filterContent = belowFilter
+                    else:
+                        # We need to construct an AndOperator
+                        oldFilterContent = sdqlpy_tree.filterContent
+                        newFilterContent = AndOperator()
+                        newFilterContent.addLeft(oldFilterContent)
+                        newFilterContent.addRight(belowFilter)
+                        sdqlpy_tree.filterContent = newFilterContent
                 # Reset belowFilter, as it's been consumed
                 belowFilter = None
                 
