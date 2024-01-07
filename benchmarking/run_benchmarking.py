@@ -597,8 +597,7 @@ def main():
                 print(color.BOLD + str(query["Query Name"]) + ": The returned data was equivalent for both SQL and Pandas" + color.END)
                 
             delete_temp_folder()
-            # teardown_sdqlpy(manifest_json["SDQLpy Setup"]["Location"])
-    
+
     print(color.GREEN + "Testing is complete and results have been written to: " + str(manifest_json["Results Location"]) + color.END)    
     
     # Writing out store queries
@@ -639,6 +638,7 @@ def main():
             f.write(start_store_queries_file_content)
         
     delete_temp_folder()
+    teardown_sdqlpy(manifest_json["SDQLpy Setup"]["Location"])
         
 if __name__ == "__main__":
     main()

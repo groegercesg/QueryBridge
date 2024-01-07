@@ -40,8 +40,6 @@ def setup_sdqlpy(sdqlpy_setup):
     previous_working_directory = os.getcwd()
     os.chdir(location)
     
-    install_sdqlpy_cmd = ['gnome-terminal', '--', 'bash', '-c'] + str(f"./{install_base_path}").split(" ")
-    #result = subprocess.Popen(install_sdqlpy_cmd, stderr=subprocess.STDOUT, stdout=subprocess.PIPE, universal_newlines=True)
     result = subprocess.run(f"./{install_base_path}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=600)
     if result.returncode != 0:
         print(result.stdout)
@@ -137,8 +135,8 @@ sdqlpy_init(1, 2)"""
         query_results = json.load(f)
     
     # Remove data_json and query_file
-    # os.remove(data_json_path)
-    # os.remove(overall_query_path)
+    os.remove(data_json_path)
+    os.remove(overall_query_path)
     
     # Return Query results
     return query_results

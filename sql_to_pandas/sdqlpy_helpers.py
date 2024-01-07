@@ -26,6 +26,8 @@ def handleEmptyCodeName(value, previousColumns):
                 current_strings.append("max")
             case CaseOperator():
                 current_strings.append("case")
+            case CountAllOperator():
+                current_strings.append("count")
             case _:
                 raise Exception(f"Unknown operator: {type(value)}")
         
