@@ -308,6 +308,10 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 )
                 jbNode.addChild(sdqlpy_tree.left)
                 jbNode.setCardinality(jbNode.child.cardinality)
+                # Set primary and foreign
+                jbNode.setPrimary(tuple([x.codeName for x in sdqlpy_tree.leftKeys]))
+                jbNode.foreignKeys = sdqlpy_tree.left.foreignKeys
+                jbNode.waitingForeignKeys = sdqlpy_tree.left.waitingForeignKeys
                 sdqlpy_tree.left = jbNode
             elif isinstance(sdqlpy_tree.left, SDQLpyAggrNode):
                 # We shouldn't index on an aggr node
@@ -1043,6 +1047,76 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             if isinstance(sdqlpy_tree, SDQLpyAggrNode) and isinstance(sdqlpy_tree.child, SDQLpyAggrNode):
                 # We have detected repeated aggrs
                 sdqlpy_tree.set_repeated_aggr()
+                
+                
+    def solveNonPrimaryFilters(sdqlpy_tree):
+        # Post Order traversal: Visit Children
+        belowFilter = None
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftFilter = solveNonPrimaryFilters(sdqlpy_tree.left)
+            rightFilter = solveNonPrimaryFilters(sdqlpy_tree.right)
+            
+            # Handle left and right Filter
+            if (leftFilter != None) and (rightFilter != None):
+                # Combine with AND, then use
+                belowFilter = AndOperator()
+                belowFilter.addLeft(leftFilter)
+                belowFilter.addRight(rightFilter)
+            elif (leftFilter != None) and (rightFilter == None):
+                belowFilter = leftFilter
+            elif (leftFilter == None) and (rightFilter != None):
+                belowFilter = rightFilter
+            else:
+                assert (leftFilter == None) and (rightFilter == None)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childFilter = solveNonPrimaryFilters(sdqlpy_tree.child)
+            # Add anyway, it's either something useful or NULL
+            belowFilter = childFilter
+        else:
+            # A leaf node
+            pass
+        
+        assert sdqlpy_tree.primaryKey != None
+        
+        # Determine if the current node is a suitable filter location
+        # Get all codeNames for keys
+        all_codeNames = [x.codeName for x in sdqlpy_tree.outputDict.flatKeys()]
+        if (not set(sdqlpy_tree.primaryKey).issubset(set(all_codeNames))) and (not isinstance(sdqlpy_tree, SDQLpyAggrNode)):
+            # IF all items of A are NOT present in B
+            # This is a cause for concern - as a filter shouldn't be applied in this scenario
+            if sdqlpy_tree.filterContent != None:
+                # We have a filter we need to move
+                if belowFilter == None:
+                    # Simply add it
+                    belowFilter = sdqlpy_tree.filterContent
+                else:
+                    oldBelowFilter = belowFilter
+                    belowFilter = AndOperator()
+                    belowFilter.addLeft(oldBelowFilter)
+                    belowFilter.addRight(sdqlpy_tree.filterContent)
+                # Reset current node's filter
+                sdqlpy_tree.filterContent = None
+        else:
+            # We have a node where we can place a belowFilter, if there is one
+            if belowFilter == None:
+                # No eligible belowFilter, all good
+                pass
+            else:
+                # We have a belowFilter to add to the current node, does it have a filter already
+                if sdqlpy_tree.filterContent == None:
+                    # No filter at the moment, all good - just add it
+                    sdqlpy_tree.filterContent = belowFilter
+                else:
+                    # We need to construct an AndOperator
+                    oldFilterContent = sdqlpy_tree.filterContent
+                    newFilterContent = AndOperator()
+                    newFilterContent.addLeft(oldFilterContent)
+                    newFilterContent.addRight(belowFilter)
+                    sdqlpy_tree.filterContent = newFilterContent
+                # Reset belowFilter, as it's been consumed
+                belowFilter = None
+                
+        return belowFilter
     
     def solveCountDistinctOperator(sdqlpy_tree): 
         replacementDict = dict()
@@ -1128,6 +1202,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     solveOutputDictEmptyCodename(sdqlpy_tree, parserCreatedColumns)
     # Solve aggr after an aggr
     solveRepeatedAggrs(sdqlpy_tree)
+    # Solve non-primary filters
+    leftOverFilter = solveNonPrimaryFilters(sdqlpy_tree)
+    assert leftOverFilter == None
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
     
