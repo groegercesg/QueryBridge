@@ -3,6 +3,7 @@ import glob
 import re
 import subprocess
 from subprocess import PIPE
+import shutil
 
 class data_generator():
     def __init__(self, data_dir, dbgen_path, scaling_factor = 1):
@@ -54,7 +55,13 @@ class data_generator():
             # We should move them to self.data_dir
                 try:
                     # TODO: This is hardcoded and sloppy, but it works for now
-                    os.makedirs("../" + self.data_dir, exist_ok=True)
+                    # Check if directory exists
+                    if os.path.isdir("../" + self.data_dir):
+                        # Delete it
+                        shutil.rmtree("../" + self.data_dir)
+                        
+                    # Remake it
+                    os.makedirs("../" + self.data_dir)
                     # Match anything in self.dbgen_path with an extension of .tbl
                     for in_fname in glob.glob("*.tbl"):
                         # Change the file permissions

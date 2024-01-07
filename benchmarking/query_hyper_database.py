@@ -45,6 +45,7 @@ def run_hyper_query(db_details, query_file, verbose):
     # Choose results
     if len(results) == 1:
         results = results[0]
+        assert (results != [[None]]) or (results != [None]) or (results != None)
     else:
         for individual_res in results:
             if individual_res != []:

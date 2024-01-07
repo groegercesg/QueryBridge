@@ -157,8 +157,7 @@ def truncate(number, digits):
             return float(split_number[0] + "." + split_number[1][:digits])
     else:
         return float(number)
-    
-    
+
 import difflib
 
 def get_overlap(s1, s2):
@@ -166,11 +165,23 @@ def get_overlap(s1, s2):
     pos_a, pos_b, size = s.find_longest_match(0, len(s1), 0, len(s2)) 
     return s1[pos_a:pos_a+size]
 
+def are_there_nones(inList: list) -> bool:
+    # Check no nones in a list
+    nones = False
+    for x in inList:
+        if x == None:
+            nones = True
+            break
+    return nones
 
 def compare_column_no_order(sql_column, pandas_column, decimal_places):
     """Function to compare two lists of data for accuracy
     """
     column_equivalent = False
+    
+    # Check neither list has any nones in it
+    assert isinstance(sql_column, list) and isinstance(pandas_column, list)
+    assert (are_there_nones(sql_column) == False) and (are_there_nones(pandas_column) == False)
     
     if len(sql_column) != len(pandas_column):
         return column_equivalent

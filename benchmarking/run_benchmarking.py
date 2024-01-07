@@ -520,7 +520,8 @@ def main():
                     try:
                         sdqlpy_results = run_sdqlpy(f"{manifest_json['Temporary Directory']}/{query_option['Converted Name']}",
                                                     manifest_json["Number of Query Runs"],
-                                                    manifest_json["SDQLpy Setup"])
+                                                    manifest_json["SDQLpy Setup"],
+                                                    manifest_json["Data Storage"])
                         bad_exec = False
                     except:
                         sdqlpy_results = dict()
@@ -561,7 +562,7 @@ def main():
                     else:
                         # Default is we check the order
                         compare_order_checking = True
-                    
+                        
                     compare_decision, columns = compare(sql_file_path, exec_result, sql_result, manifest_json["Results Precision"], compare_order_checking)
                     compare_decisions_list.append(compare_decision)
                     
