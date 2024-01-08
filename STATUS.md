@@ -1,6 +1,6 @@
 # STATUS
 
-**Overall Note:** Correctness hasn't been checked for any queries yet, this is still pending.
+**Overall Note:** Automatic correctness checking hasn't been implemented for any of the queries yet.
 
 Q1   ->  Done | Needs AVG Support
 
