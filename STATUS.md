@@ -1,3 +1,7 @@
+# STATUS
+
+**Overall Note:** Correctness hasn't been checked for any queries yet, this is still pending.
+
 Q1   ->  Done | Needs AVG Support
 Q2   ->  Done | Needs MIN Support
 Q3   ->  Done
@@ -11,7 +15,7 @@ Q10  ->  Done
 Q11  ->  Done
 Q12  ->  Done
 Q13  ->  LeftOuter Plan Discussion + Inline Condition in Records Support
-Q14  ->  Done | Needs a bit of implementation
+Q14  ->  Done
 Q15  ->  Done | Needs a bit of implementation | Needs MAX Support
 Q16  ->  Done
 Q17  ->  Needs AVG Support
