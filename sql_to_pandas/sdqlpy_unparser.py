@@ -1602,22 +1602,32 @@ class UnparseSDQLpyTree():
             # Check that the current node and child are the right size
             assert len(node.outputDict.flatCols()) == 1
             assert len(node.outputDict.flatKeys()) == 0
-            assert len(node.child.outputDict.flatCols()) == 1
             
             # Convert the codeName for all columnValues or created to the childTable
-            equation_to_output = node.outputDict.values[0]
-            self.traverse_to_change_codeName(equation_to_output, childTable)
-            # Convert the equation
-            self.doing_repeated_aggr = True
-            aggr_equation = self.__convert_expression_operator_to_sdqlpy(equation_to_output)
-            self.doing_repeated_aggr = False
+            aggr_equation = None
+            if len(node.child.outputDict.flatCols()) == 1:
+                # If there's only one child column, then change the codeName
+                equation_to_output = node.outputDict.values[0]
+                self.traverse_to_change_codeName(equation_to_output, childTable)
+                # Convert the equation
+                self.doing_repeated_aggr = True
+                aggr_equation = self.__convert_expression_operator_to_sdqlpy(equation_to_output)
+                self.doing_repeated_aggr = False
+            else:
+                # Otherwise, more than one child column, we need to:
+                #   - Set the sourceNode as childTable
+                equation_to_output = node.outputDict.values[0]
+                self.traverse_to_set_sourceNode(equation_to_output, childTable)
+                aggr_equation = self.__convert_expression_operator_to_sdqlpy(equation_to_output)
+                # Reset sourceNode
+                resetColumnValues(equation_to_output)
             
+            assert aggr_equation != None
             self.writeContent(
                 f"{createdDictName} = {aggr_equation}"
             )
             
         else:
-        
             self.writeContent(
                 f"{createdDictName} = {childTable}.sum(\n"
                 f"{TAB}lambda {lambda_index} :"
@@ -1647,6 +1657,15 @@ class UnparseSDQLpyTree():
                 f"{TAB}else\n"
                 f"{TAB}{TAB}0.0"
             )
+        else:
+            # Write a 'if True' filter to trick the compiler
+            if (len(node.outputDict.flatVals()) >= 2) and (len(node.outputDict.flatKeys()) == 0):
+                self.writeContent(
+                    f"{TAB}if\n"
+                    f"{TAB}{TAB}True\n"
+                    f"{TAB}else\n"
+                    f"{TAB}{TAB}None"
+                )
             
         node.outputDict.set_created(self)
         
@@ -1670,6 +1689,20 @@ class UnparseSDQLpyTree():
         if hasattr(value, "sourceNode") and value.sourceNode == checkingSourceNode:
             value.codeName = newCodeName
             value.no_source = True
+            
+    def traverse_to_set_sourceNode(self, value, newSourceNode):
+        if value.created == True:
+            pass
+        elif isinstance(value, BinaryExpressionOperator):
+            self.traverse_to_set_sourceNode(value.left, newSourceNode)
+            self.traverse_to_set_sourceNode(value.right, newSourceNode)
+        elif isinstance(value, UnaryExpressionOperator):
+            self.traverse_to_set_sourceNode(value.child, newSourceNode)
+        else:
+            pass
+            
+        if value.created == True or isinstance(value, ColumnValue):
+            value.sourceNode = newSourceNode
     
     def traverse_to_change_codeName(self, value, newCodeName):
         if value.created == True:

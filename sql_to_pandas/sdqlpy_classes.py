@@ -869,9 +869,10 @@ class SDQLpySRDict():
         return output_content
     
     def generateSDQLpyOneLambda(self, unparser, lambda_idx_key, lambda_idx_val, node):
-        # Balance values
         if len(self.keys) == 0 and len(self.values) > 1:
-            self.keys.append(self.values.pop(0))
+            # If many values, check we're in an Aggr
+            assert isinstance(node, SDQLpyAggrNode)
+            #self.keys.append(self.values.pop(0))
         
         keys = node.incomingDict.flatKeys()
         values = node.incomingDict.flatVals()
@@ -911,11 +912,39 @@ class SDQLpySRDict():
         
         if self.keys == []:
             # If there are no keys, this should be an aggr output
-            assert len(self.values) == 1
-            output_content.append(
-                f"{TAB}{unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(self.values[0])}"
-            )
-            return output_content
+            if len(self.values) == 1:
+                output_content.append(
+                    f"{TAB}{unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(self.values[0])}"
+                )
+                return output_content
+            else:
+                # We need to build a record just for these values
+                valueCounter = defaultdict(int)
+                writtenValues = dict()
+                
+                colContent = []
+                for val in self.values:
+                    if isinstance(val, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper,
+                                        SumAggrOperator, MulOperator, ConstantValue, CaseOperator, DivOperator)):
+                        expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val)
+                    else:
+                        expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val.child)
+
+                    assert val.codeName != ''
+                    # Check if can write out key
+                    if val.codeName in writtenValues:
+                        assert writtenValues[val.codeName] == expr
+                    else:
+                        writtenValues[val.codeName] = expr
+                        valueCounter[val.codeName] += 1
+                        colContent.append(
+                            f'"{val.codeName}": {expr}'
+                        )
+                output_content = f"{TAB}record({{{', '.join(colContent)}}})"
+                
+                assert self.counterAllValuesOne(Counter(valueCounter))
+                
+                return [output_content]
         
         output_content.append(
             f"{{"
