@@ -1777,9 +1777,9 @@ class UnparseSDQLpyTree():
             case IntervalNotionOperator():
                 expression_output = self.__handle_IntervalNotion(expr_tree)
             case AndOperator():
-                expression_output = f"{leftNode} and {rightNode}"
+                expression_output = f"({leftNode} and {rightNode})"
             case OrOperator():
-                expression_output = f"{leftNode} or {rightNode}"
+                expression_output = f"({leftNode} or {rightNode})"
             case DivOperator():
                 expression_output = f"{leftNode} / {rightNode}"
             case MulOperator():
@@ -1796,7 +1796,7 @@ class UnparseSDQLpyTree():
             case CountAllOperator():
                 expression_output = "1.0"
             case EqualsOperator():
-                expression_output = f"({leftNode} == {rightNode})"
+                expression_output = self.__handle_EqualsOperator(expr_tree, leftNode, rightNode)
             case NotEqualsOperator():
                 expression_output = f"({leftNode} != {rightNode})"
             case SDQLpyThirdNodeWrapper():
@@ -1826,6 +1826,56 @@ class UnparseSDQLpyTree():
             case _: 
                 raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
+        return expression_output
+    
+    def __handle_EqualsOperator(self, expr: EqualsOperator, leftValue: str, rightValue: str) -> str:
+        if expr.left.type == "Float" and expr.right.type == "Float":
+            raise Exception("Float to float comparison")
+        elif expr.left.type == "Float" and expr.right.type != "Float":
+            raise Exception("Left float comparison")
+        elif expr.left.type != "Float" and expr.right.type == "Float":
+            # Handle the right being a float
+            # Rewrite it into the "close" statement
+            closeThreshold = ConstantValue(0.01, "Float")
+            zeroValue = ConstantValue(0.0, "Float")
+            
+            # Left Portion
+            leftMinus = SubOperator()
+            leftMinus.addLeft(expr.left)
+            leftMinus.addRight(expr.right)
+            leftCompare = LessThanOperator()
+            leftCompare.addLeft(leftMinus)
+            leftCompare.addRight(closeThreshold)
+            leftZero = GreaterThanEqOperator()
+            leftZero.addLeft(leftMinus)
+            leftZero.addRight(zeroValue)
+            
+            leftAnd = AndOperator()
+            leftAnd.addLeft(leftCompare)
+            leftAnd.addRight(leftZero)
+            
+            # Right Portion
+            rightMinus = SubOperator()
+            rightMinus.addLeft(expr.right)
+            rightMinus.addRight(expr.left)
+            rightCompare = LessThanOperator()
+            rightCompare.addLeft(rightMinus)
+            rightCompare.addRight(closeThreshold)
+            rightZero = GreaterThanEqOperator()
+            rightZero.addLeft(rightMinus)
+            rightZero.addRight(zeroValue)
+            
+            rightAnd = AndOperator()
+            rightAnd.addLeft(rightCompare)
+            rightAnd.addRight(rightZero)
+            
+            # Overall portion
+            overallClose = OrOperator()
+            overallClose.addLeft(leftAnd)
+            overallClose.addRight(rightAnd)
+            expression_output = self.__convert_expression_operator_to_sdqlpy(overallClose)
+        else:
+            expression_output = f"({leftValue} == {rightValue})"
         return expression_output
     
     def __handle_CaseOperator(self, expr: CaseOperator) -> str:

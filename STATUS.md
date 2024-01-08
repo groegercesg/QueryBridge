@@ -16,7 +16,7 @@ Q11  ->  Done
 Q12  ->  Done
 Q13  ->  LeftOuter Plan Discussion + Inline Condition in Records Support
 Q14  ->  Done
-Q15  ->  Done | Needs a bit of implementation | Needs MAX Support
+Q15  ->  Done | Needs MAX Support
 Q16  ->  Done
 Q17  ->  Needs AVG Support
 Q18  ->  Done
