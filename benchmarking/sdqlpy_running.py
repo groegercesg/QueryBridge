@@ -135,8 +135,9 @@ sdqlpy_init(1, 2)"""
         query_results = json.load(f)
     
     # Remove data_json and query_file
-    os.remove(data_json_path)
-    os.remove(overall_query_path)
+    # TODO: Undo this!
+    # os.remove(data_json_path)
+    # os.remove(overall_query_path)
     
     # Return Query results
     return query_results

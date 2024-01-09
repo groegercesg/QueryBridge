@@ -569,11 +569,11 @@ def main():
                     if not compare_decision:
                         print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(exec_name) + " and " + str(sql_name) + "." + color.END)
                         print("Execution Data:")
-                        print(exec_result)
+                        # print(exec_result)
                         print("SQL Data:")
                         print(columns)
-                        for row in sql_result:
-                            print(row)
+                        # for row in sql_result:
+                        #     print(row)
                     else:
                         print(color.GREEN + str(query["Query Name"]) + ": The returned data was correct and the same!" + "\n" + "Between " + str(exec_name) + " and " + str(sql_name) + "." + color.END)
                         # if args.verbose:
@@ -638,7 +638,8 @@ def main():
             f.write(start_store_queries_file_content)
         
     delete_temp_folder()
-    teardown_sdqlpy(manifest_json["SDQLpy Setup"]["Location"])
+    # TODO: Add back in once solve bugs
+    # teardown_sdqlpy(manifest_json["SDQLpy Setup"]["Location"])
         
 if __name__ == "__main__":
     main()

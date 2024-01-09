@@ -60,6 +60,9 @@ def get_columns(query):
         split_query[i] = str(split_query[i]).replace(" ", "")
     return split_query
 
+def test_for_all_elements(inList: list, condition):
+    pass
+
 def compare(query_file, exec_result, sql_result, decimal_places, order_checking):
     # Compare Result
     compare_result = True
@@ -122,10 +125,28 @@ def compare(query_file, exec_result, sql_result, decimal_places, order_checking)
     # Compare the column to the columns[idx] of exec_result
     for i in range(len(columns)):
         exec_col = None
+        is_sdql = False
         if isinstance(exec_result, pd.DataFrame):
             exec_col = exec_result[columns[i]].tolist()
         elif isinstance(exec_result, dict):
             exec_col = list(exec_result[columns[i]])
+            is_sdql = True
+            
+            # Change the types
+            if all([(x.isdigit() and len(x) == 8) for x in exec_col]) and "date" in columns[i]:
+                # Cast to datetime.date
+                for idx, val in enumerate(exec_col):
+                    exec_col[idx] = datetime.datetime.strptime(val, "%Y%m%d").date()
+            elif all([(x.count(".") == 1 and exec_col[0].replace(".", "").isdigit()) for x in exec_col]):
+                # Cast to float
+                for idx, val in enumerate(exec_col):
+                    exec_col[idx] = float(val)
+            elif all([(x.isdigit()) for x in exec_col]):
+                # Cast to float
+                for idx, val in enumerate(exec_col):
+                    exec_col[idx] = int(val)
+            else:
+                assert all([isinstance(x, str) for x in exec_col]) == True
         else:
             raise Exception("Unexpected exec_result format")
         
@@ -134,7 +155,7 @@ def compare(query_file, exec_result, sql_result, decimal_places, order_checking)
         if order_checking == True:
             column_compare = compare_column([row[i] for row in sql_result], exec_col, decimal_places)
         else:
-            column_compare = compare_column_no_order([row[i] for row in sql_result], exec_col, decimal_places)
+            column_compare = compare_column_no_order([row[i] for row in sql_result], exec_col, decimal_places, is_sdql)
         # Only propagate decision forward, if is "False"
         # I.e. Don't give a decision of True, as this will overwrite previous Falses
         if column_compare == False:
@@ -146,17 +167,6 @@ def compare(query_file, exec_result, sql_result, decimal_places, order_checking)
 def truncate(number, digits):
     decimal.getcontext().rounding = decimal.ROUND_HALF_UP  # define rounding method
     return decimal.Decimal(str(float(number))).quantize(decimal.Decimal('1e-{}'.format(digits)))
-    
-    if "." in number:
-        split_number = number.split(".")
-        if len(split_number[1]) < digits:
-            # calculate extra 0s
-            extra_zeros = digits - len(split_number[1])
-            return float(split_number[0] + "." + split_number[1] + "0" * extra_zeros)
-        else:
-            return float(split_number[0] + "." + split_number[1][:digits])
-    else:
-        return float(number)
 
 import difflib
 
@@ -174,7 +184,42 @@ def are_there_nones(inList: list) -> bool:
             break
     return nones
 
-def compare_column_no_order(sql_column, pandas_column, decimal_places):
+def sdql_float_counter_compare(sql_counter: Counter, pd_counter: Counter) -> bool:
+    things_in_both = sql_counter & pd_counter
+    SQL_missing_from_pd = sql_counter - things_in_both
+    PD_missing_from_sql = pd_counter - things_in_both
+    moving = 0.01
+    
+    testing_for_close = True
+    if testing_for_close == True:
+        for key in SQL_missing_from_pd:
+            smaller = round(key - moving, 2)
+            larger = round(key + moving, 2)
+            if ((PD_missing_from_sql[key] > 0) or
+                (PD_missing_from_sql[smaller] > 0) or
+                (PD_missing_from_sql[larger] > 0)
+            ):
+                pass
+            else:
+                testing_for_close = False
+                break
+    if testing_for_close == True:
+        for key in PD_missing_from_sql:
+            smaller = round(key - moving, 2)
+            larger = round(key + moving, 2)
+            if ((SQL_missing_from_pd[key] > 0) or
+                (SQL_missing_from_pd[smaller] > 0) or
+                (SQL_missing_from_pd[larger] > 0)
+            ):
+                pass
+            else:
+                testing_for_close = False
+                break
+    
+    return testing_for_close
+        
+
+def compare_column_no_order(sql_column, pandas_column, decimal_places, is_sdql):
     """Function to compare two lists of data for accuracy
     """
     column_equivalent = False
@@ -193,20 +238,35 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places):
     
     column_types = set([sql_first_type, pandas_first_type])
     
+    # Change decimal places for SDQL
+    if is_sdql == True:
+        # SDQL can only return 2 decimal points
+        decimal_places = 2
+    
     if column_types == set([decimal.Decimal, int]):
         # Decimal and Int
         sql_column = from_decimal_to_int(sql_column, decimal_places)
         pandas_column = from_decimal_to_int(pandas_column, decimal_places)
         
         column_equivalent = Counter(sql_column) == Counter(pandas_column)
+    elif column_types == set([int, float]):
+        # Float and Int
+        sql_column = from_decimal_to_float(sql_column, decimal_places)
+        pandas_column = from_decimal_to_float(pandas_column, decimal_places)
+        
+        column_equivalent = Counter(sql_column) == Counter(pandas_column)
+        if column_equivalent == False and is_sdql == True:
+            column_equivalent = sdql_float_counter_compare(Counter(sql_column), Counter(pandas_column))
     elif column_types == set([decimal.Decimal, float]):
         # Decimal and Float
         sql_column = from_decimal_to_float(sql_column, decimal_places)
         pandas_column = from_decimal_to_float(pandas_column, decimal_places)
         
         column_equivalent = Counter(sql_column) == Counter(pandas_column)
+        if column_equivalent == False and is_sdql == True:
+            column_equivalent = sdql_float_counter_compare(Counter(sql_column), Counter(pandas_column))
     elif column_types == set([type(1.012)]):
-        # Float
+        # Float        
         sql_column = from_decimal_to_float(sql_column, decimal_places)
         pandas_column = from_decimal_to_float(pandas_column, decimal_places)
         
@@ -218,6 +278,8 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places):
             overlaps.append(len(get_overlap(str(sql_column_sorted[i]), str(pandas_column_sorted[i]))))
         
         column_equivalent = (Counter(sql_column) == Counter(pandas_column)) or (len(overlaps) == len(list(filter(lambda x: x >= 10, overlaps))))
+        if column_equivalent == False and is_sdql == True:
+            column_equivalent = sdql_float_counter_compare(Counter(sql_column), Counter(pandas_column))
     elif column_types == set([type(1)]):
         # Int
         
@@ -230,15 +292,26 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places):
             pandas_column[i] = str(pandas_column[i]).strip()
         
         column_equivalent = Counter(sql_column) == Counter(pandas_column)
+    elif column_types == set([ datetime.date, Date]):
+        # Convert hyper date to pd.Timestamp
+        # Convert datetime.date to pd.Timestamp
+        
+        if isinstance(sql_column[0], Date):
+            sql_column = from_hyper_date_to_pd_timestamp(sql_column)
+        else: 
+            raise Exception(f"sql_column was not of type Hyper Date, it was: {type(sql_column[0])}")
+        
+        if isinstance(pandas_column[0], datetime.date):
+            pandas_column = from_datetime_date_to_pd_timestamp(pandas_column)
+        else: 
+            raise Exception(f"pandas_column was not of type datetime Date, it was: {type(pandas_column[0])}")
+        
+        column_equivalent = Counter(sql_column) == Counter(pandas_column)
     elif column_types == set([pd.Timestamp, Date]):
         # Timestamp and (Hyper) Date, convert hyper date to pd.Timestamp
         
         if isinstance(sql_column[0], Date):
-            newColumn = []
-            for date in pandas_column:
-                sql_year, sql_month, sql_day = date.year, date.month, date.day
-                newColumn.append(pd.Timestamp(sql_year, sql_month, sql_day))
-            sql_column = newColumn
+            sql_column = from_hyper_date_to_pd_timestamp(sql_column)
         else: 
             raise Exception(f"sql_column was not of type Hyper Date, it was: {type(sql_column[0])}")
         
@@ -247,10 +320,7 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places):
         # Timestamp and datetime, convert datetime to pd.Timestamp
         
         if isinstance(sql_column[0], datetime.date):
-            newColumn = []
-            for date in pandas_column:
-                newColumn.append(pd.Timestamp(date))
-            sql_column = newColumn
+            sql_column = from_datetime_date_to_pd_timestamp(sql_column)
         else: 
             raise Exception(f"sql_column was not of type datetime Date, it was: {type(sql_column[0])}")
         
@@ -259,6 +329,23 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places):
         raise Exception(f"Unknown type of column_types: {column_types}")
     
     return column_equivalent
+
+def from_hyper_date_to_pd_timestamp(column_values):
+    newColumn = []
+    for date in column_values:
+        assert isinstance(date, Date)
+        sql_year, sql_month, sql_day = date.year, date.month, date.day
+        newColumn.append(pd.Timestamp(sql_year, sql_month, sql_day))
+    
+    return newColumn
+
+def from_datetime_date_to_pd_timestamp(column_values):
+    newColumn = []
+    for date in column_values:
+        assert isinstance(date, datetime.date)
+        newColumn.append(pd.Timestamp(date))
+            
+    return newColumn
 
 def from_decimal_to_float(columns_values, decimal_places):
     for i in range(len(columns_values)):
