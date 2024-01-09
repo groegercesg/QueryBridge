@@ -1,0 +1,3 @@
+Data Type,Scaling Factor,Query Name,Query Number,Average,Correct,Executed,Runs
+SQL,1,Hyper DB,Query 20,0.186,True,Yes,[0.18595194816589355]
+SDQLpy,1,SDQLpy Converted (Hyper DB),Query 20,0.331,True,Yes,[0.33136773109436035]

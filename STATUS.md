@@ -1,6 +1,6 @@
 # STATUS
 
-**Overall Note:** Automatic correctness checking hasn't been implemented for any of the queries yet.
+**Overall Note:** "Done" means that Automatic correctness checking has passed for the given query
 
 Q1   ->  Done | Needs AVG Support
 
@@ -32,7 +32,7 @@ Q14  ->  Done
 
 Q15  ->  Done | Needs MAX Support
 
-Q16  ->  Done
+Q16  ->  CountDistinct support needed, need to use Vectors and DictSize
 
 Q17  ->  Needs AVG Support
 

@@ -651,17 +651,16 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                 x.left = oldRight
                 x.right = oldLeft
             else:
-                raise Exception(f"Unknown format for x")
-            # if x.left.codeName in leftColumns and x.right.codeName in rightColumns:
-            #     # No rotate needed, all good
-            #     pass
-            # elif x.left.codeName in rightColumns and x.right.codeName in leftColumns:
-            #     oldLeft = x.left
-            #     oldRight = x.right
-            #     x.left = oldRight
-            #     x.right = oldLeft
-            # else:
-            #     raise Exception(f"Unknown format for x")
+                if x.left.codeName in leftColumns and x.right.codeName in rightColumns:
+                    # No rotate needed, all good
+                    pass
+                elif x.left.codeName in rightColumns and x.right.codeName in leftColumns:
+                    oldLeft = x.left
+                    oldRight = x.right
+                    x.left = oldRight
+                    x.right = oldLeft
+                else:
+                    raise Exception(f"Unknown format for x")
         
         # Rebalance stripped_join_condition    
         stripped_join_condition = rebalance_and_or_tree(stripped_join_condition)
