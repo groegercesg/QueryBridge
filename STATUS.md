@@ -32,7 +32,7 @@ Q14  ->  Done
 
 Q15  ->  Done | Needs MAX Support
 
-Q16  ->  CountDistinct support needed, need to use Vectors and DictSize
+Q16  ->  *Callum to add:* CountDistinct support needed, need to use Vectors and DictSize
 
 Q17  ->  Needs AVG Support
 
