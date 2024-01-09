@@ -637,18 +637,31 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         leftColumns = expr_to_string(self.left.outputDict.flatCols())
         rightColumns = expr_to_string(self.right.outputDict.flatCols())
         
+        leftIDs = [id(x) for x in self.left.outputDict.flatCols()]
+        rightIDs = [id(x) for x in self.right.outputDict.flatCols()]
+        
         # Rotate equating if needed
         for x in equating:
-            if x.left.codeName in leftColumns and x.right.codeName in rightColumns:
+            if id(x.left) in leftIDs and id(x.right) in rightIDs:
                 # No rotate needed, all good
                 pass
-            elif x.left.codeName in rightColumns and x.right.codeName in leftColumns:
+            elif id(x.left) in rightIDs and id(x.right) in leftIDs:
                 oldLeft = x.left
                 oldRight = x.right
                 x.left = oldRight
                 x.right = oldLeft
             else:
                 raise Exception(f"Unknown format for x")
+            # if x.left.codeName in leftColumns and x.right.codeName in rightColumns:
+            #     # No rotate needed, all good
+            #     pass
+            # elif x.left.codeName in rightColumns and x.right.codeName in leftColumns:
+            #     oldLeft = x.left
+            #     oldRight = x.right
+            #     x.left = oldRight
+            #     x.right = oldLeft
+            # else:
+            #     raise Exception(f"Unknown format for x")
         
         # Rebalance stripped_join_condition    
         stripped_join_condition = rebalance_and_or_tree(stripped_join_condition)
@@ -666,14 +679,20 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         lr_pairs = []
         # Iterate through equatingConditions
         for cond in self.equatingConditions:
+            leftName = None
             rightName = None
+            if cond.left.created == False:
+                leftName = cond.left.value
+            else:
+                leftName = cond.left.codeName
+            
             if cond.right.created == False:
                 rightName = cond.right.value
             else:
                 rightName = cond.right.codeName
             
             lr_pairs.append(
-                f"'{cond.left.codeName}': {lambda_index}[0].{rightName}"
+                f"'{leftName}': {lambda_index}[0].{rightName}"
             )
         innerRecord = f"{{{', '.join(lr_pairs)}}}"
         return f"{leftTable}[record({innerRecord})]"
