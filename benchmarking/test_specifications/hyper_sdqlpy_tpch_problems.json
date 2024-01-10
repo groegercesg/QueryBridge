@@ -3,25 +3,6 @@
     "Scaling Factors": [1],
     "Queries": [
         {
-            "Query Name": "Query 20",
-            "Required Data": ["supplier", "nation", "partsupp", "part", "lineitem"],
-            "SQL Name": "20.sql",
-            "Options": [
-                {
-                    "Type": "SQL",
-                    "Results Name": "Hyper DB",
-                    "DBMS": "Hyper DB"
-                },
-                {
-                    "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy.py",
-                    "Results Name": "SDQLpy Converted (Hyper DB)",
-                    "Query Plan": "Hyper DB"
-                }
-            ]
-        },
-
-        {
             "Query Name": "Query 16",
             "Required Data": ["partsupp", "part", "supplier"],
             "SQL Name": "16.sql",
@@ -55,7 +36,7 @@
     "Data Storage": "data_storage",
     "Use Numpy": "False",
     "Results Precision": 4,
-    "Regenerate Data": "False",
+    "Regenerate Data": "True",
     "Prepare Only": "HyperDB",
     "SDQLpy Setup": {
         "Location": "SDQLPY",
