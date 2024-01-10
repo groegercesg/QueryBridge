@@ -1131,17 +1131,24 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     # We need to set somethings to support this
                     assert isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyConcatNode))
                     
+                    if isinstance(sdqlpy_tree, SDQLpyGroupNode):
+                        sdqlpy_tree.output_dict_value_sr_dict = True
+                    elif isinstance(sdqlpy_tree, SDQLpyConcatNode):
+                        sdqlpy_tree.output_dict_value_dict_size = True
+                    else:
+                        raise Exception("Unexpected node")
+                    
                     # Turn off duplicateUser and counter
                     sdqlpy_tree.outputDict.duplicateUser = False
                     sdqlpy_tree.child.outputDict.duplicateCounter = False
                     
-                    newValue = ConstantValue(1.0, "Float")
-                    newValue.codeName = val.codeName
+                    # newValue = ConstantValue(1.0, "Float")
+                    # newValue.codeName = val.codeName
                     
-                    replacementDict[str(id(val))] = newValue
+                    # replacementDict[str(id(val))] = newValue
                     
-                    # Set the replacementDict
-                    sdqlpy_tree.setReplacementDict(replacementDict)
+                    # # Set the replacementDict
+                    # sdqlpy_tree.setReplacementDict(replacementDict)
                     
                     # Use the replacementDict
                     sdqlpy_tree.set_output_dict()
@@ -1401,10 +1408,28 @@ class UnparseSDQLpyTree():
         createdDictName = node.getTableName(self)
         lambda_index = "p"
         
-        # Do the summation at the end
-        self.writeContent(
-            f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}})"
-        )
+        if node.output_dict_value_dict_size == True:
+            # Use dictsize on the output_value
+            self.writeContent(
+                f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat("
+            )
+            assert isinstance(node.outputDict.keys[-1], CountDistinctAggrOperator)
+            val_codeName = node.outputDict.keys[-1].codeName
+            self.writeContent(
+                f"{TAB}record(\n"
+                f"{TAB}{TAB}{{\n"
+                f'{TAB}{TAB}{TAB}"{val_codeName}": dictSize({lambda_index}[1])\n'
+                f"{TAB}{TAB}}}\n"
+                f"{TAB})"
+            )
+            self.writeContent(
+                ")): True})"
+            )
+        else:        
+            # Do the summation at the end
+            self.writeContent(
+                f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}})"
+            )
         
     def visit_SDQLpyJoinBuildNode(self, node):
         # Get child name
@@ -1556,6 +1581,9 @@ class UnparseSDQLpyTree():
         self.writeContent(
             f"{initialDictName} = {childTable}.sum(lambda {lambda_index} :"
         )
+        
+        # Carry over the value sr_dict
+        node.outputDict.value_sr_dict = node.output_dict_value_sr_dict
         
         # Output the RecordOutput
         for output_line in node.outputDict.generateSDQLpyOneLambda(

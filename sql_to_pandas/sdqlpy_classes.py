@@ -341,6 +341,8 @@ class SDQLpyConcatNode(UnarySDQLpyNode):
         self.outputColumns = outputColumns
         self.outputDict = None
         
+        self.output_dict_value_dict_size = False
+        
     def set_output_dict(self, no_sumaggr_warn=False):
         self.outputDict = SDQLpySRDict(
             list(self.child.outputDict.flatCols()),
@@ -357,6 +359,8 @@ class SDQLpyGroupNode(UnarySDQLpyNode):
         self.aggregateOperations = aggregateOperations
         self.outputDict = None
         self.sdqlrepr = "group"
+        
+        self.output_dict_value_sr_dict = False
         
     def set_output_dict(self, no_sumaggr_warn=False):
         self.rd_aggregateOperations(no_sumaggr_warn)
@@ -758,6 +762,8 @@ class SDQLpySRDict():
         self.duplicateCounter = False
         self.duplicateUser = False
         
+        self.value_sr_dict = False
+        
     def reduceDuplicates(self, items):
         # Remove duplicates in incoming list of items: either keys or values
         itemsById = defaultdict(list)
@@ -1007,7 +1013,14 @@ class SDQLpySRDict():
                 output_content.append(
                     f"{TAB}{True}"
                 )
+        elif len(self.values) == 1 and self.value_sr_dict == True:
+            # Make the value section an SR Dict
+            val_codeName = self.values[0].child.codeName
+            val_sourceNode = self.values[0].child.sourceNode
+            
+            output_content.append(f"{TAB}sr_dict({{{val_sourceNode}.{val_codeName}: True}})")
         else:
+            assert self.value_sr_dict == False
             valueCounter = defaultdict(int)
             writtenValues = dict()
             colContent = []
