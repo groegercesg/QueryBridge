@@ -18,6 +18,7 @@ from prepare_databases.prepare_database import EXPLAIN_LOCATION
 from hyper_parsing import generate_unparse_content_from_explain_and_query
 from pandas_unparser_v2 import *
 from sdqlpy_unparser import *
+from sdqlpy_optimisations import *
 
 def syntax_check_code(path):
     with open(path) as f:
@@ -408,11 +409,10 @@ def main():
                     if args.benchmarking:
                         fp.write(f"{potentialTab}return {unparse_content.pandas_tree.tableName}\n")
             elif isinstance(unparse_content, UnparseSDQLpyTree):
-                query_output_columns = []
-                for expr in unparse_content.sdqlpy_tree.outputDict.flatCols():
-                    query_output_columns.append(
-                        expr.codeName
-                    )
+                # Apply optimisations, if present
+                apply_optimisations(unparse_content.sdqlpy_tree, [])
+                
+                query_output_columns = unparse_content.getOutputColumns()
                 
                 with open(python_output_name, 'w') as fp:
                     for line in unparse_content.getSDQLpyContent():

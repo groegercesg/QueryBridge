@@ -13,6 +13,7 @@ import json
 from hyper_classes import *
 
 from sdqlpy_unparser import *
+from sdqlpy_transformer import *
 
 def generate_hyperdb_explains():
     db = PrepareHyperDB('hyperdb_tpch.hyper')
@@ -1121,7 +1122,7 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
     iu_references = dict()
     visit_solve_iu_references(op_tree, iu_references)
 
-# # generate_hyperdb_explains()
-# # inspect_explain_plans()
-# # parse_explain_plans()
-# convert_explain_plan_to_x("sdqlpy")
+# generate_hyperdb_explains()
+# inspect_explain_plans()
+# parse_explain_plans()
+convert_explain_plan_to_x("sdqlpy")

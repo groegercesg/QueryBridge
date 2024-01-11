@@ -3,9 +3,9 @@
     "Scaling Factors": [1],
     "Queries": [
         {
-            "Query Name": "Query 16",
-            "Required Data": ["partsupp", "part", "supplier"],
-            "SQL Name": "16.sql",
+            "Query Name": "Query 1",
+            "Required Data": ["lineitem"],
+            "SQL Name": "1.sql",
             "Options": [
                 {
                     "Type": "SQL",
@@ -14,8 +14,65 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy.py",
+                    "Converted Name": "hyper_q1_sdqlpy.py",
                     "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q1_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 10",
+            "Required Data": ["customer", "orders", "lineitem", "nation"],
+            "SQL Name": "10.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q10_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q10_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 12",
+            "Required Data": ["orders", "lineitem"],
+            "SQL Name": "12.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q12_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q12_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
                     "Query Plan": "Hyper DB"
                 }
             ]
