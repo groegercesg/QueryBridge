@@ -14,6 +14,7 @@ from hyper_classes import *
 
 from sdqlpy_unparser import *
 from sdqlpy_transformer import *
+from sdqlpy_optimisations import *
 
 def generate_hyperdb_explains():
     db = PrepareHyperDB('hyperdb_tpch.hyper')
@@ -259,7 +260,7 @@ def convert_explain_plan_to_x(desired_format):
     else:
         table_keys = None
     
-    supported_queries = ["1", "2", "3" ,"4", "5", "6", "8", "9", "10", "11", "12", "14", "15", "16", "18", "19", "20"]
+    supported_queries = ["1", "2", "3" ,"4", "5", "6", "8", "9", "10", "11", "12", "14", "15_cte", "16", "18", "19", "20"]
     
     print(f"We currently support {len(supported_queries)} out of a total of 22")
     
@@ -281,6 +282,9 @@ def convert_explain_plan_to_x(desired_format):
             if desired_format == "pandas":
                 content_size = len(unparse_content.getPandasContent())
             elif desired_format == "sdqlpy":
+                # Do Optimisations
+                apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding"])
+                
                 content_size = len(unparse_content.getSDQLpyContent())
             else:
                 raise Exception("Unrecognised desired format")

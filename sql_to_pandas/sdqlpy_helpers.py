@@ -201,9 +201,12 @@ def resetColumnValues(value):
         assert isinstance(value, LeafNode)
         pass
     
-    if isinstance(value, IntervalNotionOperator):
+    if isinstance(value, (IntervalNotionOperator, LikeOperator)):
         if value.value.sourceNode != None:
             value.value.sourceNode = None
+    elif isinstance(value, InSetOperator):
+        if value.child.sourceNode != None:
+            value.child.sourceNode = None
     else:
         if hasattr(value, "sourceNode") and value.sourceNode != None:
             value.sourceNode = None

@@ -1065,4 +1065,12 @@ class SDQLpySRDict():
             key.setCreated()
         for val in self.values:
             val.setCreated()
+            
+        # Check that all keys and values have a sourceNode of None
+        for key in self.keys:
+            if hasattr(key, "sourceNode"):
+                assert key.sourceNode == None
+        for val in self.values:
+            if hasattr(val, "sourceNode"):
+                assert val.sourceNode == None
         

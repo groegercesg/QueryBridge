@@ -160,7 +160,9 @@ class UnparseSDQLpyTree():
                 self.writeContent(
                     f"{TAB}{TAB}{output_line}"
                 )
-            
+        
+        assert node.filterContent != None, "A SDQLpyFilterNode should have some filterContent"
+        
         # If there's a filter, then carry it out
         filterContent = self.convert_expr_to_sdqlpy(
             node.filterContent,

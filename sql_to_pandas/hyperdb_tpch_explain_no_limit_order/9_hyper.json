@@ -469,11 +469,11 @@
                                     "mode": "=",
                                     "left": {
                                         "expression": "iuref",
-                                        "iu": "v8"
+                                        "iu": "v10"
                                     },
                                     "right": {
                                         "expression": "iuref",
-                                        "iu": "v10"
+                                        "iu": "v8"
                                     }
                                 }
                             },
@@ -482,11 +482,11 @@
                                 "mode": "=",
                                 "left": {
                                     "expression": "iuref",
-                                    "iu": "v11"
+                                    "iu": "v6"
                                 },
                                 "right": {
                                     "expression": "iuref",
-                                    "iu": "v6"
+                                    "iu": "v11"
                                 }
                             }
                         },
