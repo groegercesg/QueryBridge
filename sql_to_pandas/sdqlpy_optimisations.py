@@ -291,45 +291,28 @@ def opt_v_fold(sdqlpy_tree):
                 if isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyJoinBuildNode, SDQLpyAggrNode)):
                     # Folding Opportunity
                     if isinstance(sdqlpy_tree, SDQLpyGroupNode):
-                        assert sdqlpy_tree.filterContent == None
                         # Carry down the output_dict_value condition
                         sdqlpy_tree.child.output_dict_value_sr_dict = sdqlpy_tree.output_dict_value_sr_dict
-                        # Set the outputDict
-                        sdqlpy_tree.child.outputDict = sdqlpy_tree.outputDict
-                        # Carry the primary and foreign
-                        sdqlpy_tree.child.primaryKey = sdqlpy_tree.primaryKey
-                        sdqlpy_tree.child.foreignKeys = sdqlpy_tree.foreignKeys
-                        sdqlpy_tree.child.waitingForeignKeys = sdqlpy_tree.waitingForeignKeys
-                        
-                        sdqlpy_tree = sdqlpy_tree.child
                     elif isinstance(sdqlpy_tree, SDQLpyJoinBuildNode):
-                        assert sdqlpy_tree.filterContent == None
-                        # Set the outputDict
-                        sdqlpy_tree.child.outputDict = sdqlpy_tree.outputDict
-                        # Carry the primary and foreign
-                        sdqlpy_tree.child.primaryKey = sdqlpy_tree.primaryKey
-                        sdqlpy_tree.child.foreignKeys = sdqlpy_tree.foreignKeys
-                        sdqlpy_tree.child.waitingForeignKeys = sdqlpy_tree.waitingForeignKeys
-                        
-                        sdqlpy_tree = sdqlpy_tree.child
-                    elif isinstance(sdqlpy_tree, SDQLpyAggrNode):
-                        # Hard
-                        assert sdqlpy_tree.filterContent == None
-                        assert sdqlpy_tree.repeated_aggr == False
-                        
-                        # Set the outputDict
-                        sdqlpy_tree.child.outputDict = sdqlpy_tree.outputDict
-                        # Carry the primary and foreign
-                        sdqlpy_tree.child.primaryKey = sdqlpy_tree.primaryKey
-                        sdqlpy_tree.child.foreignKeys = sdqlpy_tree.foreignKeys
-                        sdqlpy_tree.child.waitingForeignKeys = sdqlpy_tree.waitingForeignKeys
-                        
-                        sdqlpy_tree = sdqlpy_tree.child
+                        # JoinBuild Folding
                         pass
+                    elif isinstance(sdqlpy_tree, SDQLpyAggrNode):
+                        # Aggr Mode
+                        assert sdqlpy_tree.repeated_aggr == False
                     else:
                         # Unrecognised Node
                         raise Exception(f"Unrecognised supposedly foldable Node: {sdqlpy_tree}")
-
+                    
+                    assert sdqlpy_tree.filterContent == None
+                    
+                    # Set the outputDict
+                    sdqlpy_tree.child.outputDict = sdqlpy_tree.outputDict
+                    # Carry the primary and foreign
+                    sdqlpy_tree.child.primaryKey = sdqlpy_tree.primaryKey
+                    sdqlpy_tree.child.foreignKeys = sdqlpy_tree.foreignKeys
+                    sdqlpy_tree.child.waitingForeignKeys = sdqlpy_tree.waitingForeignKeys
+                    
+                    sdqlpy_tree = sdqlpy_tree.child
                     sdqlpy_tree.foldedInto = True
                 elif isinstance(sdqlpy_tree, (SDQLpyJoinNode, SDQLpyConcatNode)):
                     # No Folding
@@ -350,8 +333,6 @@ def opt_v_fold(sdqlpy_tree):
                     
                     sdqlpy_tree = sdqlpy_tree.child
                     sdqlpy_tree.foldedInto = True
-                    
-                    pass
                 else:
                     raise Exception(f"Unexpected Node Detected: {sdqlpy_tree}")
             
