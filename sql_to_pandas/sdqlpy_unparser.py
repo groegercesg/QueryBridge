@@ -309,17 +309,24 @@ class UnparseSDQLpyTree():
         assert node.joinType in node.KNOWN_JOIN_TYPES
         # assert node.joinMethod == "hash"
         
-        assert isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode)) and isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode)) 
+        # Check its a Valid setup
+        if ((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode))):
+            pass
+        else:
+            raise Exception("Invalid/Unsupported Left and Right Layout")
         
         self.writeTempContent(
             f"{createdDictName} = {rightTable}.sum(\n"
             f"{TAB}lambda {lambda_index} : "
         )
         
+        # Carry over the value sr_dict
+        node.outputDict.value_sr_dict = node.output_dict_value_sr_dict
+        
         leftTableRef = node.make_leftTableRef(self, lambda_index)
         
         # Write the output Record
-        for output_line in node.get_output_dict().generateSDQLpyTwoLambda(
+        for output_line in node.outputDict.generateSDQLpyTwoLambda(
             self, leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]",
             node
         ):

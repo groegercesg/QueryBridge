@@ -26,6 +26,7 @@ class SDQLpyBaseNode():
         self.waitingForeignKeys = dict()
         
         self.completedTables = set()
+        self.foldedInto = False
         
     def setPrimary(self, primary):
         assert isinstance(primary, (tuple, str))
@@ -409,13 +410,15 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.leftKeys = incomingLeftKeys
         self.rightKeys = incomingRightKeys
         
+        self.output_dict_value_sr_dict = False
+        
     def update_update_sum(self, newValue):
         assert isinstance(newValue, bool)
         self.is_update_sum = newValue
         
-    def get_output_dict(self):
-        self.set_output_dict()
-        return self.outputDict
+    # def get_output_dict(self):
+    #     self.set_output_dict()
+    #     return self.outputDict
         
     def set_output_dict(self, no_sumaggr_warn=False):
         assert (self.left != None) and (self.right != None)
@@ -1026,7 +1029,8 @@ class SDQLpySRDict():
             colContent = []
             for val in self.values:
                 if isinstance(val, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper,
-                                    SumAggrOperator, MulOperator, ConstantValue, CaseOperator, DivOperator)):
+                                    SumAggrOperator, MulOperator, ConstantValue, CaseOperator, DivOperator,
+                                    SubOperator)):
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val)
                 else:
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val.child)
