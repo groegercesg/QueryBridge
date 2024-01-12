@@ -410,7 +410,7 @@ def main():
                         fp.write(f"{potentialTab}return {unparse_content.pandas_tree.tableName}\n")
             elif isinstance(unparse_content, UnparseSDQLpyTree):
                 # Apply optimisations, if present
-                apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding"])
+                apply_optimisations(unparse_content.sdqlpy_tree, ["PipelineBreaker"])
                 
                 query_output_columns = unparse_content.getOutputColumns()
                 

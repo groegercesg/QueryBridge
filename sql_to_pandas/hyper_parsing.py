@@ -283,7 +283,7 @@ def convert_explain_plan_to_x(desired_format):
                 content_size = len(unparse_content.getPandasContent())
             elif desired_format == "sdqlpy":
                 # Do Optimisations
-                apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding"])
+                apply_optimisations(unparse_content.sdqlpy_tree, ["PipelineBreaker"])
                 
                 content_size = len(unparse_content.getSDQLpyContent())
             else:
@@ -1129,4 +1129,4 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
 # # generate_hyperdb_explains()
 # # inspect_explain_plans()
 # # parse_explain_plans()
-# convert_explain_plan_to_x("sdqlpy")
+convert_explain_plan_to_x("sdqlpy")
