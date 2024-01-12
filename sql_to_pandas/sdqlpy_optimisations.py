@@ -288,7 +288,11 @@ def opt_v_fold(sdqlpy_tree):
         if isinstance(sdqlpy_tree, UnarySDQLpyNode):
             # And we can fold it into either a JoinNode or a Filter Node
             if isinstance(sdqlpy_tree.child, SDQLpyJoinNode) and sdqlpy_tree.child.foldedInto == False:
-                if isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyJoinBuildNode, SDQLpyAggrNode)):
+                casesInOutputDict = list(filter(lambda x: type(x) == CaseOperator, sdqlpy_tree.outputDict.flatCols()))
+                if len(casesInOutputDict) >= 1 and isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyAggrNode)):
+                    # We should not do folding if there is a CaseOperator in the outputDict
+                    pass
+                elif isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyJoinBuildNode, SDQLpyAggrNode)):
                     # Folding Opportunity
                     if isinstance(sdqlpy_tree, SDQLpyGroupNode):
                         # Carry down the output_dict_value condition

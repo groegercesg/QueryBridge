@@ -24,8 +24,6 @@ class UnparseSDQLpyTree():
         
         # Variable dict
         self.variableDict = {}
-        # Set top node of the sdqlpy_tree to True
-        sdqlpy_tree.topNode = True
         self.doing_repeated_aggr = False
         
     def getChildTableNames(self, current: SDQLpyBaseNode) -> list[str]:
@@ -70,10 +68,7 @@ class UnparseSDQLpyTree():
         self.sdqlpy_temp_content = []
         
     def getSDQLpyContent(self) -> list[str]:
-        # At the start of this method, we should have captured no content
-        assert self.sdqlpy_content == []
-        # Then we walk the tree to gather it
-        self.__walk_tree(self.sdqlpy_tree)
+        self.unparse_content()
         
         # We need to return, with also the variableDict content
         variableDictContent = []
@@ -102,6 +97,14 @@ class UnparseSDQLpyTree():
         if current_node.nodeID != None:
             assert current_node.nodeID not in self.nodeDict
             self.nodeDict[current_node.nodeID] = current_node
+            
+    def unparse_content(self):
+        # At the start of this method, we should have captured no content
+        assert self.sdqlpy_content == []
+        # Set top node of the sdqlpy_tree to True
+        self.sdqlpy_tree.topNode = True
+        # Then we walk the tree to gather it
+        self.__walk_tree(self.sdqlpy_tree)
     
     def __walk_tree(self, current_node):
         # Walk to children Children
