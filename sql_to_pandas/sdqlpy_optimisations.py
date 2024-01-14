@@ -33,6 +33,9 @@ def optimisation_runner(sdqlpy_tree, inOpt):
     
 
 def apply_optimisations(sdqlpy_tree, inOptimisations):
+    if inOptimisations == [""]:
+        return sdqlpy_tree
+    
     # Check optimisations are all okay
     assert isinstance(inOptimisations, list)
     assert all([SupportedOptimisations.has_value(x) for x in inOptimisations])

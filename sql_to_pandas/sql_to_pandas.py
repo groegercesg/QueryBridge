@@ -132,6 +132,13 @@ def init_argparse() -> argparse.ArgumentParser:
                         required=False,
                         default="pandas",
                         help='What output format would you like to use?')
+    
+    parser.add_argument('--sdqlpy_optimisations',
+                        metavar='sdqlpy_optimisations',
+                        type=str,
+                        required=False,
+                        default="",
+                        help='What output format would you like to use?')
 
     return parser
 
@@ -358,7 +365,6 @@ def main():
             raise Exception("The database is empty, please specify a connection to a database with tables")
         
         # We can request the explain data from the database
-        
         explain_json, explain_content = db.get_explain(explain_content, query_name)
 
         # Write out explain_content to explain_file_path
@@ -410,7 +416,11 @@ def main():
                         fp.write(f"{potentialTab}return {unparse_content.pandas_tree.tableName}\n")
             elif isinstance(unparse_content, UnparseSDQLpyTree):
                 # Apply optimisations, if present
-                unparse_content.sdqlpy_tree = apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding"]) # , "PipelineBreaker"
+                sdqlpy_opts = str(args.sdqlpy_optimisations).split(", ")
+                assert isinstance(sdqlpy_opts, list)
+                assert all(isinstance(x, str) for x in sdqlpy_opts)
+                
+                unparse_content.sdqlpy_tree = apply_optimisations(unparse_content.sdqlpy_tree, sdqlpy_opts)
                 
                 query_output_columns = unparse_content.getOutputColumns()
                 

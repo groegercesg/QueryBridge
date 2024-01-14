@@ -9,9 +9,8 @@ import sys
 
 def bench_runner(iterations, func, args, query_columns, data_write_path):
     times_list = []
-    # Run once for burn in
-    func(*args)
     
+    # Run 'iteration' number of times
     for i in range(0, iterations):
         start=(time.time())
         func(*args)

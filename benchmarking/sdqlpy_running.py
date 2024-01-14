@@ -107,7 +107,7 @@ sdqlpy_init(1, 2)"""
     # Finish writing options out
     iterations = f"iterations = {iterations}"
     add_line_at_end(query_path, iterations)
-    data_json_name = f"{''.join(random.sample(string.ascii_uppercase, 10))}.json"
+    data_json_name = f"{''.join(random.sample(string.ascii_uppercase, 12))}.json"
     data_write_path = f'data_write_path = "{data_json_name}"'
     add_line_at_end(query_path, data_write_path)
     bench_runner = "bench_runner(iterations, query_function, query_tables, query_columns, data_write_path)"
@@ -136,7 +136,7 @@ sdqlpy_init(1, 2)"""
     
     # Remove data_json and query_file
     # TODO: Undo this!
-    # os.remove(data_json_path)
+    os.remove(data_json_path)
     # os.remove(overall_query_path)
     
     # Return Query results
