@@ -200,16 +200,34 @@ def opt_pipe_break(sdqlpy_tree):
             sdqlpy_tree.child = childNode
         else:
             assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
-        
+            
+        table_cardinalities = {
+            "customer": 150000,
+            "lineitem": 6001216,
+            "nation": 25,
+            "orders": 1500000,
+            "part": 200000,
+            "partsupp": 800000,
+            "region": 5,
+            "supplier": 10000
+        }
         
         if type(sdqlpy_tree) in PIPELINE_BREAKERS:
             # Gather filters below
             if isinstance(sdqlpy_tree, BinarySDQLpyNode):
                 filter_from_left = gather_filters_below(sdqlpy_tree.left)
-                filter_from_right = gather_filters_below(sdqlpy_tree.right)
-                
                 add_filter_to_joinNode(sdqlpy_tree, filter_from_left)
-                add_filter_to_joinNode(sdqlpy_tree, filter_from_right)
+                
+                # Do right
+                if sdqlpy_tree.right.filterContent != None:
+                    assert isinstance(sdqlpy_tree.right, SDQLpyRecordNode)
+                    
+                    print(f"Original Cardinality for Right: {table_cardinalities[sdqlpy_tree.right.tableName]}")
+                    print(f"After Filter Cardinality: {sdqlpy_tree.right.cardinality}")
+                    print(f"A reduction of: {round((table_cardinalities[sdqlpy_tree.right.tableName] - sdqlpy_tree.right.cardinality) / table_cardinalities[sdqlpy_tree.right.tableName], 7) * 100}%")
+                    
+                    filter_from_right = gather_filters_below(sdqlpy_tree.right)
+                    add_filter_to_joinNode(sdqlpy_tree, filter_from_right)
             elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
                 filter_from_below = gather_filters_below(sdqlpy_tree.child)
                 add_filter_to_current(sdqlpy_tree, filter_from_below)
