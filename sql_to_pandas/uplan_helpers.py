@@ -36,6 +36,12 @@ def handleEmptyCodeName(value, previousColumns):
                 current_strings.append("countdistinct")
             case ExtractYearOperator():
                 current_strings.append("extractyear")
+            case CountAggrOperator():
+                current_strings.append("count")
+            case AvgAggrOperator():
+                current_strings.append("avg")
+            case SubstringOperator():
+                current_strings.append("substr")
             case _:
                 raise Exception(f"Unknown operator: {type(value)}")
         

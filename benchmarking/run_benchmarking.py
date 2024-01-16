@@ -179,10 +179,13 @@ def main():
         print("Pandas Data Imported, now Running Queries")
         
         # Setup SDQLpy environment
-        print("Setting up SDQLpy Environment")
-        setup_sdqlpy(manifest_json["SDQLpy Setup"])
-        print("SDQLpy Environment Imported")
-    
+        if manifest_json["SDQLpy Setup"] == "False":
+            print("Skipping SDQLpy Setup")
+        else:
+            print("Setting up SDQLpy Environment")
+            setup_sdqlpy(manifest_json["SDQLpy Setup"])
+            print("SDQLpy Environment Imported")
+        
         # We will run the converter to create our pandas files from our sql files
         # We want this to output the converted queries to a given directory
         # This directory is specified as: manifest_json["Temporary Directory"]

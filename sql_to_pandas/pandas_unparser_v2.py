@@ -973,8 +973,10 @@ class UnparsePandasTree():
                 equalOperator = list(filter(lambda x: isinstance(x, EqualsOperator), node.joinCondition))
                 assert len(equalOperator) == 1
                 equalOperator = equalOperator[0]
-                assert equalOperator.left.codeName == equalOperator.right.codeName
-                innerKey = equalOperator.left.codeName
+                # TODO: Fix this, it's super clunky and horrible
+                # assert equalOperator.left.codeName == equalOperator.right.codeName
+                l_innerKey = equalOperator.right.codeName
+                r_innerKey = equalOperator.left.codeName
                 # Check the joinCondition didn't have things other than Equals and NotEquals
                 assert len(set(operatorCount.keys()) - set([EqualsOperator(), NotEqualsOperator()])) == 0
                 # Pull out the inner cond, use a deep copy, as we'll be editing some stuff
@@ -994,12 +996,13 @@ class UnparsePandasTree():
                     innerCondition = convert_expression_operator_to_pandas(and_join, innerTableName)#
                
                 self.writeContent(
-                    f"{innerTableName} = {leftTable}.merge({rightTable}, left_on='{innerKey}', right_on='{innerKey}', how='{'inner'}', sort={joinMethod})"
+                    f"{innerTableName} = {leftTable}.merge({rightTable}, left_on='{l_innerKey}', right_on='{r_innerKey}', how='{'inner'}', sort={joinMethod})"
                 )
                 
                 projectInnerCondWithKey = ""
                 if node.joinType not in ['rightsemijoin', 'leftsemijoin']:
-                    projectInnerCondWithKey = f"['{innerKey}']"
+                    # Choose right for the projection
+                    projectInnerCondWithKey = f"['{r_innerKey}']" 
                     
                 self.writeContent(
                     f"{innerTableName} = {innerTableName}[{innerCondition}]{projectInnerCondWithKey}"
