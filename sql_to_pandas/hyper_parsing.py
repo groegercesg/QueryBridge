@@ -16,6 +16,7 @@ from sdqlpy_unparser import *
 from sdqlpy_transformer import *
 from sdqlpy_optimisations import *
 
+from uplan_helpers import *
 from uplan_optimisations import *
 
 def generate_hyperdb_explains():
@@ -98,6 +99,27 @@ def fix_explictScanNodes(op_node: HyperBaseNode, all_nodes: dict):
             op_node.child = copy.deepcopy(all_nodes[op_node.targetOperator])
             
 def fix_solveDuplicateColumnsNames(uplan_tree):
+    def getProblemCodeNamesFromFlowColumns(flowColumns: list) -> list:
+        # Check that the codeNames are unique
+        nameDict = defaultdict(int)
+        for col in flowColumns:
+            nameDict[col.codeName] += 1
+            
+        problemCodeNames = [k for k, v in nameDict.items() if v > 1]
+        return problemCodeNames, nameDict
+    
+    def getProblemCodeNamesFromJoinKeys(leftKeys: list, rightKeys: list) -> list:
+        # Use left/rightKeys to determine this
+        # Check that the codeNames are unique
+        nameDict = defaultdict(int)
+        for col in leftKeys:
+            nameDict[col.codeName] += 1
+        for col in rightKeys:
+            nameDict[col.codeName] += 1
+            
+        problemCodeNames = [k for k, v in nameDict.items() if v > 1]
+        return problemCodeNames, nameDict
+
     # Post Order traversal: Visit Children
     leftNode, rightNode, childNode = None, None, None
     if isinstance(uplan_tree, BinaryBaseNode):
@@ -121,9 +143,61 @@ def fix_solveDuplicateColumnsNames(uplan_tree):
     
     # Run on current node (sdqlpy_tree)
     if isinstance(uplan_tree, JoinNode):
-        pass
+        assert len(uplan_tree.flowColumns) > 0
+        
+        # Any values that are > 1, we have a problem and need to resolve duplicates 
+        # in the output flowColumns
+        problemCodeNames, problemCodeNameDict = getProblemCodeNamesFromFlowColumns(uplan_tree.flowColumns)
+        if len(problemCodeNames) > 0:
+            for badCodeName in problemCodeNames:
+                    filtered_FlowColumns = [x for x in uplan_tree.flowColumns if x.codeName == badCodeName]
+                    assert len(filtered_FlowColumns) == problemCodeNameDict[badCodeName] and problemCodeNameDict[badCodeName] == 2
+                    
+                    # Change the codenames, for those in filtered
+                    nameAffixes = ["_x", "_y"]
+                    for idx, affix in enumerate(nameAffixes):
+                        filtered_FlowColumns[idx].codeName = f"{filtered_FlowColumns[idx].codeName}{affix}"
+                
+            # Check this has resolved things
+            problemCodeNames, _ = getProblemCodeNamesFromFlowColumns(uplan_tree.flowColumns)
+            assert len(problemCodeNames) == 0
+            
+        # Check the Join Keys for Duplicates as well
+        assert (len(uplan_tree.leftKeys) > 0) and (len(uplan_tree.rightKeys) > 0)
+        problemCodeNames, problemCodeNameDict = getProblemCodeNamesFromJoinKeys(uplan_tree.leftKeys, uplan_tree.rightKeys)
+        if len(problemCodeNames) > 0:
+            for badCodeName in problemCodeNames:
+                filtered_FlowColumns = [x for x in (uplan_tree.leftKeys + uplan_tree.rightKeys) if x.codeName == badCodeName]
+                assert len(filtered_FlowColumns) == problemCodeNameDict[badCodeName] and problemCodeNameDict[badCodeName] == 2
+                
+                # Change the codenames, for those in filtered
+                nameAffixes = ["_x", "_y"]
+                for idx, affix in enumerate(nameAffixes):
+                    filtered_FlowColumns[idx].codeName = f"{filtered_FlowColumns[idx].codeName}{affix}"
+            
+            # Check this has resolved things
+            problemCodeNames, _ = getProblemCodeNamesFromJoinKeys(uplan_tree.leftKeys, uplan_tree.rightKeys)
+            assert len(problemCodeNames) == 0
 
     return uplan_tree
+
+def fix_flowColumnsEmptyCodeName(uplan_tree, parserCreatedColumns):
+    # Post Order traversal: Visit Children
+    if isinstance(uplan_tree, BinaryBaseNode):
+        fix_flowColumnsEmptyCodeName(uplan_tree.left, parserCreatedColumns)
+        fix_flowColumnsEmptyCodeName(uplan_tree.right, parserCreatedColumns)
+    elif isinstance(uplan_tree, UnaryBaseNode):
+        fix_flowColumnsEmptyCodeName(uplan_tree.child, parserCreatedColumns)
+    else:
+        # A leaf node
+        pass
+    
+    # Run on current node (sdqlpy_tree)
+    for col in uplan_tree.flowColumns:
+        if col.codeName == "":
+            handleEmptyCodeName(col, parserCreatedColumns)
+            assert col.codeName != ""
+            parserCreatedColumns.add(col.codeName)
 
 def set_flowColumns(uplan_tree):
     # Post Order traversal: Visit Children
@@ -220,9 +294,6 @@ def create_hyper_operator_tree(explain_json, all_nodes: dict):
         operator_class = joinNode("inner", explain_json["method"], explain_json["condition"])
     elif operator_name in ["leftsemijoin", "leftantijoin", "rightsemijoin", "rightantijoin"]:
         operator_class = joinNode(operator_name, explain_json["method"], explain_json["condition"])
-    elif operator_name == "leftsinglejoin":
-        # Remap a left singlejoin to an inner join
-        operator_class = joinNode("inner", explain_json["method"], explain_json["condition"])
     elif operator_name == "explicitscan":
         operator_class = explicitscanNode(explain_json["mapping"])
     else:
@@ -287,6 +358,9 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     # We have a Universal Plan tree at this point, we need to traverse it to fix some items
     # Flow Columns through tree for later
     op_tree = set_flowColumns(op_tree)
+    # Solve flowColumns with empty CodeName
+    parserCreatedColumns = set()
+    fix_flowColumnsEmptyCodeName(op_tree, parserCreatedColumns)
     # Solve duplicate column names in the tree
     op_tree = fix_solveDuplicateColumnsNames(op_tree)
     # Order Joins
@@ -1223,4 +1297,4 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
 # # generate_hyperdb_explains()
 # # inspect_explain_plans()
 # # parse_explain_plans()
-convert_explain_plan_to_x("pandas")
+# convert_explain_plan_to_x("pandas")

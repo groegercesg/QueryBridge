@@ -19,7 +19,7 @@ def convert_aggregation_tree_to_pandas(aggr_tree: ExpressionBaseNode, dataFrameN
         assert aggr_tree.codeName != ""
         return f"{dataFrameName}.{aggr_tree.codeName}"
         
-    if aggr_tree.codeName != "":
+    if aggr_tree.created == True:
         return f"{dataFrameName}.{aggr_tree.codeName}"
     
     expression_output = ""
@@ -207,11 +207,17 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
     # If an expression has a non-blank codeName, then
     # it has already been created and so should be done
     # again.
-    if expr_tree.codeName != '':
+    if expr_tree.created == True:
         return f"{dataFrameName}.{expr_tree.codeName}"
     
     expression_output = None
     match expr_tree:
+        case SumAggrOperator():
+            expression_output = f"{childNode}.sum()"
+        case AvgAggrOperator():
+            expression_output = f"{childNode}.mean()"
+        case MaxAggrOperator():
+            expression_output = f"{childNode}.max()"
         case ColumnValue():
             expression_output = f"{dataFrameName}.{expr_tree.value}"
         case ConstantValue():
@@ -425,7 +431,7 @@ class PandasBaseNode():
         self.__updateTableColumns()
         outputNames = set()
         for col in self.columns:
-            if col.codeName != '':
+            if col.created == True:
                 outputNames.add(col.codeName)
             else:
                 outputNames.add(col.value)
@@ -482,7 +488,7 @@ class PandasScanNode(LeafPandasNode):
         outputColumns = []
         for col in self.tableColumns:
             assert isinstance(col, ColumnValue)
-            if col.codeName != '':
+            if col.created == True:
                 outputColumns.append(col.codeName)
             else:
                 outputColumns.append(col.value)
@@ -719,11 +725,11 @@ class UnparsePandasTree():
         assert len(current_node.columns) > 0
     
     def __getPandasRepresentationForColumn(self, column: ColumnValue):
-        if column.codeName == '':
+        if column.created == True:
+            return column.codeName
+        else:
             assert isinstance(column, ColumnValue)
             return column.value
-        else:
-            return column.codeName
         
     def visitPandasLimitNode(self, node):
         self.nodesCounter[PandasLimitNode] += 1
@@ -793,12 +799,11 @@ class UnparsePandasTree():
         
         for newColumn in node.addColumns:
             newColumnExpression = convert_expression_operator_to_pandas(newColumn, childTable)
-            newColumnName = self.getNewColumnName(newColumn, node.child)
-            # Set the new name
-            newColumn.setCodeName(newColumnName)
+            assert newColumn.codeName != ""
             self.writeContent(
-                f"{childTable}['{newColumnName}'] = {newColumnExpression}"
+                f"{childTable}['{newColumn.codeName}'] = {newColumnExpression}"
             )
+            newColumn.created = True
 
         # Set the tableName, to the child table, as we never really existed!
         node.tableName = childTable
@@ -865,23 +870,28 @@ class UnparsePandasTree():
             if isinstance(preAggrExpr, ColumnValue):
                 # Check this column is in the child, for safety
                 assert preAggrExpr in node.child.columns
-            elif preAggrExpr.codeName != '':
+            elif preAggrExpr.created == True:
                 # "Already been created, don't do it again
                 pass
             else:
-                newColumnName = self.getNewColumnName(preAggrExpr, node.child)
-                newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable, newColumnName)
-                # Set the new name
-                preAggrExpr.setCodeName(newColumnName)
+                if preAggrExpr.codeName == "":
+                    newColumnName = self.getNewColumnName(preAggrExpr, node.child)
+                    # Set the new name
+                    preAggrExpr.setCodeName(newColumnName)
+                else:
+                    assert preAggrExpr.codeName != ""
+                
+                newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable, preAggrExpr.codeName)
                 if isinstance(newColumnExpression, str):
                     self.writeContent(
-                        f"{childTable}['{newColumnName}'] = {newColumnExpression}"
+                        f"{childTable}['{preAggrExpr.codeName}'] = {newColumnExpression}"
                     )
                 elif isinstance(newColumnExpression, list):
                     for line in newColumnExpression:
                         self.writeContent(line)
                 else:
                     raise Exception(f"Unexpected format of newColumnExpression: {type(newColumnExpression)}")
+                preAggrExpr.created = True
         
         # keyExpressions
         assert len(node.keyExpressions) > 0
@@ -894,10 +904,7 @@ class UnparsePandasTree():
         
         # postAggregateOperations
         for postAggrOp in node.postAggregateOperations:
-            # Write each one
-            newColumnName = self.getNewColumnName(postAggrOp, node)
-            # Set the new name
-            postAggrOp.setCodeName(newColumnName)
+            assert postAggrOp.codeName != ""
             if isinstance(postAggrOp, CountAllOperator):
                 # Select column name from child columns, choose random (ish) column
                 previousColumnName = list(node.child.getTableColumnsString() - set(processedKeys))[0]
@@ -906,10 +913,11 @@ class UnparsePandasTree():
                 assert not isinstance(postAggrOp.child, AggregationOperators), "There should be only 1 aggregation, as one can't nest them in SQL"
                 previousColumnName = self.__getPandasRepresentationForColumn(postAggrOp.child)
             columnAggregation = convert_expression_operator_to_aggr(postAggrOp)
-            assert not any(x == "" for x in [newColumnName, previousColumnName, columnAggregation])
+            assert not any(x == "" for x in [postAggrOp.codeName, previousColumnName, columnAggregation])
             self.writeContent(
-                f"{TAB}{TAB}{newColumnName}=('{previousColumnName}', {columnAggregation}),"
+                f"{TAB}{TAB}{postAggrOp.codeName}=('{previousColumnName}', {columnAggregation}),"
             )
+            postAggrOp.created = True
             
         # Write the aggregation closing
         self.writeContent(
@@ -1146,12 +1154,26 @@ class UnparsePandasTree():
             )
             # Update previousTableName
             previousTableName = createdDataFrameName
-            
+
         # Limit by table columns
         self.writeContent(
             f"{createdDataFrameName} = {previousTableName}[{node.getTableColumnsForDF()}]"
         )
         
+        # Rename the columns
+        # Only create new names, if they'd be different
+        currentNewNameDict = dict()
+        for col in node.tableColumns:
+            if col.value != col.codeName:
+                assert col.value not in currentNewNameDict
+                currentNewNameDict[col.value] = col.codeName
+                col.created = True
+        
+        if currentNewNameDict != {}:
+            self.writeContent(
+                f"{createdDataFrameName} = {createdDataFrameName}.rename(columns={currentNewNameDict})"
+            )
+
         # Set the tableName
         node.tableName = createdDataFrameName
         # Set the tableColumns
@@ -1173,23 +1195,29 @@ class UnparsePandasTree():
                 if isinstance(preAggrExpr, ColumnValue):
                     # Check this column is in the child, for safety
                     assert preAggrExpr in node.child.columns
-                elif preAggrExpr.codeName != '':
+                elif preAggrExpr.created == True:
                     # Already created
                     pass
                 else:
-                    newColumnName = self.getNewColumnName(preAggrExpr, node.child)
-                    newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable, newColumnName)
-                    # Set the new name
-                    preAggrExpr.setCodeName(newColumnName)
+                    if preAggrExpr.codeName == "":
+                        newColumnName = self.getNewColumnName(preAggrExpr, node.child)
+                        # Set the new name
+                        preAggrExpr.setCodeName(newColumnName)
+                    else:
+                        assert preAggrExpr.codeName != ""
+                    
+                    newColumnExpression = convert_expression_operator_to_pandas(preAggrExpr, childTable, preAggrExpr.codeName)
                     if isinstance(newColumnExpression, str):
                         self.writeContent(
-                            f"{childTable}['{newColumnName}'] = {newColumnExpression}"
+                            f"{childTable}['{preAggrExpr.codeName}'] = {newColumnExpression}"
                         )
                     elif isinstance(newColumnExpression, list):
                         for line in newColumnExpression:
                             self.writeContent(line)
                     else:
                         raise Exception(f"Unexpected format of newColumnExpression: {type(newColumnExpression)}")
+                    
+                    preAggrExpr.created = True
 
         # Create the new dataFrame, do the postAggregateOperations here
         createdDataFrameName = f"df_aggr_{nodeNumber}"
@@ -1201,12 +1229,11 @@ class UnparsePandasTree():
         if node.postAggregateOperations != []:
             for postAggrOp in node.postAggregateOperations:
                 newColumnExpression = convert_aggregation_tree_to_pandas(postAggrOp, childTable)
-                newColumnName = self.getNewColumnName(postAggrOp, node)
-                # Set the new name
-                postAggrOp.setCodeName(newColumnName)
+                assert postAggrOp.codeName != ""
                 self.writeContent(
-                    f"{createdDataFrameName}['{newColumnName}'] = [{newColumnExpression}]"
+                    f"{createdDataFrameName}['{postAggrOp.codeName}'] = [{newColumnExpression}]"
                 )
+                postAggrOp.created = True
         
         # Set the tableName
         node.tableName = createdDataFrameName

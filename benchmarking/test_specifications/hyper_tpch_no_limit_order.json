@@ -438,5 +438,6 @@
     "Results Precision": 4,
     "Regenerate Data": "False",
     "Prepare Only": "HyperDB",
-    "Order Checking": "False"
+    "Order Checking": "False",
+    "SDQLpy Setup": "False"
 }
