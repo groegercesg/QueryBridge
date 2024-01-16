@@ -138,7 +138,14 @@ def init_argparse() -> argparse.ArgumentParser:
                         type=str,
                         required=False,
                         default="",
-                        help='What output format would you like to use?')
+                        help='What SDQLpy Tree optimisations would you like to use?')
+    
+    parser.add_argument('--universal_optimisations',
+                        metavar='universal_optimisations',
+                        type=str,
+                        required=False,
+                        default="",
+                        help='What Universal Tree optimisations would you like to use?')
 
     return parser
 
@@ -391,9 +398,15 @@ def main():
         elif args.query_planner == "Hyper_DB":
             # Get Table Keys
             table_keys = db.get_table_keys()
+            
+            # Apply Universal Tree optimisations, if present
+            uplan_opts = str(args.universal_optimisations).split(", ")
+            assert isinstance(uplan_opts, list)
+            assert all(isinstance(x, str) for x in uplan_opts)
+            
             # content = db.execute_query(query_file_data)
             unparse_content = generate_unparse_content_from_explain_and_query(
-                explain_json, query_file, args.output_fmt, table_keys
+                explain_json, query_file, args.output_fmt, table_keys, uplan_opts
             )
             
             if isinstance(unparse_content, UnparsePandasTree):
@@ -420,7 +433,7 @@ def main():
                 assert isinstance(sdqlpy_opts, list)
                 assert all(isinstance(x, str) for x in sdqlpy_opts)
                 
-                unparse_content.sdqlpy_tree = apply_optimisations(unparse_content.sdqlpy_tree, sdqlpy_opts)
+                unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, sdqlpy_opts)
                 
                 query_output_columns = unparse_content.getOutputColumns()
                 

@@ -6,7 +6,6 @@ from sdqlpy_helpers import *
 class SupportedOptimisations(Enum):
     PIPE_BREAK = "PipelineBreaker"
     V_FOLD = "VerticalFolding"
-    COL_ELIM = "ColumnElimination"
     
     @staticmethod
     def has_value(item):
@@ -14,8 +13,7 @@ class SupportedOptimisations(Enum):
 
 OPTIMISATIONS_ORDER = [
     SupportedOptimisations.PIPE_BREAK,
-    SupportedOptimisations.V_FOLD,
-    SupportedOptimisations.COL_ELIM
+    SupportedOptimisations.V_FOLD
 ]
 
 def optimisation_runner(sdqlpy_tree, inOpt):
@@ -24,15 +22,13 @@ def optimisation_runner(sdqlpy_tree, inOpt):
             sdqlpy_tree = opt_pipe_break(sdqlpy_tree)
         case SupportedOptimisations.V_FOLD.value:
             sdqlpy_tree = opt_v_fold(sdqlpy_tree)
-        case SupportedOptimisations.COL_ELIM.value:
-            sdqlpy_tree = opt_col_elim(sdqlpy_tree)
         case _:
             raise Exception(f"The optimisation: {inOpt} was not recognised.")
         
     return sdqlpy_tree
     
 
-def apply_optimisations(sdqlpy_tree, inOptimisations):
+def sdqlpy_apply_optimisations(sdqlpy_tree, inOptimisations):
     if inOptimisations == [""]:
         return sdqlpy_tree
     
@@ -365,9 +361,3 @@ def opt_v_fold(sdqlpy_tree):
     
     sdqlpy_tree = v_fold_run(sdqlpy_tree)
     return sdqlpy_tree
-        
-
-def opt_col_elim(sdqlpy_tree):
-    pass
-    return sdqlpy_tree
-    

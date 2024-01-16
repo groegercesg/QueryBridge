@@ -16,6 +16,8 @@ from sdqlpy_unparser import *
 from sdqlpy_transformer import *
 from sdqlpy_optimisations import *
 
+from uplan_optimisations import *
+
 def generate_hyperdb_explains():
     db = PrepareHyperDB('hyperdb_tpch.hyper')
     db.prepare_database('data_storage')
@@ -187,7 +189,7 @@ def create_hyper_operator_tree(explain_json, all_nodes: dict):
     
     return operator_class
 
-def generate_unparse_content_from_explain_and_query(explain_json, query_file, output_format, table_keys):
+def generate_unparse_content_from_explain_and_query(explain_json, query_file, output_format, table_keys, uplan_opts):
     query_name = query_file.split("/")[-1].split(".")[0].strip()
     
     all_nodes = dict()
@@ -205,6 +207,12 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     print(f"Transformed Plan {query_name} Hyper Tree into Universal Plan")
     # Task 3: Fix sql table aliases in tablescans
     transform_sql_table_aliases(query_file, op_tree)
+
+    # We have a Universal Plan tree at this point, we need to traverse it to fix some items
+    
+    
+    # And, also apply optimisations
+    op_tree = uplan_apply_optimisations(op_tree, uplan_opts)
     
     # Test 1: top node should be OutputNode
     assert audit_universal_plan_tree_outputnode(op_tree)
@@ -283,7 +291,7 @@ def convert_explain_plan_to_x(desired_format):
                 content_size = len(unparse_content.getPandasContent())
             elif desired_format == "sdqlpy":
                 # Do Optimisations
-                unparse_content.sdqlpy_tree = apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding", "PipelineBreaker"]) #
+                unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding", "PipelineBreaker"]) #
                 
                 content_size = len(unparse_content.getSDQLpyContent())
             else:
