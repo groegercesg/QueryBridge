@@ -361,10 +361,11 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     # Solve flowColumns with empty CodeName
     parserCreatedColumns = set()
     fix_flowColumnsEmptyCodeName(op_tree, parserCreatedColumns)
-    # Solve duplicate column names in the tree
-    op_tree = fix_solveDuplicateColumnsNames(op_tree)
-    # Order Joins
+    # Order Joins - we need to do this before duplicate renaming
     pass
+    # Solve duplicate column names in the tree
+    # TODO: renaming primary/foreign if applicable
+    op_tree = fix_solveDuplicateColumnsNames(op_tree)
     
     # And, also apply optimisations
     op_tree = uplan_apply_optimisations(op_tree, uplan_opts)

@@ -663,6 +663,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         
     def order_joins(sdqlpy_tree, table_keys):        
         def whatTypeAreKeys(joinKeys: list, childNode):
+            # What if a rename (adding the '_x' to a column name) happens?
+            # Then it would no longer be in primary/foreign, even though it sorta is
             joinKeys_str = [x.codeName for x in joinKeys]
             nextJoinKeys = joinKeys_str
             
