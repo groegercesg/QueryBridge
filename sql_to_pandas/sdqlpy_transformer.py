@@ -1172,8 +1172,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     wire_up_incoming_output_dicts(sdqlpy_tree)
     # solve Duplicates by multiplying by a counter
     duplicateFixTopGroupJoin(sdqlpy_tree)
-    # solve duplicate column names in outputDicts
-    sdqlpy_tree = solveDuplicateColumnsNames(sdqlpy_tree)
+    # # solve duplicate column names in outputDicts
+    # sdqlpy_tree = solveDuplicateColumnsNames(sdqlpy_tree)
     # solve CountDistinctOperator
     sdqlpy_tree, _ = solveCountDistinctOperator(sdqlpy_tree)
     # solve CountAllOperator
@@ -1187,15 +1187,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     assert leftOverFilter == None
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
-    
-    # Everything below is relating to optimisations
-    
-    # Fold conditions and output records into subsequent nodes
-    # sdqlpy_tree = foldConditionsAndOutputRecords(sdqlpy_tree)
-    # Push down join conditions
-    # sdqlpy_tree = joinPushDown(sdqlpy_tree)
-    # Set update sums correctly
-    # set_update_sum_for_highest_join(sdqlpy_tree)
     
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)

@@ -24,7 +24,7 @@ def optimisation_runner(uplan_tree, inOpt):
     
 
 def uplan_apply_optimisations(uplan_tree, inOptimisations):
-    if inOptimisations == [""]:
+    if (inOptimisations == [""]) or (inOptimisations == ""):
         return uplan_tree
     
     # Check optimisations are all okay

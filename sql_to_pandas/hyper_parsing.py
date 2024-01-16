@@ -96,6 +96,82 @@ def fix_explictScanNodes(op_node: HyperBaseNode, all_nodes: dict):
             assert op_node.targetOperator in all_nodes
             # Deepcopy it?
             op_node.child = copy.deepcopy(all_nodes[op_node.targetOperator])
+            
+def fix_solveDuplicateColumnsNames(uplan_tree):
+    # Post Order traversal: Visit Children
+    leftNode, rightNode, childNode = None, None, None
+    if isinstance(uplan_tree, BinaryBaseNode):
+        leftNode = fix_solveDuplicateColumnsNames(uplan_tree.left)
+        rightNode = fix_solveDuplicateColumnsNames(uplan_tree.right)
+    elif isinstance(uplan_tree, UnaryBaseNode):
+        childNode = fix_solveDuplicateColumnsNames(uplan_tree.child)
+    else:
+        # A leaf node
+        pass
+    
+    # Assign previous changes
+    if (leftNode != None) and (rightNode != None):
+        uplan_tree.left = leftNode
+        uplan_tree.right = rightNode
+    elif (childNode != None):
+        uplan_tree.child = childNode
+    else:
+        # A leaf node
+        pass
+    
+    # Run on current node (sdqlpy_tree)
+    if isinstance(uplan_tree, JoinNode):
+        pass
+
+    return uplan_tree
+
+def set_flowColumns(uplan_tree):
+    # Post Order traversal: Visit Children
+    leftNode, rightNode, childNode = None, None, None
+    if isinstance(uplan_tree, BinaryBaseNode):
+        leftNode = set_flowColumns(uplan_tree.left)
+        rightNode = set_flowColumns(uplan_tree.right)
+    elif isinstance(uplan_tree, UnaryBaseNode):
+        childNode = set_flowColumns(uplan_tree.child)
+    else:
+        # A leaf node
+        pass
+    
+    # Assign previous changes
+    if (leftNode != None) and (rightNode != None):
+        uplan_tree.left = leftNode
+        uplan_tree.right = rightNode
+    elif (childNode != None):
+        uplan_tree.child = childNode
+    else:
+        # A leaf node
+        pass
+    
+    # Run on current node (sdqlpy_tree)
+    if isinstance(uplan_tree, ScanNode):
+        uplan_tree.flowColumns = uplan_tree.tableColumns
+    elif isinstance(uplan_tree, JoinNode):
+        if uplan_tree.joinType in ["inner", "outer"]:
+            uplan_tree.flowColumns = uplan_tree.left.flowColumns + uplan_tree.right.flowColumns
+        elif "left" in uplan_tree.joinType:
+            uplan_tree.flowColumns = uplan_tree.left.flowColumns
+        elif "right" in uplan_tree.joinType:
+            uplan_tree.flowColumns = uplan_tree.right.flowColumns
+        else:
+            raise Exception(f"Unrecognised Join Type for JoinNode: {uplan_tree.joinType}")
+    elif isinstance(uplan_tree, GroupNode):
+        if uplan_tree.keyExpressions == []:
+            uplan_tree.flowColumns = uplan_tree.postAggregateOperations
+        else:
+            uplan_tree.flowColumns = uplan_tree.keyExpressions + uplan_tree.postAggregateOperations
+    elif isinstance(uplan_tree, NewColumnNode):
+        uplan_tree.flowColumns = uplan_tree.values + uplan_tree.child.flowColumns
+    elif isinstance(uplan_tree, (SortNode, LimitNode, OutputNode, FilterNode)):
+        uplan_tree.flowColumns = uplan_tree.child.flowColumns
+    else:
+        raise Exception(f"Unrecognised node: {uplan_tree}")
+
+    return uplan_tree
 
 def create_hyper_operator_tree(explain_json, all_nodes: dict):
     operator_name = explain_json["operator"].lower()
@@ -209,10 +285,18 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     transform_sql_table_aliases(query_file, op_tree)
 
     # We have a Universal Plan tree at this point, we need to traverse it to fix some items
-    
+    # Flow Columns through tree for later
+    op_tree = set_flowColumns(op_tree)
+    # Solve duplicate column names in the tree
+    op_tree = fix_solveDuplicateColumnsNames(op_tree)
+    # Order Joins
+    pass
     
     # And, also apply optimisations
     op_tree = uplan_apply_optimisations(op_tree, uplan_opts)
+    
+    # Get rid of flowColumns
+    pass
     
     # Test 1: top node should be OutputNode
     assert audit_universal_plan_tree_outputnode(op_tree)
@@ -283,7 +367,9 @@ def convert_explain_plan_to_x(desired_format):
                 explain_content,
                 f'{query_directory}/{sql_file}',
                 desired_format,
-                table_keys)
+                table_keys,
+                ""
+            )
             
             print(unparse_content)
             content_size = 0
@@ -1137,4 +1223,4 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
 # # generate_hyperdb_explains()
 # # inspect_explain_plans()
 # # parse_explain_plans()
-convert_explain_plan_to_x("sdqlpy")
+convert_explain_plan_to_x("pandas")
