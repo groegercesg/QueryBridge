@@ -546,10 +546,8 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     parserCreatedColumns = set()
     fix_flowColumnsEmptyCodeName(op_tree, parserCreatedColumns)
     # Order Joins - we need to do this before duplicate renaming
-    # table_schema
     op_tree = fix_orderJoinsForPrimaryForeignKeys(op_tree, table_schema)
     # Solve duplicate column names in the tree
-    # TODO: renaming primary/foreign if applicable
     op_tree = fix_solveDuplicateColumnsNames(op_tree)
     
     # And, also apply optimisations
@@ -1479,4 +1477,4 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
 # # generate_hyperdb_explains()
 # # inspect_explain_plans()
 # # parse_explain_plans()
-convert_explain_plan_to_x("sdqlpy") # pandas
+convert_explain_plan_to_x("pandas") # sdqlpy

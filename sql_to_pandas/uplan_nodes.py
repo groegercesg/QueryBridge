@@ -98,13 +98,21 @@ class JoinNode(BinaryBaseNode):
         assert len(self.flowColumns) > 0
         
         for key in self.waitingForeignKeys.keys():
-            if len(list(filter(lambda x: x.codeName == self.waitingForeignKeys[key][0], self.flowColumns))) > 0:
+            howManyTimesEligible = list(filter(lambda x: x.codeName == self.waitingForeignKeys[key][0], self.flowColumns))
+            if len(howManyTimesEligible) == 1:
                 self.foreignKeys.add(
                     returnFromFlowColumns(
                         self.waitingForeignKeys[key][0], self.flowColumns
                     )
                 )
                 toPopKeys.append(key)
+            elif len(howManyTimesEligible) == 2:
+                # Tricky situation: Pick first
+                self.foreignKeys.add(
+                    howManyTimesEligible[0]
+                )
+            elif len(howManyTimesEligible) > 2:
+                raise Exception(f"Too many times eligible: {len(howManyTimesEligible)}")
             
         for tpKey in toPopKeys:
             self.waitingForeignKeys.pop(tpKey)
