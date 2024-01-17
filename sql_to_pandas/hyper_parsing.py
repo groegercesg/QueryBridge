@@ -336,7 +336,7 @@ def create_hyper_operator_tree(explain_json, all_nodes: dict):
     
     return operator_class
 
-def generate_unparse_content_from_explain_and_query(explain_json, query_file, output_format, table_keys, uplan_opts):
+def generate_unparse_content_from_explain_and_query(explain_json, query_file, output_format, table_schema, uplan_opts):
     query_name = query_file.split("/")[-1].split(".")[0].strip()
     
     all_nodes = dict()
@@ -362,6 +362,7 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     parserCreatedColumns = set()
     fix_flowColumnsEmptyCodeName(op_tree, parserCreatedColumns)
     # Order Joins - we need to do this before duplicate renaming
+    # table_schema
     pass
     # Solve duplicate column names in the tree
     # TODO: renaming primary/foreign if applicable
@@ -392,7 +393,7 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
         #     raise Exception("Failed Pandas Generation")
     elif output_format == "sdqlpy":
         # Convert Universal Plan Tree to SDQLpy Tree
-        sdqlpy_tree = convert_universal_to_sdqlpy(op_tree, table_keys)
+        sdqlpy_tree = convert_universal_to_sdqlpy(op_tree, table_schema)
         
         # Test: All leaf nodes should be SDQLpyRecordNode
         assert audit_sdqlpy_tree_leafnode(sdqlpy_tree)
