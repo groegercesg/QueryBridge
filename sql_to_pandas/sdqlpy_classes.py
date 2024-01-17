@@ -23,23 +23,8 @@ class SDQLpyBaseNode():
         self.primaryKey = None
         self.foreignKeys = set()
         
-        self.waitingForeignKeys = dict()
-        
         self.completedTables = set()
         self.foldedInto = False
-        
-    def setPrimary(self, primary):
-        assert isinstance(primary, (tuple, str))
-        self.primaryKey = primary
-        
-    def addForeign(self, foreign):
-        assert isinstance(foreign, (dict, set))
-        if isinstance(foreign, set):
-            self.foreignKeys.update(foreign)
-        else:
-            for fkey in foreign.keys():
-                self.foreignKeys.add(fkey)
-            self.waitingForeignKeys.update(foreign)
     
     def updateReplacementDict(self, update_dictionary: dict):
         self.replacementDict.update(update_dictionary)
@@ -232,7 +217,11 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
     def filterTableColumns(self):
         # Filter tableColumns
         self.oldTableColumns = self.tableColumns
-        self.tableColumns = [x for x in self.oldTableColumns if (x.essential == True) or (x.codeName in self.primaryKey)]
+        self.tableColumns = []
+        primaryKeyIDs = [id(x) for x in self.primaryKey]
+        for x in self.oldTableColumns:
+            if (x.essential == True) or (id(x) in primaryKeyIDs):
+                self.tableColumns.append(x)
         self.createInputOutputDicts()
         
     def createInputOutputDicts(self):
@@ -724,21 +713,6 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             oldRight = x.right
             x.left = oldRight
             x.right = oldLeft
-        
-    def resolveForeignKeys(self):
-        # Also do completedTables
-        self.completedTables.update(self.left.completedTables)
-        self.completedTables.update(self.right.completedTables)
-        
-        toPopKeys = []
-        
-        for key in self.waitingForeignKeys.keys():
-            if self.waitingForeignKeys[key][1] in self.completedTables:
-                self.foreignKeys.add(self.waitingForeignKeys[key][0])
-                toPopKeys.append(key)
-                
-        for tpKey in toPopKeys:
-            self.waitingForeignKeys.pop(tpKey)
     
 # Classes for SDQLpy Constructs
 class SDQLpyNKeyJoin():

@@ -19,6 +19,8 @@ from sdqlpy_optimisations import *
 from uplan_helpers import *
 from uplan_optimisations import *
 
+from tpch_helpers import *
+
 def generate_hyperdb_explains():
     db = PrepareHyperDB('hyperdb_tpch.hyper')
     db.prepare_database('data_storage')
@@ -575,7 +577,7 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
         #     raise Exception("Failed Pandas Generation")
     elif output_format == "sdqlpy":
         # Convert Universal Plan Tree to SDQLpy Tree
-        sdqlpy_tree = convert_universal_to_sdqlpy(op_tree, table_schema)
+        sdqlpy_tree = convert_universal_to_sdqlpy(op_tree)
         
         # Test: All leaf nodes should be SDQLpyRecordNode
         assert audit_sdqlpy_tree_leafnode(sdqlpy_tree)
@@ -603,12 +605,6 @@ def convert_explain_plan_to_x(desired_format):
     
     combined_sql_content = list(zip(query_files, explain_files))
     
-    if desired_format == "sdqlpy":
-        db = PrepareHyperDB('hyperdb_tpch.hyper')
-        db.prepare_database('data_storage')
-        table_keys = db.get_table_keys()
-    else:
-        table_keys = None
     
     supported_queries = ["1", "2", "3" ,"4", "5", "6", "8", "9", "10", "11", "12", "14", "15_cte", "16", "18", "19", "20"]
     
@@ -621,11 +617,13 @@ def convert_explain_plan_to_x(desired_format):
         with open(f'{explain_directory}/{explain_file}') as r:
             explain_content = json.loads(r.read())
             
+            table_schema = configure_table_schema({})
+            
             unparse_content = generate_unparse_content_from_explain_and_query(
                 explain_content,
                 f'{query_directory}/{sql_file}',
                 desired_format,
-                table_keys,
+                table_schema,
                 ""
             )
             
@@ -635,7 +633,7 @@ def convert_explain_plan_to_x(desired_format):
                 content_size = len(unparse_content.getPandasContent())
             elif desired_format == "sdqlpy":
                 # Do Optimisations
-                unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding", "PipelineBreaker"]) #
+                # unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding", "PipelineBreaker"]) #
                 
                 content_size = len(unparse_content.getSDQLpyContent())
             else:
@@ -1481,4 +1479,4 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
 # # generate_hyperdb_explains()
 # # inspect_explain_plans()
 # # parse_explain_plans()
-# convert_explain_plan_to_x("pandas")
+convert_explain_plan_to_x("sdqlpy") # pandas

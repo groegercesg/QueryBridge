@@ -25,7 +25,7 @@ def audit_sdqlpy_tree_leafnode(op_tree: SDQLpyBaseNode) -> bool:
     all_leaves = get_leaf_nodes(op_tree)
     return all(isinstance(leaf, LeafSDQLpyNode) for leaf in all_leaves)
 
-def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: dict[str, tuple]) -> SDQLpyBaseNode:
+def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBaseNode:
     def convert_join_bnl_to_inner(op_tree: UniversalBaseNode) -> UniversalBaseNode:
         # Visit Children
         if isinstance(op_tree, BinaryBaseNode):
@@ -106,20 +106,32 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     new_op_tree.addFilterContent(op_tree.tableFilters)
                 elif op_tree.tableRestrictions != []:
                     new_op_tree.addFilterContent(op_tree.tableRestrictions)
+                # Set Primary/Foreign information from Universal Plan
+                new_op_tree.primaryKey = op_tree.primaryKey
+                new_op_tree.foreignKeys = op_tree.foreignKeys
             case GroupNode():
                 if op_tree.keyExpressions == []:
                     new_op_tree = SDQLpyAggrNode(
                         op_tree.postAggregateOperations
                     )
+                    # Set Primary/Foreign information from Universal Plan
+                    new_op_tree.primaryKey = op_tree.primaryKey
+                    new_op_tree.foreignKeys = op_tree.foreignKeys
                 else:
                     # A Group should be a Concat <- Group
                     group_node = SDQLpyGroupNode(
                         op_tree.keyExpressions,
                         op_tree.postAggregateOperations
                     )
+                    # Set Primary/Foreign information from Universal Plan
+                    group_node.primaryKey = op_tree.primaryKey
+                    group_node.foreignKeys = op_tree.foreignKeys
                     new_op_tree = SDQLpyConcatNode(
                         op_tree.keyExpressions + op_tree.postAggregateOperations
                     )
+                    # Set Primary/Foreign information from Universal Plan
+                    new_op_tree.primaryKey = op_tree.primaryKey
+                    new_op_tree.foreignKeys = op_tree.foreignKeys
                     new_op_tree.addChild(group_node)
             case OutputNode():
                 new_op_tree = None
@@ -131,9 +143,15 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     op_tree.leftKeys,
                     op_tree.rightKeys
                 )
+                # Set Primary/Foreign information from Universal Plan
+                new_op_tree.primaryKey = op_tree.primaryKey
+                new_op_tree.foreignKeys = op_tree.foreignKeys
             case FilterNode():
                 new_op_tree = SDQLpyFilterNode()
                 new_op_tree.addFilterContent(op_tree.condition)
+                # Set Primary/Foreign information from Universal Plan
+                new_op_tree.primaryKey = op_tree.primaryKey
+                new_op_tree.foreignKeys = op_tree.foreignKeys
             case NewColumnNode():
                 assert childNode.outputDict != None and len(childNode.outputDict.flatCols()) > 0
                 if isinstance(childNode, SDQLpyConcatNode):
@@ -149,16 +167,24 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                         newKeyExpressions,
                         op_tree.values
                     )
+                    newGroup.primaryKey = childNode.child.primaryKey
+                    newGroup.foreignKeys = childNode.child.foreignKeys
                     newGroup.addChild(childNode.child)
                     new_op_tree = SDQLpyConcatNode(
                         newGroup.keyExpressions + newGroup.aggregateOperations
                     )
+                    # Set Primary/Foreign information from Universal Plan
+                    new_op_tree.primaryKey = op_tree.primaryKey
+                    new_op_tree.foreignKeys = op_tree.foreignKeys
                     new_op_tree.addChild(newGroup)
                     childNode = None
                 elif isinstance(childNode, SDQLpyAggrNode):
                     new_op_tree = SDQLpyAggrNode(
                         op_tree.values
                     )
+                    # Set Primary/Foreign information from Universal Plan
+                    new_op_tree.primaryKey = op_tree.primaryKey
+                    new_op_tree.foreignKeys = op_tree.foreignKeys
                 else:
                     new_op_tree = None
                     childNode.outputDict.keys.append(op_tree.values)
@@ -167,6 +193,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     op_tree.tableColumns,
                     op_tree.retrieveTargetID
                 )
+                # Set Primary/Foreign information from Universal Plan
+                new_op_tree.primaryKey = op_tree.primaryKey
+                new_op_tree.foreignKeys = op_tree.foreignKeys
             case _:
                 raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
@@ -209,10 +238,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 case BinarySDQLpyNode():
                     lowest_node_pointer.addLeft(leftNode)
                     lowest_node_pointer.addRight(rightNode)
-                    # if isinstance(lowest_node_pointer, SDQLpyJoinNode):
-                    #     lowest_node_pointer.set_output_dict()
-                    # else:
-                    #     raise Exception("Binary with some Nones")
                 case _:
                     # LeafSDQLpyNode
                     assert isinstance(lowest_node_pointer, LeafSDQLpyNode)
@@ -314,9 +339,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 jbNode.addChild(sdqlpy_tree.left)
                 jbNode.setCardinality(jbNode.child.cardinality)
                 # Set primary and foreign
-                jbNode.setPrimary(tuple([x.codeName for x in tableKeys]))
+                jbNode.primaryKey = tuple(tableKeys)
                 jbNode.foreignKeys = sdqlpy_tree.left.foreignKeys
-                jbNode.waitingForeignKeys = sdqlpy_tree.left.waitingForeignKeys
                 sdqlpy_tree.left = jbNode
             elif isinstance(sdqlpy_tree.left, SDQLpyAggrNode):
                 # We shouldn't index on an aggr node
@@ -661,43 +685,14 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             # A leaf node
             pass
         
-    def order_joins(sdqlpy_tree, table_keys):        
-        def whatTypeAreKeys(joinKeys: list, childNode):
-            # What if a rename (adding the '_x' to a column name) happens?
-            # Then it would no longer be in primary/foreign, even though it sorta is
-            joinKeys_str = [x.codeName for x in joinKeys]
-            nextJoinKeys = joinKeys_str
-            
-            outcomes = []
-            primaryKeys = childNode.primaryKey
-            primaryKeyCounter = 0
-            
-            # Check for primary first
-            for jKey in list(joinKeys_str):
-                if jKey in primaryKeys:
-                    primaryKeyCounter += 1
-                    if primaryKeyCounter == len(primaryKeys):
-                        outcomes.append("P")
-                        for pkey in primaryKeys:
-                            nextJoinKeys.remove(pkey)
-            
-            # Check for foreign keys after
-            for jKey in list(nextJoinKeys):
-                if jKey in childNode.foreignKeys:
-                    outcomes.append("F")
-                else:
-                    # Joining on keys that are neither Primary nor Foreign
-                    outcomes.append("N")
-            
-            return outcomes
-        
+    def solveSDQLpySpecificOrderJoins(sdqlpy_tree):
         # Post Order traversal: Visit Children
         leftNode, rightNode, childNode = None, None, None
         if isinstance(sdqlpy_tree, BinarySDQLpyNode):
-            leftNode = order_joins(sdqlpy_tree.left, table_keys)
-            rightNode = order_joins(sdqlpy_tree.right, table_keys)
+            leftNode = solveSDQLpySpecificOrderJoins(sdqlpy_tree.left)
+            rightNode = solveSDQLpySpecificOrderJoins(sdqlpy_tree.right)
         elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
-            childNode = order_joins(sdqlpy_tree.child, table_keys)
+            childNode = solveSDQLpySpecificOrderJoins(sdqlpy_tree.child)
         else:
             # A leaf node
             pass
@@ -715,136 +710,16 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         # Run on current node (sdqlpy_tree)
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
             # Decompose
-            # TODO: KEEP
             sdqlpy_tree.decompose_join_condition()
-
-            # Check the cardinality information for left and right exists
-            assert sdqlpy_tree.left.cardinality != None
-            assert sdqlpy_tree.right.cardinality != None
             
-            # Check which is primary and foreign, to set primary/foreign for current node
-            leftType = whatTypeAreKeys(sdqlpy_tree.leftKeys, sdqlpy_tree.left)
-            rightType = whatTypeAreKeys(sdqlpy_tree.rightKeys, sdqlpy_tree.right)
-            
-            # TODO: KEEP
+            # Swap if it's a left semijoin
             if sdqlpy_tree.joinType == "leftsemijoin":
                 sdqlpy_tree.joinType = "rightsemijoin"
                 sdqlpy_tree.swapLeftAndRight()
             else:
-                leftKeys_str = [x.codeName for x in sdqlpy_tree.leftKeys]
-                rightKeys_str = [x.codeName for x in sdqlpy_tree.rightKeys]
+                # Otherwise, it's grand - so just leave it
+                pass
                 
-                if leftType == [] and rightType == []:
-                    # This means its a non-equi join
-                    conditionType = set([type(cond) for cond in sdqlpy_tree.joinCondition]) 
-                    assert len(conditionType) == 1 and GreaterThanOperator in conditionType
-                    # We check that the cardinality is okay
-                    assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
-                    pass
-                elif leftType == ["N"] or rightType == ["N"]:
-                    # Joining on keys that are neither Primary nor Foreign
-                    if isinstance(leftNode, SDQLpyRecordNode) and isinstance(rightNode, SDQLpyRecordNode):
-                        # We expect them both to be record nodes and that they're of the same table
-                        assert leftNode.tableName == rightNode.tableName
-                        # Double check that cardinalities are the same and leave it as we found it
-                        assert leftNode.cardinality == rightNode.cardinality
-                    else:
-                        # That it's a non-equi join, verify that it is - by looking at the operators
-                        joinConditionTypes = set([type(x) for x in sdqlpy_tree.joinCondition])
-                        nonEquiJoinTypes = set([type(x) for x in [GreaterThanEqOperator(), GreaterThanOperator(), LessThanEqOperator(), LessThanOperator()]])
-                        # Subset - all items of A are present in B
-                        assert joinConditionTypes.issubset(nonEquiJoinTypes)
-                elif "P" in leftType and "P" in rightType:
-                    # Both left and right are primary
-                    # Prefer the one with lower cardinality
-                    if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
-                        # We should index on Left
-                        # No swap required
-                        pass
-                    else:
-                        # We should index on Right
-                        # Swap required
-                        sdqlpy_tree.swapLeftAndRight()
-                        assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
-                elif "P" in leftType:
-                    # Check that all of right are "F" or "N"
-                    assert len(set(rightType)) > 0 and Counter(rightType)["P"] == 0
-                    # That there's only 1 P in left and the rest are F or N
-                    assert Counter(leftType)["P"] == 1 and (Counter(leftType)["F"] + Counter(leftType)["N"] == len(leftType) - 1)
-                    
-                    # Index on Left
-                    # We should index on Left
-                    # No swap required
-                    pass
-                elif "P" in rightType:
-                    # Check that all of left are "F" or "N"
-                    leftCounter = Counter(leftType)
-                    assert (leftCounter["F"] > 0 or leftCounter["N"] > 0) and (leftCounter["P"] == 0)
-                    # And, that there's only 1 P in right and the rest are F or N
-                    assert Counter(rightType)["P"] == 1 and (Counter(rightType)["F"] + Counter(rightType)["N"] == len(rightType) - 1)
-                    
-                    # We should index on Right
-                    # Swap required
-                    sdqlpy_tree.swapLeftAndRight()
-                elif leftKeys_str == rightKeys_str:
-                    # They are entirely foreign
-                    assert set(leftType) == set("F") and set(rightType) == set("F")
-                    # If we are joining on identical keys, even if they're not primary, it's still okay
-                    # We'll use cardinality to decide
-                    # Prefer the one with lower cardinality
-                    if sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality:
-                        # We should index on Left
-                        # No swap required
-                        pass
-                    else:
-                        # We should index on Right
-                        # Swap required
-                        sdqlpy_tree.swapLeftAndRight()
-                        assert sdqlpy_tree.left.cardinality <= sdqlpy_tree.right.cardinality
-                else:
-                    raise Exception
-            
-            # Set the primary/foreignKeys
-            # The primary will be the primary of right
-            sdqlpy_tree.setPrimary(sdqlpy_tree.right.primaryKey)
-                
-            # Set foreign keys
-            sdqlpy_tree.addForeign(sdqlpy_tree.left.foreignKeys)
-            sdqlpy_tree.addForeign(sdqlpy_tree.left.waitingForeignKeys)
-            sdqlpy_tree.addForeign(sdqlpy_tree.right.foreignKeys)
-            sdqlpy_tree.addForeign(sdqlpy_tree.right.waitingForeignKeys)
-            sdqlpy_tree.resolveForeignKeys()
-            
-        else:
-            if isinstance(sdqlpy_tree, SDQLpyRecordNode):
-                # Add primary/foreign
-                getPrimary = table_keys[sdqlpy_tree.tableName][0]
-                assert len(getPrimary) == 1
-                sdqlpy_tree.setPrimary(list(getPrimary)[0])
-                getForeign = table_keys[sdqlpy_tree.tableName][1]
-                sdqlpy_tree.addForeign(getForeign)
-                sdqlpy_tree.completedTables.add(sdqlpy_tree.tableName)
-                # Recreate input/output dicts
-                # TODO: KEEP
-                sdqlpy_tree.filterTableColumns()                
-            else:
-                if isinstance(sdqlpy_tree, SDQLpyGroupNode):
-                    # Set the index as primary
-                    assert len(sdqlpy_tree.keyExpressions) > 0
-                    primaryKeys = tuple([x.codeName for x in sdqlpy_tree.keyExpressions])
-                    sdqlpy_tree.setPrimary(primaryKeys)
-                    sdqlpy_tree.addForeign(sdqlpy_tree.child.foreignKeys)
-                    sdqlpy_tree.addForeign(sdqlpy_tree.child.waitingForeignKeys)
-                else:
-                    # Propagate forwards
-                    assert len(sdqlpy_tree.child.primaryKey) > 0
-                    sdqlpy_tree.setPrimary(sdqlpy_tree.child.primaryKey)
-                    sdqlpy_tree.addForeign(sdqlpy_tree.child.foreignKeys)
-                    sdqlpy_tree.addForeign(sdqlpy_tree.child.waitingForeignKeys)
-                
-                # Carry forward completedTables
-                
-        
         return sdqlpy_tree     
     
     def insertPostJoinFilterNodes(sdqlpy_tree):
@@ -1013,8 +888,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             if isinstance(sdqlpy_tree, SDQLpyAggrNode) and isinstance(sdqlpy_tree.child, SDQLpyAggrNode):
                 # We have detected repeated aggrs
                 sdqlpy_tree.set_repeated_aggr()
-                
-                
+            
     def solveNonPrimaryFilters(sdqlpy_tree):
         # Post Order traversal: Visit Children
         belowFilter = None
@@ -1047,7 +921,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         # Determine if the current node is a suitable filter location
         # Get all codeNames for keys
         all_codeNames = [x.codeName for x in sdqlpy_tree.outputDict.flatKeys()]
-        if (not set(sdqlpy_tree.primaryKey).issubset(set(all_codeNames))) and (not isinstance(sdqlpy_tree, (SDQLpyAggrNode, SDQLpyJoinNode))):
+        primaryKey_codeNames = [x.codeName for x in sdqlpy_tree.primaryKey]
+        if (not set(primaryKey_codeNames).issubset(set(all_codeNames))) and (not isinstance(sdqlpy_tree, (SDQLpyAggrNode, SDQLpyJoinNode))):
             # IF all items of A are NOT present in B
             # This is a cause for concern - as a filter shouldn't be applied in this scenario
             if sdqlpy_tree.filterContent != None:
@@ -1142,18 +1017,22 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                     sdqlpy_tree.outputDict.duplicateUser = False
                     sdqlpy_tree.child.outputDict.duplicateCounter = False
                     
-                    # newValue = ConstantValue(1.0, "Float")
-                    # newValue.codeName = val.codeName
-                    
-                    # replacementDict[str(id(val))] = newValue
-                    
-                    # # Set the replacementDict
-                    # sdqlpy_tree.setReplacementDict(replacementDict)
-                    
-                    # Use the replacementDict
                     sdqlpy_tree.set_output_dict()
                 
         return sdqlpy_tree, replacementDict
+    
+    def solveRecordNodeImportantTableColumns(sdqlpy_tree):
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            solveRecordNodeImportantTableColumns(sdqlpy_tree.left)
+            solveRecordNodeImportantTableColumns(sdqlpy_tree.right)
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            solveRecordNodeImportantTableColumns(sdqlpy_tree.child)
+        else:
+            # A leaf node
+            pass
+        
+        if isinstance(sdqlpy_tree, SDQLpyRecordNode):
+            sdqlpy_tree.filterTableColumns()
     
     # Set the code names
     set_codeNames(universal_tree)
@@ -1168,8 +1047,10 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
     parserCreatedColumns, _ = convertSumAggrOperatorToColumnNode(sdqlpy_tree)
     # Solve empty outputDict codenames
     solveOutputDictEmptyCodename(sdqlpy_tree, parserCreatedColumns)
-    # Order joins, using cardinality information
-    sdqlpy_tree = order_joins(sdqlpy_tree, table_keys)
+    # Solve RecordNodes so that they're more efficient
+    solveRecordNodeImportantTableColumns(sdqlpy_tree)
+    # Order joins, in the specific SDQLpy Manner
+    sdqlpy_tree = solveSDQLpySpecificOrderJoins(sdqlpy_tree)
     # Insert JoinProbe Nodes
     sdqlpy_tree = insert_join_probe_nodes(sdqlpy_tree)
     # move postJoinFilterNodes into a separate FilterNode

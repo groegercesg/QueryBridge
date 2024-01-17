@@ -331,7 +331,6 @@ def opt_v_fold(sdqlpy_tree):
                     # Carry the primary and foreign
                     sdqlpy_tree.child.primaryKey = sdqlpy_tree.primaryKey
                     sdqlpy_tree.child.foreignKeys = sdqlpy_tree.foreignKeys
-                    sdqlpy_tree.child.waitingForeignKeys = sdqlpy_tree.waitingForeignKeys
                     
                     sdqlpy_tree = sdqlpy_tree.child
                     sdqlpy_tree.foldedInto = True
@@ -350,7 +349,6 @@ def opt_v_fold(sdqlpy_tree):
                     # Carry the primary and foreign
                     sdqlpy_tree.child.primaryKey = sdqlpy_tree.primaryKey
                     sdqlpy_tree.child.foreignKeys = sdqlpy_tree.foreignKeys
-                    sdqlpy_tree.child.waitingForeignKeys = sdqlpy_tree.waitingForeignKeys
                     
                     sdqlpy_tree = sdqlpy_tree.child
                     sdqlpy_tree.foldedInto = True
