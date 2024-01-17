@@ -739,6 +739,10 @@ class UnparseSDQLpyTree():
     def __handle_CaseOperator(self, expr: CaseOperator) -> str:
         assert len(expr.caseInstances) == 1
         outputValue = self.__convert_expression_operator_to_sdqlpy(expr.caseInstances[0].outputValue)
+        if hasattr(expr.caseInstances[0].case, "left") and isinstance(expr.caseInstances[0].case.left, ColumnValue):
+            if expr.caseInstances[0].case.left.codeName != expr.caseInstances[0].case.left.value:
+                expr.caseInstances[0].case.left.created = True
+                pass
         caseValue = self.__convert_expression_operator_to_sdqlpy(expr.caseInstances[0].case)
         elseValue = self.__convert_expression_operator_to_sdqlpy(expr.elseExpr)
         # [caseInstances[0].outputValue] if [caseInstances[0].case] else [elseExpr] 

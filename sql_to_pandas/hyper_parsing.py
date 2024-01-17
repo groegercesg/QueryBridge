@@ -407,7 +407,12 @@ def set_flowColumns(uplan_tree):
     
     # Run on current node (sdqlpy_tree)
     if isinstance(uplan_tree, ScanNode):
-        uplan_tree.flowColumns = uplan_tree.tableColumns
+        if uplan_tree.primaryKey == None:
+            uplan_tree.flowColumns = uplan_tree.tableColumns
+        else:
+            # We apply the partial column limiting optimisation here
+            uplan_tree.flowColumns = list(set([x for x in uplan_tree.tableColumns if x.essential == True] + list(uplan_tree.primaryKey)))
+            uplan_tree.tableColumns = uplan_tree.flowColumns
     elif isinstance(uplan_tree, JoinNode):
         if uplan_tree.joinType in ["inner", "outer"]:
             uplan_tree.flowColumns = uplan_tree.left.flowColumns + uplan_tree.right.flowColumns
@@ -547,6 +552,7 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     fix_flowColumnsEmptyCodeName(op_tree, parserCreatedColumns)
     # Order Joins - we need to do this before duplicate renaming
     op_tree = fix_orderJoinsForPrimaryForeignKeys(op_tree, table_schema)
+    op_tree = set_flowColumns(op_tree)
     # Solve duplicate column names in the tree
     op_tree = fix_solveDuplicateColumnsNames(op_tree)
     
@@ -1477,4 +1483,4 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
 # # generate_hyperdb_explains()
 # # inspect_explain_plans()
 # # parse_explain_plans()
-convert_explain_plan_to_x("pandas") # sdqlpy
+convert_explain_plan_to_x("pandas") # sdqlpy  ][ pandas

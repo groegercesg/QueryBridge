@@ -19,5 +19,6 @@ benchmarking/temp_queries/
 sqlconv_env/
 debugging/
 hyperd.log
+hyperd_1.log
 hyperdb_tpch.hyper
 SDQLPY/

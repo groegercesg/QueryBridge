@@ -405,10 +405,6 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         assert isinstance(newValue, bool)
         self.is_update_sum = newValue
         
-    # def get_output_dict(self):
-    #     self.set_output_dict()
-    #     return self.outputDict
-        
     def set_output_dict(self, no_sumaggr_warn=False):
         assert (self.left != None) and (self.right != None)
         # Track and carry previous outputDict value
@@ -547,19 +543,6 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             
         traverse_tree(self.comparingTree)
         
-    def handle_equating_conditions_zero(self):
-        assert isinstance(self.left, SDQLpyJoinBuildNode) and isinstance(self.right, SDQLpyRecordNode)
-        # Make it NotEqualCondition between the primaryKeys of each
-        newCondition = NotEqualsOperator()
-        assert len(self.left.outputDict.keys) > 0
-        newCondition.left = self.left.outputDict.keys[0]
-        rightKeys = [col for col in self.right.outputDict.flatCols()]
-        assert len(rightKeys)
-        sorted(rightKeys, key=lambda x: difflib.SequenceMatcher(None, x.codeName, newCondition.left.codeName).ratio())
-        newCondition.right = rightKeys[-1]
-        
-        return [newCondition]
-        
     def decompose_join_condition(self):
         # We have the joinConditions all bundled up
         # We need to split these into, conditions for the leftTableRef
@@ -621,10 +604,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         
         assert len(self.joinCondition) == 1
         equating, stripped_join_condition = extract_column_equating(self.joinCondition[0])
-        
-        # if equating == []:
-        #     equating = self.handle_equating_conditions_zero()
-        
+                
         # Audit before assigning
         if equating != []:
             equating_types = Counter(equating)
