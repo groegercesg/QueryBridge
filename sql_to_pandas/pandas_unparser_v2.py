@@ -2,7 +2,7 @@ from collections import defaultdict, Counter
 import copy
 import random
 
-from universal_plan_nodes import *
+from uplan_nodes import *
 from expression_operators import *
 
 TAB = "    "

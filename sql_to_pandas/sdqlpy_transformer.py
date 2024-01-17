@@ -1,7 +1,7 @@
 import copy
 
 from uplan_helpers import *
-from universal_plan_nodes import *
+from uplan_nodes import *
 from sdqlpy_classes import *
 
 def audit_sdqlpy_tree_leafnode(op_tree: SDQLpyBaseNode) -> bool:
@@ -715,6 +715,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
         # Run on current node (sdqlpy_tree)
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
             # Decompose
+            # TODO: KEEP
             sdqlpy_tree.decompose_join_condition()
 
             # Check the cardinality information for left and right exists
@@ -725,6 +726,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
             leftType = whatTypeAreKeys(sdqlpy_tree.leftKeys, sdqlpy_tree.left)
             rightType = whatTypeAreKeys(sdqlpy_tree.rightKeys, sdqlpy_tree.right)
             
+            # TODO: KEEP
             if sdqlpy_tree.joinType == "leftsemijoin":
                 sdqlpy_tree.joinType = "rightsemijoin"
                 sdqlpy_tree.swapLeftAndRight()
@@ -823,6 +825,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode, table_keys: d
                 sdqlpy_tree.addForeign(getForeign)
                 sdqlpy_tree.completedTables.add(sdqlpy_tree.tableName)
                 # Recreate input/output dicts
+                # TODO: KEEP
                 sdqlpy_tree.filterTableColumns()                
             else:
                 if isinstance(sdqlpy_tree, SDQLpyGroupNode):

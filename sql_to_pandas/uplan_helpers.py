@@ -2,6 +2,16 @@ import random
 
 from expression_operators import *
 
+def returnFromFlowColumns(targetCodeNames, inFlowCols) -> ExpressionBaseNode:
+    if isinstance(targetCodeNames, str):
+        filtFlowCols = list(filter(lambda x: x.codeName == targetCodeNames, inFlowCols))
+        assert len(filtFlowCols) == 1
+        return filtFlowCols[0]
+    else:
+        filtFlowCols = list(filter(lambda x: x.codeName in targetCodeNames, inFlowCols))
+        assert len(filtFlowCols) == len(targetCodeNames)
+        return tuple(filtFlowCols)
+
 def handleEmptyCodeName(value, previousColumns):
     # Takes a expr with no codename, at the top level
     # Use the subnodes to create one

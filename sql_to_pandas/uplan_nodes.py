@@ -1,9 +1,28 @@
 from expression_operators import *
+from uplan_helpers import *
 
 class UniversalBaseNode():
     def __init__(self):
         self.nodeID = None
         self.cardinality = None
+        
+        self.primaryKey = None
+        self.foreignKeys = set()
+        self.waitingForeignKeys = dict()
+        self.completedTables = set()
+        
+    def setPrimary(self, inPrimary):
+        assert isinstance(inPrimary, tuple)
+        self.primaryKey = inPrimary
+        
+    def addForeign(self, inForeign):
+        assert isinstance(inForeign, (set, dict))
+        if isinstance(inForeign, set):
+            self.foreignKeys.update(inForeign)
+        else:
+            for fkey in inForeign.keys():
+                self.foreignKeys.add(fkey)
+            self.waitingForeignKeys.update(inForeign)
     
     def addID(self, value):
         assert self.nodeID == None
@@ -59,6 +78,42 @@ class JoinNode(BinaryBaseNode):
         assert isinstance(leftKeys, list) and isinstance(rightKeys, list)
         self.leftKeys = leftKeys
         self.rightKeys = rightKeys
+        
+    def swapLeftAndRight(self):
+        # Swap left and right
+        new_right = self.left
+        new_left = self.right
+        
+        self.left = new_left
+        self.right = new_right
+        
+        # Swap the keys as well
+        oldLeftKeys = self.leftKeys
+        oldRightKeys = self.rightKeys
+        
+        self.leftKeys = oldRightKeys
+        self.rightKeys = oldLeftKeys
+        
+    def resolveForeignKeys(self):
+        # Do completedTables
+        self.completedTables |= self.left.completedTables
+        self.completedTables |= self.right.completedTables
+        
+        toPopKeys = []
+        
+        assert len(self.flowColumns) > 0
+        
+        for key in self.waitingForeignKeys.keys():
+            if self.waitingForeignKeys[key][1] in self.completedTables:
+                self.foreignKeys.add(
+                    returnFromFlowColumns(
+                        self.waitingForeignKeys[key][0], self.flowColumns
+                    )
+                )
+                toPopKeys.append(key)
+            
+        for tpKey in toPopKeys:
+            self.waitingForeignKeys.pop(tpKey)
         
 class SortNode(UnaryBaseNode):
     def __init__(self, sortCriteria):

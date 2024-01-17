@@ -1,6 +1,6 @@
 from enum import Enum
 
-from universal_plan_nodes import *
+from uplan_nodes import *
 
 class SupportedOptimisations(Enum):
     COL_ELIM = "ColumnElimination"

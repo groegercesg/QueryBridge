@@ -1,7 +1,7 @@
 from collections import Counter, defaultdict
 import difflib
 
-from universal_plan_nodes import *
+from uplan_nodes import *
 from expression_operators import *
 
 from sdqlpy_helpers import *

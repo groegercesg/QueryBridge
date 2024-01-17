@@ -198,7 +198,193 @@ def fix_flowColumnsEmptyCodeName(uplan_tree, parserCreatedColumns):
             handleEmptyCodeName(col, parserCreatedColumns)
             assert col.codeName != ""
             parserCreatedColumns.add(col.codeName)
-
+            
+def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_schema: dict) -> UniversalBaseNode:
+    def whatTypeAreKeys(joinKeys: list, childNode):
+        assert len(joinKeys) > 0
+        nextJoinKeysIDs = [id(x) for x in joinKeys]
+                
+        outcomes = []
+        primaryKeyIDs = [id(x) for x in childNode.primaryKey]
+        foreignKeyIDs = [id(x) for x in childNode.foreignKeys]
+        
+        primaryKeyCounter = 0
+        
+        # Check for primary first
+        for jKey in joinKeys:
+            if id(jKey) in primaryKeyIDs:
+                primaryKeyCounter += 1
+                if primaryKeyCounter == len(childNode.primaryKey):
+                    outcomes.append("P")
+                    for pkey in childNode.primaryKey:
+                        nextJoinKeysIDs.remove(id(pkey))
+        
+        # Check for foreign keys after
+        for jKey in nextJoinKeysIDs:
+            if jKey in foreignKeyIDs:
+                outcomes.append("F")
+            else:
+                # Joining on keys that are neither Primary nor Foreign
+                outcomes.append("N")
+        
+        return outcomes
+    
+    # Post Order traversal: Visit Children
+    leftNode, rightNode, childNode = None, None, None
+    if isinstance(uplan_tree, BinaryBaseNode):
+        leftNode = fix_orderJoinsForPrimaryForeignKeys(uplan_tree.left, table_schema)
+        rightNode = fix_orderJoinsForPrimaryForeignKeys(uplan_tree.right, table_schema)
+    elif isinstance(uplan_tree, UnaryBaseNode):
+        childNode = fix_orderJoinsForPrimaryForeignKeys(uplan_tree.child, table_schema)
+    else:
+        # A leaf node
+        pass
+    
+    # Assign previous changes
+    if (leftNode != None) and (rightNode != None):
+        uplan_tree.left = leftNode
+        uplan_tree.right = rightNode
+    elif (childNode != None):
+        uplan_tree.child = childNode
+    else:
+        # A leaf node
+        pass
+    
+    # Run on current node (sdqlpy_tree)
+    if isinstance(uplan_tree, JoinNode):
+        # Check the cardinality information for left and right exists
+        assert uplan_tree.left.cardinality != None
+        assert uplan_tree.right.cardinality != None
+        
+        assert len(uplan_tree.leftKeys) > 0
+        assert len(uplan_tree.rightKeys) > 0
+        
+        # Check which is primary and foreign, to set primary/foreign for current node
+        leftType = whatTypeAreKeys(uplan_tree.leftKeys, uplan_tree.left)
+        rightType = whatTypeAreKeys(uplan_tree.rightKeys, uplan_tree.right)
+        
+        leftKeys_str = [x.codeName for x in uplan_tree.leftKeys]
+        rightKeys_str = [x.codeName for x in uplan_tree.rightKeys]
+        
+        if leftType == ["N"] or rightType == ["N"]:
+            # Joining on keys that are neither Primary nor Foreign
+            if isinstance(leftNode, ScanNode) and isinstance(rightNode, ScanNode):
+                # We expect them both to be record nodes and that they're of the same table
+                assert leftNode.tableName == rightNode.tableName
+                # Double check that cardinalities are the same and leave it as we found it
+                assert leftNode.cardinality == rightNode.cardinality
+            else:
+                # That it's a non-equi join, verify that it is - by looking at the operators
+                joinConditionTypes = set([type(x) for x in uplan_tree.joinCondition])
+                nonEquiJoinTypes = set([type(x) for x in [GreaterThanEqOperator(), GreaterThanOperator(), LessThanEqOperator(), LessThanOperator()]])
+                # Subset - all items of A are present in B
+                assert joinConditionTypes.issubset(nonEquiJoinTypes)
+        elif "P" in leftType and "P" in rightType:
+            # Both left and right are primary
+            # Prefer the one with lower cardinality
+            if uplan_tree.left.cardinality <= uplan_tree.right.cardinality:
+                # We should index on Left
+                # No swap required
+                pass
+            else:
+                # We should index on Right
+                # Swap required
+                uplan_tree.swapLeftAndRight()
+                assert uplan_tree.left.cardinality <= uplan_tree.right.cardinality
+        elif "P" in leftType:
+            # Check that all of right are "F" or "N"
+                assert len(set(rightType)) > 0 and Counter(rightType)["P"] == 0
+                # That there's only 1 P in left and the rest are F or N
+                assert Counter(leftType)["P"] == 1 and (Counter(leftType)["F"] + Counter(leftType)["N"] == len(leftType) - 1)
+                
+                # Index on Left
+                # We should index on Left
+                # No swap required
+                pass
+        elif "P" in rightType:
+            # Check that all of left are "F" or "N"
+            leftCounter = Counter(leftType)
+            assert (leftCounter["F"] > 0 or leftCounter["N"] > 0) and (leftCounter["P"] == 0)
+            # And, that there's only 1 P in right and the rest are F or N
+            assert Counter(rightType)["P"] == 1 and (Counter(rightType)["F"] + Counter(rightType)["N"] == len(rightType) - 1)
+            
+            # We should index on Right
+            # Swap required
+            uplan_tree.swapLeftAndRight()
+        elif leftKeys_str == rightKeys_str:
+            # They are entirely foreign
+            assert set(leftType) == set("F") and set(rightType) == set("F")
+            # If we are joining on identical keys, even if they're not primary, it's still okay
+            # We'll use cardinality to decide
+            # Prefer the one with lower cardinality
+            if uplan_tree.left.cardinality <= uplan_tree.right.cardinality:
+                # We should index on Left
+                # No swap required
+                pass
+            else:
+                # We should index on Right
+                # Swap required
+                uplan_tree.swapLeftAndRight()
+                assert uplan_tree.left.cardinality <= uplan_tree.right.cardinality
+        else:
+            raise Exception(f"Unrecognised format for the Join Condition or unexpected Primary/Foreign Key configuration")
+        
+        # Set the primary/foreignKeys
+        # The primary will be the primary of right
+        uplan_tree.setPrimary(uplan_tree.right.primaryKey)
+            
+        # Set foreign keys
+        uplan_tree.addForeign(uplan_tree.left.foreignKeys)
+        uplan_tree.addForeign(uplan_tree.left.waitingForeignKeys)
+        uplan_tree.addForeign(uplan_tree.right.foreignKeys)
+        uplan_tree.addForeign(uplan_tree.right.waitingForeignKeys)
+        uplan_tree.resolveForeignKeys()
+            
+    else:
+        # Not a join, we should set/propagate Primary/Foreign Keys
+        if isinstance(uplan_tree, ScanNode):
+            # Add primary key
+            getPrimary = table_schema[uplan_tree.tableName][0]
+            assert len(getPrimary) == 1
+            primaryKeyList = []
+            for primary_key in list(list(getPrimary)[0]):
+                primaryKeyList.append(
+                    returnFromFlowColumns(
+                        primary_key, uplan_tree.flowColumns
+                    )
+                )
+            uplan_tree.setPrimary(tuple(primaryKeyList))
+            # Add foreign key
+            getForeign = table_schema[uplan_tree.tableName][1]
+            reformatedForeign = dict()
+            for foreign_key, value in getForeign.items():
+                reformatedForeign[
+                    returnFromFlowColumns(
+                        foreign_key, uplan_tree.flowColumns
+                    )
+                ] = value
+            uplan_tree.addForeign(reformatedForeign)
+            # Completed Table
+            uplan_tree.completedTables.add(uplan_tree.tableName)
+        elif isinstance(uplan_tree, GroupNode):
+            # Set the key as primary
+            assert len(uplan_tree.keyExpressions) > 0
+            uplan_tree.setPrimary(tuple(uplan_tree.keyExpressions))
+            uplan_tree.addForeign(uplan_tree.child.foreignKeys)
+            uplan_tree.addForeign(uplan_tree.child.waitingForeignKeys)
+            # Carry forwards Completed Tables
+            uplan_tree.completedTables |= uplan_tree.child.completedTables
+        else:
+            # Propagate Forwards
+            assert len(uplan_tree.child.primaryKey) > 0
+            uplan_tree.setPrimary(uplan_tree.child.primaryKey)
+            uplan_tree.addForeign(uplan_tree.child.foreignKeys)
+            uplan_tree.addForeign(uplan_tree.child.waitingForeignKeys)
+            # Carry forwards Completed Tables
+            uplan_tree.completedTables |= uplan_tree.child.completedTables
+           
+    return uplan_tree
+        
 def set_flowColumns(uplan_tree):
     # Post Order traversal: Visit Children
     leftNode, rightNode, childNode = None, None, None
@@ -363,7 +549,7 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     fix_flowColumnsEmptyCodeName(op_tree, parserCreatedColumns)
     # Order Joins - we need to do this before duplicate renaming
     # table_schema
-    pass
+    op_tree = fix_orderJoinsForPrimaryForeignKeys(op_tree, table_schema)
     # Solve duplicate column names in the tree
     # TODO: renaming primary/foreign if applicable
     op_tree = fix_solveDuplicateColumnsNames(op_tree)
@@ -558,7 +744,7 @@ def parse_explain_plans():
     print("Unparsed Pandas Tree(s) into Pandas Content")
     
 from pandas_unparser_v2 import *
-from universal_plan_nodes import *
+from uplan_nodes import *
 from sqlglot import parse_one, exp
 
 def transform_sql_table_aliases(sql_file_path: str, op_tree: HyperBaseNode):
