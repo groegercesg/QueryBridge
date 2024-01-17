@@ -367,23 +367,17 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
                     )
                 ] = value
             uplan_tree.addForeign(reformatedForeign)
-            # Completed Table
-            uplan_tree.completedTables.add(uplan_tree.tableName)
         elif isinstance(uplan_tree, GroupNode) and len(uplan_tree.keyExpressions) > 0:
             # Set the key as primary
             uplan_tree.setPrimary(tuple(uplan_tree.keyExpressions))
             uplan_tree.addForeign(uplan_tree.child.foreignKeys)
             uplan_tree.addForeign(uplan_tree.child.waitingForeignKeys)
-            # Carry forwards Completed Tables
-            uplan_tree.completedTables |= uplan_tree.child.completedTables
         else:
             # Propagate Forwards
             assert len(uplan_tree.child.primaryKey) > 0
             uplan_tree.setPrimary(uplan_tree.child.primaryKey)
             uplan_tree.addForeign(uplan_tree.child.foreignKeys)
             uplan_tree.addForeign(uplan_tree.child.waitingForeignKeys)
-            # Carry forwards Completed Tables
-            uplan_tree.completedTables |= uplan_tree.child.completedTables
            
     return uplan_tree
         

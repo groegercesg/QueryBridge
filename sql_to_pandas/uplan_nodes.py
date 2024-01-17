@@ -9,7 +9,6 @@ class UniversalBaseNode():
         self.primaryKey = None
         self.foreignKeys = set()
         self.waitingForeignKeys = dict()
-        self.completedTables = set()
         
     def setPrimary(self, inPrimary):
         assert isinstance(inPrimary, tuple)
@@ -95,12 +94,7 @@ class JoinNode(BinaryBaseNode):
         self.rightKeys = oldLeftKeys
         
     def resolveForeignKeys(self):
-        # Do completedTables
-        self.completedTables |= self.left.completedTables
-        self.completedTables |= self.right.completedTables
-        
         toPopKeys = []
-        
         assert len(self.flowColumns) > 0
         
         for key in self.waitingForeignKeys.keys():
