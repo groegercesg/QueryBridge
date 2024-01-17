@@ -104,7 +104,7 @@ class JoinNode(BinaryBaseNode):
         assert len(self.flowColumns) > 0
         
         for key in self.waitingForeignKeys.keys():
-            if self.waitingForeignKeys[key][1] in self.completedTables:
+            if len(list(filter(lambda x: x.codeName == self.waitingForeignKeys[key][0], self.flowColumns))) > 0:
                 self.foreignKeys.add(
                     returnFromFlowColumns(
                         self.waitingForeignKeys[key][0], self.flowColumns

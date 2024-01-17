@@ -266,7 +266,7 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
         leftKeys_str = [x.codeName for x in uplan_tree.leftKeys]
         rightKeys_str = [x.codeName for x in uplan_tree.rightKeys]
         
-        if leftType == ["N"] or rightType == ["N"]:
+        if leftType == ["N"] and rightType == ["N"]:
             # Joining on keys that are neither Primary nor Foreign
             if isinstance(leftNode, ScanNode) and isinstance(rightNode, ScanNode):
                 # We expect them both to be record nodes and that they're of the same table
@@ -275,7 +275,10 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
                 assert leftNode.cardinality == rightNode.cardinality
             else:
                 # That it's a non-equi join, verify that it is - by looking at the operators
-                joinConditionTypes = set([type(x) for x in uplan_tree.joinCondition])
+                if isinstance(uplan_tree.joinCondition, list):
+                    joinConditionTypes = set([type(x) for x in uplan_tree.joinCondition])
+                else:
+                    joinConditionTypes = set([type(uplan_tree.joinCondition)])
                 nonEquiJoinTypes = set([type(x) for x in [GreaterThanEqOperator(), GreaterThanOperator(), LessThanEqOperator(), LessThanOperator()]])
                 # Subset - all items of A are present in B
                 assert joinConditionTypes.issubset(nonEquiJoinTypes)
@@ -366,9 +369,8 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
             uplan_tree.addForeign(reformatedForeign)
             # Completed Table
             uplan_tree.completedTables.add(uplan_tree.tableName)
-        elif isinstance(uplan_tree, GroupNode):
+        elif isinstance(uplan_tree, GroupNode) and len(uplan_tree.keyExpressions) > 0:
             # Set the key as primary
-            assert len(uplan_tree.keyExpressions) > 0
             uplan_tree.setPrimary(tuple(uplan_tree.keyExpressions))
             uplan_tree.addForeign(uplan_tree.child.foreignKeys)
             uplan_tree.addForeign(uplan_tree.child.waitingForeignKeys)
