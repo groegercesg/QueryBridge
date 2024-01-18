@@ -305,7 +305,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         
         # Work on current
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
-            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyRetrieveNode, SDQLpyConcatNode, SDQLpyGroupNode))
+            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyRetrieveNode, SDQLpyConcatNode, SDQLpyGroupNode, SDQLpyPromoteToFloatNode))
             
             # Turn a Record or JoinNode on the left into a JoinBuildNode
             if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)):
@@ -1068,7 +1068,12 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             pass
         elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.right, SDQLpyGroupNode) and is_complex_aggr_in_group(sdqlpy_tree.right):
             # We need to insert a SDQLpyPromoteToFloat node above the Group on the LHS
-            pass
+            promote = SDQLpyPromoteToFloatNode()
+            promote.addChild(sdqlpy_tree.right)
+            promote.primaryKey = sdqlpy_tree.right.primaryKey
+            promote.foreignKeys = sdqlpy_tree.right.foreignKeys
+            promote.set_output_dict()
+            sdqlpy_tree.right = promote
         
         return sdqlpy_tree
     

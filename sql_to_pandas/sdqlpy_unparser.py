@@ -26,6 +26,7 @@ class UnparseSDQLpyTree():
         # Variable dict
         self.variableDict = {}
         self.doing_repeated_aggr = False
+        self.doingNode = None
         
     def getChildTableNames(self, current: SDQLpyBaseNode) -> list[str]:
         childTables = []
@@ -119,6 +120,8 @@ class UnparseSDQLpyTree():
             assert isinstance(current_node, LeafSDQLpyNode)
             pass
         
+        # Set the doingNode
+        self.doingNode = current_node.__class__.__name__
         # Visit the current_node and add it to self.pandas_content
         targetVisitorMethod = f"visit_{current_node.__class__.__name__}"
         # Refresh current_node's outputDict, before running
@@ -130,6 +133,7 @@ class UnparseSDQLpyTree():
             getattr(self, targetVisitorMethod)(current_node)
         else:
             raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
+        self.doingNode = None
         
     def visit_SDQLpyRetrieveNode(self, node):
         assert node.targetID in self.nodeDict
@@ -145,6 +149,33 @@ class UnparseSDQLpyTree():
         
         node.getTableName(self)
         node.tableName = retrievedNode.tableName
+        
+    def visit_SDQLpyPromoteToFloatNode(self, node):
+        # Get child name
+        childTable = node.getChildName(self)
+        
+        createdDictName = node.getTableName(self)
+        lambda_index = "p"
+        
+        self.writeContent(
+            f"{createdDictName} = {childTable}.sum(\n"
+            f"{TAB}lambda {lambda_index} : "
+        )
+        
+        for output_line in node.outputDict.generateSDQLpyOneLambda(
+                self, f"{lambda_index}[0]", f"{lambda_index}[1]", node
+            ):
+                self.writeContent(
+                    f"{TAB}{TAB}{output_line}"
+                )
+        
+        assert node.filterContent == None
+        
+        node.outputDict.set_created(self)
+        
+        self.writeContent(
+            f")"
+        )
         
     def visit_SDQLpyFilterNode(self, node):
         # Get child name
@@ -329,7 +360,7 @@ class UnparseSDQLpyTree():
         # assert node.joinMethod == "hash"
         
         # Check its a Valid setup
-        if ((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode, SDQLpyGroupNode, SDQLpyRetrieveNode))):
+        if ((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode, SDQLpyGroupNode, SDQLpyRetrieveNode, SDQLpyPromoteToFloatNode))):
             pass
         else:
             raise Exception("Invalid/Unsupported Left and Right Layout")
@@ -724,15 +755,22 @@ class UnparseSDQLpyTree():
                 promoteValue = "maxtype"
             case _:
                 raise Exception(f"Unexpected ComplexAggr: {expr}")
-            
-        if expr.created == True:
+        
+        expression_output = None
+        if expr.created == True and self.doingNode in ["SDQLpyPromoteToFloatNode", "SDQLpyConcatNode"]:
             # Override the promote value if we've already created this
             promoteValue = "float"
             childValue = f"{expr.sourceNode}.{expr.codeName}"
+            expression_output = f"promote({childValue}, {promoteValue})"
+        elif expr.created == True:
+            expression_output = f"{expr.sourceNode}.{expr.codeName}"
         else:
+            assert expr.created == False
             childValue = self.__convert_expression_operator_to_sdqlpy(expr.child)
+            expression_output = f"promote({childValue}, {promoteValue})"
         
-        return f"promote({childValue}, {promoteValue})"
+        assert expression_output != None
+        return expression_output
     
     def __handle_EqualsOperator(self, expr: EqualsOperator, leftValue: str, rightValue: str) -> str:
         if expr.left.type == "Float" and expr.right.type == "Float":
@@ -787,10 +825,10 @@ class UnparseSDQLpyTree():
     def __handle_CaseOperator(self, expr: CaseOperator) -> str:
         assert len(expr.caseInstances) == 1
         outputValue = self.__convert_expression_operator_to_sdqlpy(expr.caseInstances[0].outputValue)
-        if hasattr(expr.caseInstances[0].case, "left") and isinstance(expr.caseInstances[0].case.left, ColumnValue):
-            if expr.caseInstances[0].case.left.codeName != expr.caseInstances[0].case.left.value:
-                expr.caseInstances[0].case.left.created = True
-                pass
+        # if hasattr(expr.caseInstances[0].case, "left") and isinstance(expr.caseInstances[0].case.left, ColumnValue):
+        #     if expr.caseInstances[0].case.left.codeName != expr.caseInstances[0].case.left.value:
+        #         expr.caseInstances[0].case.left.created = True
+        #         pass
         caseValue = self.__convert_expression_operator_to_sdqlpy(expr.caseInstances[0].case)
         elseValue = self.__convert_expression_operator_to_sdqlpy(expr.elseExpr)
         # [caseInstances[0].outputValue] if [caseInstances[0].case] else [elseExpr] 

@@ -268,6 +268,22 @@ class SDQLpyJoinBuildNode(UnarySDQLpyNode):
         self.rd_outputDict(no_sumaggr_warn)
         self.rd_filterContent(no_sumaggr_warn)
 
+class SDQLpyPromoteToFloatNode(UnarySDQLpyNode):
+    def __init__(self):
+        super().__init__()
+        self.outputDict = None
+        self.sdqlrepr = "promote"
+        
+    def set_output_dict(self, no_sumaggr_warn=False):
+        assert self.child != None
+        self.outputDict = SDQLpySRDict(
+            self.child.outputDict.keys,
+            self.child.outputDict.values
+        )
+        
+        self.rd_outputDict(no_sumaggr_warn)
+        self.rd_filterContent(no_sumaggr_warn)
+
 class SDQLpyFilterNode(UnarySDQLpyNode):
     def __init__(self):
         super().__init__()
