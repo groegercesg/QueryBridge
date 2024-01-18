@@ -47,8 +47,8 @@ class SDQLpyBaseNode():
                         else:
                             print(str(id(val)))
                             raise Exception("Discovered a SumAggr, but we don't have any known replacement for this!")
-                    elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
-                        raise Exception("Max/Min/Avg operator detected, we don't have support for these")
+                    # elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+                    #     raise Exception("Max/Min/Avg operator detected, we don't have support for these")
 
     def replaceInExpression(self, expression, replacements, no_sumaggr_warn):
         # Post Order traversal: Visit Children
@@ -79,8 +79,8 @@ class SDQLpyBaseNode():
                 pass
             else:
                 raise Exception("Discovered a SumAggr, but we don't have any known replacement for this!")
-        elif isinstance(expression, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
-            raise Exception("Max/Min/Avg operator detected, we don't have support for these")
+        # elif isinstance(expression, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+        #     raise Exception("Max/Min/Avg operator detected, we don't have support for these")
             
         return expression
 
@@ -132,8 +132,8 @@ class LeafSDQLpyNode(SDQLpyBaseNode):
                         pass
                     else:
                         raise Exception("we shouldn't find a SumAggrOperation in tableColumns that we don't already know about")
-                elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
-                    raise Exception("Max/Min/Avg operator detected, we don't have support for these")
+                # elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+                #     raise Exception("Max/Min/Avg operator detected, we don't have support for these")
 
 class PipelineBreakerNode(SDQLpyBaseNode):
     def __init__(self):
@@ -331,6 +331,7 @@ class SDQLpyConcatNode(UnarySDQLpyNode):
         self.outputDict = None
         
         self.output_dict_value_dict_size = False
+        self.promote_to_float = False
         
     def set_output_dict(self, no_sumaggr_warn=False):
         self.outputDict = SDQLpySRDict(
@@ -983,7 +984,7 @@ class SDQLpySRDict():
             for val in self.values:
                 if isinstance(val, (ColumnValue, CountAllOperator, SDQLpyThirdNodeWrapper,
                                     SumAggrOperator, MulOperator, ConstantValue, CaseOperator, DivOperator,
-                                    SubOperator)):
+                                    SubOperator, AvgAggrOperator, MaxAggrOperator, MinAggrOperator)):
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val)
                 else:
                     expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(val.child)

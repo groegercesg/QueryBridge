@@ -464,8 +464,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                                 (str(id(valueCopy)), newValue)
                             ]
                         )
-                elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
-                    raise Exception("Max/Min/Avg operator detected, we don't have support for these")
+                # elif isinstance(val, (MaxAggrOperator, AvgAggrOperator, MinAggrOperator)):
+                #     raise Exception("Max/Min/Avg operator detected, we don't have support for these")
         
         # Set the replacementDict
         sdqlpy_tree.setReplacementDict(replacementDict)
@@ -1034,6 +1034,44 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             
         return sdqlpy_tree
     
+    def solveComplexAggrHandling(sdqlpy_tree):
+        def is_complex_aggr_in_group(sdqlpy_node) -> bool:
+            complex_aggrs = [AvgAggrOperator, MinAggrOperator, MaxAggrOperator]
+            numberComplex = list(filter(lambda x: type(x) in complex_aggrs, sdqlpy_node.outputDict.flatCols()))
+            return len(numberComplex) > 0
+            
+        # Post Order traversal: Visit Children
+        leftNode, rightNode, childNode = None, None, None
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = solveComplexAggrHandling(sdqlpy_tree.left)
+            rightNode = solveComplexAggrHandling(sdqlpy_tree.right)
+            
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = solveComplexAggrHandling(sdqlpy_tree.child)
+            
+            sdqlpy_tree.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        # A AVG/MIN/MAX should only happen in a Group/Or be used, once created
+        if isinstance(sdqlpy_tree, UnarySDQLpyNode) and isinstance(sdqlpy_tree.child, SDQLpyGroupNode) and is_complex_aggr_in_group(sdqlpy_tree.child):
+            # A complex Aggr has been detected,
+            if isinstance(sdqlpy_tree, SDQLpyConcatNode):
+                sdqlpy_tree.promote_to_float = True
+            else:
+                raise Exception(f"A groupNode with complex aggrs (avg/max/min) has an unrecognised parent: {sdqlpy_tree}")
+        elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.left, SDQLpyGroupNode) and is_complex_aggr_in_group(sdqlpy_tree.left):
+            # We need to insert a SDQLpyPromoteToFloat node above the Group on the LHS
+            pass
+        elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.right, SDQLpyGroupNode) and is_complex_aggr_in_group(sdqlpy_tree.right):
+            # We need to insert a SDQLpyPromoteToFloat node above the Group on the LHS
+            pass
+        
+        return sdqlpy_tree
+    
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
@@ -1047,6 +1085,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     wire_up_incoming_output_dicts(sdqlpy_tree, no_sumaggr_warn=True)
     # Convert SumAggrOperator to ColumnNode
     parserCreatedColumns, _ = convertSumAggrOperatorToColumnNode(sdqlpy_tree)
+    # Add PromoteToFloat handing for AVG/MIN/MAX
+    sdqlpy_tree = solveComplexAggrHandling(sdqlpy_tree)
     # Solve empty outputDict codenames
     solveOutputDictEmptyCodename(sdqlpy_tree, parserCreatedColumns)
     # Solve RecordNodes so that they're more efficient
@@ -1061,8 +1101,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     wire_up_incoming_output_dicts(sdqlpy_tree)
     # solve Duplicates by multiplying by a counter
     duplicateFixTopGroupJoin(sdqlpy_tree)
-    # # solve duplicate column names in outputDicts
-    # sdqlpy_tree = solveDuplicateColumnsNames(sdqlpy_tree)
     # solve CountDistinctOperator
     sdqlpy_tree, _ = solveCountDistinctOperator(sdqlpy_tree)
     # solve CountAllOperator

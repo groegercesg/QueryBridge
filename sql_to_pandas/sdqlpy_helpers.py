@@ -86,7 +86,7 @@ def setSourceNodeColumnValuesNPairs(value, sourcePairs):
             
             if set_index == False:
                 raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
-        case MulOperator():
+        case MulOperator() | AvgAggrOperator() | MinAggrOperator() | MaxAggrOperator() | CountAllOperator():
             if value.created == True:
                 set_index = False
                 for index_name, columns in sourcePairs:
@@ -120,7 +120,7 @@ def setSourceNodeColumnValuesNPairs(value, sourcePairs):
             if set_index == False and value.value != '':
                 raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
     
-    if value.created == True and isinstance(value, MulOperator):
+    if value.created == True and isinstance(value, (MulOperator, AvgAggrOperator, MinAggrOperator, MaxAggrOperator, CountAllOperator)):
         pass
     elif isinstance(value, BinaryExpressionOperator):
         setSourceNodeColumnValuesNPairs(value.left, sourcePairs)

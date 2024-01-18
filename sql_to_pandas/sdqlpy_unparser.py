@@ -248,6 +248,21 @@ class UnparseSDQLpyTree():
             self.writeContent(
                 ")): True})"
             )
+        elif node.promote_to_float == True:
+            # Use the incomingDict, as this has values separated.
+            self.writeContent(
+                f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat("
+            )
+            generatedOutput = node.incomingDict.generateSDQLpyOneLambda(
+                self, f"{lambda_index}[0]", f"{lambda_index}[1]", node
+            )
+            # Only use the third row, the Record for values
+            generatedOutput = generatedOutput[2:-1]
+            assert len(generatedOutput) == 1
+            self.writeContent(generatedOutput[0])
+            self.writeContent(
+                ")): True})"
+            )
         else:        
             # Do the summation at the end
             self.writeContent(
@@ -597,7 +612,7 @@ class UnparseSDQLpyTree():
     
     def __convert_expression_operator_to_sdqlpy(self, expr_tree: ExpressionBaseNode) -> str:
         # Visit Children
-        if expr_tree.created == True and isinstance(expr_tree, MulOperator):
+        if expr_tree.created == True and isinstance(expr_tree, (MulOperator, AvgAggrOperator, MinAggrOperator, MaxAggrOperator, CountAllOperator)):
             pass
         elif isinstance(expr_tree, BinaryExpressionOperator):
             leftNode = self.__convert_expression_operator_to_sdqlpy(expr_tree.left)
@@ -652,7 +667,10 @@ class UnparseSDQLpyTree():
             case AddOperator():
                 expression_output = f"({leftNode} + {rightNode})"
             case CountAllOperator():
-                expression_output = "1.0"
+                if expr_tree.created == True:
+                    expression_output = f"{expr_tree.sourceNode}.{expr_tree.codeName}"
+                else:
+                    expression_output = "1.0"
             case EqualsOperator():
                 expression_output = self.__handle_EqualsOperator(expr_tree, leftNode, rightNode)
             case NotEqualsOperator():
@@ -681,10 +699,33 @@ class UnparseSDQLpyTree():
                 expression_output = self.__handle_SDQLpyEndsWith(expr_tree, leftNode, rightNode)
             case CaseOperator():
                 expression_output = self.__handle_CaseOperator(expr_tree)
+            case AvgAggrOperator() | MinAggrOperator() | MaxAggrOperator():
+                expression_output = self.__handle_ComplexAggrOperator(expr_tree)
             case _: 
                 raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
         return expression_output
+    
+    def __handle_ComplexAggrOperator(self, expr: AggregationOperators) -> str:
+        promoteValue = None
+        match expr:
+            case AvgAggrOperator():
+                promoteValue = "avgtype"
+            case MinAggrOperator():
+                promoteValue = "mintype"
+            case MaxAggrOperator():
+                promoteValue = "maxtype"
+            case _:
+                raise Exception(f"Unexpected ComplexAggr: {expr}")
+            
+        if expr.created == True:
+            # Override the promote value if we've already created this
+            promoteValue = "float"
+            childValue = f"{expr.sourceNode}.{expr.codeName}"
+        else:
+            childValue = self.__convert_expression_operator_to_sdqlpy(expr.child)
+        
+        return f"promote({childValue}, {promoteValue})"
     
     def __handle_EqualsOperator(self, expr: EqualsOperator, leftValue: str, rightValue: str) -> str:
         if expr.left.type == "Float" and expr.right.type == "Float":
