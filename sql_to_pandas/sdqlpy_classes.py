@@ -325,10 +325,9 @@ class SDQLpyRetrieveNode(LeafSDQLpyNode):
         self.rd_outputDict(no_sumaggr_warn)
         
 class SDQLpyConcatNode(UnarySDQLpyNode):
-    def __init__(self, outputColumns):
+    def __init__(self):
         super().__init__()
         self.sdqlrepr = "concat"
-        self.outputColumns = outputColumns
         self.outputDict = None
         
         self.output_dict_value_dict_size = False

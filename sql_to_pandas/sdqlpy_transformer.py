@@ -114,25 +114,15 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     new_op_tree = SDQLpyAggrNode(
                         op_tree.postAggregateOperations
                     )
-                    # Set Primary/Foreign information from Universal Plan
-                    new_op_tree.primaryKey = op_tree.primaryKey
-                    new_op_tree.foreignKeys = op_tree.foreignKeys
                 else:
-                    # A Group should be a Concat <- Group
-                    group_node = SDQLpyGroupNode(
+                    new_op_tree = SDQLpyGroupNode(
                         op_tree.keyExpressions,
                         op_tree.postAggregateOperations
                     )
-                    # Set Primary/Foreign information from Universal Plan
-                    group_node.primaryKey = op_tree.primaryKey
-                    group_node.foreignKeys = op_tree.foreignKeys
-                    new_op_tree = SDQLpyConcatNode(
-                        op_tree.keyExpressions + op_tree.postAggregateOperations
-                    )
-                    # Set Primary/Foreign information from Universal Plan
-                    new_op_tree.primaryKey = op_tree.primaryKey
-                    new_op_tree.foreignKeys = op_tree.foreignKeys
-                    new_op_tree.addChild(group_node)
+                
+                # Set Primary/Foreign information from Universal Plan
+                new_op_tree.primaryKey = op_tree.primaryKey
+                new_op_tree.foreignKeys = op_tree.foreignKeys
             case OutputNode():
                 new_op_tree = None
             case JoinNode():
@@ -315,7 +305,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         
         # Work on current
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
-            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyRetrieveNode, SDQLpyConcatNode))
+            assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyRetrieveNode, SDQLpyConcatNode, SDQLpyGroupNode))
             
             # Turn a Record or JoinNode on the left into a JoinBuildNode
             if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)):
@@ -1033,6 +1023,16 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         
         if isinstance(sdqlpy_tree, SDQLpyRecordNode):
             sdqlpy_tree.filterTableColumns()
+            
+    def solveConcatNodeForTopGroupNode(sdqlpy_tree):
+        if isinstance(sdqlpy_tree, SDQLpyGroupNode):
+            concat_node = SDQLpyConcatNode()
+            concat_node.primaryKey = sdqlpy_tree.primaryKey
+            concat_node.foreignKeys = sdqlpy_tree.foreignKeys
+            concat_node.addChild(sdqlpy_tree)
+            sdqlpy_tree = concat_node
+            
+        return sdqlpy_tree
     
     # Set the code names
     set_codeNames(universal_tree)
@@ -1041,6 +1041,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     convert_join_bnl_to_inner(universal_tree)
     # Call convert trees
     sdqlpy_tree = convert_trees(universal_tree)
+    # Add concat if top node is a GroupNode
+    sdqlpy_tree = solveConcatNodeForTopGroupNode(sdqlpy_tree)
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree, no_sumaggr_warn=True)
     # Convert SumAggrOperator to ColumnNode

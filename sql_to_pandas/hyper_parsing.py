@@ -1483,4 +1483,4 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
 # # generate_hyperdb_explains()
 # # inspect_explain_plans()
 # # parse_explain_plans()
-convert_explain_plan_to_x("pandas") # sdqlpy  ][ pandas
+# convert_explain_plan_to_x("sdqlpy") # sdqlpy || pandas

@@ -313,7 +313,7 @@ class UnparseSDQLpyTree():
         # assert node.joinMethod == "hash"
         
         # Check its a Valid setup
-        if ((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode))):
+        if ((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode, SDQLpyGroupNode))):
             pass
         else:
             raise Exception("Invalid/Unsupported Left and Right Layout")
