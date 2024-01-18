@@ -209,6 +209,7 @@ class AggregationOperators(UnaryExpressionOperator):
     def __init__(self):
         super().__init__()
         self.sourceNode = None
+        self.type = "Float"
         
 class MaxAggrOperator(AggregationOperators):
     def __init__(self):
@@ -279,6 +280,7 @@ class SubstringOperator(LeafNode):
         self.value = value
         self.startPosition = startPosition
         self.length = length
+        self.type = "String"
    
 class LikeOperator(LeafNode):
     def __init__(self, value, comparator):

@@ -275,6 +275,9 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
                 assert leftNode.tableName == rightNode.tableName
                 # Double check that cardinalities are the same and leave it as we found it
                 assert leftNode.cardinality == rightNode.cardinality
+            elif isinstance(leftNode, GroupNode) and isinstance(rightNode, RetrieveNode):
+                # All good
+                pass
             else:
                 # That it's a non-equi join, verify that it is - by looking at the operators
                 if isinstance(uplan_tree.joinCondition, list):
@@ -429,7 +432,7 @@ def set_flowColumns(uplan_tree):
             uplan_tree.flowColumns = uplan_tree.keyExpressions + uplan_tree.postAggregateOperations
     elif isinstance(uplan_tree, NewColumnNode):
         uplan_tree.flowColumns = uplan_tree.values + uplan_tree.child.flowColumns
-    elif isinstance(uplan_tree, (SortNode, LimitNode, OutputNode, FilterNode)):
+    elif isinstance(uplan_tree, (SortNode, LimitNode, OutputNode, FilterNode, RetrieveNode)):
         uplan_tree.flowColumns = uplan_tree.child.flowColumns
     else:
         raise Exception(f"Unrecognised node: {uplan_tree}")

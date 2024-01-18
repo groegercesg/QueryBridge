@@ -35,7 +35,10 @@ def getCodeNameFromSetColumnValues(columns):
         # if isinstance(x, ColumnValue):
         #     assert x.codeName == x.value
         if x.created == False:
-            columns_str.append(x.value)
+            if hasattr(x, "value"):
+                columns_str.append(x.value)
+            else:
+                columns_str.append(x.codeName)
         elif x.created == True:
             columns_str.append(x.codeName)
         else:
@@ -66,16 +69,32 @@ def setSourceNodeColumnValuesNPairs(value, sourcePairs):
             
             if set_index == False:
                 raise Exception("The ThirdNode Target Key must be in either Left or Right")
-        case InSetOperator():
+        case SubstringOperator():
             set_index = False
             for index_name, columns in sourcePairs:
-                if value.child.codeName in columns:
+                if value.value.codeName in columns:
                     assert set_index == False
-                    value.child.sourceNode = index_name
+                    value.value.sourceNode = index_name
                     set_index = True
             
             if set_index == False:
-                raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
+                raise Exception(f"Value ({value.child.codeName}) wasn't in either left or right")
+        case InSetOperator():
+            set_index = False
+            for index_name, columns in sourcePairs:
+                if isinstance(value.child, SubstringOperator):
+                    if value.child.value.codeName in columns:
+                        assert set_index == False
+                        value.child.sourceNode = index_name
+                        set_index = True
+                else:
+                    if value.child.codeName in columns:
+                        assert set_index == False
+                        value.child.sourceNode = index_name
+                        set_index = True
+            
+            if set_index == False:
+                raise Exception(f"Value ({value.child.codeName}) wasn't in either left or right")
         case IntervalNotionOperator() | LikeOperator():
             set_index = False
             for index_name, columns in sourcePairs:
@@ -149,6 +168,9 @@ def resetColumnValues(value):
     elif isinstance(value, InSetOperator):
         if value.child.sourceNode != None:
             value.child.sourceNode = None
+    elif isinstance(value, SubstringOperator):
+        value.sourceNode = None
+        value.value.sourceNode = None
     else:
         if hasattr(value, "sourceNode") and value.sourceNode != None:
             value.sourceNode = None

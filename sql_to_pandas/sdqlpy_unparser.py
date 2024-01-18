@@ -1,4 +1,5 @@
 from collections import defaultdict
+import string
 
 from expression_operators import *
 
@@ -131,8 +132,8 @@ class UnparseSDQLpyTree():
             raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
         
     def visit_SDQLpyRetrieveNode(self, node):
-        assert node.retrieveTargetID in self.nodeDict
-        retrievedNode = self.nodeDict[node.retrieveTargetID]
+        assert node.targetID in self.nodeDict
+        retrievedNode = self.nodeDict[node.targetID]
         
         nodeTableColumnsCounter = Counter([type(x) for x in node.outputDict.flatCols()])
         retrievedNodeColumnsCounter = Counter([type(x) for x in retrievedNode.outputDict.flatCols()])
@@ -328,7 +329,7 @@ class UnparseSDQLpyTree():
         # assert node.joinMethod == "hash"
         
         # Check its a Valid setup
-        if ((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode, SDQLpyGroupNode))):
+        if ((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode, SDQLpyGroupNode, SDQLpyRetrieveNode))):
             pass
         else:
             raise Exception("Invalid/Unsupported Left and Right Layout")
@@ -701,10 +702,16 @@ class UnparseSDQLpyTree():
                 expression_output = self.__handle_CaseOperator(expr_tree)
             case AvgAggrOperator() | MinAggrOperator() | MaxAggrOperator():
                 expression_output = self.__handle_ComplexAggrOperator(expr_tree)
+            case SubstringOperator():
+                expression_output = self.__handle_SubstringOperator(expr_tree)
             case _: 
                 raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
         return expression_output
+    
+    def __handle_SubstringOperator(self, expr: SubstringOperator) -> str:
+        valueName = f"{expr.value.sourceNode}.{expr.value.codeName}"
+        return f"substr({valueName}, {expr.startPosition.value}, {expr.length.value - 1})"
     
     def __handle_ComplexAggrOperator(self, expr: AggregationOperators) -> str:
         promoteValue = None
@@ -893,12 +900,18 @@ class UnparseSDQLpyTree():
             # Save value in variableDict
             variableString = str(expr.value)
             newVariable = variableString.replace(" ", "_").replace("#", "").replace("-", "").lower()
-            # Check it's not all integers
-            assert not newVariable.isdigit()
+            
+            # Fix a new variable is all integers
+            if newVariable.isdigit():
+                # Add a random letter to the start
+                randomLetter = str(random.choice(string.ascii_letters)).lower()
+                newVariable = f"{randomLetter}{newVariable}"
+            
             # Fix start with integer
             while newVariable[0].isdigit():
                 oldStart = newVariable[0]
                 newVariable = newVariable[1:] + oldStart
+            
             if newVariable in self.variableDict:
                 if self.variableDict.get(newVariable) == variableString:
                     # The same string is happening twice, just use the existing created reference

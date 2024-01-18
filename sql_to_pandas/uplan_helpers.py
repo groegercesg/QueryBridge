@@ -34,6 +34,8 @@ def handleEmptyCodeName(value, previousColumns):
                 pass
             case MaxAggrOperator():
                 current_strings.append("max")
+            case MinAggrOperator():
+                current_strings.append("min")
             case CaseOperator():
                 current_strings.append("case")
             case CountAllOperator():
