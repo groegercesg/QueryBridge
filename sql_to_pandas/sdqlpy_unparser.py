@@ -157,25 +157,33 @@ class UnparseSDQLpyTree():
         createdDictName = node.getTableName(self)
         lambda_index = "p"
         
-        self.writeContent(
-            f"{createdDictName} = {childTable}.sum(\n"
-            f"{TAB}lambda {lambda_index} : "
-        )
-        
-        for output_line in node.outputDict.generateSDQLpyOneLambda(
-                self, f"{lambda_index}[0]", f"{lambda_index}[1]", node
-            ):
-                self.writeContent(
-                    f"{TAB}{TAB}{output_line}"
-                )
-        
         assert node.filterContent == None
         
+        if len(node.child.outputDict.flatCols()) == 1:
+            # Do a singlePromote
+            node.singlePromote = True
+            self.writeContent(
+                f"{createdDictName} = promote({childTable}, {'float'})"
+            )
+        else:
+            # Do a promote for multiple columns
+            self.writeContent(
+                f"{createdDictName} = {childTable}.sum(\n"
+                f"{TAB}lambda {lambda_index} : "
+            )
+            
+            for output_line in node.outputDict.generateSDQLpyOneLambda(
+                    self, f"{lambda_index}[0]", f"{lambda_index}[1]", node
+                ):
+                    self.writeContent(
+                        f"{TAB}{TAB}{output_line}"
+                    )
+            
+            self.writeContent(
+                f")"
+            )
+            
         node.outputDict.set_created(self)
-        
-        self.writeContent(
-            f")"
-        )
         
     def visit_SDQLpyFilterNode(self, node):
         # Get child name
@@ -360,7 +368,7 @@ class UnparseSDQLpyTree():
         # assert node.joinMethod == "hash"
         
         # Check its a Valid setup
-        if ((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode, SDQLpyGroupNode, SDQLpyRetrieveNode, SDQLpyPromoteToFloatNode))):
+        if ((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode, SDQLpyPromoteToFloatNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode, SDQLpyGroupNode, SDQLpyRetrieveNode, SDQLpyPromoteToFloatNode))):
             pass
         else:
             raise Exception("Invalid/Unsupported Left and Right Layout")
@@ -375,6 +383,13 @@ class UnparseSDQLpyTree():
         
         leftTableRef = node.make_leftTableRef(self, lambda_index)
         
+        # Change node ahead of outputRecord
+        if node.equatingConditions == [] and node.comparingTree != None:
+            node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
+            if isinstance(node.left, SDQLpyPromoteToFloatNode) and node.left.singlePromote == True:
+                # Change the codeName when the sourceNode is
+                self.traverse_to_change_codeName_when_sourceNode(node.comparingTree, leftTable, leftTableRef)
+                    
         # Write the output Record
         for output_line in node.outputDict.generateSDQLpyTwoLambda(
             self, leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]",
@@ -402,6 +417,11 @@ class UnparseSDQLpyTree():
             node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
             
             if isinstance(node.left, SDQLpyAggrNode) and node.left.repeated_aggr == True:
+                # Change the codeName when the sourceNode is
+                self.traverse_to_change_codeName_when_sourceNode(node.comparingTree, leftTable, leftTableRef)
+                # Convert the equation
+                nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+            elif isinstance(node.left, SDQLpyPromoteToFloatNode) and node.left.singlePromote == True:
                 # Change the codeName when the sourceNode is
                 self.traverse_to_change_codeName_when_sourceNode(node.comparingTree, leftTable, leftTableRef)
                 # Convert the equation
@@ -593,6 +613,7 @@ class UnparseSDQLpyTree():
             
         if hasattr(value, "sourceNode") and value.sourceNode == checkingSourceNode:
             value.codeName = newCodeName
+            # Set no_source to true, as we don't want to source this Node
             value.no_source = True
             
     def traverse_to_set_sourceNode(self, value, newSourceNode):
@@ -763,7 +784,10 @@ class UnparseSDQLpyTree():
             childValue = f"{expr.sourceNode}.{expr.codeName}"
             expression_output = f"promote({childValue}, {promoteValue})"
         elif expr.created == True:
-            expression_output = f"{expr.sourceNode}.{expr.codeName}"
+            if expr.no_source == True:
+                expression_output = f"{expr.codeName}"
+            else:
+                expression_output = f"{expr.sourceNode}.{expr.codeName}"
         else:
             assert expr.created == False
             childValue = self.__convert_expression_operator_to_sdqlpy(expr.child)

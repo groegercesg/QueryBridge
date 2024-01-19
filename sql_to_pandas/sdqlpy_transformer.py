@@ -334,8 +334,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 jbNode.primaryKey = tuple(tableKeys)
                 jbNode.foreignKeys = sdqlpy_tree.left.foreignKeys
                 sdqlpy_tree.left = jbNode
-            elif isinstance(sdqlpy_tree.left, SDQLpyAggrNode):
-                # We shouldn't index on an aggr node
+            elif isinstance(sdqlpy_tree.left, (SDQLpyAggrNode, SDQLpyPromoteToFloatNode)):
+                # We shouldn't index on an aggr/or a promoteToFloat node
                 assert len(sdqlpy_tree.left.outputDict.flatCols()) == 1
                 pass
             else:
@@ -1040,7 +1040,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         return sdqlpy_tree
     
     def solveComplexAggrHandling(sdqlpy_tree):
-        def is_complex_aggr_in_group(sdqlpy_node) -> bool:
+        def is_complex_aggr_in_node(sdqlpy_node) -> bool:
             complex_aggrs = [AvgAggrOperator, MinAggrOperator, MaxAggrOperator]
             numberComplex = list(filter(lambda x: type(x) in complex_aggrs, sdqlpy_node.outputDict.flatCols()))
             return len(numberComplex) > 0
@@ -1062,16 +1062,16 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             pass
         
         # A AVG/MIN/MAX should only happen in a Group/Or be used, once created
-        if isinstance(sdqlpy_tree, UnarySDQLpyNode) and isinstance(sdqlpy_tree.child, SDQLpyGroupNode) and is_complex_aggr_in_group(sdqlpy_tree.child):
+        if isinstance(sdqlpy_tree, UnarySDQLpyNode) and isinstance(sdqlpy_tree.child, SDQLpyGroupNode) and is_complex_aggr_in_node(sdqlpy_tree.child):
             # A complex Aggr has been detected,
             if isinstance(sdqlpy_tree, SDQLpyConcatNode):
                 sdqlpy_tree.promote_to_float = True
             else:
                 raise Exception(f"A groupNode with complex aggrs (avg/max/min) has an unrecognised parent: {sdqlpy_tree}")
-        elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.left, SDQLpyGroupNode) and is_complex_aggr_in_group(sdqlpy_tree.left):
+        elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.left, SDQLpyGroupNode) and is_complex_aggr_in_node(sdqlpy_tree.left):
             # We need to insert a SDQLpyPromoteToFloat node above the Group on the LHS
             pass
-        elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.right, SDQLpyGroupNode) and is_complex_aggr_in_group(sdqlpy_tree.right):
+        elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.right, SDQLpyGroupNode) and is_complex_aggr_in_node(sdqlpy_tree.right):
             # We need to insert a SDQLpyPromoteToFloat node above the Group on the LHS
             promote = SDQLpyPromoteToFloatNode()
             promote.addChild(sdqlpy_tree.right)
@@ -1079,6 +1079,18 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             promote.foreignKeys = sdqlpy_tree.right.foreignKeys
             promote.set_output_dict()
             sdqlpy_tree.right = promote
+        elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.left, SDQLpyAggrNode) and is_complex_aggr_in_node(sdqlpy_tree.left):
+            # SDQLpyPromoteToFloat for an AggrNode
+            promote = SDQLpyPromoteToFloatNode()
+            promote.addChild(sdqlpy_tree.left)
+            promote.primaryKey = sdqlpy_tree.left.primaryKey
+            promote.foreignKeys = sdqlpy_tree.left.foreignKeys
+            promote.set_output_dict()
+            sdqlpy_tree.left = promote
+        elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.right, SDQLpyAggrNode) and is_complex_aggr_in_node(sdqlpy_tree.right):
+            # SDQLpyPromoteToFloat for an AggrNode
+            pass
+        
         
         return sdqlpy_tree
     

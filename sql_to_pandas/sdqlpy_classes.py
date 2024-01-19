@@ -273,6 +273,7 @@ class SDQLpyPromoteToFloatNode(UnarySDQLpyNode):
         super().__init__()
         self.outputDict = None
         self.sdqlrepr = "promote"
+        self.singlePromote = False
         
     def set_output_dict(self, no_sumaggr_warn=False):
         assert self.child != None
