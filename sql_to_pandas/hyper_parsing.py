@@ -301,14 +301,14 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
                 assert uplan_tree.left.cardinality <= uplan_tree.right.cardinality
         elif "P" in leftType:
             # Check that all of right are "F" or "N"
-                assert len(set(rightType)) > 0 and Counter(rightType)["P"] == 0
-                # That there's only 1 P in left and the rest are F or N
-                assert Counter(leftType)["P"] == 1 and (Counter(leftType)["F"] + Counter(leftType)["N"] == len(leftType) - 1)
-                
-                # Index on Left
-                # We should index on Left
-                # No swap required
-                pass
+            assert len(set(rightType)) > 0 and Counter(rightType)["P"] == 0
+            # That there's only 1 P in left and the rest are F or N
+            assert Counter(leftType)["P"] == 1 and (Counter(leftType)["F"] + Counter(leftType)["N"] == len(leftType) - 1)
+            
+            # Index on Left
+            # We should index on Left
+            # No swap required
+            pass
         elif "P" in rightType:
             # Check that all of left are "F" or "N"
             leftCounter = Counter(leftType)

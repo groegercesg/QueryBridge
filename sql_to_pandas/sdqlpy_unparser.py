@@ -818,6 +818,12 @@ class UnparseSDQLpyTree():
             overallClose.addLeft(leftAnd)
             overallClose.addRight(rightAnd)
             expression_output = self.__convert_expression_operator_to_sdqlpy(overallClose)
+        elif isinstance(expr.left, SubstringOperator) and expr.left.startPosition.value == 0 and expr.right.type == "String":
+            # This is a Substring starts at zero, equal to a string. We can convert this to a StartsWith
+            newStartsWith = SDQLpyStartsWith()
+            newStartsWith.addLeft(expr.left.value)
+            newStartsWith.addRight(expr.right)
+            expression_output = self.__convert_expression_operator_to_sdqlpy(newStartsWith)
         else:
             expression_output = f"({leftValue} == {rightValue})"
         return expression_output
@@ -958,7 +964,13 @@ class UnparseSDQLpyTree():
                     # We need to complicate our variable naming futher
                     raise Exception("Variable name corresponds to different strings")
             else:
-                self.variableDict[newVariable] = variableString
+                # Check if value is in variableDict
+                if variableString in self.variableDict.values():
+                    # Get the key for it
+                    newVariable = list(self.variableDict.keys())[list(self.variableDict.values()).index(variableString)]
+                else:
+                    # New value, add the variable
+                    self.variableDict[newVariable] = variableString
                 return f"{newVariable}"
         elif expr.type == "Float":
             return expr.value

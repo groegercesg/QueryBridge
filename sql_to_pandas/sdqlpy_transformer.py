@@ -310,7 +310,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             # Turn a Record or JoinNode on the left into a JoinBuildNode
             if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)):
                 # Make it a SDQLpyJoinBuildNode
-                assert len(set([str(id(x)) for x in sdqlpy_tree.leftKeys]) - set([str(id(x)) for x in sdqlpy_tree.left.outputDict.flatCols()])) == 0
+                leftKeyIDs = [str(id(x)) for x in [y.left for y in sdqlpy_tree.equatingConditions]]
+                leftColumnIDs = [str(id(x)) for x in sdqlpy_tree.left.outputDict.flatCols()]
+                assert len(set(leftKeyIDs) - set(leftColumnIDs)) == 0
                 
                 # Only set tableKeys as only the leftKeys that are in equatingConditions
                 tableKeys = []
@@ -705,6 +707,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             # Swap if it's a left semijoin
             if sdqlpy_tree.joinType == "leftsemijoin":
                 sdqlpy_tree.joinType = "rightsemijoin"
+                sdqlpy_tree.swapLeftAndRight()
+            elif sdqlpy_tree.joinType == "leftantijoin":
+                sdqlpy_tree.joinType = "rightantijoin"
                 sdqlpy_tree.swapLeftAndRight()
             else:
                 # Otherwise, it's grand - so just leave it
