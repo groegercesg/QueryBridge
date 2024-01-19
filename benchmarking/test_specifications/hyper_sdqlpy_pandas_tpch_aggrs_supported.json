@@ -153,6 +153,31 @@
             ]
         },
         {
+            "Query Name": "Query 7",
+            "Required Data": ["supplier", "lineitem", "orders", "customer", "nation"],
+            "SQL Name": "7.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q7_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q7_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
             "Query Name": "Query 8",
             "Required Data": ["part", "supplier", "lineitem", "orders", "customer", "nation", "region"],
             "SQL Name": "8.sql",

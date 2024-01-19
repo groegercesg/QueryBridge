@@ -380,7 +380,7 @@ def from_decimal_to_int(columns_values, decimal_places):
 
 def from_str_to_int(columns_values, decimal_places):
     for i in range(len(columns_values)):
-        assert "." not in columns_values[1]
+        assert "." not in columns_values[i]
         columns_values[i] = int(columns_values[i])
     return columns_values
 

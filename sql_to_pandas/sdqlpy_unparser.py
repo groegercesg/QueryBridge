@@ -1045,6 +1045,10 @@ class UnparseSDQLpyTree():
             raise Exception(f"Unknown format of comparator: {expr.comparator.value}")
     
     def __handle_ConstantValue(self, expr: ConstantValue):
+        def getRandomLetter() -> str:
+            randLetter = str(random.choice(string.ascii_letters)).lower()
+            return randLetter
+        
         if expr.type == "String":
             # Save value in variableDict
             variableString = str(expr.value)
@@ -1053,7 +1057,10 @@ class UnparseSDQLpyTree():
             # Fix a new variable is all integers
             if newVariable.isdigit():
                 # Add a random letter to the start
-                randomLetter = str(random.choice(string.ascii_letters)).lower()
+                randomLetter = getRandomLetter()
+                # SDQLpy won't let a variable start with "v"
+                while randomLetter == "v":
+                    randomLetter = getRandomLetter()
                 newVariable = f"{randomLetter}{newVariable}"
             
             # Fix start with integer
