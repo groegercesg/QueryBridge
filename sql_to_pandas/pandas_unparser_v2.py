@@ -434,7 +434,10 @@ class PandasBaseNode():
             if col.created == True:
                 outputNames.add(col.codeName)
             else:
-                outputNames.add(col.value)
+                if hasattr(col, "value"):
+                    outputNames.add(col.value)
+                else:
+                    outputNames.add(col.codeName)
         return outputNames
 
     def getTableColumnsInternal(self) -> set():
@@ -727,9 +730,14 @@ class UnparsePandasTree():
     def __getPandasRepresentationForColumn(self, column: ColumnValue):
         if column.created == True:
             return column.codeName
+        elif isinstance(column, SumAggrOperator):
+            return column.codeName
         else:
-            assert isinstance(column, ColumnValue)
-            return column.value
+            if hasattr(column, "value"):
+                assert isinstance(column, ColumnValue)
+                return column.value
+            else:
+                return column.codeName
         
     def visitPandasLimitNode(self, node):
         self.nodesCounter[PandasLimitNode] += 1
