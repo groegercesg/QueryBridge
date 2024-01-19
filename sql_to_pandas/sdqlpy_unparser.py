@@ -97,8 +97,11 @@ class UnparseSDQLpyTree():
             pass
         
         if current_node.nodeID != None:
-            assert current_node.nodeID not in self.nodeDict
-            self.nodeDict[current_node.nodeID] = current_node
+            if current_node.nodeID in self.nodeDict:
+                pass
+            else:
+                assert current_node.nodeID not in self.nodeDict
+                self.nodeDict[current_node.nodeID] = current_node
             
     def unparse_content(self):
         # At the start of this method, we should have captured no content
@@ -146,6 +149,12 @@ class UnparseSDQLpyTree():
         assert nodeTableColumnsCounter == retrievedNodeColumnsCounter
         assert len(set(nodeTableColumnsCounter.values())) <= 1, "All should have the same value"
         assert all(1 == x for x in nodeTableColumnsCounter.values()), "All should be 1"
+        # All should have same names and types
+        for idx, val in enumerate(node.outputDict.flatCols()):
+            retrievedDictItem = list(retrievedNode.outputDict.flatCols())[idx]
+            assert type(val) == type(retrievedDictItem)
+            if val.codeName != retrievedDictItem.codeName:
+                val.create_again = retrievedDictItem.codeName
         
         node.getTableName(self)
         node.tableName = retrievedNode.tableName

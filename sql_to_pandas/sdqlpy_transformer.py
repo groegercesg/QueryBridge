@@ -75,6 +75,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 op_tree.joinCondition = newCondition
                 op_tree.joinMethod = "hash"
     
+    nodeIDs = dict()
     def convert_trees(op_tree: UniversalBaseNode) -> SDQLpyBaseNode:
         # Visit Children
         leftNode, rightNode, childNode = None, None, None
@@ -179,13 +180,16 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     new_op_tree = None
                     childNode.outputDict.keys.append(op_tree.values)
             case RetrieveNode():
-                new_op_tree = SDQLpyRetrieveNode(
-                    op_tree.tableColumns,
-                    op_tree.retrieveTargetID
-                )
-                # Set Primary/Foreign information from Universal Plan
-                new_op_tree.primaryKey = op_tree.primaryKey
-                new_op_tree.foreignKeys = op_tree.foreignKeys
+                # Build the use the nodeDict
+                assert op_tree.retrieveTargetID in nodeIDs
+                new_op_tree = nodeIDs[op_tree.retrieveTargetID]
+                # new_op_tree = SDQLpyRetrieveNode(
+                #     op_tree.tableColumns,
+                #     op_tree.retrieveTargetID
+                # )
+                # # Set Primary/Foreign information from Universal Plan
+                # new_op_tree.primaryKey = op_tree.primaryKey
+                # new_op_tree.foreignKeys = op_tree.foreignKeys
             case _:
                 raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
@@ -243,6 +247,9 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             else:
                 # We've already assigned one, don't overwrite it
                 pass
+            # Add to the Nodedict
+            if new_op_tree.nodeID != None:
+                nodeIDs[new_op_tree.nodeID] = new_op_tree
             # Add cardinality to new_op_node
             if new_op_tree.cardinality == None:
                 new_op_tree.setCardinality(op_tree.cardinality)
@@ -1039,6 +1046,62 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             
         return sdqlpy_tree
     
+    # def solveRetrieveNode(sdqlpy_tree):
+    #     # Traverse to gather nodeIDs
+    #     nodeIDs = dict()
+        
+    #     def traverse_to_set_node_ids(sdqlpy_tree):
+    #         if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+    #             traverse_to_set_node_ids(sdqlpy_tree.left)
+    #             traverse_to_set_node_ids(sdqlpy_tree.right)
+    #         elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+    #             traverse_to_set_node_ids(sdqlpy_tree.child)
+    #         else:
+    #             # A leaf node
+    #             pass
+            
+    #         if sdqlpy_tree.nodeID not in nodeIDs:
+    #             nodeIDs[sdqlpy_tree.nodeID] = sdqlpy_tree
+    #         elif sdqlpy_tree.nodeID == None:
+    #             # NodeID is none, this is something we've created then - and is not going to be used by a retrieveNode
+    #             pass
+    #         else:
+    #             raise Exception()
+        
+    #     def configureRetrieveNodes(sdqlpy_tree):
+    #         if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+    #             configureRetrieveNodes(sdqlpy_tree.left)
+    #             configureRetrieveNodes(sdqlpy_tree.right)
+    #         elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+    #             configureRetrieveNodes(sdqlpy_tree.child)
+    #         else:
+    #             # A leaf node
+    #             pass
+            
+    #         if isinstance(sdqlpy_tree, SDQLpyRetrieveNode):
+    #             assert sdqlpy_tree.targetID in nodeIDs
+    #             retrievedNode = nodeIDs[sdqlpy_tree.targetID]
+                
+    #             nodeTableColumnsCounter = Counter([type(x) for x in sdqlpy_tree.outputDict.flatCols()])
+    #             retrievedNodeColumnsCounter = Counter([type(x) for x in retrievedNode.outputDict.flatCols()])
+                
+    #             assert len(sdqlpy_tree.outputDict.flatCols()) == len(retrievedNode.outputDict.flatCols())
+    #             assert nodeTableColumnsCounter == retrievedNodeColumnsCounter
+    #             assert len(set(nodeTableColumnsCounter.values())) <= 1, "All should have the same value"
+    #             assert all(1 == x for x in nodeTableColumnsCounter.values()), "All should be 1"
+    #             # All should have same names and types
+    #             for idx, val in enumerate(sdqlpy_tree.outputDict.flatCols()):
+    #                 retrievedDictItem = list(retrievedNode.outputDict.flatCols())[idx]
+    #                 assert type(val) == type(retrievedDictItem)
+    #                 if val.codeName != retrievedDictItem.codeName:
+    #                     retrievedDictItem.codeName = val.codeName
+    #                 assert val.codeName == retrievedDictItem.codeName
+        
+    #     # Build a dictionary of Node IDs
+    #     traverse_to_set_node_ids(sdqlpy_tree)
+    #     # Configure each RetrieveNode to be correct
+    #     configureRetrieveNodes(sdqlpy_tree)
+    
     def solveComplexAggrHandling(sdqlpy_tree):
         def is_complex_aggr_in_node(sdqlpy_node) -> bool:
             complex_aggrs = [AvgAggrOperator, MinAggrOperator, MaxAggrOperator]
@@ -1091,7 +1154,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             # SDQLpyPromoteToFloat for an AggrNode
             pass
         
-        
         return sdqlpy_tree
     
     # Set the code names
@@ -1136,6 +1198,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     assert leftOverFilter == None
     # Wire up incoming/output Dicts
     wire_up_incoming_output_dicts(sdqlpy_tree)
+    # # Solve RetrieveNode
+    # solveRetrieveNode(sdqlpy_tree)
     
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)
