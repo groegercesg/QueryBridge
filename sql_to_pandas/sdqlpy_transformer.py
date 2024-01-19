@@ -314,8 +314,11 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         if isinstance(sdqlpy_tree, SDQLpyJoinNode):
             assert isinstance(sdqlpy_tree.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyRetrieveNode, SDQLpyConcatNode, SDQLpyGroupNode, SDQLpyPromoteToFloatNode))
             
+            # BNL
+            if sdqlpy_tree.joinMethod == "bnl":
+                pass
             # Turn a Record or JoinNode on the left into a JoinBuildNode
-            if isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)):
+            elif isinstance(sdqlpy_tree.left, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode)):
                 # Make it a SDQLpyJoinBuildNode
                 leftKeyIDs = [str(id(x)) for x in [y.left for y in sdqlpy_tree.equatingConditions]]
                 leftColumnIDs = [str(id(x)) for x in sdqlpy_tree.left.outputDict.flatCols()]
@@ -1160,7 +1163,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
     # Convert BNL to Inner with condition
-    convert_join_bnl_to_inner(universal_tree)
+    # convert_join_bnl_to_inner(universal_tree)
     # Call convert trees
     sdqlpy_tree = convert_trees(universal_tree)
     # Add concat if top node is a GroupNode

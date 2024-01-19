@@ -1,5 +1,20 @@
 from expression_operators import *
 
+def setSourceNodeByIDs(value, l_lambda_idx_key, l_keys_IDs,
+                               l_lambda_idx_val, l_values_IDs, 
+                               r_lambda_idx_key, r_keys_IDs,
+                               r_lambda_idx_val, r_values_IDs):
+    if id(value) in l_keys_IDs:
+        value.sourceNode = l_lambda_idx_key
+    elif id(value) in l_values_IDs:
+        value.sourceNode = l_lambda_idx_val
+    elif id(value) in r_keys_IDs:
+        value.sourceNode = r_lambda_idx_key
+    elif id(value) in r_values_IDs:
+        value.sourceNode = r_lambda_idx_val
+    else:
+        raise Exception(f"We could not find the value ({value}) in any of the lists of IDs")
+
 def setSourceNodeColumnValues(value, l_lambda_idx, l_columns, r_lambda_idx, r_columns, r_lambda_val=None, r_columns_vals=None):
     def check_and_fix_columns(columns):
         if isinstance(columns, set) and isinstance(next(iter(columns)), ExpressionBaseNode):
@@ -124,6 +139,7 @@ def setSourceNodeColumnValuesNPairs(value, sourcePairs):
                     if value.sourceNode == None:
                         value.sourceNode = index_name
                         set_index = True
+                        break
                     else:
                         assert value.sourceNode == index_name
                         set_index = True
@@ -132,6 +148,7 @@ def setSourceNodeColumnValuesNPairs(value, sourcePairs):
                     if value.sourceNode == None:
                         value.sourceNode = index_name
                         set_index = True
+                        break
                     else:
                         assert value.sourceNode == index_name
                         set_index = True
@@ -171,6 +188,9 @@ def resetColumnValues(value):
     elif isinstance(value, SubstringOperator):
         value.sourceNode = None
         value.value.sourceNode = None
+    elif isinstance(value, LookupOperator):
+        for val in value.values:
+            val.sourceNode = None
     else:
         if hasattr(value, "sourceNode") and value.sourceNode != None:
             value.sourceNode = None

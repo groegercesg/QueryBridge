@@ -190,8 +190,10 @@ class BinarySDQLpyNode(PipelineBreakerNode):
     def rd_joinCondition(self, no_sumaggr_warn):
         if hasattr(self, "joinCondition"):
             for idx, val in enumerate(self.joinCondition):
-                self.joinCondition[idx].left = self.replaceInExpression(val.left, self.replacementDict, no_sumaggr_warn)
-                self.joinCondition[idx].right = self.replaceInExpression(val.right, self.replacementDict, no_sumaggr_warn)
+                if hasattr(self.joinCondition[idx], "left"):
+                    self.joinCondition[idx].left = self.replaceInExpression(val.left, self.replacementDict, no_sumaggr_warn)
+                if hasattr(self.joinCondition[idx], "right"):
+                    self.joinCondition[idx].right = self.replaceInExpression(val.right, self.replacementDict, no_sumaggr_warn)
                 
     def rd_leftRightKeys(self, no_sumaggr_warn):
         if hasattr(self, "leftKeys"):
@@ -388,7 +390,7 @@ class SDQLpyGroupNode(UnarySDQLpyNode):
         
 class SDQLpyJoinNode(BinarySDQLpyNode):
     KNOWN_JOIN_METHODS = set([
-        'hash', 'merge'
+        'hash', 'merge', 'bnl'
     ])
     KNOWN_JOIN_TYPES = set([
         'inner', 'rightsemijoin', 'leftsemijoin', 'rightantijoin', 'leftantijoin', 'outer'
@@ -529,7 +531,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             else:
                 pass
             
-            if comparing.created == True or isinstance(comparing, (ColumnValue, IntervalNotionOperator, LikeOperator)):
+            if comparing.created == True or isinstance(comparing, (ColumnValue, IntervalNotionOperator, LikeOperator, LookupOperator)):
             
                 # Set the sourceNode
                 leftColumns = [str(col.codeName) for col in self.left.outputDict.flatCols()]
@@ -555,6 +557,16 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                         comparing.value.sourceNode = right_value
                     else:
                         raise Exception(f"The comparing ({comparing.sourceNode}) was not found in either Left or Right.")
+                elif isinstance(comparing, LookupOperator):
+                    for val in comparing.values:
+                        if val.codeName in leftColumns:
+                            val.sourceNode = left_source
+                        elif val.codeName in rightKeys:
+                            val.sourceNode = right_key
+                        elif val.codeName in rightValues:
+                            val.sourceNode = right_value
+                        else:
+                            raise Exception(f"The comparing ({comparing.sourceNode}) was not found in either Left or Right.") 
                 else:
                     raise Exception("Unknown error")
             
@@ -827,6 +839,42 @@ class SDQLpySRDict():
             )
         
         return self.third_wrap_counter
+    
+    def generateSDQLpyFourLambda(self, unparser, l_lambda_idx_key, l_lambda_idx_val, r_lambda_idx_key, r_lambda_idx_val, node):
+        l_node, r_node = node.left, node.right
+        assert node.joinMethod == "bnl"
+        
+        l_keys_IDs = [id(x) for x in l_node.outputDict.flatKeys()]
+        l_values_IDs = [id(x) for x in l_node.outputDict.flatVals()]
+        r_keys_IDs = [id(x) for x in r_node.outputDict.flatKeys()]
+        r_values_IDs = [id(x) for x in r_node.outputDict.flatVals()]
+        
+        # Reduce keys and values
+        self.keys = self.reduceDuplicates(self.keys)
+        self.values = self.reduceDuplicates(self.values)
+        
+        # Assign sourceNode to the Column Values
+        for key in self.keys:
+            setSourceNodeByIDs(key, l_lambda_idx_key, l_keys_IDs,
+                               l_lambda_idx_val, l_values_IDs, 
+                               r_lambda_idx_key, r_keys_IDs,
+                               r_lambda_idx_val, r_values_IDs)
+        for col in self.values:
+            setSourceNodeByIDs(col, l_lambda_idx_key, l_keys_IDs,
+                               l_lambda_idx_val, l_values_IDs, 
+                               r_lambda_idx_key, r_keys_IDs,
+                               r_lambda_idx_val, r_values_IDs)
+        
+        # Generate content
+        output_content = self.generateSDQLpyContent(unparser)
+        
+        # Reset SourceNodes
+        for key in self.keys:
+            resetColumnValues(key)
+        for col in self.values:
+            resetColumnValues(col)
+        
+        return output_content
     
     def generateSDQLpyTwoLambda(self, unparser, l_lambda_idx, r_lambda_idx_key, r_lambda_idx_val, node):
         l_node, r_node = node.left, node.right

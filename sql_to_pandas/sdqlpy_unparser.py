@@ -371,13 +371,15 @@ class UnparseSDQLpyTree():
         
         createdDictName = node.getTableName(self)
         lambda_index = "p"
+        lambda_index_2 = "k"
         
         # TODO: We only support an inner hash join at the moment
         assert node.joinType in node.KNOWN_JOIN_TYPES
         # assert node.joinMethod == "hash"
         
         # Check its a Valid setup
-        if ((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode, SDQLpyPromoteToFloatNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode, SDQLpyGroupNode, SDQLpyRetrieveNode, SDQLpyPromoteToFloatNode))):
+        if (((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode, SDQLpyPromoteToFloatNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode, SDQLpyGroupNode, SDQLpyRetrieveNode, SDQLpyPromoteToFloatNode))) or
+            (isinstance(node.left, SDQLpyRecordNode) and isinstance(node.right, SDQLpyRecordNode) and node.joinMethod == "bnl")):
             pass
         else:
             raise Exception("Invalid/Unsupported Left and Right Layout")
@@ -387,83 +389,118 @@ class UnparseSDQLpyTree():
             f"{TAB}lambda {lambda_index} : "
         )
         
-        # Carry over the value sr_dict
-        node.outputDict.value_sr_dict = node.output_dict_value_sr_dict
-        
-        leftTableRef = node.make_leftTableRef(self, lambda_index)
-        
-        # Change node ahead of outputRecord
-        if node.equatingConditions == [] and node.comparingTree != None:
-            node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
-            if isinstance(node.left, SDQLpyPromoteToFloatNode) and node.left.singlePromote == True:
-                # Change the codeName when the sourceNode is
-                self.traverse_to_change_codeName_when_sourceNode(node.comparingTree, leftTable, leftTableRef)
-                    
-        # Write the output Record
-        for output_line in node.outputDict.generateSDQLpyTwoLambda(
-            self, leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]",
-            node
-        ):
+        if node.joinMethod == "bnl":
             self.writeTempContent(
-                f"{TAB}{TAB}{output_line}"
+                f"{TAB}{TAB}{leftTable}.sum(\n"
+                f"{TAB}{TAB}{TAB}lambda {lambda_index_2} : "
             )
-        
-        joinComparator = "!="
-        if "anti" in node.joinType:
-            joinComparator = "=="
-        
-        # Add the other joinComparison
-        if node.equatingConditions != [] and node.comparingTree == None:
-            self.writeTempContent(
-                f"{TAB}if\n"
-                f"{TAB}{TAB}{leftTableRef} {joinComparator} None\n"
-                f"{TAB}else\n"
-                f"{TAB}{TAB}None"
-            )
-        elif node.equatingConditions == [] and node.comparingTree != None:
-            # A Non-equi join
+            
+            for output_line in node.outputDict.generateSDQLpyFourLambda(
+                self, f"{lambda_index_2}[0]", f"{lambda_index_2}[1]", f"{lambda_index}[0]", f"{lambda_index}[1]",
+                node
+            ):
+                self.writeTempContent(
+                    f"{TAB}{TAB}{TAB}{TAB}{output_line}"
+                )
+                
             # Assign sources for the comparing condition
-            node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
-            
-            if isinstance(node.left, SDQLpyAggrNode) and node.left.repeated_aggr == True:
-                # Change the codeName when the sourceNode is
-                self.traverse_to_change_codeName_when_sourceNode(node.comparingTree, leftTable, leftTableRef)
-                # Convert the equation
-                nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
-            elif isinstance(node.left, SDQLpyPromoteToFloatNode) and node.left.singlePromote == True:
-                # Change the codeName when the sourceNode is
-                self.traverse_to_change_codeName_when_sourceNode(node.comparingTree, leftTable, leftTableRef)
-                # Convert the equation
-                nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
-            else:
-                nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
-            
-            # reset sources, so as to not cause issues later down the line
-            resetColumnValues(node.comparingTree)
-            
-            self.writeTempContent(
-                f"{TAB}if\n"
-                f"{TAB}{TAB}{nonEquiJoinCondition}\n"
-                f"{TAB}else\n"
-                f"{TAB}{TAB}None"
-            )
-            
-        elif node.equatingConditions != [] and node.comparingTree != None:
-            # Assign sources for the comparing condition
-            node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
+            node.set_sources_for_comparing_condition(f"{lambda_index_2}[0]", f"{lambda_index}[0]", f"{lambda_index}[1]")
+             
             otherJoinComparison = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
             # reset sources, so as to not cause issues later down the line
             resetColumnValues(node.comparingTree)
             
             self.writeTempContent(
-                f"{TAB}if\n"
-                f"{TAB}{TAB}{leftTableRef} {joinComparator} None and ({otherJoinComparison})\n"
-                f"{TAB}else\n"
-                f"{TAB}{TAB}None"
+                f"{TAB}{TAB}{TAB}{TAB}if\n"
+                f"{TAB}{TAB}{TAB}{TAB}{TAB}{otherJoinComparison}\n"
+                f"{TAB}{TAB}{TAB}{TAB}else\n"
+                f"{TAB}{TAB}{TAB}{TAB}{TAB}None"
             )
+            
+            self.writeTempContent(
+                f"{TAB}{TAB})"
+            )
+                
+            pass
         else:
-            assert node.equatingConditions == [] and node.comparingTree == None
-            raise Exception(f"Illogical format of join")
+        
+            # Carry over the value sr_dict
+            node.outputDict.value_sr_dict = node.output_dict_value_sr_dict
+            
+            leftTableRef = node.make_leftTableRef(self, lambda_index)
+            
+            # Change node ahead of outputRecord
+            if node.equatingConditions == [] and node.comparingTree != None:
+                node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
+                if isinstance(node.left, SDQLpyPromoteToFloatNode) and node.left.singlePromote == True:
+                    # Change the codeName when the sourceNode is
+                    self.traverse_to_change_codeName_when_sourceNode(node.comparingTree, leftTable, leftTableRef)
+                        
+            # Write the output Record
+            for output_line in node.outputDict.generateSDQLpyTwoLambda(
+                self, leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]",
+                node
+            ):
+                self.writeTempContent(
+                    f"{TAB}{TAB}{output_line}"
+                )
+            
+            joinComparator = "!="
+            if "anti" in node.joinType:
+                joinComparator = "=="
+            
+            # Add the other joinComparison
+            if node.equatingConditions != [] and node.comparingTree == None:
+                self.writeTempContent(
+                    f"{TAB}if\n"
+                    f"{TAB}{TAB}{leftTableRef} {joinComparator} None\n"
+                    f"{TAB}else\n"
+                    f"{TAB}{TAB}None"
+                )
+            elif node.equatingConditions == [] and node.comparingTree != None:
+                # A Non-equi join
+                # Assign sources for the comparing condition
+                node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
+                
+                if isinstance(node.left, SDQLpyAggrNode) and node.left.repeated_aggr == True:
+                    # Change the codeName when the sourceNode is
+                    self.traverse_to_change_codeName_when_sourceNode(node.comparingTree, leftTable, leftTableRef)
+                    # Convert the equation
+                    nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+                elif isinstance(node.left, SDQLpyPromoteToFloatNode) and node.left.singlePromote == True:
+                    # Change the codeName when the sourceNode is
+                    self.traverse_to_change_codeName_when_sourceNode(node.comparingTree, leftTable, leftTableRef)
+                    # Convert the equation
+                    nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+                else:
+                    nonEquiJoinCondition = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+                
+                # reset sources, so as to not cause issues later down the line
+                resetColumnValues(node.comparingTree)
+                
+                self.writeTempContent(
+                    f"{TAB}if\n"
+                    f"{TAB}{TAB}{nonEquiJoinCondition}\n"
+                    f"{TAB}else\n"
+                    f"{TAB}{TAB}None"
+                )
+                
+            elif node.equatingConditions != [] and node.comparingTree != None:
+                # Assign sources for the comparing condition
+                node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
+                otherJoinComparison = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+                # reset sources, so as to not cause issues later down the line
+                resetColumnValues(node.comparingTree)
+                
+                self.writeTempContent(
+                    f"{TAB}if\n"
+                    f"{TAB}{TAB}{leftTableRef} {joinComparator} None and ({otherJoinComparison})\n"
+                    f"{TAB}else\n"
+                    f"{TAB}{TAB}None"
+                )
+            else:
+                assert node.equatingConditions == [] and node.comparingTree == None
+                raise Exception(f"Illogical format of join")
             
         node.outputDict.set_created(self)
         
@@ -765,9 +802,44 @@ class UnparseSDQLpyTree():
                 expression_output = self.__handle_ComplexAggrOperator(expr_tree)
             case SubstringOperator():
                 expression_output = self.__handle_SubstringOperator(expr_tree)
+            case LookupOperator():
+                expression_output = self.__handle_LookupOperator(expr_tree)
             case _: 
                 raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
+        return expression_output
+    
+    def __handle_LookupOperator(self, expr: LookupOperator) -> str:
+        assert len(expr.comparisons) / len(expr.values) % 2 == 0
+        assert all(isinstance(x, EqualsOperator) for x in expr.modes)
+        
+        leftEquals = []
+        for i in range(len(expr.values)):
+            newEq = EqualsOperator()
+            newEq.addLeft(expr.values[i])
+            newEq.addRight(expr.comparisons[i])
+            leftEquals.append(newEq)
+        rightEquals = []
+        for i in range(len(expr.values)):
+            newEq = EqualsOperator()
+            newEq.addLeft(expr.values[i])
+            newEq.addRight(expr.comparisons[i+len(expr.values)])
+            rightEquals.append(newEq)
+            
+        assert len(leftEquals) == 2
+        assert len(rightEquals) == 2
+        
+        leftAnd = AndOperator()
+        leftAnd.addLeft(leftEquals[0])
+        leftAnd.addRight(leftEquals[1])
+        rightAnd = AndOperator()
+        rightAnd.addLeft(rightEquals[0])
+        rightAnd.addRight(rightEquals[1])
+        newCondition = OrOperator()
+        newCondition.addLeft(leftAnd)
+        newCondition.addRight(rightAnd)
+        
+        expression_output = self.__convert_expression_operator_to_sdqlpy(newCondition)
         return expression_output
     
     def __handle_SubstringOperator(self, expr: SubstringOperator) -> str:
