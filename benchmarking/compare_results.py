@@ -284,6 +284,26 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places, is_sdql):
         # Int
         
         column_equivalent = Counter(sql_column) == Counter(pandas_column)
+    elif column_types == set([type(1), type("STR")]):
+        # String and Int
+        if sql_first_type == type("STR"):
+            # SQL is str
+            assert all([x.isdigit() for x in sql_column])
+            sql_column = from_str_to_int(sql_column, decimal_places)
+        elif pandas_first_type == type("STR"):
+            # Pandas is str
+            assert all([x.isdigit() for x in pandas_column])
+            pandas_column = from_str_to_int(pandas_column, decimal_places)
+        else:
+            raise Exception("Not possible to reach here")
+        
+        # Now both strings
+        assert len(sql_column) == len(pandas_column)
+        for i in range(len(sql_column)):
+            sql_column[i] = str(sql_column[i]).strip()
+            pandas_column[i] = str(pandas_column[i]).strip()
+            
+        column_equivalent = Counter(sql_column) == Counter(pandas_column)    
     elif column_types == set([type("STR")]):
         # String
         assert len(sql_column) == len(pandas_column)
@@ -355,6 +375,13 @@ def from_decimal_to_float(columns_values, decimal_places):
 def from_decimal_to_int(columns_values, decimal_places):
     for i in range(len(columns_values)):
         columns_values[i] = int(truncate(columns_values[i], decimal_places))
+    return columns_values
+
+
+def from_str_to_int(columns_values, decimal_places):
+    for i in range(len(columns_values)):
+        assert "." not in columns_values[1]
+        columns_values[i] = int(columns_values[i])
     return columns_values
 
 def compare_column(sql_column, pandas_column, decimal_places):
