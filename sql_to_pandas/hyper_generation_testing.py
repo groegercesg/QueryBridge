@@ -12,6 +12,7 @@ import json
 from prepare_databases.prepare_hyperdb import PrepareHyperDB
 from hyper_parsing import generate_unparse_content_from_explain_and_query
 from tpch_helpers import *
+from sdqlpy_optimisations import sdqlpy_apply_optimisations
 
 query_directory = 'sql_to_pandas/tpch_no_limit_order_with_aggrs'
 explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order_with_aggrs'
@@ -108,7 +109,7 @@ def convert_explain_plan_to_x(desired_format):
                 content_size = len(unparse_content.getPandasContent())
             elif desired_format == "sdqlpy":
                 # Do Optimisations
-                # unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding", "PipelineBreaker"]) #
+                unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding", "PipelineBreaker"]) #
                 
                 content_size = len(unparse_content.getSDQLpyContent())
             else:

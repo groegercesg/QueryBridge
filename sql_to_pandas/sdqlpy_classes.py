@@ -546,7 +546,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             else:
                 pass
             
-            if comparing.created == True or isinstance(comparing, (ColumnValue, IntervalNotionOperator, LikeOperator, LookupOperator)):
+            if comparing.created == True or isinstance(comparing, (ColumnValue, IntervalNotionOperator, LikeOperator, LookupOperator, SubstringOperator)):
             
                 # Set the sourceNode
                 leftColumns = [str(col.codeName) for col in self.left.outputDict.flatCols()]
@@ -563,7 +563,7 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
                         comparing.sourceNode = right_value
                     else:
                         raise Exception(f"The comparing ({comparing.sourceNode}) was not found in either Left or Right.")
-                elif isinstance(comparing, (IntervalNotionOperator, LikeOperator)):
+                elif isinstance(comparing, (IntervalNotionOperator, LikeOperator, SubstringOperator)):
                     if comparing.value.codeName in leftColumns:
                         comparing.value.sourceNode = left_source
                     elif comparing.value.codeName in rightKeys:
