@@ -154,7 +154,10 @@ def setSourceNodeColumnValuesNPairs(value, sourcePairs):
                         set_index = True
             
             if set_index == False and value.value != '':
-                raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
+                if hasattr(value, "isOuterLookup") and value.isOuterLookup == True:
+                    pass
+                else:
+                    raise Exception(f"Value ({value.codeName}) wasn't in either left or right")
     
     if value.created == True and isinstance(value, (MulOperator, AvgAggrOperator, MinAggrOperator, MaxAggrOperator, CountAllOperator)):
         pass

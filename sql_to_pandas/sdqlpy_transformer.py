@@ -689,6 +689,14 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             elif sdqlpy_tree.joinType == "leftantijoin":
                 sdqlpy_tree.joinType = "rightantijoin"
                 sdqlpy_tree.swapLeftAndRight()
+            elif sdqlpy_tree.joinType == "outer":
+                # Outer means left-outer
+                # Make whatevers in left in Right, as we need all records for that
+                sdqlpy_tree.swapLeftAndRight()
+                # And make the left a Vector
+                assert isinstance(sdqlpy_tree.left, SDQLpyRecordNode)
+                sdqlpy_tree.left.vectorValue = True
+                pass
             else:
                 # Otherwise, it's grand - so just leave it
                 pass

@@ -215,6 +215,7 @@ class SDQLpyRecordNode(LeafSDQLpyNode):
         self.tableColumns = tableColumns
         # self.tableColumns = [x for x in self.oldTableColumns if x.essential == True]
         self.createInputOutputDicts()
+        self.vectorValue = False
         
     def filterTableColumns(self):
         # Filter tableColumns
@@ -260,6 +261,7 @@ class SDQLpyJoinBuildNode(UnarySDQLpyNode):
         self.additionalColumns = additionalColumns
         self.sdqlrepr = "indexed"
         self.outputDict = None
+        self.vectorValue = False
         
     def set_output_dict(self, no_sumaggr_warn=False):
         self.outputDict = SDQLpySRDict(
@@ -370,6 +372,19 @@ class SDQLpyGroupNode(UnarySDQLpyNode):
         self.sdqlrepr = "group"
         
         self.output_dict_value_sr_dict = False
+        
+    def childOuterValueResolving(self, childKeyReference):
+        if isinstance(self.child, SDQLpyJoinNode) and self.child.joinType == "outer":
+            joinFalseValue = list(filter(lambda x: x.just_source == True, self.child.outputDict.flatCols()))
+            assert len(joinFalseValue) == 1
+            joinFalseValue = joinFalseValue[0]
+            joinFalseValue_codeName = joinFalseValue.codeName
+            
+            # Search Values, for this codename
+            for val in self.outputDict.flatVals():
+                if hasattr(val, "value") and val.value == joinFalseValue_codeName:
+                    val.value = f"1 if {childKeyReference}.{joinFalseValue_codeName} != False else 0"
+                    val.isOuterLookup = True
         
     def set_output_dict(self, no_sumaggr_warn=False):
         self.rd_aggregateOperations(no_sumaggr_warn)
@@ -749,6 +764,7 @@ class SDQLpySRDict():
         self.duplicateUser = False
         
         self.value_sr_dict = False
+        self.value_vector = False
         
     def reduceDuplicates(self, items):
         # Remove duplicates in incoming list of items: either keys or values
@@ -842,7 +858,7 @@ class SDQLpySRDict():
     
     def generateSDQLpyFourLambda(self, unparser, l_lambda_idx_key, l_lambda_idx_val, r_lambda_idx_key, r_lambda_idx_val, node):
         l_node, r_node = node.left, node.right
-        assert node.joinMethod == "bnl"
+        assert node.joinMethod == "bnl" or node.joinType == "outer"
         
         l_keys_IDs = [id(x) for x in l_node.outputDict.flatKeys()]
         l_values_IDs = [id(x) for x in l_node.outputDict.flatVals()]
@@ -930,6 +946,20 @@ class SDQLpySRDict():
             setSourceNodeColumnValues(key, lambda_idx_key, keys, lambda_idx_val, values)
         for col in self.values:
             setSourceNodeColumnValues(col, lambda_idx_key, keys, lambda_idx_val, values)
+            
+        # Value vector, remove the key and anything not an Integer, should be length 1
+        if self.value_vector:
+            keyIDs = [id(x) for x in self.keys]
+            removes = []
+            for idx, val in enumerate(self.values):
+                if id(val) in keyIDs:
+                    removes.append(idx)
+                elif val.type != "Integer":
+                    removes.append(idx)
+            removes.reverse()
+            for rem in removes:
+                self.values.pop(rem)
+            assert len(self.values) == 1
         
         # Update the self.values, if needed
         if self.duplicateUser:
@@ -1041,6 +1071,12 @@ class SDQLpySRDict():
             val_sourceNode = self.values[0].child.sourceNode
             
             output_content.append(f"{TAB}sr_dict({{{val_sourceNode}.{val_codeName}: True}})")
+        elif len(self.values) == 1 and self.value_vector == True:
+            # Make the value section an SR Dict
+            val_codeName = self.values[0].codeName
+            val_sourceNode = self.values[0].sourceNode
+            
+            output_content.append(f"{TAB}vector({{{val_sourceNode}.{val_codeName}}})")
         else:
             assert self.value_sr_dict == False
             valueCounter = defaultdict(int)

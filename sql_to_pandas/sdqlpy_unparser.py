@@ -332,6 +332,10 @@ class UnparseSDQLpyTree():
         
         assert len(node.outputDict.keys) > 0
         
+        if hasattr(node, "child") and isinstance(node.child, SDQLpyRecordNode):
+            node.vectorValue = node.child.vectorValue
+            node.outputDict.value_vector = node.vectorValue
+        
         for output_line in node.outputDict.generateSDQLpyOneLambda(
             self, f"{lambda_index}[0]", f"{lambda_index}[1]", node
         ):
@@ -389,14 +393,67 @@ class UnparseSDQLpyTree():
             f"{TAB}lambda {lambda_index} : "
         )
         
-        if node.joinMethod == "bnl":
+        if node.joinType == "outer":
+            assert node.left.vectorValue == True
+            node.set_output_dict()
+            
+            # remove left key from output_dict
+            rightIds = [id(x) for x in node.right.outputDict.flatCols()]
+            leftKeyIds = [id(x) for x in node.left.outputDict.flatKeys()]
+            leftValIds = [id(x) for x in node.left.outputDict.flatVals()]
+            removes = []
+            for idx, val in enumerate(node.outputDict.flatCols()):
+                if id(val) in rightIds:
+                    pass
+                elif id(val) in leftKeyIds:
+                    removes.append(idx)
+                elif id(val) in leftValIds:
+                    val.just_source = True
+            removes.reverse()
+            for rem in removes:
+                node.outputDict.keys.pop(rem)
+            
+            leftTable_ref = node.make_leftTableRef(self, lambda_index)
+            
+            self.writeTempContent(
+                f"{TAB}{TAB}{leftTable_ref}.sum(\n"
+                f"{TAB}{TAB}{TAB}lambda {lambda_index_2} : "
+            )
+            
+            for output_line in node.outputDict.generateSDQLpyFourLambda(
+                self, f"{lambda_index_2}[0]", f"{lambda_index_2}", f"{lambda_index}[0]", f"{lambda_index}[1]",
+                node
+            ):
+                self.writeTempContent(
+                    f"{TAB}{TAB}{TAB}{TAB}{output_line}"
+                )
+            
+            self.writeTempContent(
+                f"{TAB}{TAB})"
+            )
+            
+            self.writeTempContent(
+                f"{TAB}if\n"
+                f"{TAB}{TAB}{leftTable_ref} != None\n"
+                f"{TAB}else"
+            )
+            
+            for output_line in node.outputDict.generateSDQLpyFourLambda(
+                self, f"{lambda_index_2}[0]", f"{False}", f"{lambda_index}[0]", f"{lambda_index}[1]",
+                node
+            ):
+                self.writeTempContent(
+                    f"{TAB}{TAB}{output_line}"
+                )
+            
+        elif node.joinMethod == "bnl":
             self.writeTempContent(
                 f"{TAB}{TAB}{leftTable}.sum(\n"
                 f"{TAB}{TAB}{TAB}lambda {lambda_index_2} : "
             )
             
             for output_line in node.outputDict.generateSDQLpyFourLambda(
-                self, f"{lambda_index_2}[0]", f"{lambda_index_2}[1]", f"{lambda_index}[0]", f"{lambda_index}[1]",
+                self, f"{lambda_index_2}[0]", f"{lambda_index_2}", f"{lambda_index}[0]", f"{lambda_index}[1]",
                 node
             ):
                 self.writeTempContent(
@@ -528,9 +585,12 @@ class UnparseSDQLpyTree():
         # Carry over the value sr_dict
         node.outputDict.value_sr_dict = node.output_dict_value_sr_dict
         
+        childKeyReference = f"{lambda_index}[0]"
+        node.childOuterValueResolving(childKeyReference)
+        
         # Output the RecordOutput
         for output_line in node.outputDict.generateSDQLpyOneLambda(
-            self, f"{lambda_index}[0]", f"{lambda_index}[1]", node
+            self, childKeyReference, f"{lambda_index}[1]", node
         ):
             self.writeContent(
                 f"{TAB}{output_line}"
@@ -728,9 +788,15 @@ class UnparseSDQLpyTree():
             case ColumnValue():
                 if self.doing_repeated_aggr == True or expr_tree.no_source == True:
                     expression_output = f"{expr_tree.codeName}"
+                elif expr_tree.just_source == True:
+                    expression_output = f"{expr_tree.sourceNode}"
                 else:
-                    assert expr_tree.sourceNode != None
-                    expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
+                    if hasattr(expr_tree, "isOuterLookup") and expr_tree.isOuterLookup == True:
+                        # No SourceNode
+                        expression_output = f"{expr_tree.value}"
+                    else:
+                        assert expr_tree.sourceNode != None
+                        expression_output = f"{expr_tree.sourceNode}.{expr_tree.value}"
                     # Update the value after creation
                     # Add to codeNameUpdates
                     self.codeNameUpdates.append(

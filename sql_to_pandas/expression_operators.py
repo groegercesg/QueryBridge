@@ -5,6 +5,7 @@ class ExpressionBaseNode():
         self.codeName = ""
         self.created = False
         self.no_source = False
+        self.just_source = False
         
     def setCreated(self):
         self.created = True
