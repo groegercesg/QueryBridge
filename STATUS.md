@@ -42,6 +42,6 @@ Q19  ->  Done
 
 Q20  ->  Done
 
-Q21  ->  Needs Research
+Q21  ->  SDQLpy issue, then needs added to Code Generator
 
 Q22  ->  Done
