@@ -1,15 +1,3 @@
-# Use the lark package to parse strings from the Output into a tree-based class representation
-import sys
-# Add the parent directory of package to sys.path before attempting to import anything from package using absolute imports:
-from pathlib import Path # if you haven't already done so
-current_file = Path(__file__).resolve()
-parent, root = current_file.parent, current_file.parents[1]
-sys.path.append(str(root))
-from prepare_databases.prepare_hyperdb import PrepareHyperDB
-from os import listdir
-from os.path import isfile, join
-import json
-
 from hyper_classes import *
 
 from sdqlpy_unparser import *
@@ -20,68 +8,7 @@ from uplan_helpers import *
 from uplan_optimisations import *
 
 from tpch_helpers import *
-
-def generate_hyperdb_explains():
-    db = PrepareHyperDB('hyperdb_tpch.hyper')
-    db.prepare_database('data_storage')
-    query_directory = 'sql_to_pandas/tpch_no_limit_order'
-    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order'
-    
-    onlyfiles = [f for f in listdir(query_directory) if isfile(join(query_directory, f))]
-    
-    for query_file in onlyfiles:
-        with open(f'{query_directory}/{query_file}') as r:
-            explain_content = r.read()
-            
-        query_name = query_file.split('.')[0]
-        
-        # TODO: Skip Query 15:
-        # HyperException: Views are disabled.
-        if str(query_name) == "15":
-            continue
-    
-        # Else, we can request the explain data from the database
-        explain_json, query_content = db.get_explain(explain_content, query_name)
-
-        # Write out explain_content to explain_file_path
-        with open(f'{explain_directory}/{query_name}_hyper.json', "w") as outfile:
-            # returns JSON object as a dictionary, write that to outfile
-            outfile.write(json.dumps(explain_json, indent=4))
-            
-        print(f'Generated explain output for: {query_file}')
-        
-    print(f'Generated Explain output for all {len(onlyfiles)} queries.')
-
-def gather_operators(explain_node):
-    operators = set()
-    has_below = False
-    for option in ["input", "left", "right"]: 
-        if option in explain_node:
-            has_below = True
-            operators.update(gather_operators(explain_node[option]))
-    
-    if has_below == False and explain_node["operator"] != "tablescan":
-        raise Exception(f"New leaf node discovered: { explain_node['operator'] }")
-    
-    operators.add(explain_node["operator"])
-    return operators
-
-def inspect_explain_plans():
-    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order'
-    
-    onlyfiles = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
-    
-    operators = set()
-    
-    for explain_file in onlyfiles:
-        with open(f'{explain_directory}/{explain_file}') as r:
-            explain_content = json.loads(r.read())
-
-        operators.update(gather_operators(explain_content))
-    
-    print("Below are the operators that Hyper DB Uses:")
-    print(operators)
-    
+   
 def fix_explictScanNodes(op_node: HyperBaseNode, all_nodes: dict):
     # Visit Children
     if isinstance(op_node, JoinBaseNode) and op_node.isJoinNode == True:
@@ -601,148 +528,101 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
         
     assert unparse_content != None
     return unparse_content
-
-def convert_explain_plan_to_x(desired_format):
-    query_directory = 'sql_to_pandas/tpch_no_limit_order'
-    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order'
+   
+# def parse_explain_plans():
+#     query_directory = 'sql_to_pandas/tpch_queries'
+#     explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order'
     
-    # Ignore Query 15 for now
-    query_files = [f for f in listdir(query_directory) if isfile(join(query_directory, f)) and str(f).split(".")[0] != "15"]
-    explain_files = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
+#     # Ignore Query 15 for now
+#     query_files = [f for f in listdir(query_directory) if isfile(join(query_directory, f)) and str(f).split(".")[0] != "15"]
+#     explain_files = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
     
-    combined_sql_content = list(zip(query_files, explain_files))
+#     combined_sql_content = list(zip(query_files, explain_files))
     
-    
-    supported_queries = ["1", "2", "3" ,"4", "5", "6", "8", "9", "10", "11", "12", "14", "15_cte", "16", "18", "19", "20"]
-    
-    print(f"We currently support {len(supported_queries)} out of a total of 22")
-    
-    for sql_file, explain_file in combined_sql_content:
-        if sql_file.split(".")[0] not in supported_queries:
-            continue
-        
-        with open(f'{explain_directory}/{explain_file}') as r:
-            explain_content = json.loads(r.read())
-            
-            table_schema = configure_table_schema({})
-            
-            unparse_content = generate_unparse_content_from_explain_and_query(
-                explain_content,
-                f'{query_directory}/{sql_file}',
-                desired_format,
-                table_schema,
-                ""
-            )
-            
-            print(unparse_content)
-            content_size = 0
-            if desired_format == "pandas":
-                content_size = len(unparse_content.getPandasContent())
-            elif desired_format == "sdqlpy":
-                # Do Optimisations
-                # unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding", "PipelineBreaker"]) #
-                
-                content_size = len(unparse_content.getSDQLpyContent())
-            else:
-                raise Exception("Unrecognised desired format")
-            
-            assert content_size > 0
-            print(f"Generated {content_size} lines of SDQLpy code")
-    
-def parse_explain_plans():
-    query_directory = 'sql_to_pandas/tpch_queries'
-    explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order'
-    
-    # Ignore Query 15 for now
-    query_files = [f for f in listdir(query_directory) if isfile(join(query_directory, f)) and str(f).split(".")[0] != "15"]
-    explain_files = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
-    
-    combined_sql_content = list(zip(query_files, explain_files))
-    
-    all_operator_trees = []
-    for sql_file, explain_file in combined_sql_content:
-        # if sql_file.split(".")[0] not in ["3"]:
-        #    continue
+#     all_operator_trees = []
+#     for sql_file, explain_file in combined_sql_content:
+#         # if sql_file.split(".")[0] not in ["3"]:
+#         #    continue
          
-        print(f"Transforming {explain_file} into a Hyper Tree")
-        with open(f'{explain_directory}/{explain_file}') as r:
-            explain_content = json.loads(r.read())
+#         print(f"Transforming {explain_file} into a Hyper Tree")
+#         with open(f'{explain_directory}/{explain_file}') as r:
+#             explain_content = json.loads(r.read())
         
-        # Gather all the nodes
-        all_nodes = dict()
-        op_tree = create_hyper_operator_tree(explain_content, all_nodes)
-        all_operator_trees.append([sql_file, op_tree, all_nodes])
+#         # Gather all the nodes
+#         all_nodes = dict()
+#         op_tree = create_hyper_operator_tree(explain_content, all_nodes)
+#         all_operator_trees.append([sql_file, op_tree, all_nodes])
 
-    #assert len(all_operator_trees) == 21
-    print("All 21 HyperDB plans have been parsed into Hyper DB Class Trees")
+#     #assert len(all_operator_trees) == 21
+#     print("All 21 HyperDB plans have been parsed into Hyper DB Class Trees")
     
-    # Transform the operator_trees
-    # Task 0: Fix tree and it's explicitScan (where retrieve)
-    for tree in all_operator_trees:
-        fix_explictScanNodes(tree[1], tree[2])
-        print(f"Transformed Explicit Scan Nodes in Plan {tree[0]} Hyper Tree")
-    # Task 1: Solve the 'v1' references, in 'iu'
-        # These propagate up, and are occasionally reset by things like "mapNode" or "groupbyNode"
-        # Postorder traversal is required for this, make a dict of the pairs:
-            # v1: l_suppkey
-            # v3: p_partkey
-            # ...
-        # Also in this pass we should parse expressions (and similar things) into ExpressionOperators
-    for tree in all_operator_trees:
-        transform_hyper_iu_references(tree[1])
-        print(f"Transformed IU References in Plan {tree[0]} Hyper Tree")
-    # Task 2: Convert Hyper DB Nodes into Universal Plan Nodes
-    for tree in all_operator_trees:
-        tree[1] = transform_hyper_to_universal_plan(tree[1])
-        print(f"Transformed Plan {tree[0]} Hyper Tree into Universal Plan")
-    # Task 3: Fix sql table aliases in tablescans
-    for tree in all_operator_trees:
-        transform_sql_table_aliases(f"{query_directory}/{tree[0]}", tree[1])
+#     # Transform the operator_trees
+#     # Task 0: Fix tree and it's explicitScan (where retrieve)
+#     for tree in all_operator_trees:
+#         fix_explictScanNodes(tree[1], tree[2])
+#         print(f"Transformed Explicit Scan Nodes in Plan {tree[0]} Hyper Tree")
+#     # Task 1: Solve the 'v1' references, in 'iu'
+#         # These propagate up, and are occasionally reset by things like "mapNode" or "groupbyNode"
+#         # Postorder traversal is required for this, make a dict of the pairs:
+#             # v1: l_suppkey
+#             # v3: p_partkey
+#             # ...
+#         # Also in this pass we should parse expressions (and similar things) into ExpressionOperators
+#     for tree in all_operator_trees:
+#         transform_hyper_iu_references(tree[1])
+#         print(f"Transformed IU References in Plan {tree[0]} Hyper Tree")
+#     # Task 2: Convert Hyper DB Nodes into Universal Plan Nodes
+#     for tree in all_operator_trees:
+#         tree[1] = transform_hyper_to_universal_plan(tree[1])
+#         print(f"Transformed Plan {tree[0]} Hyper Tree into Universal Plan")
+#     # Task 3: Fix sql table aliases in tablescans
+#     for tree in all_operator_trees:
+#         transform_sql_table_aliases(f"{query_directory}/{tree[0]}", tree[1])
     
-    print("Hyper Tree Plans have been Transformed into Universal Plan Trees")
+#     print("Hyper Tree Plans have been Transformed into Universal Plan Trees")
     
-    # Audit Universal Plan Trees
-    for tree in all_operator_trees:
-        # Test 1: top node should be OutputNode
-        assert audit_universal_plan_tree_outputnode(tree[1])
-        # Test 2: all leaf nodes should be ScanNode
-        assert audit_universal_plan_tree_scannode(tree[1])
+#     # Audit Universal Plan Trees
+#     for tree in all_operator_trees:
+#         # Test 1: top node should be OutputNode
+#         assert audit_universal_plan_tree_outputnode(tree[1])
+#         # Test 2: all leaf nodes should be ScanNode
+#         assert audit_universal_plan_tree_scannode(tree[1])
         
-    print("Universal Plan Trees have been Audited")
+#     print("Universal Plan Trees have been Audited")
     
-    # Convert Universal Plan Tree to Pandas Tree
-    for tree in all_operator_trees:
-        tree[1] = convert_universal_to_pandas(tree[1])
-        print(f"Converted Universal Plan Tree of {tree[0]} into Pandas Tree")
+#     # Convert Universal Plan Tree to Pandas Tree
+#     for tree in all_operator_trees:
+#         tree[1] = convert_universal_to_pandas(tree[1])
+#         print(f"Converted Universal Plan Tree of {tree[0]} into Pandas Tree")
 
-    print("Universal Plan Trees have been converted into Pandas Trees")
+#     print("Universal Plan Trees have been converted into Pandas Trees")
 
-    # Transform Pandas Tree in ways that are required
-    for tree in all_operator_trees:
-        pass
+#     # Transform Pandas Tree in ways that are required
+#     for tree in all_operator_trees:
+#         pass
 
-    # Unparse Pandas Trees to list
-    failed_counter = 0
-    for tree in all_operator_trees:
-        try:
-            pandas_content = UnparsePandasTree(tree[1]).getPandasContent()
-        except:
-            print(f"Pandas Generation for Query '{tree[0]}' Failed.")
-            failed_counter += 1
+#     # Unparse Pandas Trees to list
+#     failed_counter = 0
+#     for tree in all_operator_trees:
+#         try:
+#             pandas_content = UnparsePandasTree(tree[1]).getPandasContent()
+#         except:
+#             print(f"Pandas Generation for Query '{tree[0]}' Failed.")
+#             failed_counter += 1
             
-        # print(f"Pandas Content for Plan '{tree[0]}':")
-        # for line in pandas_content:
-        #     print(line)
-        # print("-" * 15)
+#         # print(f"Pandas Content for Plan '{tree[0]}':")
+#         # for line in pandas_content:
+#         #     print(line)
+#         # print("-" * 15)
     
-    if failed_counter > 0:
-        print("-"*15)
-        print(f"We failed {failed_counter} out of {len(all_operator_trees)}; or {round((failed_counter / len(all_operator_trees)) * 100, 2)}%.")
-    else:
-        print("-"*15)
-        print(f"We succeeded in unparsing all {len(all_operator_trees)} Pandas trees into Pandas Content")
+#     if failed_counter > 0:
+#         print("-"*15)
+#         print(f"We failed {failed_counter} out of {len(all_operator_trees)}; or {round((failed_counter / len(all_operator_trees)) * 100, 2)}%.")
+#     else:
+#         print("-"*15)
+#         print(f"We succeeded in unparsing all {len(all_operator_trees)} Pandas trees into Pandas Content")
     
-    print("Unparsed Pandas Tree(s) into Pandas Content")
+#     print("Unparsed Pandas Tree(s) into Pandas Content")
     
 from pandas_unparser_v2 import *
 from uplan_nodes import *
@@ -1482,8 +1362,3 @@ def transform_hyper_iu_references(op_tree: HyperBaseNode):
     
     iu_references = dict()
     visit_solve_iu_references(op_tree, iu_references)
-
-# # generate_hyperdb_explains()
-# # inspect_explain_plans()
-# # parse_explain_plans()
-# convert_explain_plan_to_x("sdqlpy") # sdqlpy || pandas
