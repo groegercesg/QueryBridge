@@ -25,6 +25,27 @@ def audit_sdqlpy_tree_leafnode(op_tree: SDQLpyBaseNode) -> bool:
     all_leaves = get_leaf_nodes(op_tree)
     return all(isinstance(leaf, LeafSDQLpyNode) for leaf in all_leaves)
 
+def surface_all_exprs(expr_tree):
+    currentNodes = []
+
+    if isinstance(expr_tree, BinaryExpressionOperator):
+        leftNodes = surface_all_exprs(expr_tree.left)
+        rightNodes = surface_all_exprs(expr_tree.right)
+        
+        currentNodes.extend(leftNodes)
+        currentNodes.extend(rightNodes)
+    elif isinstance(expr_tree, UnaryExpressionOperator):
+        childNodes = surface_all_exprs(expr_tree.child)
+        
+        currentNodes.extend(childNodes)
+    else:
+        pass
+    
+    # Add current
+    currentNodes.append(type(expr_tree))
+    
+    return currentNodes
+
 def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBaseNode:
         
     nodeIDs = dict()
@@ -97,6 +118,11 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 new_op_tree.foreignKeys = op_tree.foreignKeys
             case NewColumnNode():
                 assert childNode.outputDict != None and len(childNode.outputDict.flatCols()) > 0
+                allExprTypes = []
+                for val in op_tree.values:
+                    allExprTypes.extend(surface_all_exprs(val))
+                valueTypeCounter = Counter(allExprTypes)
+                
                 if isinstance(childNode, SDQLpyConcatNode):
                     assert isinstance(childNode.child, SDQLpyGroupNode)
                     # We need to add a Aggr Node
@@ -128,7 +154,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     # Set Primary/Foreign information from Universal Plan
                     new_op_tree.primaryKey = op_tree.primaryKey
                     new_op_tree.foreignKeys = op_tree.foreignKeys
-                elif isinstance(childNode, SDQLpyGroupNode):
+                elif isinstance(childNode, SDQLpyGroupNode) and valueTypeCounter[type(SumAggrOperator)] > 1:
                     # We need to add a Group Node
                     newKeyExpressions = []
                     for keyExpr in childNode.keyExpressions:

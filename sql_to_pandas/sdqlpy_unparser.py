@@ -477,8 +477,6 @@ class UnparseSDQLpyTree():
             self.writeTempContent(
                 f"{TAB}{TAB})"
             )
-                
-            pass
         else:
         
             # Carry over the value sr_dict
