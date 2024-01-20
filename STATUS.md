@@ -26,7 +26,7 @@ Q11  ->  Done
 
 Q12  ->  Done
 
-Q13  ->  LeftOuter Plan Discussion + Inline Condition in Records Support
+Q13  ->  Results not quite right, SDQLpy issue?
 
 Q14  ->  Done
 
