@@ -544,15 +544,24 @@ class UnparseSDQLpyTree():
                 # Assign sources for the comparing condition
                 node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
                 otherJoinComparison = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+                canDoJoinComparisonFirst = not (leftTableRef in otherJoinComparison)
                 # reset sources, so as to not cause issues later down the line
                 resetColumnValues(node.comparingTree)
                 
-                self.writeTempContent(
-                    f"{TAB}if\n"
-                    f"{TAB}{TAB}{leftTableRef} {joinComparator} None and ({otherJoinComparison})\n"
-                    f"{TAB}else\n"
-                    f"{TAB}{TAB}None"
-                )
+                if canDoJoinComparisonFirst:
+                    self.writeTempContent(
+                        f"{TAB}if\n"
+                        f"{TAB}{TAB}({otherJoinComparison}) and {leftTableRef} {joinComparator} None\n"
+                        f"{TAB}else\n"
+                        f"{TAB}{TAB}None"
+                    )
+                else:
+                    self.writeTempContent(
+                        f"{TAB}if\n"
+                        f"{TAB}{TAB}{leftTableRef} {joinComparator} None and ({otherJoinComparison})\n"
+                        f"{TAB}else\n"
+                        f"{TAB}{TAB}None"
+                    )
             else:
                 assert node.equatingConditions == [] and node.comparingTree == None
                 raise Exception(f"Illogical format of join")
