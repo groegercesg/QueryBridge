@@ -167,6 +167,19 @@ def get_query_tables(query_path: str) -> list:
     
     return potential_tables
 
+def check_sdqlpy_file(file_path: str):
+    required_variables = ["iterations", "query_function", "query_tables", "query_columns", "data_write_path"]
+    
+    query_content = None
+    with open(file_path) as f:
+        query_content = f.read()
+        
+    for var in required_variables:
+        if f"{var} =" not in query_content:
+            print(f"Variable: {var} was not found in the query file")
+            print(query_content)
+            raise Exception("Query Error")
+
 def run_sdqlpy(query_path, iterations, sdqlpy_setup, data_location):
     # Prepend SDQLpy information
     query_tables = get_query_tables(query_path)
@@ -180,6 +193,9 @@ def run_sdqlpy(query_path, iterations, sdqlpy_setup, data_location):
     data_json_name = f"{''.join(random.sample(string.ascii_uppercase, 12))}.json"
     data_write_path = f'data_write_path = "{data_json_name}"'
     add_line_at_end(query_path, data_write_path)
+    
+    check_sdqlpy_file(query_path)
+    
     bench_runner = "bench_runner(iterations, query_function, query_tables, query_columns, data_write_path)"
     add_line_at_end(query_path, "\n")
     add_line_at_end(query_path, bench_runner)

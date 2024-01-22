@@ -490,38 +490,61 @@ def main():
                 elif query_option["Type"] == "SDQLpy":
                     # We first convert the SQL to a SDQLpy Query, and then run it!
                     # Run converter
-                    if query_option["Query Plan"] == "Postgres":
-                        cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Postgres", "--planner_file", manifest_json["Postgres Connection Details"], "--output_fmt", "sdqlpy"]
-                    elif query_option["Query Plan"] == "Duck DB":
-                        cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Duck_DB", "--planner_file", duck_db_details, "--output_fmt", "sdqlpy"]
-                    elif query_option["Query Plan"] == "Hyper DB":
-                        cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Hyper_DB", "--planner_file", hyper_db_details, "--output_fmt", "sdqlpy"]
+                    
+                    query_path = None
+                    if ("Converter" in query_option and query_option["Converter"] == "True") or ("Converter" not in query_option):
+                        if query_option["Query Plan"] == "Postgres":
+                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Postgres", "--planner_file", manifest_json["Postgres Connection Details"], "--output_fmt", "sdqlpy"]
+                        elif query_option["Query Plan"] == "Duck DB":
+                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Duck_DB", "--planner_file", duck_db_details, "--output_fmt", "sdqlpy"]
+                        elif query_option["Query Plan"] == "Hyper DB":
+                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Hyper_DB", "--planner_file", hyper_db_details, "--output_fmt", "sdqlpy"]
+                        else:
+                            raise Exception("Unrecognised option")
+                        
+                        if "Conversion Options" in query_option:
+                            if args.verbose:
+                                print("Adding conversion options: " + str(query_option["Conversion Options"]))
+                            cmd += query_option["Conversion Options"]
+                        
+                        try:
+                            if args.verbose:
+                                print("We are running the converter, with the following command: " + str(cmd))
+                            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=600)
+                            bad_query = False
+                        except Exception as ex:
+                            bad_query = True
+                            # We print the error
+                            # But still output to CSV and to the query file
+                            print(color.RED + str(query["Query Name"]) + ": SDQLpy conversion error!" + "\n" + color.END)
+                            print(ex)
+                        
+                        # Print returncode
+                        if args.verbose:
+                            print(f'The returncode for generating the query was: {result.returncode}')
+                            
+                        query_path = f"{manifest_json['Temporary Directory']}/{query_option['Converted Name']}"
+                    elif ("Converter" in query_option and query_option["Converter"] == "False"):
+                        # Use Stored Queries
+                        assert "Stored Queries Location" in manifest_json
+                        
+                        print(f"Using a Stored Query, by the name of: {query_option['Converted Name']}")
+                        
+                        # Copy the file somewhere and have the path to the temporary one
+                        storedPath = f"{manifest_json['Stored Queries Location']}/{query_option['Converted Name']}"
+                        tempPath = f"{manifest_json['Temporary Directory']}/{query_option['Converted Name']}"
+                        shutil.copy(storedPath, tempPath)
+                        
+                        query_path = tempPath
                     else:
-                        raise Exception("Unrecognised option")
-                    
-                    if "Conversion Options" in query_option:
-                        if args.verbose:
-                            print("Adding conversion options: " + str(query_option["Conversion Options"]))
-                        cmd += query_option["Conversion Options"]
-                    
+                        raise Exception(f"Unrecognised Query Option Spec: {query_option}")    
+
                     try:
-                        if args.verbose:
-                            print("We are running the converter, with the following command: " + str(cmd))
-                        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, timeout=600)
-                        bad_query = False
-                    except Exception as ex:
-                        bad_query = True
-                        # We print the error
-                        # But still output to CSV and to the query file
-                        print(color.RED + str(query["Query Name"]) + ": SDQLpy conversion error!" + "\n" + color.END)
-                        print(ex)
-                    
-                    # Print returncode
-                    if args.verbose:
-                        print(f'The returncode for generating the query was: {result.returncode}')
-                    
-                    try:
-                        sdqlpy_results = run_sdqlpy(f"{manifest_json['Temporary Directory']}/{query_option['Converted Name']}",
+                        assert query_path != None
+                        # Assert there is a file at query_path
+                        assert os.path.isfile(query_path)
+                        
+                        sdqlpy_results = run_sdqlpy(query_path,
                                                     manifest_json["Number of Query Runs"],
                                                     manifest_json["SDQLpy Setup"],
                                                     manifest_json["Data Storage"])
@@ -531,7 +554,8 @@ def main():
                         sdqlpy_results["Times"] = []
                         sdqlpy_results["Result"] = []
                         bad_exec = True
-                    
+                        print(color.RED + str(query["Query Name"]) + ": SDQLpy Execution error!" + "\n" + color.END)
+                                            
                     sdqlpy_run_times = sdqlpy_results["Times"]
                                
                     if args.verbose:   

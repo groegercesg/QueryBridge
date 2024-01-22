@@ -1,0 +1,63 @@
+{
+    "Test Name": "Hyper DB TPC-H Test",
+    "Scaling Factors": [1],
+    "Queries": [
+        {
+            "Query Name": "Query 20",
+            "Required Data": ["supplier", "nation", "partsupp", "part", "lineitem"],
+            "SQL Name": "20.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q20_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converter": "False",
+                    "Converted Name": "hesam_q20_sdqlpy.py",
+                    "Results Name": "SDQLpy Hesam",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q20_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        }
+    ],
+    "Temporary Directory": "benchmarking/temp_queries",
+    "SQL Converter Location": "sql_to_pandas/sql_to_pandas.py",
+    "SQL Queries Location": "benchmarking/tpch_no_limit_order_with_aggrs",
+    "Stored Queries Location": "benchmarking/stored_queries",
+    "Pandas Data Loader": "tpch_data_loader.py",
+    "Number of Query Runs": 1,
+    "Results Location": "benchmarking/test_results/hyper_sdqlpy_pandas_tpch_hesam_problems_test_results.csv",
+    "Postgres Connection Details": "postgres_connection.json",
+    "Duck DB Connection": "duckdb_tpch.duckdb",
+    "Hyper DB Connection": "hyperdb_tpch.hyper",
+    "DB Gen Location": "tpch-dbgen",
+    "Constants Location": "tpch-prep",
+    "Data Storage": "data_storage",
+    "Use Numpy": "False",
+    "Results Precision": 4,
+    "Regenerate Data": "False",
+    "Prepare Only": "HyperDB",
+    "SDQLpy Setup": {
+        "Location": "SDQLPY",
+        "Install Script": "benchmarking/sdqlpy_install.sh",
+        "Queries Directory": "queries",
+        "Bench Run": "benchmarking/bench_run.sh",
+        "Bench Class": "benchmarking/sdqlpy_benchmark_runner.py"
+    },
+    "Order Checking": "False"
+}
