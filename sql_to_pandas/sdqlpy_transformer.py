@@ -154,7 +154,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     # Set Primary/Foreign information from Universal Plan
                     new_op_tree.primaryKey = op_tree.primaryKey
                     new_op_tree.foreignKeys = op_tree.foreignKeys
-                elif isinstance(childNode, SDQLpyGroupNode) and valueTypeCounter[type(SumAggrOperator)] > 1:
+                elif isinstance(childNode, SDQLpyGroupNode) and valueTypeCounter[SumAggrOperator] > 1:
                     # We need to add a Group Node
                     newKeyExpressions = []
                     for keyExpr in childNode.keyExpressions:
