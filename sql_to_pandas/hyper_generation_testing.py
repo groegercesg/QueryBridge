@@ -95,12 +95,14 @@ def convert_explain_plan_to_x(desired_format):
             
             table_schema = configure_table_schema({})
             
+            uplan_opts = ["ColumnElimination"]
+            
             unparse_content = generate_unparse_content_from_explain_and_query(
                 explain_content,
                 f'{query_directory}/{sql_file}',
                 desired_format,
                 table_schema,
-                ""
+                uplan_opts
             )
             
             print(unparse_content)
@@ -109,7 +111,8 @@ def convert_explain_plan_to_x(desired_format):
                 content_size = len(unparse_content.getPandasContent())
             elif desired_format == "sdqlpy":
                 # Do Optimisations
-                unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding", "PipelineBreaker"]) #
+                # TODO: We need to make these optimisations interact correctly with the removeColumnIDs
+                # unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["VerticalFolding", "PipelineBreaker"]) #
                 
                 content_size = len(unparse_content.getSDQLpyContent())
             else:

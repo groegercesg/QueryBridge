@@ -180,7 +180,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 else:
                     new_op_tree = None
                     childNode.outputDict.keys.extend(op_tree.values)
-                    assert childNode.removeColumnIDs == op_tree.removeColumnIDs
+                    childNode.removeColumnIDs = set(childNode.removeColumnIDs).union(op_tree.removeColumnIDs)
             case RetrieveNode():
                 # Build the use the nodeDict
                 assert op_tree.retrieveTargetID in nodeIDs
@@ -1170,15 +1170,15 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         
         return sdqlpy_tree
     
-    def solveremoveColumnIDs(sdqlpy_tree):
+    def solveRemoveColumnIDs(sdqlpy_tree):
         if isinstance(sdqlpy_tree, BinarySDQLpyNode):
-            leftNode = solveremoveColumnIDs(sdqlpy_tree.left)
-            rightNode = solveremoveColumnIDs(sdqlpy_tree.right)
+            leftNode = solveRemoveColumnIDs(sdqlpy_tree.left)
+            rightNode = solveRemoveColumnIDs(sdqlpy_tree.right)
             
             sdqlpy_tree.left = leftNode
             sdqlpy_tree.right = rightNode
         elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
-            childNode = solveremoveColumnIDs(sdqlpy_tree.child)
+            childNode = solveRemoveColumnIDs(sdqlpy_tree.child)
             
             sdqlpy_tree.child = childNode
         else:
@@ -1192,7 +1192,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             sdqlpy_tree.outputDict.deleteFromSROnIDs(sdqlpy_tree.removeColumnIDs)
             # Check Primary still in SRDict
             outputDictIDs = [id(x) for x in sdqlpy_tree.outputDict.flatCols()]
-            assert all([id(x) in outputDictIDs for x in sdqlpy_tree.primaryKey])
+            assert all([id(x) in outputDictIDs for x in sdqlpy_tree.primaryKey]) or isinstance(sdqlpy_tree, SDQLpyAggrNode)
             # Check no removeIds in outputDict
             assert all([not (x in outputDictIDs) for x in sdqlpy_tree.removeColumnIDs])
         
@@ -1243,7 +1243,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     # # Solve RetrieveNode
     # solveRetrieveNode(sdqlpy_tree)
     # Use removeColumnIDs information
-    sdqlpy_tree = solveremoveColumnIDs(sdqlpy_tree)
+    sdqlpy_tree = solveRemoveColumnIDs(sdqlpy_tree)
     
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)

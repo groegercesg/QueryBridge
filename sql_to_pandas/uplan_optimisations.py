@@ -66,6 +66,11 @@ def opt_col_elim(uplan_tree):
                 if uplan_tree.tableRestrictions != []:
                     requiredColumns.extend([uplan_tree.tableRestrictions])
                 requiredColumns.extend(uplan_tree.tableColumns)
+            case NewColumnNode():
+                requiredColumns.extend(uplan_tree.values)
+            case RetrieveNode():
+                # TODO: This will need improved
+                requiredColumns.extend(uplan_tree.tableColumns)
             case _:
                 raise Exception(f"Unrecognised Universal Node: {uplan_tree}")
         
@@ -109,6 +114,11 @@ def opt_col_elim(uplan_tree):
             all_cols.extend(getAllColumns(expr.right))
         elif isinstance(expr, UnaryExpressionOperator):
             all_cols.extend(getAllColumns(expr.child))
+        elif isinstance(expr, CaseOperator):
+            for case in expr.caseInstances:
+                all_cols.extend(getContributingColumns(case.case, all_cols))
+        elif isinstance(expr, LikeOperator):
+            all_cols.extend(getContributingColumns(expr.value))
         else:
             pass
         
@@ -124,6 +134,11 @@ def opt_col_elim(uplan_tree):
             contribs.extend(getContributingColumns(expr.right, belowColumns))
         elif isinstance(expr, UnaryExpressionOperator):
             contribs.extend(getContributingColumns(expr.child, belowColumns))
+        elif isinstance(expr, CaseOperator):
+            for case in expr.caseInstances:
+                contribs.extend(getContributingColumns(case.case, belowColumns))
+        elif isinstance(expr, LikeOperator):
+            contribs.extend(getContributingColumns(expr.value, belowColumns))
         else:
             pass
         
@@ -131,7 +146,6 @@ def opt_col_elim(uplan_tree):
             contribs.append(expr)
         
         return contribs
-        
     
     def requiredIDs(uplan_tree):
         reqCols = requiredColumns(uplan_tree)
@@ -180,7 +194,7 @@ def opt_col_elim(uplan_tree):
     def get_columns_for_id(flowColumns, IDs):
         current_flow_id_dict = build_flow_id_dict(flowColumns)
         
-        return [current_flow_id_dict[x] for x in IDs]
+        return [current_flow_id_dict.get(x, None) for x in IDs]
     
     def run_col_elim(uplan_tree, requiredForAboveIds = None):
         # Preorder Traversal
@@ -196,17 +210,17 @@ def opt_col_elim(uplan_tree):
         primaryKeyIDs = getIDsForList(makeAllList(uplan_tree.primaryKey))
         removeIDs = set(flowIDs) - (set(requiredForAboveIds).union(set(primaryKeyIDs)))
         uplan_tree.removeColumnIDs = removeIDs
-        # if len(removeIDs) > 0:
-        #     print(f"We can remove {len(removeIDs)} columns from the {uplan_tree} node")
-        #     # Show what they are
-        #     flow_id_dict = build_flow_id_dict(uplan_tree.flowColumns)
-        #     for removeID in removeIDs:
-        #         print(f"{flow_id_dict[removeID].codeName}")
+        if len(removeIDs) > 0:
+            print(f"We can remove {len(removeIDs)} columns from the {uplan_tree} node")
+            # Show what they are
+            flow_id_dict = build_flow_id_dict(uplan_tree.flowColumns)
+            for removeID in removeIDs:
+                print(f"{flow_id_dict[removeID].codeName}")
         
         # Calculate Required For Above, for this current Node
         requiredForCurrentNode = requiredIDs(uplan_tree)
-        # requiredForCurrentNodeColumns = get_columns_for_id(uplan_tree.flowColumns, requiredForCurrentNode)
         requiredForAboveIds = list(set(requiredForCurrentNode).union(requiredForAboveIds))
+        requiredForCurrentNodeColumns = get_columns_for_id(uplan_tree.flowColumns, requiredForAboveIds)
         
         if isinstance(uplan_tree, BinaryBaseNode):
             run_col_elim(uplan_tree.left, requiredForAboveIds)
