@@ -1,1 +1,5 @@
 Data Type,Scaling Factor,Query Name,Query Number,Average,Correct,Executed,Runs
+SQL,1,Hyper DB,Query 20,0.232,True,Yes,[0.23158764839172363]
+SDQLpy,1,SDQLpy Converted (Hyper DB),Query 20,0.264,True,Yes,[0.2643396854400635]
+SDQLpy,1,SDQLpy Hesam,Query 20,0.0185,True,Yes,[0.018543243408203125]
+Pandas,1,Pandas Converted (Hyper DB),Query 20,0.659,True,Yes,[0.6585559844970703]
