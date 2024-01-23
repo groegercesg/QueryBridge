@@ -10,6 +10,8 @@ class UniversalBaseNode():
         self.foreignKeys = set()
         self.waitingForeignKeys = dict()
         
+        self.removeColumnIDs = []
+        
     def setPrimary(self, inPrimary):
         assert isinstance(inPrimary, tuple)
         self.primaryKey = inPrimary

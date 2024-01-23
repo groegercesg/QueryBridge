@@ -83,6 +83,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 # Set Primary/Foreign information from Universal Plan
                 new_op_tree.primaryKey = op_tree.primaryKey
                 new_op_tree.foreignKeys = op_tree.foreignKeys
+                new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
             case GroupNode():
                 if op_tree.keyExpressions == []:
                     new_op_tree = SDQLpyAggrNode(
@@ -97,6 +98,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 # Set Primary/Foreign information from Universal Plan
                 new_op_tree.primaryKey = op_tree.primaryKey
                 new_op_tree.foreignKeys = op_tree.foreignKeys
+                new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
             case OutputNode():
                 new_op_tree = None
             case JoinNode():
@@ -110,12 +112,14 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 # Set Primary/Foreign information from Universal Plan
                 new_op_tree.primaryKey = op_tree.primaryKey
                 new_op_tree.foreignKeys = op_tree.foreignKeys
+                new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
             case FilterNode():
                 new_op_tree = SDQLpyFilterNode()
                 new_op_tree.addFilterContent(op_tree.condition)
                 # Set Primary/Foreign information from Universal Plan
                 new_op_tree.primaryKey = op_tree.primaryKey
                 new_op_tree.foreignKeys = op_tree.foreignKeys
+                new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
             case NewColumnNode():
                 assert childNode.outputDict != None and len(childNode.outputDict.flatCols()) > 0
                 allExprTypes = []
@@ -145,6 +149,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     # Set Primary/Foreign information from Universal Plan
                     new_op_tree.primaryKey = op_tree.primaryKey
                     new_op_tree.foreignKeys = op_tree.foreignKeys
+                    new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
                     new_op_tree.addChild(newGroup)
                     childNode = None
                 elif isinstance(childNode, SDQLpyAggrNode):
@@ -154,6 +159,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     # Set Primary/Foreign information from Universal Plan
                     new_op_tree.primaryKey = op_tree.primaryKey
                     new_op_tree.foreignKeys = op_tree.foreignKeys
+                    new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
                 elif isinstance(childNode, SDQLpyGroupNode) and valueTypeCounter[SumAggrOperator] > 1:
                     # We need to add a Group Node
                     newKeyExpressions = []
@@ -168,11 +174,13 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     )
                     new_op_tree.primaryKey = childNode.primaryKey
                     new_op_tree.foreignKeys = childNode.foreignKeys
+                    new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
                     new_op_tree.addChild(childNode)
                     childNode = None
                 else:
                     new_op_tree = None
                     childNode.outputDict.keys.extend(op_tree.values)
+                    assert childNode.removeColumnIDs == op_tree.removeColumnIDs
             case RetrieveNode():
                 # Build the use the nodeDict
                 assert op_tree.retrieveTargetID in nodeIDs
@@ -337,6 +345,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 # Set primary and foreign
                 jbNode.primaryKey = tuple(tableKeys)
                 jbNode.foreignKeys = sdqlpy_tree.left.foreignKeys
+                jbNode.removeColumnIDs = sdqlpy_tree.left.removeColumnIDs
                 sdqlpy_tree.left = jbNode
             elif isinstance(sdqlpy_tree.left, (SDQLpyAggrNode, SDQLpyPromoteToFloatNode)):
                 # We shouldn't index on an aggr/or a promoteToFloat node
@@ -1161,6 +1170,34 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         
         return sdqlpy_tree
     
+    def solveremoveColumnIDs(sdqlpy_tree):
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = solveremoveColumnIDs(sdqlpy_tree.left)
+            rightNode = solveremoveColumnIDs(sdqlpy_tree.right)
+            
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = solveremoveColumnIDs(sdqlpy_tree.child)
+            
+            sdqlpy_tree.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        # Current node
+        if len(sdqlpy_tree.removeColumnIDs) > 0:
+            # We have had an optimisation applied
+            # Delete from SDQLpySRDict
+            sdqlpy_tree.outputDict.deleteFromSROnIDs(sdqlpy_tree.removeColumnIDs)
+            # Check Primary still in SRDict
+            outputDictIDs = [id(x) for x in sdqlpy_tree.outputDict.flatCols()]
+            assert all([id(x) in outputDictIDs for x in sdqlpy_tree.primaryKey])
+            # Check no removeIds in outputDict
+            assert all([not (x in outputDictIDs) for x in sdqlpy_tree.removeColumnIDs])
+        
+        return sdqlpy_tree
+    
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
@@ -1205,6 +1242,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     wire_up_incoming_output_dicts(sdqlpy_tree)
     # # Solve RetrieveNode
     # solveRetrieveNode(sdqlpy_tree)
+    # Use removeColumnIDs information
+    sdqlpy_tree = solveremoveColumnIDs(sdqlpy_tree)
     
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)

@@ -25,6 +25,7 @@ class SDQLpyBaseNode():
         
         self.completedTables = set()
         self.foldedInto = False
+        self.removeColumnIDs = []
     
     def updateReplacementDict(self, update_dictionary: dict):
         self.replacementDict.update(update_dictionary)
@@ -765,6 +766,24 @@ class SDQLpySRDict():
         
         self.value_sr_dict = False
         self.value_vector = False
+        
+    def deleteFromSROnIDs(self, removeIDs):
+        removeKeyPos = []
+        for idx, key in enumerate(self.keys):
+            if id(key) in removeIDs:
+                removeKeyPos.append(idx)
+        removeKeyPos.reverse()
+        for remPos in removeKeyPos:
+            self.keys.pop(remPos)
+            
+        removeValPos = []
+        for idx, val in enumerate(self.values):
+            if id(val) in removeIDs:
+                removeValPos.append(idx)
+        removeValPos.reverse()
+        for remPos in removeValPos:
+            self.values.pop(remPos)
+        
         
     def reduceDuplicates(self, items):
         # Remove duplicates in incoming list of items: either keys or values

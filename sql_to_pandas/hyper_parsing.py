@@ -489,9 +489,6 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     # And, also apply optimisations
     op_tree = uplan_apply_optimisations(op_tree, uplan_opts)
     
-    # Get rid of flowColumns
-    pass
-    
     # Test 1: top node should be OutputNode
     assert audit_universal_plan_tree_outputnode(op_tree)
     # Test 2: all leaf nodes should be ScanNode
