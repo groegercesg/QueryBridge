@@ -1154,6 +1154,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             promote.addChild(sdqlpy_tree.right)
             promote.primaryKey = sdqlpy_tree.right.primaryKey
             promote.foreignKeys = sdqlpy_tree.right.foreignKeys
+            promote.removeColumnIDs = sdqlpy_tree.right.removeColumnIDs
             promote.set_output_dict()
             sdqlpy_tree.right = promote
         elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.left, SDQLpyAggrNode) and is_complex_aggr_in_node(sdqlpy_tree.left):
@@ -1162,6 +1163,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             promote.addChild(sdqlpy_tree.left)
             promote.primaryKey = sdqlpy_tree.left.primaryKey
             promote.foreignKeys = sdqlpy_tree.left.foreignKeys
+            promote.removeColumnIDs = sdqlpy_tree.left.removeColumnIDs
             promote.set_output_dict()
             sdqlpy_tree.left = promote
         elif isinstance(sdqlpy_tree, BinarySDQLpyNode) and isinstance(sdqlpy_tree.right, SDQLpyAggrNode) and is_complex_aggr_in_node(sdqlpy_tree.right):
