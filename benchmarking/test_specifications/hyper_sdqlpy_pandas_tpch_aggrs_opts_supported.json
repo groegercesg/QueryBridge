@@ -1,0 +1,671 @@
+{
+    "Test Name": "Hyper DB TPC-H Test",
+    "Scaling Factors": [1],
+    "Queries": [
+        {
+            "Query Name": "Query 1",
+            "Required Data": ["lineitem"],
+            "SQL Name": "1.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q1_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q1_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q1_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 2",
+            "Required Data": ["part", "supplier", "partsupp", "nation", "region"],
+            "SQL Name": "2.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q2_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q2_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q2_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 3",
+            "Required Data": ["customer", "orders", "lineitem"],
+            "SQL Name": "3.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q3_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q3_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q3_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 4",
+            "Required Data": ["orders", "lineitem"],
+            "SQL Name": "4.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q4_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q4_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q4_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 5",
+            "Required Data": ["customer", "orders", "lineitem", "supplier", "nation", "region"],
+            "SQL Name": "5.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q5_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q5_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q5_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 6",
+            "Required Data": ["lineitem"],
+            "SQL Name": "6.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q6_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q6_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q6_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 7",
+            "Required Data": ["supplier", "lineitem", "orders", "customer", "nation"],
+            "SQL Name": "7.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q7_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q7_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q7_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 8",
+            "Required Data": ["part", "supplier", "lineitem", "orders", "customer", "nation", "region"],
+            "SQL Name": "8.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q8_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q8_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "q8_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 9",
+            "Required Data": ["part", "supplier", "lineitem", "partsupp", "orders", "nation"],
+            "SQL Name": "9.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q9_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q9_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q9_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 10",
+            "Required Data": ["customer", "orders", "lineitem", "nation"],
+            "SQL Name": "10.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q10_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q10_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q10_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 11",
+            "Required Data": ["partsupp", "supplier", "nation"],
+            "SQL Name": "11.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q11_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q11_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q11_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 12",
+            "Required Data": ["orders", "lineitem"],
+            "SQL Name": "12.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q12_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q12_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q12_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 14",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "14.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q14_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q14_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q14_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 15",
+            "Required Data": ["lineitem", "supplier"],
+            "SQL Name": "15_cte.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q15_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q15_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q15_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 16",
+            "Required Data": ["partsupp", "part", "supplier"],
+            "SQL Name": "16.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q16_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q16_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q16_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 17",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "17.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q17_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q17_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q17_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 18",
+            "Required Data": ["customer", "orders", "lineitem"],
+            "SQL Name": "18.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q18_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q18_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q18_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 19",
+            "Required Data": ["lineitem", "part"],
+            "SQL Name": "19.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q19_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q19_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q19_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 20",
+            "Required Data": ["supplier", "nation", "partsupp", "part", "lineitem"],
+            "SQL Name": "20.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q20_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q20_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q20_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 22",
+            "Required Data": ["customer", "orders"],
+            "SQL Name": "22.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q22_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q22_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q22_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        }
+    ],
+    "Temporary Directory": "benchmarking/temp_queries",
+    "SQL Converter Location": "sql_to_pandas/sql_to_pandas.py",
+    "SQL Queries Location": "benchmarking/tpch_no_limit_order_with_aggrs",
+    "Stored Queries Location": "benchmarking/stored_queries",
+    "Pandas Data Loader": "tpch_data_loader.py",
+    "Number of Query Runs": 6,
+    "Results Location": "benchmarking/test_results/hyper_sdqlpy_pandas_tpch_aggrs_opts_test_results.csv",
+    "Postgres Connection Details": "postgres_connection.json",
+    "Duck DB Connection": "duckdb_tpch.duckdb",
+    "Hyper DB Connection": "hyperdb_tpch.hyper",
+    "DB Gen Location": "tpch-dbgen",
+    "Constants Location": "tpch-prep",
+    "Data Storage": "data_storage",
+    "Use Numpy": "False",
+    "Results Precision": 4,
+    "Regenerate Data": "False",
+    "Prepare Only": "HyperDB",
+    "SDQLpy Setup": {
+        "Location": "SDQLPY",
+        "Install Script": "benchmarking/sdqlpy_install.sh",
+        "Queries Directory": "queries",
+        "Bench Run": "benchmarking/bench_run.sh",
+        "Bench Class": "benchmarking/sdqlpy_benchmark_runner.py"
+    },
+    "Order Checking": "False"
+}
