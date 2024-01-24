@@ -738,6 +738,27 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             oldRight = x.right
             x.left = oldRight
             x.right = oldLeft
+        
+        # Change around the primary keys as well
+        outputDictIDs = [id(x) for x in self.outputDict.flatCols()]
+        currentPrimIDs = [id(x) for x in self.primaryKey]
+        if all([x in outputDictIDs for x in currentPrimIDs]):
+            # Primary keys are okay
+            pass
+        else:
+            leftPrimIDs = [id(x) for x in self.left.primaryKey]
+            rightPrimIDs = [id(x) for x in self.right.primaryKey]
+            
+            # Try left
+            if all([x in outputDictIDs for x in leftPrimIDs]):
+                # Set as Left
+                self.primaryKey = self.left.primaryKey
+            # Try right
+            elif all([x in outputDictIDs for x in rightPrimIDs]):
+                # Set as Right
+                self.primaryKey = self.right.primaryKey
+            else:
+                raise Exception("Couldn't determine an appropriate primary key for this node")
     
 # Classes for SDQLpy Constructs
 class SDQLpyNKeyJoin():

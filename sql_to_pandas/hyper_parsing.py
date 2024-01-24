@@ -195,6 +195,8 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
         leftKeys_str = [x.codeName for x in uplan_tree.leftKeys]
         rightKeys_str = [x.codeName for x in uplan_tree.rightKeys]
         
+        joinType = "basic"
+        
         if leftType == ["N"] and rightType == ["N"]:
             # Joining on keys that are neither Primary nor Foreign
             if isinstance(leftNode, ScanNode) and isinstance(rightNode, ScanNode):
@@ -213,6 +215,7 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
                     joinConditionTypes = set([type(uplan_tree.joinCondition)])
                 nonEquiJoinTypes = set([type(x) for x in [GreaterThanEqOperator(), GreaterThanOperator(), LessThanEqOperator(), LessThanOperator()]])
                 # Subset - all items of A are present in B
+                joinType = "non-equi"
                 assert joinConditionTypes.issubset(nonEquiJoinTypes)
         elif "P" in leftType and "P" in rightType:
             # Both left and right are primary
@@ -266,7 +269,28 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
         
         # Set the primary/foreignKeys
         # The primary will be the primary of right
-        uplan_tree.setPrimary(uplan_tree.right.primaryKey)
+        if uplan_tree.joinType == "leftantijoin":
+            flowColumnIDs = [id(x) for x in uplan_tree.flowColumns]
+            leftPrimIDs = [id(x) for x in uplan_tree.left.primaryKey]
+            assert all([x in flowColumnIDs for x in leftPrimIDs])
+            uplan_tree.setPrimary(uplan_tree.left.primaryKey)
+        elif uplan_tree.joinType == "leftsemijoin":
+            flowColumnIDs = [id(x) for x in uplan_tree.flowColumns]
+            leftPrimIDs = [id(x) for x in uplan_tree.left.primaryKey]
+            assert all([x in flowColumnIDs for x in leftPrimIDs])
+            uplan_tree.setPrimary(uplan_tree.left.primaryKey)
+        elif uplan_tree.joinType == "rightantijoin":
+            flowColumnIDs = [id(x) for x in uplan_tree.flowColumns]
+            rightPrimIDs = [id(x) for x in uplan_tree.right.primaryKey]
+            assert all([x in flowColumnIDs for x in rightPrimIDs])
+            uplan_tree.setPrimary(uplan_tree.right.primaryKey)
+        elif uplan_tree.joinType == "rightsemijoin":
+            flowColumnIDs = [id(x) for x in uplan_tree.flowColumns]
+            rightPrimIDs = [id(x) for x in uplan_tree.right.primaryKey]
+            assert all([x in flowColumnIDs for x in rightPrimIDs])
+            uplan_tree.setPrimary(uplan_tree.right.primaryKey)
+        else:
+            uplan_tree.setPrimary(uplan_tree.right.primaryKey)
             
         # Set foreign keys
         uplan_tree.addForeign(uplan_tree.left.foreignKeys)
