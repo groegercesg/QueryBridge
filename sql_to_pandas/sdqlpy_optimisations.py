@@ -245,10 +245,33 @@ def opt_pipe_break(sdqlpy_tree):
         
         return currentNodes
     
+    def resolve_incoming_dicts(sdqlpy_tree):
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = resolve_incoming_dicts(sdqlpy_tree.left)
+            rightNode = resolve_incoming_dicts(sdqlpy_tree.right)
+            
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+            
+            sdqlpy_tree.incomingDicts = [sdqlpy_tree.left.outputDict, sdqlpy_tree.right.outputDict]
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = resolve_incoming_dicts(sdqlpy_tree.child)
+            
+            sdqlpy_tree.child = childNode
+            
+            sdqlpy_tree.incomingDict = sdqlpy_tree.child.outputDict
+        else:
+            assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
+            
+        return sdqlpy_tree
+        
+    
     pipe_break_run(sdqlpy_tree)
     allNodesInTree = surface_all_nodes(sdqlpy_tree)
     nonPipelineBreakers = list(filter(lambda x: (x not in PIPELINE_BREAKERS) and not (x == SDQLpyRecordNode), allNodesInTree))
     assert len(nonPipelineBreakers) == 0
+    
+    sdqlpy_tree = resolve_incoming_dicts(sdqlpy_tree)
     
     return sdqlpy_tree
 
@@ -312,6 +335,12 @@ def opt_v_fold(sdqlpy_tree):
                     
                     # Set the outputDict
                     sdqlpy_tree.child.outputDict = sdqlpy_tree.outputDict
+                    # Set the incomingDict
+                    if isinstance(sdqlpy_tree.child, BinarySDQLpyNode):
+                        sdqlpy_tree.child.incomingDicts = [sdqlpy_tree.child.left.outputDict, sdqlpy_tree.child.right.outputDict]
+                    else:
+                        raise Exception("Must be a Binary SDQLpy Node")
+                    
                     # Carry the primary and foreign
                     sdqlpy_tree.child.primaryKey = sdqlpy_tree.primaryKey
                     sdqlpy_tree.child.foreignKeys = sdqlpy_tree.foreignKeys
@@ -330,6 +359,12 @@ def opt_v_fold(sdqlpy_tree):
                     
                     # Set the outputDict
                     sdqlpy_tree.child.outputDict = sdqlpy_tree.outputDict
+                    # Set the incomingDict
+                    if isinstance(sdqlpy_tree.child, UnaryBaseNode):
+                        sdqlpy_tree.child.incomingDict = sdqlpy_tree.child.child.outputDict
+                    else:
+                        raise Exception("Must be a Unary SDQLpy Node")
+                
                     # Carry the primary and foreign
                     sdqlpy_tree.child.primaryKey = sdqlpy_tree.primaryKey
                     sdqlpy_tree.child.foreignKeys = sdqlpy_tree.foreignKeys

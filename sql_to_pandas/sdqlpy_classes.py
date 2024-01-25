@@ -976,11 +976,14 @@ class SDQLpySRDict():
             assert isinstance(node, SDQLpyAggrNode)
             #self.keys.append(self.values.pop(0))
         
-        keys = node.incomingDict.flatKeys()
-        values = node.incomingDict.flatVals()
+        assert isinstance(node, UnarySDQLpyNode)
+        keys = node.child.outputDict.flatKeys()
+        values = node.child.outputDict.flatVals()
+        
         # Reduce keys and values
         self.keys = self.reduceDuplicates(self.keys)
         self.values = self.reduceDuplicates(self.values)
+        
         # Assign sourceNode to the Column Values
         for key in self.keys:
             setSourceNodeColumnValues(key, lambda_idx_key, keys, lambda_idx_val, values)
