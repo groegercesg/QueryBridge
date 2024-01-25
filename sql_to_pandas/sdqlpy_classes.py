@@ -972,13 +972,12 @@ class SDQLpySRDict():
     
     def generateSDQLpyOneLambda(self, unparser, lambda_idx_key, lambda_idx_val, node):
         if len(self.keys) == 0 and len(self.values) > 1:
-            # If many values, check we're in an Aggr
+            # If many values and no keys, check we're in an Aggr
             assert isinstance(node, SDQLpyAggrNode)
             #self.keys.append(self.values.pop(0))
         
-        assert isinstance(node, UnarySDQLpyNode)
-        keys = node.child.outputDict.flatKeys()
-        values = node.child.outputDict.flatVals()
+        keys = node.incomingDict.flatKeys()
+        values = node.incomingDict.flatVals()
         
         # Reduce keys and values
         self.keys = self.reduceDuplicates(self.keys)
