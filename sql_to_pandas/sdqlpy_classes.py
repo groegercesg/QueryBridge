@@ -716,7 +716,49 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
             )
         innerRecord = f"{{{', '.join(lr_pairs)}}}"
         return f"{leftTable}[record({innerRecord})]"
-
+    
+    def segmentComparingTreeIntoBeforeAndAfterLookup(self, unparser, leftTableRef):
+        # Segment the comparingTree into before Lookup and after Lookup
+        def gather_before_after(expr):
+            beforeLookup = []
+            afterLookup = []
+            
+            if isinstance(expr, AndOperator):
+                leftSide = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(expr.left)
+                rightSide = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(expr.right)
+            
+                if leftTableRef in leftSide:
+                    afterLookup.append(expr.left)
+                else:
+                    beforeLookup.append(expr.left)
+                    
+                if leftTableRef in rightSide:
+                    afterLookup.append(expr.right)
+                else:
+                    beforeLookup.append(expr.right)
+            else:
+                afterLookup.append(expr)
+                
+            return beforeLookup, afterLookup
+            
+        before, after = gather_before_after(self.comparingTree)
+        if len(before) == 2:
+            before = [join_statements_with_operator(before, "AndOperator")]
+        
+        assert ((len(before) == 1) or (len(before) == 0)) and ((len(after) == 1) or (len(after) == 0))
+        
+        if len(before) == 0:
+            beforeCondition = None
+        else:
+            beforeCondition = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(before[0])
+        
+        if len(after) == 0:
+            afterCondition = None
+        else:            
+            afterCondition = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(after[0])
+        
+        return beforeCondition, afterCondition
+    
     def swapLeftAndRight(self):
         # Swap left and right
         new_right = self.left

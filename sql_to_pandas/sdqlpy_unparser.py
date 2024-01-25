@@ -543,25 +543,36 @@ class UnparseSDQLpyTree():
             elif node.equatingConditions != [] and node.comparingTree != None:
                 # Assign sources for the comparing condition
                 node.set_sources_for_comparing_condition(leftTableRef, f"{lambda_index}[0]", f"{lambda_index}[1]")
-                otherJoinComparison = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
-                canDoJoinComparisonFirst = not (leftTableRef in otherJoinComparison)
+                beforeJoinComparison, afterJoinComparison = node.segmentComparingTreeIntoBeforeAndAfterLookup(self, leftTableRef)
                 # reset sources, so as to not cause issues later down the line
                 resetColumnValues(node.comparingTree)
                 
-                if canDoJoinComparisonFirst:
+                if beforeJoinComparison != None and afterJoinComparison != None:
                     self.writeTempContent(
                         f"{TAB}if\n"
-                        f"{TAB}{TAB}({otherJoinComparison}) and {leftTableRef} {joinComparator} None\n"
+                        f"{TAB}{TAB}({beforeJoinComparison}) and {leftTableRef} {joinComparator} None and ({afterJoinComparison})\n"
                         f"{TAB}else\n"
                         f"{TAB}{TAB}None"
                     )
+                elif beforeJoinComparison == None and afterJoinComparison != None:
+                    self.writeTempContent(
+                        f"{TAB}if\n"
+                        f"{TAB}{TAB}{leftTableRef} {joinComparator} None and ({afterJoinComparison})\n"
+                        f"{TAB}else\n"
+                        f"{TAB}{TAB}None"
+                    )
+                elif beforeJoinComparison != None and afterJoinComparison == None:
+                    self.writeTempContent(
+                        f"{TAB}if\n"
+                        f"{TAB}{TAB}({beforeJoinComparison}) and {leftTableRef} {joinComparator} None\n"
+                        f"{TAB}else\n"
+                        f"{TAB}{TAB}None"
+                    )
+                elif beforeJoinComparison == None and afterJoinComparison == None:
+                    pass
                 else:
-                    self.writeTempContent(
-                        f"{TAB}if\n"
-                        f"{TAB}{TAB}{leftTableRef} {joinComparator} None and ({otherJoinComparison})\n"
-                        f"{TAB}else\n"
-                        f"{TAB}{TAB}None"
-                    )
+                    raise Exception("Unrecognised Join Condition")
+                    
             else:
                 assert node.equatingConditions == [] and node.comparingTree == None
                 raise Exception(f"Illogical format of join")
