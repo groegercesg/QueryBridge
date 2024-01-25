@@ -3,9 +3,9 @@
     "Scaling Factors": [1],
     "Queries": [
         {
-            "Query Name": "Query 22",
+            "Query Name": "Query 13",
             "Required Data": ["customer", "orders"],
-            "SQL Name": "22.sql",
+            "SQL Name": "13.sql",
             "Options": [
                 {
                     "Type": "SQL",
@@ -14,14 +14,39 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy.py",
+                    "Converted Name": "hyper_q13_sdqlpy.py",
                     "Results Name": "SDQLpy Converted (Hyper DB)",
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "Pandas",
                     "Converter": "True",
-                    "Converted Name": "hyper_q22_pandas.py",
+                    "Converted Name": "hyper_q13_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                }
+            ]
+        },
+        {
+            "Query Name": "Query 21",
+            "Required Data": ["customer", "orders"],
+            "SQL Name": "21.sql",
+            "Options": [
+                {
+                    "Type": "SQL",
+                    "Results Name": "Hyper DB",
+                    "DBMS": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q21_sdqlpy.py",
+                    "Results Name": "SDQLpy Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q21_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
                     "Query Plan": "Hyper DB"
                 }
