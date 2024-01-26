@@ -1338,9 +1338,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 removes.reverse()
                 for remIdx in removes:
                     sdqlpy_tree.left.outputDict.keys.pop(remIdx)
-                
-                
-                pass
             else:
                 pass
         else:

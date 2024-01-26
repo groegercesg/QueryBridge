@@ -482,19 +482,18 @@ class UnparseSDQLpyTree():
             rightIds = [id(x) for x in node.right.outputDict.flatCols()]
             leftKeyIds = [id(x) for x in node.left.outputDict.flatKeys()]
             leftValIds = [id(x) for x in node.left.outputDict.flatVals()]
-            removes = []
             for idx, val in enumerate(node.outputDict.flatCols()):
                 if id(val) in rightIds:
                     pass
                 elif id(val) in leftKeyIds:
                     val.no_source = True
                     val.new_value = f"{lambda_index}[0].{node.equatingConditions[0].right.codeName}"
-                    # removes.append(idx)
                 elif id(val) in leftValIds:
                     val.just_source = True
-            removes.reverse()
-            for rem in removes:
-                node.outputDict.keys.pop(rem)
+            gatheredCompTreeColumns = getColumnsFromGatherColumns(node.comparingTree)
+            for val in gatheredCompTreeColumns:        
+                if id(val) in leftValIds:
+                    val.just_source = True
             
             leftTable_ref = node.make_leftTableRef(self, lambda_index)
             
@@ -532,6 +531,9 @@ class UnparseSDQLpyTree():
                 if hasattr(val, "new_value"):
                     delattr(val, "new_value")
                     val.no_source = False
+            
+            for val in gatheredCompTreeColumns:        
+                val.just_source = False
             
         elif node.joinMethod == "bnl":
             self.writeTempContent(

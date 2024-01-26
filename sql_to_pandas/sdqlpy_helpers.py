@@ -1,5 +1,27 @@
 from expression_operators import *
 
+def gatherColumns(in_col):
+    current_types = []
+    if isinstance(in_col, BinaryExpressionOperator):
+        leftTypes = gatherColumns(in_col.left)
+        rightTypes = gatherColumns(in_col.right)
+
+        current_types.extend(leftTypes)
+        current_types.extend(rightTypes)
+    elif isinstance(in_col, UnaryExpressionOperator):
+        childTypes = gatherColumns(in_col.child)
+        
+        current_types.extend(childTypes)
+    else:
+        pass
+    
+    current_types.append(in_col)
+    return current_types
+        
+def getColumnsFromGatherColumns(filter_cond):
+    filterColumns = list(filter(lambda x: type(x) == ColumnValue, gatherColumns(filter_cond)))
+    return filterColumns
+
 def setSourceNodeByIDs(value, l_lambda_idx_key, l_keys_IDs,
                                l_lambda_idx_val, l_values_IDs, 
                                r_lambda_idx_key, r_keys_IDs,
