@@ -258,7 +258,7 @@ class UnparseSDQLpyTree():
             f"{TAB}if\n"
             f"{TAB}{TAB}{filterContent}\n"
             f"{TAB}else\n"
-            f"{TAB}{TAB}None\n"
+            f"{TAB}{TAB}None"
         )
         
         if node.outputDict.is_not_update_sum == True:
@@ -305,7 +305,7 @@ class UnparseSDQLpyTree():
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{filterContent}\n"
                 f"{TAB}else\n"
-                f"{TAB}{TAB}None\n"
+                f"{TAB}{TAB}None"
             )
             
             if node.outputDict.is_not_update_sum == True:
