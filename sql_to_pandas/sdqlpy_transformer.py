@@ -338,17 +338,20 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     
                 assert tableKeys != []
                 
-                jbNode = SDQLpyJoinBuildNode(
-                    tableKeys,
-                    list(sdqlpy_tree.left.outputDict.flatCols())
-                )
-                jbNode.addChild(sdqlpy_tree.left)
-                jbNode.setCardinality(jbNode.child.cardinality)
-                # Set primary and foreign
-                jbNode.primaryKey = tuple(tableKeys)
-                jbNode.foreignKeys = sdqlpy_tree.left.foreignKeys
-                jbNode.removeColumnIDs = sdqlpy_tree.left.removeColumnIDs
-                sdqlpy_tree.left = jbNode
+                if isinstance(sdqlpy_tree.left, SDQLpyJoinNode) and hasattr(sdqlpy_tree.left, "is_special_inner_join") and sdqlpy_tree.left.is_special_inner_join == True:
+                    pass
+                else:
+                    jbNode = SDQLpyJoinBuildNode(
+                        tableKeys,
+                        list(sdqlpy_tree.left.outputDict.flatCols())
+                    )
+                    jbNode.addChild(sdqlpy_tree.left)
+                    jbNode.setCardinality(jbNode.child.cardinality)
+                    # Set primary and foreign
+                    jbNode.primaryKey = tuple(tableKeys)
+                    jbNode.foreignKeys = sdqlpy_tree.left.foreignKeys
+                    jbNode.removeColumnIDs = sdqlpy_tree.left.removeColumnIDs
+                    sdqlpy_tree.left = jbNode
             elif isinstance(sdqlpy_tree.left, (SDQLpyAggrNode, SDQLpyPromoteToFloatNode)):
                 # We shouldn't index on an aggr/or a promoteToFloat node
                 assert len(sdqlpy_tree.left.outputDict.flatCols()) == 1
@@ -1277,6 +1280,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 innerJoin.set_output_dict()
                 innerJoin.primaryKey = (equalCond.right, )
                 innerJoin.setCardinality(-1)
+                innerJoin.is_special_inner_join = True
                 
                 # Overall Join
                 if "left" in sdqlpy_tree.joinType:
@@ -1300,6 +1304,47 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                 overallJoin.setCardinality(sdqlpy_tree.cardinality)
                 
                 sdqlpy_tree = overallJoin
+        
+        return sdqlpy_tree
+    
+    def fixSpecialInnerJoin(sdqlpy_tree):
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = fixSpecialInnerJoin(sdqlpy_tree.left)
+            rightNode = fixSpecialInnerJoin(sdqlpy_tree.right)
+            
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = fixSpecialInnerJoin(sdqlpy_tree.child)
+            
+            sdqlpy_tree.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        # is_special_inner_join
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            if isinstance(sdqlpy_tree.left, SDQLpyJoinNode) and hasattr(sdqlpy_tree.left, "is_special_inner_join") and sdqlpy_tree.left.is_special_inner_join == True:
+                
+                # Set the outputDict of sdqlpy_tree.left correctly
+                # It should only contain sdqlpy_tree.leftKeys
+                removes = []
+                leftKeysIDs = [id(x) for x in sdqlpy_tree.leftKeys]
+                for idx, val in enumerate(sdqlpy_tree.left.outputDict.keys):
+                    if id(val) in leftKeysIDs:
+                        pass
+                    else:
+                        removes.append(idx)
+                removes.reverse()
+                for remIdx in removes:
+                    sdqlpy_tree.left.outputDict.keys.pop(remIdx)
+                
+                
+                pass
+            else:
+                pass
+        else:
+            pass
         
         return sdqlpy_tree
     
@@ -1351,6 +1396,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     # solveRetrieveNode(sdqlpy_tree)
     # Use removeColumnIDs information
     sdqlpy_tree = solveRemoveColumnIDs(sdqlpy_tree)
+    # Trim SpecialInnerJoin
+    sdqlpy_tree = fixSpecialInnerJoin(sdqlpy_tree)
     
     # Order the topNode correctly
     orderTopNode(sdqlpy_tree, output_cols_order)

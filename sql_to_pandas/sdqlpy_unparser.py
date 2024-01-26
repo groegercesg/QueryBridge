@@ -411,7 +411,8 @@ class UnparseSDQLpyTree():
         
         # Check its a Valid setup
         if (((isinstance(node.left, (SDQLpyJoinBuildNode, SDQLpyAggrNode, SDQLpyPromoteToFloatNode))) or (isinstance(node.left, (SDQLpyFilterNode, SDQLpyJoinNode)) and node.left.foldedInto == True)) and (isinstance(node.right, (SDQLpyRecordNode, SDQLpyJoinNode, SDQLpyFilterNode, SDQLpyConcatNode, SDQLpyGroupNode, SDQLpyRetrieveNode, SDQLpyPromoteToFloatNode))) or
-            (isinstance(node.left, SDQLpyRecordNode) and isinstance(node.right, SDQLpyRecordNode) and node.joinMethod == "bnl")):
+            (isinstance(node.left, SDQLpyRecordNode) and isinstance(node.right, SDQLpyRecordNode) and node.joinMethod == "bnl") or
+            (isinstance(node.left, SDQLpyJoinNode) and len(node.left.outputDict.flatCols()) == 1)):
             pass
         else:
             raise Exception("Invalid/Unsupported Left and Right Layout")
@@ -473,9 +474,9 @@ class UnparseSDQLpyTree():
                     f"{TAB}{TAB}{output_line}"
                 )
             
-        elif node.left.vectorValue == True:
+        elif hasattr(node.left, "vectorValue") and node.left.vectorValue == True:
             assert node.left.vectorValue == True
-            node.set_output_dict()
+            # node.set_output_dict()
             
             # remove left key from output_dict
             rightIds = [id(x) for x in node.right.outputDict.flatCols()]
@@ -531,7 +532,6 @@ class UnparseSDQLpyTree():
                 if hasattr(val, "new_value"):
                     delattr(val, "new_value")
                     val.no_source = False
-                    pass
             
         elif node.joinMethod == "bnl":
             self.writeTempContent(
