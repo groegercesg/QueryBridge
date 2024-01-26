@@ -26,7 +26,7 @@ Q11  ->  Done
 
 Q12  ->  Done
 
-Q13  ->  Results not quite right, SDQLpy issue?
+Q13  ->  Done
 
 Q14  ->  Done
 
@@ -42,6 +42,6 @@ Q19  ->  Done
 
 Q20  ->  Done
 
-Q21  ->  SDQLpy issue, then needs added to Code Generator
+Q21  ->  Done
 
 Q22  ->  Done
