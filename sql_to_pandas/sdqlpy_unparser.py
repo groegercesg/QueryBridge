@@ -979,10 +979,15 @@ class UnparseSDQLpyTree():
                 expression_output = self.__handle_SubstringOperator(expr_tree)
             case LookupOperator():
                 expression_output = self.__handle_LookupOperator(expr_tree)
+            case SDQLpyRegexMatch():
+                expression_output = self.__handle_SDQLpyRegexMatch(expr_tree, leftNode, rightNode)
             case _: 
                 raise Exception(f"Unrecognised expression operator: {type(expr_tree)}")
 
         return expression_output
+    
+    def __handle_SDQLpyRegexMatch(self, expr: SDQLpyRegexMatch, leftValue: str, rightValue: str) -> str:
+        return f"regexMatch({leftValue}, {rightValue})"
     
     def __handle_LookupOperator(self, expr: LookupOperator) -> str:
         assert len(expr.comparisons) / len(expr.values) % 2 == 0
@@ -1166,54 +1171,59 @@ class UnparseSDQLpyTree():
             column_value = self.__convert_expression_operator_to_sdqlpy(expr.value)
             return f"{comparator_value} in {column_value}"
         elif expr.comparator.value.count("%") > 2:
-            assert expr.comparator.value[0] == "%" and expr.comparator.value[-1] == "%"
-            # use FirstIndex
-            # Split comparator into many values
-            many_comparators = list(filter(None, expr.comparator.value.split("%")))
+            # assert expr.comparator.value[0] == "%" and expr.comparator.value[-1] == "%"
+            # # use FirstIndex
+            # # Split comparator into many values
+            # many_comparators = list(filter(None, expr.comparator.value.split("%")))
             
-            comparator_values = []
-            for comparator_string in many_comparators:
-                comparator = ConstantValue(comparator_string, expr.comparator.type)
-                comparator_values.append(comparator)
+            # comparator_values = []
+            # for comparator_string in many_comparators:
+            #     comparator = ConstantValue(comparator_string, expr.comparator.type)
+            #     comparator_values.append(comparator)
             
-            # Check the First Index of Each aren't -1
-            comparators_checks = []
-            for comparator in comparator_values:
-                # Create comparator Value
-                firstIndex = SDQLpyFirstIndex()
-                firstIndex.left = expr.value
-                firstIndex.right = comparator
-                notEqual = NotEqualsOperator()
-                notEqual.left = firstIndex
-                minusOne = ConstantValue(-1, "Integer")
-                minusOne.setForceInteger(True)
-                notEqual.right = minusOne
-                comparators_checks.append(notEqual)
+            # # Check the First Index of Each aren't -1
+            # comparators_checks = []
+            # for comparator in comparator_values:
+            #     # Create comparator Value
+            #     firstIndex = SDQLpyFirstIndex()
+            #     firstIndex.left = expr.value
+            #     firstIndex.right = comparator
+            #     notEqual = NotEqualsOperator()
+            #     notEqual.left = firstIndex
+            #     minusOne = ConstantValue(-1, "Integer")
+            #     minusOne.setForceInteger(True)
+            #     notEqual.right = minusOne
+            #     comparators_checks.append(notEqual)
                 
-            # Reverse comparator_values
-            comparator_values.reverse()
-            # Check for each comparator, the firstIndex is > firstIndex of the Next + (len(next) - 1)
-            for i in range(0, len(comparator_values) - 1):
-                leftPosition = SDQLpyFirstIndex()
-                leftPosition.left = expr.value
-                leftPosition.right = comparator_values[i]
-                rightPostion = SDQLpyFirstIndex()
-                rightPostion.left = expr.value
-                rightPostion.right = comparator_values[i + 1]
-                rightLocation = AddOperator()
-                rightLocation.left = rightPostion
-                rightSize = ConstantValue(len(comparator_values[i + 1].value) - 1, "Integer")
-                rightSize.setForceInteger(True)
-                rightLocation.right = rightSize
-                positionCompare = GreaterThanOperator()
-                positionCompare.left = leftPosition
-                positionCompare.right = rightLocation
-                comparators_checks.append(positionCompare)
+            # # Reverse comparator_values
+            # comparator_values.reverse()
+            # # Check for each comparator, the firstIndex is > firstIndex of the Next + (len(next) - 1)
+            # for i in range(0, len(comparator_values) - 1):
+            #     leftPosition = SDQLpyFirstIndex()
+            #     leftPosition.left = expr.value
+            #     leftPosition.right = comparator_values[i]
+            #     rightPostion = SDQLpyFirstIndex()
+            #     rightPostion.left = expr.value
+            #     rightPostion.right = comparator_values[i + 1]
+            #     rightLocation = AddOperator()
+            #     rightLocation.left = rightPostion
+            #     rightSize = ConstantValue(len(comparator_values[i + 1].value) - 1, "Integer")
+            #     rightSize.setForceInteger(True)
+            #     rightLocation.right = rightSize
+            #     positionCompare = GreaterThanOperator()
+            #     positionCompare.left = leftPosition
+            #     positionCompare.right = rightLocation
+            #     comparators_checks.append(positionCompare)
             
-            # Join with ANDs
-            and_join = join_statements_with_operator(comparators_checks, "AndOperator")
+            # # Join with ANDs
+            # and_join = join_statements_with_operator(comparators_checks, "AndOperator")
             
-            return self.__convert_expression_operator_to_sdqlpy(and_join)
+            # Use RegexMatch
+            reg = SDQLpyRegexMatch()
+            reg.addLeft(expr.value)
+            reg.addRight(expr.comparator)
+            
+            return self.__convert_expression_operator_to_sdqlpy(reg)
         else:
             # Unknown number of percentages
             # Should use "startsWith"/"endsWith" macros from SDQLpy
@@ -1227,7 +1237,7 @@ class UnparseSDQLpyTree():
         if expr.type == "String":
             # Save value in variableDict
             variableString = str(expr.value)
-            newVariable = variableString.replace(" ", "_").replace("#", "").replace("-", "").lower()
+            newVariable = variableString.replace(" ", "_").replace("#", "").replace("-", "").replace("%", "").lower()
             
             # Fix a new variable is all integers
             if newVariable.isdigit():

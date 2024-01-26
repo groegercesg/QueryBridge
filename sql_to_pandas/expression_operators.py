@@ -360,3 +360,7 @@ class SDQLpyColumnValue(LeafNode):
     def __init__(self):
         super().__init__()
         
+class SDQLpyRegexMatch(BinaryExpressionOperator):
+    def __init__(self):
+        super().__init__()
+        

@@ -19,6 +19,13 @@
                     "Query Plan": "Hyper DB"
                 },
                 {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q13_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "hyper_q13_pandas.py",
@@ -44,6 +51,13 @@
                     "Query Plan": "Hyper DB"
                 },
                 {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q21_sdqlpy_both.py",
+                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
                     "Type": "Pandas",
                     "Converter": "True",
                     "Converted Name": "hyper_q21_pandas.py",
@@ -59,7 +73,7 @@
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 1,
-    "Results Location": "benchmarking/test_results/hyper_sdqlpy_pandas_tpch_aggrs_problems_test_results.csv",
+    "Results Location": "benchmarking/test_results/hyper_sdqlpy_pandas_tpch_aggrs_opts_problems_test_results.csv",
     "Postgres Connection Details": "postgres_connection.json",
     "Duck DB Connection": "duckdb_tpch.duckdb",
     "Hyper DB Connection": "hyperdb_tpch.hyper",
