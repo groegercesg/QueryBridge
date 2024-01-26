@@ -678,22 +678,6 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     sdqlpy_tree = sdqlpy_tree.right
                     
         return sdqlpy_tree
-    
-    def set_update_sum_for_highest_join(sdqlpy_tree):
-        match sdqlpy_tree:
-            case SDQLpyJoinNode():
-                sdqlpy_tree.update_update_sum(True)
-                return
-        
-        # Post Order traversal: Visit Children
-        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
-            set_update_sum_for_highest_join(sdqlpy_tree.left)
-            set_update_sum_for_highest_join(sdqlpy_tree.right)
-        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
-            set_update_sum_for_highest_join(sdqlpy_tree.child)
-        else:
-            # A leaf node
-            pass
         
     def solveSDQLpySpecificOrderJoins(sdqlpy_tree):
         # Post Order traversal: Visit Children

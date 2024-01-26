@@ -427,8 +427,6 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.outputDict = None
         self.sdqlrepr = "join"
         self.third_node = None
-        self.is_update_sum = False
-        
         self.equatingConditions = []
         self.comparingTree = None
         
@@ -436,10 +434,6 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         self.rightKeys = incomingRightKeys
         
         self.output_dict_value_sr_dict = False
-        
-    def update_update_sum(self, newValue):
-        assert isinstance(newValue, bool)
-        self.is_update_sum = newValue
         
     def set_output_dict(self, no_sumaggr_warn=False):
         assert (self.left != None) and (self.right != None)
@@ -840,6 +834,11 @@ class SDQLpySRDict():
         
         self.value_sr_dict = False
         self.value_vector = False
+        self.is_not_update_sum = False
+        
+    def set_is_not_update_sum(self, newValue):
+        assert isinstance(newValue, bool)
+        self.is_not_update_sum = newValue
         
     def deleteFromSROnIDs(self, removeIDs):
         removeKeyPos = []

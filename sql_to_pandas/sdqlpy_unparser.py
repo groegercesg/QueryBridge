@@ -259,6 +259,14 @@ class UnparseSDQLpyTree():
             f"{TAB}{TAB}{filterContent}\n"
             f"{TAB}else\n"
             f"{TAB}{TAB}None\n"
+        )
+        
+        if node.outputDict.is_not_update_sum == True:
+            self.writeContent(
+                f"{TAB}, False"
+            )
+        
+        self.writeContent(
             f")"
         )
     
@@ -298,6 +306,14 @@ class UnparseSDQLpyTree():
                 f"{TAB}{TAB}{filterContent}\n"
                 f"{TAB}else\n"
                 f"{TAB}{TAB}None\n"
+            )
+            
+            if node.outputDict.is_not_update_sum == True:
+                self.writeContent(
+                    f"{TAB}, False"
+                )
+            
+            self.writeContent(
                 f")"
             )
         
@@ -322,9 +338,15 @@ class UnparseSDQLpyTree():
                 f"{TAB}{TAB}}}\n"
                 f"{TAB})"
             )
-            self.writeContent(
-                ")): True})"
-            )
+            
+            if node.outputDict.is_not_update_sum == True:
+                self.writeContent(
+                    ")): True}, False)"
+                )
+            else:
+                self.writeContent(
+                    ")): True})"
+                )
         elif node.promote_to_float == True:
             # Use the incomingDict, as this has values separated.
             self.writeContent(
@@ -337,14 +359,25 @@ class UnparseSDQLpyTree():
             generatedOutput = generatedOutput[2:-1]
             assert len(generatedOutput) == 1
             self.writeContent(generatedOutput[0])
-            self.writeContent(
-                ")): True})"
-            )
+            if node.outputDict.is_not_update_sum == True:
+                self.writeContent(
+                    ")): True}, False)"
+                )
+            else:
+                self.writeContent(
+                    ")): True})"
+                )
         else:        
             # Do the summation at the end
-            self.writeContent(
-                f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}})"
-            )
+            if node.outputDict.is_not_update_sum == True:
+                self.writeContent(
+                    f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}}, False)"
+                )
+            else:
+                self.writeContent(
+                    f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}})"
+                )
+            
         
     def visit_SDQLpyJoinBuildNode(self, node):
         # Get child name
@@ -388,6 +421,11 @@ class UnparseSDQLpyTree():
             )
         
         node.outputDict.set_created(self)
+        
+        if node.outputDict.is_not_update_sum == True:
+            self.writeContent(
+                f"{TAB}, False"
+            )
         
         self.writeContent(
             f")"
@@ -672,6 +710,11 @@ class UnparseSDQLpyTree():
         assert node.filterContent == None
         assert hasattr(node, "postJoinFilters") == False
             
+        if node.outputDict.is_not_update_sum == True:
+            self.writeTempContent(
+                f"{TAB}, False"
+            )
+        
         self.writeTempContent(
             f")"
         )
@@ -721,6 +764,11 @@ class UnparseSDQLpyTree():
             )
         
         node.outputDict.set_created(self)
+        
+        if node.outputDict.is_not_update_sum == True:
+            self.writeContent(
+                f"{TAB}, False"
+            )
         
         self.writeContent(
             f")"
@@ -808,6 +856,11 @@ class UnparseSDQLpyTree():
         node.outputDict.set_created(self)
         
         if node.repeated_aggr != True:
+            if node.outputDict.is_not_update_sum == True:
+                self.writeContent(
+                    f"{TAB}, False"
+                )
+            
             self.writeContent(
                 f")"
             )

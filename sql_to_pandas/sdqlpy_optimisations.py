@@ -6,6 +6,7 @@ from sdqlpy_helpers import *
 class SupportedOptimisations(Enum):
     PIPE_BREAK = "PipelineBreaker"
     V_FOLD = "VerticalFolding"
+    UPDATE_SUM = "UpdateSum"
     
     @staticmethod
     def has_value(item):
@@ -13,7 +14,8 @@ class SupportedOptimisations(Enum):
 
 OPTIMISATIONS_ORDER = [
     SupportedOptimisations.PIPE_BREAK,
-    SupportedOptimisations.V_FOLD
+    SupportedOptimisations.V_FOLD,
+    SupportedOptimisations.UPDATE_SUM
 ]
 
 def optimisation_runner(sdqlpy_tree, inOpt):
@@ -22,6 +24,8 @@ def optimisation_runner(sdqlpy_tree, inOpt):
             sdqlpy_tree = opt_pipe_break(sdqlpy_tree)
         case SupportedOptimisations.V_FOLD.value:
             sdqlpy_tree = opt_v_fold(sdqlpy_tree)
+        case SupportedOptimisations.UPDATE_SUM.value:
+            sdqlpy_tree = opt_update_sum(sdqlpy_tree)
         case _:
             raise Exception(f"The optimisation: {inOpt} was not recognised.")
         
@@ -390,4 +394,29 @@ def opt_v_fold(sdqlpy_tree):
         return sdqlpy_tree
     
     sdqlpy_tree = v_fold_run(sdqlpy_tree)
+    return sdqlpy_tree
+
+def opt_update_sum(sdqlpy_tree):
+    def update_sum_run(sdqlpy_tree):
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = update_sum_run(sdqlpy_tree.left)
+            rightNode = update_sum_run(sdqlpy_tree.right)
+            
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = update_sum_run(sdqlpy_tree.child)
+            
+            sdqlpy_tree.child = childNode
+        else:
+            assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
+            
+        if (sdqlpy_tree.outputDict.duplicateCounter == False) and len(sdqlpy_tree.outputDict.flatVals()) == 0:
+            # Is not an UpdateSum - we know that the key is unique
+            # So we can pass in "False"
+            sdqlpy_tree.outputDict.set_is_not_update_sum(True)
+        
+        return sdqlpy_tree
+    
+    sdqlpy_tree = update_sum_run(sdqlpy_tree)    
     return sdqlpy_tree
