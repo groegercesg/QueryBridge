@@ -332,6 +332,7 @@ class SDQLpyRetrieveNode(LeafSDQLpyNode):
     def __init__(self, tableColumns, targetID):
         super().__init__()
         self.tableColumns = tableColumns
+        assert targetID != None and isinstance(targetID, int)
         self.targetID = targetID
         self.outputDict = None
         self.sdqlrepr = "retrieve"

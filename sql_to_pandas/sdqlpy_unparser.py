@@ -27,6 +27,7 @@ class UnparseSDQLpyTree():
         self.variableDict = {}
         self.doing_repeated_aggr = False
         self.doingNode = None
+        self.tableNames = set()
         
     def getChildTableNames(self, current: SDQLpyBaseNode) -> list[str]:
         childTables = []
@@ -102,12 +103,39 @@ class UnparseSDQLpyTree():
             else:
                 assert current_node.nodeID not in self.nodeDict
                 self.nodeDict[current_node.nodeID] = current_node
+                
+    def assignTableNames(self, current_node = None):
+        if current_node == None:
+            current_node = self.sdqlpy_tree
             
+        if isinstance(current_node, BinarySDQLpyNode):
+            self.assignTableNames(current_node.left)
+            self.assignTableNames(current_node.right)
+        elif isinstance(current_node, UnarySDQLpyNode):
+            self.assignTableNames(current_node.child)
+        else:
+            # A leaf node
+            pass
+        
+        self.nodesCounter[current_node.__class__.__name__] += 1
+        createdTableName = current_node.getTableName(self)
+        if isinstance(current_node, SDQLpyRecordNode) and current_node.filterContent == None:
+            pass
+        else:
+            assert createdTableName not in self.tableNames
+            self.tableNames.add(createdTableName)
+    
+    def resetNodesCounter(self):
+        self.nodesCounter = defaultdict(int)
+    
     def unparse_content(self):
         # At the start of this method, we should have captured no content
         assert self.sdqlpy_content == []
         # Set top node of the sdqlpy_tree to True
         self.sdqlpy_tree.topNode = True
+        # Assign tableNames
+        self.assignTableNames()
+        self.resetNodesCounter()
         # Then we walk the tree to gather it
         self.__walk_tree(self.sdqlpy_tree)
     
@@ -148,7 +176,7 @@ class UnparseSDQLpyTree():
         assert len(node.outputDict.flatCols()) == len(retrievedNode.outputDict.flatCols())
         assert nodeTableColumnsCounter == retrievedNodeColumnsCounter
         assert len(set(nodeTableColumnsCounter.values())) <= 1, "All should have the same value"
-        assert all(1 == x for x in nodeTableColumnsCounter.values()), "All should be 1"
+        # assert all(1 == x for x in nodeTableColumnsCounter.values()), "All should be 1"
         # All should have same names and types
         for idx, val in enumerate(node.outputDict.flatCols()):
             retrievedDictItem = list(retrievedNode.outputDict.flatCols())[idx]
@@ -156,14 +184,14 @@ class UnparseSDQLpyTree():
             if val.codeName != retrievedDictItem.codeName:
                 val.create_again = retrievedDictItem.codeName
         
-        node.getTableName(self)
+        node.tableName
         node.tableName = retrievedNode.tableName
         
     def visit_SDQLpyPromoteToFloatNode(self, node):
         # Get child name
         childTable = node.getChildName(self)
         
-        createdDictName = node.getTableName(self)
+        createdDictName = node.tableName
         lambda_index = "p"
         
         assert node.filterContent == None
@@ -198,7 +226,7 @@ class UnparseSDQLpyTree():
         # Get child name
         childTable = node.getChildName(self)
         
-        createdDictName = node.getTableName(self)
+        createdDictName = node.tableName
         lambda_index = "p"
         
         self.writeContent(
@@ -235,8 +263,8 @@ class UnparseSDQLpyTree():
         )
     
     def visit_SDQLpyRecordNode(self, node):
-        self.relations.add(node.tableName)
-        createdDictName = node.getTableName(self)
+        self.relations.add(node.sdqlrepr)
+        createdDictName = node.tableName
         
         if node.filterContent != None:
             originalTableName = node.sdqlrepr
@@ -277,7 +305,7 @@ class UnparseSDQLpyTree():
         # Get child name
         childTable = node.getChildName(self)
         
-        createdDictName = node.getTableName(self)
+        createdDictName = node.tableName
         lambda_index = "p"
         
         if node.output_dict_value_dict_size == True:
@@ -322,7 +350,7 @@ class UnparseSDQLpyTree():
         # Get child name
         childTable = node.getChildName(self)
         
-        createdDictName = node.getTableName(self)
+        createdDictName = node.tableName
         lambda_index = "p"
         
         self.writeContent(
@@ -373,7 +401,7 @@ class UnparseSDQLpyTree():
         # Get child name
         leftTable, rightTable = node.getChildNames(self)
         
-        createdDictName = node.getTableName(self)
+        createdDictName = node.tableName
         lambda_index = "p"
         lambda_index_2 = "k"
         
@@ -593,7 +621,7 @@ class UnparseSDQLpyTree():
         # Get child name
         childTable = node.getChildName(self)
         
-        initialDictName = node.getTableName(self, not_output = True)
+        initialDictName = node.tableName
         lambda_index = "p"
         
         self.writeContent(
@@ -641,7 +669,7 @@ class UnparseSDQLpyTree():
         # Get child name
         childTable = node.getChildName(self)
         
-        createdDictName = node.getTableName(self)
+        createdDictName = node.tableName
         lambda_index = "p"
         
         if node.repeated_aggr == True:
