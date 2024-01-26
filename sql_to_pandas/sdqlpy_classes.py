@@ -951,7 +951,7 @@ class SDQLpySRDict():
     
     def generateSDQLpyFourLambda(self, unparser, l_lambda_idx_key, l_lambda_idx_val, r_lambda_idx_key, r_lambda_idx_val, node):
         l_node, r_node = node.left, node.right
-        assert node.joinMethod == "bnl" or node.joinType == "outer"
+        assert node.joinMethod == "bnl" or node.joinType == "outer" or l_node.vectorValue == True
         
         l_keys_IDs = [id(x) for x in l_node.outputDict.flatKeys()]
         l_values_IDs = [id(x) for x in l_node.outputDict.flatVals()]
@@ -1168,7 +1168,11 @@ class SDQLpySRDict():
             output_content.append(f"{TAB}sr_dict({{{val_sourceNode}.{val_codeName}: True}})")
         elif len(self.values) == 1 and self.value_vector == True:
             # Make the value section an SR Dict
-            val_codeName = self.values[0].codeName
+            if self.values[0].codeName != self.values[0].value:
+                # Use value:
+                val_codeName = self.values[0].value
+            else:
+                val_codeName = self.values[0].codeName
             val_sourceNode = self.values[0].sourceNode
             
             output_content.append(f"{TAB}vector({{{val_sourceNode}.{val_codeName}}})")

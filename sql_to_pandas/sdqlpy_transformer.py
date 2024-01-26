@@ -1220,6 +1220,10 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
             
             current_types.append(join_cond)
             return current_types
+        
+        def getColumnsForFilter(filter_cond):
+            filterColumns = list(filter(lambda x: type(x) == ColumnValue, gatherJoinCondTypes(filter_cond)))
+            return filterColumns
             
         if isinstance(sdqlpy_tree, BinarySDQLpyNode):
             leftNode = solveEqNeqJoins(sdqlpy_tree.left)
@@ -1253,27 +1257,25 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                                            sdqlpy_tree.rightKeys, sdqlpy_tree.leftKeys)
                 
                 # Left should be a record (that is a vector)
-                leftVectored = SDQLpyRecordNode(sdqlpy_tree.right.tableName, sdqlpy_tree.rightKeys)
+                columnsForFilter = getColumnsForFilter(sdqlpy_tree.right.filterContent)
+                leftVectored = SDQLpyRecordNode(sdqlpy_tree.right.tableName, sdqlpy_tree.rightKeys + columnsForFilter)
                 leftVectored.addFilterContent(sdqlpy_tree.right.filterContent)
                 leftVectored.vectorValue = True
                 leftVectored.setCardinality(-1)
-                leftVectored.primaryKey = (equalCond.left, )
+                leftVectored.primaryKey = sdqlpy_tree.right.primaryKey
                 leftVectored.incomingDict = sdqlpy_tree.right.outputDict
                 
                 innerJoin.addLeft(leftVectored)
-                innerJoin.primaryKey = (equalCond.left, )
                 
                 # Right should be a probe over a Retrieve for the original join
                 if sdqlpy_tree.left.nodeID == None:
                     # Create a new NodeID, that is likely to be unique
-                    sdqlpy_tree.left.nodeID = random.randint(50, 100) 
-                rightRetrieve = SDQLpyRetrieveNode(sdqlpy_tree.outputDict.flatCols(), sdqlpy_tree.left.nodeID)
-                rightRetrieve.outputDict = sdqlpy_tree.outputDict
-                rightRetrieve.primaryKey = sdqlpy_tree.primaryKey
-                innerJoin.addRight(rightRetrieve)
+                    sdqlpy_tree.left.nodeID = random.randint(50, 100)
+                # Add the right node at the inner, retrieve above
+                innerJoin.addRight(sdqlpy_tree.left)
                 
                 innerJoin.set_output_dict()
-                innerJoin.primaryKey = innerJoin.left.primaryKey
+                innerJoin.primaryKey = (equalCond.right, )
                 innerJoin.setCardinality(-1)
                 
                 # Overall Join
@@ -1283,9 +1285,13 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
                     raise Exception(f"Expected it to be 'left...' but instead was: {sdqlpy_tree.joinType}")
                 
                 overallJoin = SDQLpyJoinNode(sdqlpy_tree.joinMethod, newJoinType, equalCond,
-                                             [equalCond.right], [equalCond.left])
+                                             [equalCond.left], [equalCond.right])
                 overallJoin.addLeft(innerJoin)
-                overallJoin.addRight(sdqlpy_tree.left)
+                
+                rightRetrieve = SDQLpyRetrieveNode(sdqlpy_tree.left.outputDict.flatCols(), sdqlpy_tree.left.nodeID)
+                rightRetrieve.outputDict = sdqlpy_tree.left.outputDict
+                rightRetrieve.primaryKey = sdqlpy_tree.left.primaryKey
+                overallJoin.addRight(rightRetrieve)
                 
                 overallJoin.set_output_dict()
                 overallJoin.primaryKey = sdqlpy_tree.primaryKey

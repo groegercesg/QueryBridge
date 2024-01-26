@@ -140,7 +140,7 @@ class UnparseSDQLpyTree():
         self.__walk_tree(self.sdqlpy_tree)
     
     def __walk_tree(self, current_node):
-        # Walk to children Children
+        # Change: Try a Post Order Traversal
         if isinstance(current_node, BinarySDQLpyNode):
             self.__walk_tree(current_node.left)
             self.__walk_tree(current_node.right)
@@ -455,11 +455,10 @@ class UnparseSDQLpyTree():
                 self.writeTempContent(
                     f"{TAB}{TAB}{TAB}{TAB}{output_line}"
                 )
-            
+                
             self.writeTempContent(
                 f"{TAB}{TAB})"
             )
-            
             self.writeTempContent(
                 f"{TAB}if\n"
                 f"{TAB}{TAB}{leftTable_ref} != None\n"
@@ -473,6 +472,66 @@ class UnparseSDQLpyTree():
                 self.writeTempContent(
                     f"{TAB}{TAB}{output_line}"
                 )
+            
+        elif node.left.vectorValue == True:
+            assert node.left.vectorValue == True
+            node.set_output_dict()
+            
+            # remove left key from output_dict
+            rightIds = [id(x) for x in node.right.outputDict.flatCols()]
+            leftKeyIds = [id(x) for x in node.left.outputDict.flatKeys()]
+            leftValIds = [id(x) for x in node.left.outputDict.flatVals()]
+            removes = []
+            for idx, val in enumerate(node.outputDict.flatCols()):
+                if id(val) in rightIds:
+                    pass
+                elif id(val) in leftKeyIds:
+                    val.no_source = True
+                    val.new_value = f"{lambda_index}[0].{node.equatingConditions[0].right.codeName}"
+                    # removes.append(idx)
+                elif id(val) in leftValIds:
+                    val.just_source = True
+            removes.reverse()
+            for rem in removes:
+                node.outputDict.keys.pop(rem)
+            
+            leftTable_ref = node.make_leftTableRef(self, lambda_index)
+            
+            self.writeTempContent(
+                f"{TAB}{TAB}{leftTable_ref}.sum(\n"
+                f"{TAB}{TAB}{TAB}lambda {lambda_index_2} : "
+            )
+            
+            for output_line in node.outputDict.generateSDQLpyFourLambda(
+                self, f"{leftTable_ref}[0]", f"{lambda_index_2}", f"{lambda_index}[0]", f"{lambda_index}[1]",
+                node
+            ):
+                self.writeTempContent(
+                    f"{TAB}{TAB}{TAB}{TAB}{output_line}"
+                )
+                
+            # Assign sources for the comparing condition
+            node.set_sources_for_comparing_condition(f"{lambda_index_2}", f"{lambda_index}[0]", f"{lambda_index}[1]")
+            
+            otherJoinComparison = self.__convert_expression_operator_to_sdqlpy(node.comparingTree)
+            # reset sources, so as to not cause issues later down the line
+            resetColumnValues(node.comparingTree)
+            
+            self.writeTempContent(
+                f"{TAB}{TAB}{TAB}if\n"
+                f"{TAB}{TAB}{TAB}{TAB}{leftTable_ref} != None and {otherJoinComparison}\n"
+                f"{TAB}{TAB}{TAB}else\n"
+                f"{TAB}{TAB}{TAB}{TAB}None"
+            )
+            self.writeTempContent(
+                f"{TAB}{TAB})"
+            )
+            
+            for idx, val in enumerate(node.outputDict.flatCols()):
+                if hasattr(val, "new_value"):
+                    delattr(val, "new_value")
+                    val.no_source = False
+                    pass
             
         elif node.joinMethod == "bnl":
             self.writeTempContent(
@@ -832,7 +891,9 @@ class UnparseSDQLpyTree():
         expression_output = None
         match expr_tree:
             case ColumnValue():
-                if self.doing_repeated_aggr == True or expr_tree.no_source == True:
+                if hasattr(expr_tree, "new_value"):
+                    expression_output = f"{expr_tree.new_value}"
+                elif self.doing_repeated_aggr == True or expr_tree.no_source == True:
                     expression_output = f"{expr_tree.codeName}"
                 elif expr_tree.just_source == True:
                     expression_output = f"{expr_tree.sourceNode}"
