@@ -1200,6 +1200,76 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         
         return sdqlpy_tree
     
+    def solveEqNeqJoins(sdqlpy_tree):
+        def gatherJoinCondTypes(join_cond):
+            current_types = []
+            if isinstance(join_cond, BinaryExpressionOperator):
+                leftTypes = gatherJoinCondTypes(join_cond.left)
+                rightTypes = gatherJoinCondTypes(join_cond.right)
+
+                current_types.extend(leftTypes)
+                current_types.extend(rightTypes)
+            elif isinstance(join_cond, UnaryExpressionOperator):
+                childTypes = gatherJoinCondTypes(join_cond.child)
+                
+                current_types.extend(childTypes)
+            else:
+                pass
+            
+            current_types.append(join_cond)
+            return current_types
+            
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = solveEqNeqJoins(sdqlpy_tree.left)
+            rightNode = solveEqNeqJoins(sdqlpy_tree.right)
+            
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = solveEqNeqJoins(sdqlpy_tree.child)
+            
+            sdqlpy_tree.child = childNode
+        else:
+            # A leaf node
+            pass
+        
+        if isinstance(sdqlpy_tree, SDQLpyJoinNode):
+            joinTypes = []
+            for x in sdqlpy_tree.joinCondition:
+                joinTypes.extend(gatherJoinCondTypes(x))
+            joinTypeCounter = Counter([type(x) for x in joinTypes])
+            
+            if (joinTypeCounter[EqualsOperator] >= 1) and (joinTypeCounter[NotEqualsOperator] >= 1):
+                assert joinTypeCounter[EqualsOperator] == 1
+                equalCond = list(filter(lambda x: type(x) == EqualsOperator, joinTypes))
+                assert len(equalCond) == 1
+                equalCond = equalCond[0]
+                
+                # Make the inner join
+                
+                innerJoin = SDQLpyJoinNode(sdqlpy_tree.joinMethod, "inner", sdqlpy_tree.joinCondition,
+                                           sdqlpy_tree.rightKeys, sdqlpy_tree.leftKeys)
+                
+                # Left should be a record (that is a vector)
+                leftVectored = SDQLpyRecordNode(sdqlpy_tree.right.tableName, sdqlpy_tree.rightKeys)
+                leftVectored.addFilterContent(sdqlpy_tree.right.filterContent)
+                leftVectored.vectorValue = True
+                innerJoin.addLeft(leftVectored)
+                
+                # Right should be a probe over a Retrieve for the original join
+                rightRetrieve = SDQLpyRetrieveNode(sdqlpy_tree.outputDict.flatCols(), sdqlpy_tree.nodeID)
+                innerJoin.addRight(rightRetrieve)
+                
+                # Overall Join
+                overallJoin = SDQLpyJoinNode(sdqlpy_tree.joinMethod, sdqlpy_tree.joinType, equalCond,
+                                             equalCond.right, equalCond.left)
+                overallJoin.addLeft(innerJoin)
+                overallJoin.addRight(sdqlpy_tree.left)
+                
+                pass
+        
+        return sdqlpy_tree
+    
     # Set the code names
     set_codeNames(universal_tree)
     output_cols_order = universal_tree.outputNames
@@ -1219,6 +1289,8 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     solveOutputDictEmptyCodename(sdqlpy_tree, parserCreatedColumns)
     # Solve RecordNodes so that they're more efficient
     solveRecordNodeImportantTableColumns(sdqlpy_tree)
+    # Solve Equal/Neq Joins
+    sdqlpy_tree = solveEqNeqJoins(sdqlpy_tree)
     # Order joins, in the specific SDQLpy Manner
     sdqlpy_tree = solveSDQLpySpecificOrderJoins(sdqlpy_tree)
     # Insert JoinProbe Nodes

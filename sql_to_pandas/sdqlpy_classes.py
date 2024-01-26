@@ -653,7 +653,17 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         # Audit before assigning
         if equating != []:
             equating_types = Counter(equating)
-            assert len(equating_types) == 1 and (equating_types[EqualsOperator()] > 0 or equating_types[NotEqualsOperator()] > 0)
+            if not len(equating_types) == 1:
+                if (equating_types[EqualsOperator()] > 0 or equating_types[NotEqualsOperator()] > 0):
+                    not_equals = list(filter(lambda x: type(x) == NotEqualsOperator, equating))
+                    assert len(not_equals) == 1
+                    not_equals = not_equals[0]
+                    stripped_join_condition = not_equals
+                    equating = list(filter(lambda x: type(x) == EqualsOperator, equating))
+                    assert len(equating) == 1
+                else:
+                    raise Exception("Unknown issue with Equating condition")    
+                
         
         leftColumns = expr_to_string(self.left.outputDict.flatCols())
         rightColumns = expr_to_string(self.right.outputDict.flatCols())
