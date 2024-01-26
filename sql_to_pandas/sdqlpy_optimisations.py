@@ -52,7 +52,8 @@ PIPELINE_BREAKERS = [
     SDQLpyConcatNode,
     SDQLpyAggrNode,
     SDQLpyJoinBuildNode,
-    SDQLpyPromoteToFloatNode
+    SDQLpyPromoteToFloatNode,
+    SDQLpyRetrieveNode
 ]
         
 def opt_pipe_break(sdqlpy_tree):
@@ -138,9 +139,18 @@ def opt_pipe_break(sdqlpy_tree):
         def add_filter_to_current(sdqlpy_tree, addFilter):
             # Add filter to current, have to be aware of the fact that it might already have a filter
             
-            if sdqlpy_tree.filterContent == None:
+            if sdqlpy_tree.filterContent == None and addFilter == None:
+                # Don't add anything
+                pass
+            elif sdqlpy_tree.filterContent != None and addFilter == None:
+                # Don't add anything
+                pass
+            elif sdqlpy_tree.filterContent == None and addFilter != None:
+                # Overwrite
                 sdqlpy_tree.filterContent = addFilter
             else:
+                assert sdqlpy_tree.filterContent != None and addFilter != None
+                # Use an AndOperator
                 newFilter = AndOperator()
                 newFilter.addLeft(sdqlpy_tree.filterContent)
                 newFilter.addRight(addFilter)
@@ -208,6 +218,9 @@ def opt_pipe_break(sdqlpy_tree):
             elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
                 filter_from_below = gather_filters_below(sdqlpy_tree.child)
                 add_filter_to_current(sdqlpy_tree, filter_from_below)
+            elif isinstance(sdqlpy_tree, SDQLpyRetrieveNode):
+                # SDQLpyRetrieveNode is a quasi-pipeline breaker
+                pass
             else:
                 raise Exception("A Pipeline breaker shouldn't be a LeafNode")
             

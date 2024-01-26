@@ -82,7 +82,7 @@ def convert_explain_plan_to_x(desired_format):
     combined_sql_content = list(zip(query_files, explain_files))
     
     
-    supported_queries = ["1", "2", "3" ,"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15_cte", "16", "17", "18", "19", "20", "22"]
+    supported_queries = ["1", "2", "3" ,"4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15_cte", "16", "17", "18", "19", "20", "21", "22"]
     
     print(f"We currently support {len(supported_queries)} out of a total of 22")
     
