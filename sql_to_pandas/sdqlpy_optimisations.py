@@ -415,6 +415,9 @@ def opt_update_sum(sdqlpy_tree):
             # Is not an UpdateSum - we know that the key is unique
             # So we can pass in "False"
             sdqlpy_tree.outputDict.set_is_not_update_sum(True)
+        elif isinstance(sdqlpy_tree, (SDQLpyJoinBuildNode, SDQLpyConcatNode)):
+            # Build summations should always be true, also the concat 
+            sdqlpy_tree.outputDict.set_is_not_update_sum(True)
         
         return sdqlpy_tree
     

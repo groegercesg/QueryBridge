@@ -21,14 +21,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q1_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q1_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -60,14 +60,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q2_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q2_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -99,14 +99,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q3_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q3_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -138,14 +138,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q4_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q4_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -177,14 +177,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q5_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q5_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -216,14 +216,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q6_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q6_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -255,14 +255,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q7_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q7_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -294,14 +294,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q8_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q8_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -333,14 +333,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q9_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q9_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -372,14 +372,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q10_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q10_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -411,14 +411,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q11_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q11_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -450,14 +450,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q12_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q12_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -489,14 +489,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q13_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q13_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -528,14 +528,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q14_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q14_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -567,14 +567,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q15_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q15_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -606,14 +606,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q16_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q16_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -645,14 +645,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q17_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q17_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -684,14 +684,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q18_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q18_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -723,14 +723,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q19_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q19_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -762,14 +762,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q20_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q20_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -801,14 +801,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q21_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q21_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
@@ -840,14 +840,14 @@
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q22_sdqlpy_updatesum.py",
-                    "Results Name": "SDQLpy Converted + UpdateSum (Hyper DB)",
-                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum"],
+                    "Results Name": "SDQLpy Converted + PB_VF (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
                     "Converted Name": "hyper_q22_sdqlpy_both.py",
-                    "Results Name": "SDQLpy Converted + Both (Hyper DB)",
+                    "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
                 },
