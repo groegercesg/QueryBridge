@@ -442,8 +442,6 @@ def main():
                 
                 unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, sdqlpy_opts)
                 
-                query_output_columns = unparse_content.getOutputColumns()
-                
                 with open(python_output_name, 'w') as fp:
                     for line in unparse_content.getSDQLpyContent():
                         if "\n" in line:
@@ -461,6 +459,8 @@ def main():
                     # Write return 'blah', if benchmarking
                     if args.benchmarking:
                         fp.write(f"{potentialTab}return {unparse_content.sdqlpy_tree.tableName}\n")
+                
+                query_output_columns = unparse_content.getOutputColumns()
                     
             else:
                 raise Exception(f"Unexpected format for unparse_content class: {type(unparse_content)}")

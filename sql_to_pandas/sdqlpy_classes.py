@@ -1080,6 +1080,10 @@ class SDQLpySRDict():
     def generateSDQLpyContent(self, unparser):
         output_content = []
         
+        # Order the keys and values
+        self.keys.sort(key=lambda x: x.codeName)
+        self.values.sort(key=lambda x: x.codeName)
+        
         if self.keys == []:
             # If there are no keys, this should be an aggr output
             if len(self.values) == 1:
