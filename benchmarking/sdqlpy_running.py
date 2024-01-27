@@ -118,9 +118,10 @@ dataset_path = "/home/callum/Documents/Academia/University/Year4/PROJ/dataframe-
     for table in desired_tables:
         new_sdqlpy_info += f"{tpch_table_definitions[table]}\n"
         
+    # This 'sdqlpy_init(...)' controls whether it's single threaded or not
     new_sdqlpy_info += """print("Data Loaded")
 
-sdqlpy_init(1, 1)"""
+sdqlpy_init(1, 2)"""
     
     sdqlpy_info = """from sdqlpy.sdql_lib import *
 from sdqlpy_benchmark_runner import bench_runner

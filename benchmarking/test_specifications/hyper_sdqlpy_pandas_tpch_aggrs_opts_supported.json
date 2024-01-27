@@ -867,7 +867,7 @@
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 6,
-    "Results Location": "benchmarking/test_results/hyper_sdqlpy_pandas_tpch_aggrs_opts_test_results.csv",
+    "Results Location": "benchmarking/test_results/hyper_sdqlpy_pandas_tpch_aggrs_opts_parallel_test_results.csv",
     "Postgres Connection Details": "postgres_connection.json",
     "Duck DB Connection": "duckdb_tpch.duckdb",
     "Hyper DB Connection": "hyperdb_tpch.hyper",
