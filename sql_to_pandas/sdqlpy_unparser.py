@@ -261,9 +261,9 @@ class UnparseSDQLpyTree():
             f"{TAB}{TAB}None"
         )
         
-        if node.outputDict.is_not_update_sum == True:
+        if node.outputDict.is_assignment_sum == True:
             self.writeContent(
-                f"{TAB}, False"
+                f"{TAB}, True"
             )
         
         self.writeContent(
@@ -308,9 +308,9 @@ class UnparseSDQLpyTree():
                 f"{TAB}{TAB}None"
             )
             
-            if node.outputDict.is_not_update_sum == True:
+            if node.outputDict.is_assignment_sum == True:
                 self.writeContent(
-                    f"{TAB}, False"
+                    f"{TAB}, True"
                 )
             
             self.writeContent(
@@ -339,9 +339,9 @@ class UnparseSDQLpyTree():
                 f"{TAB})"
             )
             
-            if node.outputDict.is_not_update_sum == True:
+            if node.outputDict.is_assignment_sum == True:
                 self.writeContent(
-                    ")): True}, False)"
+                    ")): True}, True)"
                 )
             else:
                 self.writeContent(
@@ -359,9 +359,9 @@ class UnparseSDQLpyTree():
             generatedOutput = generatedOutput[2:-1]
             assert len(generatedOutput) == 1
             self.writeContent(generatedOutput[0])
-            if node.outputDict.is_not_update_sum == True:
+            if node.outputDict.is_assignment_sum == True:
                 self.writeContent(
-                    ")): True}, False)"
+                    ")): True}, True)"
                 )
             else:
                 self.writeContent(
@@ -369,9 +369,9 @@ class UnparseSDQLpyTree():
                 )
         else:        
             # Do the summation at the end
-            if node.outputDict.is_not_update_sum == True:
+            if node.outputDict.is_assignment_sum == True:
                 self.writeContent(
-                    f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}}, False)"
+                    f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}}, True)"
                 )
             else:
                 self.writeContent(
@@ -422,9 +422,9 @@ class UnparseSDQLpyTree():
         
         node.outputDict.set_created(self)
         
-        if node.outputDict.is_not_update_sum == True:
+        if node.outputDict.is_assignment_sum == True:
             self.writeContent(
-                f"{TAB}, False"
+                f"{TAB}, True"
             )
         
         self.writeContent(
@@ -710,9 +710,9 @@ class UnparseSDQLpyTree():
         assert node.filterContent == None
         assert hasattr(node, "postJoinFilters") == False
             
-        if node.outputDict.is_not_update_sum == True:
+        if node.outputDict.is_assignment_sum == True:
             self.writeTempContent(
-                f"{TAB}, False"
+                f"{TAB}, True"
             )
         
         self.writeTempContent(
@@ -765,9 +765,9 @@ class UnparseSDQLpyTree():
         
         node.outputDict.set_created(self)
         
-        if node.outputDict.is_not_update_sum == True:
+        if node.outputDict.is_assignment_sum == True:
             self.writeContent(
-                f"{TAB}, False"
+                f"{TAB}, True"
             )
         
         self.writeContent(
@@ -856,9 +856,9 @@ class UnparseSDQLpyTree():
         node.outputDict.set_created(self)
         
         if node.repeated_aggr != True:
-            if node.outputDict.is_not_update_sum == True:
+            if node.outputDict.is_assignment_sum == True:
                 self.writeContent(
-                    f"{TAB}, False"
+                    f"{TAB}, True"
                 )
             
             self.writeContent(

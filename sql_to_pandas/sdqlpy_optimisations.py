@@ -414,10 +414,22 @@ def opt_update_sum(sdqlpy_tree):
         if (sdqlpy_tree.outputDict.duplicateCounter == False) and len(sdqlpy_tree.outputDict.flatVals()) == 0:
             # Is not an UpdateSum - we know that the key is unique
             # So we can pass in "False"
-            sdqlpy_tree.outputDict.set_is_not_update_sum(True)
+            sdqlpy_tree.outputDict.set_is_assignment_sum(True)
         elif isinstance(sdqlpy_tree, (SDQLpyJoinBuildNode, SDQLpyConcatNode)):
             # Build summations should always be true, also the concat 
-            sdqlpy_tree.outputDict.set_is_not_update_sum(True)
+            sdqlpy_tree.outputDict.set_is_assignment_sum(True)
+        elif isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyAggrNode, SDQLpyPromoteToFloatNode)):
+            # In a groupNode, PromoteToFloat or AggrNode, the key is not unique
+            pass
+        elif isinstance(sdqlpy_tree, SDQLpyJoinNode):
+            valueTypeCounter = Counter([type(x) for x in sdqlpy_tree.outputDict.flatVals()])
+            if valueTypeCounter[ColumnValue] == len(sdqlpy_tree.outputDict.flatVals()):
+                # The value section is just ColumnValues, so we can make it an assignment sum
+                sdqlpy_tree.outputDict.set_is_assignment_sum(True)
+            else:
+                pass
+        else:
+            pass
         
         return sdqlpy_tree
     

@@ -834,11 +834,11 @@ class SDQLpySRDict():
         
         self.value_sr_dict = False
         self.value_vector = False
-        self.is_not_update_sum = False
+        self.is_assignment_sum = False
         
-    def set_is_not_update_sum(self, newValue):
+    def set_is_assignment_sum(self, newValue):
         assert isinstance(newValue, bool)
-        self.is_not_update_sum = newValue
+        self.is_assignment_sum = newValue
         
     def deleteFromSROnIDs(self, removeIDs):
         removeKeyPos = []
