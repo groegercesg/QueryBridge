@@ -339,14 +339,10 @@ class UnparseSDQLpyTree():
                 f"{TAB})"
             )
             
-            if node.outputDict.is_assignment_sum == True:
-                self.writeContent(
-                    ")): True}, True)"
-                )
-            else:
-                self.writeContent(
-                    ")): True})"
-                )
+            # if node.outputDict.is_assignment_sum == True:
+            self.writeContent(
+                ")): True})"
+            )
         elif node.promote_to_float == True:
             # Use the incomingDict, as this has values separated.
             self.writeContent(
@@ -359,24 +355,18 @@ class UnparseSDQLpyTree():
             generatedOutput = generatedOutput[2:-1]
             assert len(generatedOutput) == 1
             self.writeContent(generatedOutput[0])
-            if node.outputDict.is_assignment_sum == True:
-                self.writeContent(
-                    ")): True}, True)"
-                )
-            else:
-                self.writeContent(
-                    ")): True})"
-                )
+            
+            # if node.outputDict.is_assignment_sum == True:
+            
+            self.writeContent(
+                ")): True})"
+            )
         else:        
             # Do the summation at the end
-            if node.outputDict.is_assignment_sum == True:
-                self.writeContent(
-                    f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}}, True)"
-                )
-            else:
-                self.writeContent(
-                    f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}})"
-                )
+            # if node.outputDict.is_assignment_sum == True:
+            self.writeContent(
+                f"{createdDictName} = {childTable}.sum(lambda {lambda_index} : {{unique({lambda_index}[0].concat({lambda_index}[1])): True}})"
+            )
             
         
     def visit_SDQLpyJoinBuildNode(self, node):
