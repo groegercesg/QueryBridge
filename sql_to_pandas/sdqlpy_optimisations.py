@@ -219,6 +219,8 @@ def opt_pipe_break(sdqlpy_tree):
                 add_filter_to_joinNode(sdqlpy_tree, filter_from_left)
                 filter_from_right = gather_filters_below(sdqlpy_tree.right)
                 add_filter_to_joinNode(sdqlpy_tree, filter_from_right)
+            elif isinstance(sdqlpy_tree, SDQLpyAggrNode) and Counter([type(x) for x in sdqlpy_tree.outputDict.flatVals()])[AvgAggrOperator] >= 1:
+                pass
             elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
                 filter_from_below = gather_filters_below(sdqlpy_tree.child)
                 add_filter_to_current(sdqlpy_tree, filter_from_below)

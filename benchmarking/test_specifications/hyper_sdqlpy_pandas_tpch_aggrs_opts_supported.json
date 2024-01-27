@@ -421,6 +421,13 @@
                     "Results Name": "SDQLpy Converted + All (Hyper DB)",
                     "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker"],
                     "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q11_pandas.py",
+                    "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
                 }
             ]
         },
