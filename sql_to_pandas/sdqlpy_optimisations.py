@@ -417,22 +417,28 @@ def opt_update_sum(sdqlpy_tree):
             sdqlpy_tree.outputDict.set_is_assignment_sum(True)
         elif isinstance(sdqlpy_tree, (SDQLpyJoinBuildNode, SDQLpyConcatNode)):
             # Build summations should always be true, also the concat 
-            sdqlpy_tree.outputDict.set_is_assignment_sum(True)
+            if isinstance(sdqlpy_tree, SDQLpyJoinBuildNode) and hasattr(sdqlpy_tree.child, "vectorValue") and sdqlpy_tree.child.vectorValue == True:
+                pass
+            else:
+                sdqlpy_tree.outputDict.set_is_assignment_sum(True)
         elif isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyAggrNode, SDQLpyPromoteToFloatNode)):
             # In a groupNode, PromoteToFloat or AggrNode, the key is not unique
             pass
         elif isinstance(sdqlpy_tree, SDQLpyJoinNode):
-            valueTypeCounter = Counter([type(x) for x in sdqlpy_tree.outputDict.flatVals()])
-            if valueTypeCounter[ColumnValue] == len(sdqlpy_tree.outputDict.flatVals()) and len(sdqlpy_tree.outputDict.flatKeys()) >= 1:
-                # Column Types
-                columnNames = set([x.codeName for x in sdqlpy_tree.outputDict.flatVals()])
-                if "sum" in columnNames:
-                    pass
-                else:
-                    # The value section is just ColumnValues, so we can make it an assignment sum
-                    sdqlpy_tree.outputDict.set_is_assignment_sum(True)
-            else:
+            if sdqlpy_tree.joinMethod == "bnl":
                 pass
+            else:
+                valueTypeCounter = Counter([type(x) for x in sdqlpy_tree.outputDict.flatVals()])
+                if valueTypeCounter[ColumnValue] == len(sdqlpy_tree.outputDict.flatVals()) and len(sdqlpy_tree.outputDict.flatKeys()) >= 1:
+                    # Column Types
+                    columnNames = set([x.codeName for x in sdqlpy_tree.outputDict.flatVals()])
+                    if "sum" in columnNames:
+                        pass
+                    else:
+                        # The value section is just ColumnValues, so we can make it an assignment sum
+                        sdqlpy_tree.outputDict.set_is_assignment_sum(True)
+                else:
+                    pass
         else:
             pass
         
