@@ -423,9 +423,14 @@ def opt_update_sum(sdqlpy_tree):
             pass
         elif isinstance(sdqlpy_tree, SDQLpyJoinNode):
             valueTypeCounter = Counter([type(x) for x in sdqlpy_tree.outputDict.flatVals()])
-            if valueTypeCounter[ColumnValue] == len(sdqlpy_tree.outputDict.flatVals()):
-                # The value section is just ColumnValues, so we can make it an assignment sum
-                sdqlpy_tree.outputDict.set_is_assignment_sum(True)
+            if valueTypeCounter[ColumnValue] == len(sdqlpy_tree.outputDict.flatVals()) and len(sdqlpy_tree.outputDict.flatKeys()) >= 1:
+                # Column Types
+                columnNames = set([x.codeName for x in sdqlpy_tree.outputDict.flatVals()])
+                if "sum" in columnNames:
+                    pass
+                else:
+                    # The value section is just ColumnValues, so we can make it an assignment sum
+                    sdqlpy_tree.outputDict.set_is_assignment_sum(True)
             else:
                 pass
         else:
