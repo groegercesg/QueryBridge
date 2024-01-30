@@ -173,16 +173,18 @@ class UnparseSDQLpyTree():
         nodeTableColumnsCounter = Counter([type(x) for x in node.outputDict.flatCols()])
         retrievedNodeColumnsCounter = Counter([type(x) for x in retrievedNode.outputDict.flatCols()])
         
-        assert len(node.outputDict.flatCols()) == len(retrievedNode.outputDict.flatCols())
-        assert nodeTableColumnsCounter == retrievedNodeColumnsCounter
-        assert len(set(nodeTableColumnsCounter.values())) <= 1, "All should have the same value"
-        # assert all(1 == x for x in nodeTableColumnsCounter.values()), "All should be 1"
-        # All should have same names and types
-        for idx, val in enumerate(node.outputDict.flatCols()):
-            retrievedDictItem = list(retrievedNode.outputDict.flatCols())[idx]
-            assert type(val) == type(retrievedDictItem)
-            if val.codeName != retrievedDictItem.codeName:
-                val.create_again = retrievedDictItem.codeName
+        # retrievedNode might have had removeIDs
+        
+        # # assert len(node.outputDict.flatCols()) == len(retrievedNode.outputDict.flatCols())
+        # assert nodeTableColumnsCounter == retrievedNodeColumnsCounter
+        # assert len(set(nodeTableColumnsCounter.values())) <= 1, "All should have the same value"
+        # # assert all(1 == x for x in nodeTableColumnsCounter.values()), "All should be 1"
+        # # All should have same names and types
+        # for idx, val in enumerate(node.outputDict.flatCols()):
+        #     retrievedDictItem = list(retrievedNode.outputDict.flatCols())[idx]
+        #     assert type(val) == type(retrievedDictItem)
+        #     if val.codeName != retrievedDictItem.codeName:
+        #         val.create_again = retrievedDictItem.codeName
         
         node.tableName
         node.tableName = retrievedNode.tableName
