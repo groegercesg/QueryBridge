@@ -20,9 +20,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q1_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q1_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -30,6 +37,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q1_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q1_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -52,9 +67,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q2_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q2_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -62,6 +84,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q2_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q2_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -84,9 +114,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q3_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q3_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -94,6 +131,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q3_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q3_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -116,9 +161,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q4_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q4_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -126,6 +178,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q4_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q4_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -148,9 +208,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q5_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q5_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -158,6 +225,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q5_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q5_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -180,9 +255,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q6_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q6_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -190,6 +272,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q6_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q6_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -212,9 +302,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q7_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q7_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -222,6 +319,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q7_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q7_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -244,9 +349,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q8_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q8_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -254,6 +366,14 @@
                     "Converter": "True",
                     "Converted Name": "q8_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q8_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -276,9 +396,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q9_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q9_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -286,6 +413,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q9_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q9_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -308,9 +443,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q10_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q10_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -318,6 +460,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q10_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q10_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -340,9 +490,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q11_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q11_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -350,6 +507,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q11_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q11_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -372,9 +537,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q12_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q12_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -382,6 +554,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q12_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q12_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -404,9 +584,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q13_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q13_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -414,6 +601,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q13_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q13_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -436,9 +631,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q14_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q14_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -446,6 +648,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q14_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q14_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -468,9 +678,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q15_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q15_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -478,6 +695,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q15_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q15_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -500,9 +725,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q16_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q16_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -510,6 +742,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q16_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q16_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -532,9 +772,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q17_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q17_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -542,6 +789,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q17_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q17_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -564,9 +819,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q18_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q18_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -574,6 +836,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q18_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q18_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -596,9 +866,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q19_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q19_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -606,6 +883,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q19_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q19_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -628,9 +913,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q20_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q20_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -638,6 +930,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q20_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q20_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -660,9 +960,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q21_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q21_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -670,6 +977,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q21_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q21_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
@@ -692,9 +1007,16 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_col_elim.py",
-                    "Results Name": "SDQLpy Converted + ColElim (Hyper DB)",
+                    "Converted Name": "hyper_q22_sdqlpy_O4.py",
+                    "Results Name": "SDQLpy Converted + O4 (Hyper DB)",
                     "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "SDQLpy",
+                    "Converted Name": "hyper_q22_sdqlpy_O1_O2_O4.py",
+                    "Results Name": "SDQLpy Converted + O1,O2,O4 (Hyper DB)",
+                    "Conversion Options": ["--sdqlpy_optimisations", "UpdateSum, VerticalFolding, PipelineBreaker", "--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 },
                 {
@@ -702,6 +1024,14 @@
                     "Converter": "True",
                     "Converted Name": "hyper_q22_pandas.py",
                     "Results Name": "Pandas Converted (Hyper DB)",
+                    "Query Plan": "Hyper DB"
+                },
+                {
+                    "Type": "Pandas",
+                    "Converter": "True",
+                    "Converted Name": "hyper_q22_pandas_O4.py",
+                    "Results Name": "Pandas Converted + O4 (Hyper DB)",
+                    "Conversion Options": ["--universal_optimisations", "ColumnElimination"],
                     "Query Plan": "Hyper DB"
                 }
             ]
