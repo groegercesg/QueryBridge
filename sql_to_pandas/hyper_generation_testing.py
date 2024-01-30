@@ -95,7 +95,7 @@ def convert_explain_plan_to_x(desired_format):
             
             table_schema = configure_table_schema({})
             
-            # uplan_opts = ""
+            uplan_opts = ""
             uplan_opts = ["ColumnElimination"]
             
             unparse_content = generate_unparse_content_from_explain_and_query(
@@ -125,4 +125,4 @@ def convert_explain_plan_to_x(desired_format):
 # generate_hyperdb_explains()
 # # inspect_explain_plans()
 # # parse_explain_plans()
-convert_explain_plan_to_x("pandas") # sdqlpy || pandas
+convert_explain_plan_to_x("sdqlpy") # sdqlpy || pandas

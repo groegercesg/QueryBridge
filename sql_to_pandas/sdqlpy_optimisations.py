@@ -30,7 +30,26 @@ def optimisation_runner(sdqlpy_tree, inOpt):
             raise Exception(f"The optimisation: {inOpt} was not recognised.")
         
     return sdqlpy_tree
+
+def sdqlpy_tree_preprocess(sdqlpy_tree):
+    # Reset columnRemoveIDs
+    #   As the removal has already happened
+    if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+        leftNode = sdqlpy_tree_preprocess(sdqlpy_tree.left)
+        rightNode = sdqlpy_tree_preprocess(sdqlpy_tree.right)
     
+        sdqlpy_tree.left = leftNode
+        sdqlpy_tree.right = rightNode
+    elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+        childNode = sdqlpy_tree_preprocess(sdqlpy_tree.child)
+        
+        sdqlpy_tree.child = childNode
+    else:
+        pass
+    
+    sdqlpy_tree.removeColumnIDs = set()
+
+    return sdqlpy_tree
 
 def sdqlpy_apply_optimisations(sdqlpy_tree, inOptimisations):
     if inOptimisations == [""]:
@@ -44,6 +63,8 @@ def sdqlpy_apply_optimisations(sdqlpy_tree, inOptimisations):
     # We should sort the optimisations
     order = {v.value:i for i,v in enumerate(OPTIMISATIONS_ORDER)}
     inOptimisations = sorted(inOptimisations, key=lambda x: order[x])
+    
+    # sdqlpy_tree = sdqlpy_tree_preprocess(sdqlpy_tree)
     
     for opt in inOptimisations:
         sdqlpy_tree = optimisation_runner(sdqlpy_tree, opt)
