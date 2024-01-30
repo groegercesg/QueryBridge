@@ -121,7 +121,7 @@ dataset_path = "/home/callum/Documents/Academia/University/Year4/PROJ/dataframe-
     # This 'sdqlpy_init(...)' controls whether it's single threaded or not
     new_sdqlpy_info += """print("Data Loaded")
 
-sdqlpy_init(1, 4)"""
+sdqlpy_init(1, 1)"""
     
     sdqlpy_info = """from sdqlpy.sdql_lib import *
 from sdqlpy_benchmark_runner import bench_runner
