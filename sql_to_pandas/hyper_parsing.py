@@ -521,12 +521,12 @@ def generate_unparse_content_from_explain_and_query(explain_json, query_file, ou
     unparse_content = None
     if output_format == "pandas":
         # Convert Universal Plan Tree to Pandas Tree
-        op_tree = convert_universal_to_pandas(op_tree)
+        pd_tree = convert_universal_to_pandas(op_tree)
         print(f"Converted Universal Plan Tree of {query_name} into Pandas Tree")
 
         # Unparse Pandas Tree
         # try:
-        unparse_content = UnparsePandasTree(op_tree)
+        unparse_content = UnparsePandasTree(pd_tree)
         # except:
         #     print(f"Pandas Generation for Query '{query_name}' Failed.")
         #     raise Exception("Failed Pandas Generation")

@@ -125,4 +125,4 @@ def convert_explain_plan_to_x(desired_format):
 # generate_hyperdb_explains()
 # # inspect_explain_plans()
 # # parse_explain_plans()
-convert_explain_plan_to_x("sdqlpy") # sdqlpy || pandas
+convert_explain_plan_to_x("pandas") # sdqlpy || pandas

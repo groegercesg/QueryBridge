@@ -293,6 +293,7 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
                     op_tree.tableFilters
                 )
                 new_op_tree.addChild(scan_node)
+            new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
         case GroupNode():
             if op_tree.keyExpressions == []:
                 new_op_tree = PandasAggrNode(
@@ -305,11 +306,13 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
                     op_tree.preAggregateExpressions,
                     op_tree.postAggregateOperations
                 )
+            new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
         case OutputNode():
             new_op_tree = PandasOutputNode(
                 op_tree.outputColumns,
                 op_tree.outputNames
             )
+            new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
         case JoinNode():
             updateJoinMethod = op_tree.joinMethod
             if updateJoinMethod == None:
@@ -334,27 +337,34 @@ def convert_universal_to_pandas(op_tree: UniversalBaseNode):
                 # Reset postJoinFilters
                 join_node.postJoinFilters = []
                 new_op_tree.addChild(join_node)
+            # Add to the new_op_tree, whatever that is after the filter processing
+            new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
         case SortNode():
             new_op_tree = PandasSortNode(
                 op_tree.sortCriteria
             )
+            new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
         case FilterNode():
             new_op_tree = PandasFilterNode(
                 op_tree.condition
             )
+            new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
         case NewColumnNode():
             new_op_tree = PandasAddColumnsNode(
                 op_tree.values
             )
+            new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
         case RetrieveNode():
             new_op_tree = PandasRetrieveNode(
                 op_tree.tableColumns,
                 op_tree.retrieveTargetID
             )
+            new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
         case LimitNode():
             new_op_tree = PandasLimitNode(
                 op_tree.limitValue
             )
+            new_op_tree.removeColumnIDs = op_tree.removeColumnIDs
         case _:
             raise Exception(f"Unexpected op_tree, it was of class: {op_tree.__class__}")
 
@@ -395,6 +405,8 @@ class PandasBaseNode():
         # The columns, as strs
         self.columns = set()
         self.nodeID = None
+        
+        self.removeColumnIDs = []
         
     def addID(self, value):
         assert self.nodeID == None
@@ -723,11 +735,41 @@ class UnparsePandasTree():
         targetVisitorMethod = f"visit{current_node.__class__.__name__}"
         if hasattr(self, targetVisitorMethod):
             getattr(self, targetVisitorMethod)(current_node)
+            self.__applyColumnLimiting(current_node)
         else:
             raise Exception(f"No visit method found for class name: {current_node.__class__.__name__}, was expected to find a: '{targetVisitorMethod}' method.")
         assert len(current_node.columns) > 0
+        
+    def getTableColumnsForNode(self, node: PandasBaseNode) -> list[str]:
+        outputColumns = []
+        for col in node.columns:
+            outputColumns.append(self.__getPandasRepresentationForColumn(col))
+        return outputColumns
     
-    def __getPandasRepresentationForColumn(self, column: ColumnValue):
+    def __applyColumnLimiting(self, node: PandasBaseNode):
+        if len(node.removeColumnIDs) > 0 and isinstance(node, PandasScanNode) and node.tableRestriction == None:
+            raise Exception("A Scan without a tableRestriction, we need to resolve this!")
+        elif len(node.removeColumnIDs) > 0 and not isinstance(node, PandasOutputNode):
+            # Limit columns
+            node.columns = list(node.columns)
+            removeColPos = []
+            for idx, key in enumerate(node.columns):
+                if id(key) in node.removeColumnIDs:
+                    removeColPos.append(idx)
+            removeColPos.reverse()
+            for remPos in removeColPos:
+                node.columns.pop(remPos)
+            
+            # Check no removeIds in outputDict
+            nodeColumnsIDs = [id(x) for x in node.columns]
+            assert all([not (x in nodeColumnsIDs) for x in node.removeColumnIDs])
+            
+            self.writeContent(
+                f"{node.tableName} = {node.tableName}[{self.getTableColumnsForNode(node)}]"
+            )
+            node.columns = set(node.columns)
+    
+    def __getPandasRepresentationForColumn(self, column: ExpressionBaseNode) -> str:
         if column.created == True:
             return column.codeName
         elif isinstance(column, SumAggrOperator):
@@ -1167,9 +1209,10 @@ class UnparsePandasTree():
             previousTableName = createdDataFrameName
 
         # Limit by table columns
-        self.writeContent(
-            f"{createdDataFrameName} = {previousTableName}[{node.getTableColumnsForDF()}]"
-        )
+        if len(node.removeColumnIDs) == 0:
+            self.writeContent(
+                f"{createdDataFrameName} = {previousTableName}[{node.getTableColumnsForDF()}]"
+            )
         
         # Rename the columns
         # Only create new names, if they'd be different
@@ -1180,9 +1223,13 @@ class UnparsePandasTree():
                 currentNewNameDict[col.value] = col.codeName
                 col.created = True
         
-        if currentNewNameDict != {}:
+        if currentNewNameDict != {} and len(node.removeColumnIDs) == 0:
             self.writeContent(
                 f"{createdDataFrameName} = {createdDataFrameName}.rename(columns={currentNewNameDict})"
+            )
+        elif currentNewNameDict != {} and len(node.removeColumnIDs) > 0:
+            self.writeContent(
+                f"{createdDataFrameName} = {previousTableName}.rename(columns={currentNewNameDict})"
             )
 
         # Set the tableName
