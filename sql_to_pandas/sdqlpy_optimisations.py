@@ -240,11 +240,22 @@ def opt_pipe_break(sdqlpy_tree):
                 add_filter_to_joinNode(sdqlpy_tree, filter_from_left)
                 filter_from_right = gather_filters_below(sdqlpy_tree.right)
                 add_filter_to_joinNode(sdqlpy_tree, filter_from_right)
+                # Handle removeColumnIDs
+                if filter_from_left != None:
+                    sdqlpy_tree.removeColumnIDs = set(sdqlpy_tree.left.removeColumnIDs).union(sdqlpy_tree.removeColumnIDs)
+                    sdqlpy_tree.left.removeColumnIDs = set()
+                if filter_from_right != None:
+                    sdqlpy_tree.removeColumnIDs = set(sdqlpy_tree.right.removeColumnIDs).union(sdqlpy_tree.removeColumnIDs)
+                    sdqlpy_tree.right.removeColumnIDs = set()
             elif isinstance(sdqlpy_tree, SDQLpyAggrNode) and Counter([type(x) for x in sdqlpy_tree.outputDict.flatVals()])[AvgAggrOperator] >= 1:
                 pass
             elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
                 filter_from_below = gather_filters_below(sdqlpy_tree.child)
                 add_filter_to_current(sdqlpy_tree, filter_from_below)
+                # Handle removeColumnIDs
+                if filter_from_below != None:
+                    sdqlpy_tree.removeColumnIDs = set(sdqlpy_tree.child.removeColumnIDs).union(sdqlpy_tree.removeColumnIDs)
+                    sdqlpy_tree.child.removeColumnIDs = set()
             elif isinstance(sdqlpy_tree, SDQLpyRetrieveNode):
                 # SDQLpyRetrieveNode is a quasi-pipeline breaker
                 pass
@@ -304,7 +315,6 @@ def opt_pipe_break(sdqlpy_tree):
             assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
             
         return sdqlpy_tree
-        
     
     pipe_break_run(sdqlpy_tree)
     allNodesInTree = surface_all_nodes(sdqlpy_tree)
@@ -384,6 +394,8 @@ def opt_v_fold(sdqlpy_tree):
                     # Carry the primary and foreign
                     sdqlpy_tree.child.primaryKey = sdqlpy_tree.primaryKey
                     sdqlpy_tree.child.foreignKeys = sdqlpy_tree.foreignKeys
+                    # Carry the removeColumnIDs
+                    sdqlpy_tree.child.removeColumnIDs = set(sdqlpy_tree.child.removeColumnIDs).union(sdqlpy_tree.removeColumnIDs)
                     
                     sdqlpy_tree = sdqlpy_tree.child
                     sdqlpy_tree.foldedInto = True
@@ -400,7 +412,7 @@ def opt_v_fold(sdqlpy_tree):
                     # Set the outputDict
                     sdqlpy_tree.child.outputDict = sdqlpy_tree.outputDict
                     # Set the incomingDict
-                    if isinstance(sdqlpy_tree.child, UnaryBaseNode):
+                    if isinstance(sdqlpy_tree.child, UnarySDQLpyNode):
                         sdqlpy_tree.child.incomingDict = sdqlpy_tree.child.child.outputDict
                     else:
                         raise Exception("Must be a Unary SDQLpy Node")
@@ -408,7 +420,9 @@ def opt_v_fold(sdqlpy_tree):
                     # Carry the primary and foreign
                     sdqlpy_tree.child.primaryKey = sdqlpy_tree.primaryKey
                     sdqlpy_tree.child.foreignKeys = sdqlpy_tree.foreignKeys
-                    
+                    # Carry the removeColumnIDs
+                    sdqlpy_tree.child.removeColumnIDs = set(sdqlpy_tree.child.removeColumnIDs).union(sdqlpy_tree.removeColumnIDs)
+                                        
                     sdqlpy_tree = sdqlpy_tree.child
                     sdqlpy_tree.foldedInto = True
                 else:

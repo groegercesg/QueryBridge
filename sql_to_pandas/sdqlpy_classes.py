@@ -1256,7 +1256,7 @@ def solveRemoveColumnIDs(sdqlpy_tree):
         sdqlpy_tree.outputDict.deleteFromSROnIDs(sdqlpy_tree.removeColumnIDs)
         # Check Primary still in SRDict
         outputDictIDs = [id(x) for x in sdqlpy_tree.outputDict.flatCols()]
-        assert all([id(x) in outputDictIDs for x in sdqlpy_tree.primaryKey]) or isinstance(sdqlpy_tree, SDQLpyAggrNode)
+        assert all([id(x) in outputDictIDs for x in sdqlpy_tree.primaryKey]) or isinstance(sdqlpy_tree, SDQLpyAggrNode) or sdqlpy_tree.foldedInto == True or sdqlpy_tree.topNode == True
         # Check no removeIds in outputDict
         assert all([not (x in outputDictIDs) for x in sdqlpy_tree.removeColumnIDs])
     
