@@ -133,6 +133,8 @@ class UnparseSDQLpyTree():
         assert self.sdqlpy_content == []
         # Set top node of the sdqlpy_tree to True
         self.sdqlpy_tree.topNode = True
+        # Use removeColumnIDs information
+        self.sdqlpy_tree = solveRemoveColumnIDs(self.sdqlpy_tree)
         # Assign tableNames
         self.assignTableNames()
         self.resetNodesCounter()

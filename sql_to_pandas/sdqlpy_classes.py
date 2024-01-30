@@ -1,5 +1,4 @@
 from collections import Counter, defaultdict
-import difflib
 
 from uplan_nodes import *
 from expression_operators import *
@@ -1234,4 +1233,31 @@ class SDQLpySRDict():
         for val in self.values:
             if hasattr(val, "sourceNode"):
                 assert val.sourceNode == None
+
+def solveRemoveColumnIDs(sdqlpy_tree):
+    if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+        leftNode = solveRemoveColumnIDs(sdqlpy_tree.left)
+        rightNode = solveRemoveColumnIDs(sdqlpy_tree.right)
         
+        sdqlpy_tree.left = leftNode
+        sdqlpy_tree.right = rightNode
+    elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+        childNode = solveRemoveColumnIDs(sdqlpy_tree.child)
+        
+        sdqlpy_tree.child = childNode
+    else:
+        # A leaf node
+        pass
+    
+    # Current node
+    if len(sdqlpy_tree.removeColumnIDs) > 0:
+        # We have had an optimisation applied
+        # Delete from SDQLpySRDict
+        sdqlpy_tree.outputDict.deleteFromSROnIDs(sdqlpy_tree.removeColumnIDs)
+        # Check Primary still in SRDict
+        outputDictIDs = [id(x) for x in sdqlpy_tree.outputDict.flatCols()]
+        assert all([id(x) in outputDictIDs for x in sdqlpy_tree.primaryKey]) or isinstance(sdqlpy_tree, SDQLpyAggrNode)
+        # Check no removeIds in outputDict
+        assert all([not (x in outputDictIDs) for x in sdqlpy_tree.removeColumnIDs])
+    
+    return sdqlpy_tree

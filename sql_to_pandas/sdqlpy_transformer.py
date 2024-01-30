@@ -1161,33 +1161,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
         
         return sdqlpy_tree
     
-    def solveRemoveColumnIDs(sdqlpy_tree):
-        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
-            leftNode = solveRemoveColumnIDs(sdqlpy_tree.left)
-            rightNode = solveRemoveColumnIDs(sdqlpy_tree.right)
-            
-            sdqlpy_tree.left = leftNode
-            sdqlpy_tree.right = rightNode
-        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
-            childNode = solveRemoveColumnIDs(sdqlpy_tree.child)
-            
-            sdqlpy_tree.child = childNode
-        else:
-            # A leaf node
-            pass
-        
-        # Current node
-        if len(sdqlpy_tree.removeColumnIDs) > 0:
-            # We have had an optimisation applied
-            # Delete from SDQLpySRDict
-            sdqlpy_tree.outputDict.deleteFromSROnIDs(sdqlpy_tree.removeColumnIDs)
-            # Check Primary still in SRDict
-            outputDictIDs = [id(x) for x in sdqlpy_tree.outputDict.flatCols()]
-            assert all([id(x) in outputDictIDs for x in sdqlpy_tree.primaryKey]) or isinstance(sdqlpy_tree, SDQLpyAggrNode)
-            # Check no removeIds in outputDict
-            assert all([not (x in outputDictIDs) for x in sdqlpy_tree.removeColumnIDs])
-        
-        return sdqlpy_tree
+    
     
     def solveEqNeqJoins(sdqlpy_tree):
         def gatherJoinCondTypes(join_cond):
@@ -1376,7 +1350,7 @@ def convert_universal_to_sdqlpy(universal_tree: UniversalBaseNode) -> SDQLpyBase
     # # Solve RetrieveNode
     # solveRetrieveNode(sdqlpy_tree)
     # Use removeColumnIDs information
-    sdqlpy_tree = solveRemoveColumnIDs(sdqlpy_tree)
+    #sdqlpy_tree = solveRemoveColumnIDs(sdqlpy_tree)
     # Trim SpecialInnerJoin
     sdqlpy_tree = fixSpecialInnerJoin(sdqlpy_tree)
     
