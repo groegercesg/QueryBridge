@@ -153,7 +153,14 @@ def init_argparse() -> argparse.ArgumentParser:
                         type=json.loads,
                         required=False,
                         default=dict(),
-                        help='What Universal Tree optimisations would you like to use?')
+                        help='What TableSchema would you like to use, please enter as something serialisable by JSON?')
+    
+    parser.add_argument('--sdqlpy_o3_value',
+                        metavar='sdqlpy_o3_value',
+                        type=str,
+                        required=False,
+                        default="",
+                        help='What value would you like to use for the O3 SDQLpy optimisation?')
 
     return parser
 
@@ -440,7 +447,7 @@ def main():
                 assert isinstance(sdqlpy_opts, list)
                 assert all(isinstance(x, str) for x in sdqlpy_opts)
                 
-                unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, sdqlpy_opts)
+                unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, sdqlpy_opts, args.sdqlpy_o3_value)
                 
                 with open(python_output_name, 'w') as fp:
                     for line in unparse_content.getSDQLpyContent():

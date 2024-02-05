@@ -390,6 +390,8 @@ class UnparseSDQLpyTree():
         if hasattr(node, "child") and isinstance(node.child, SDQLpyRecordNode):
             node.vectorValue = node.child.vectorValue
             node.outputDict.value_vector = node.vectorValue
+            node.outputDict.key_dense = node.is_dense
+            self.doing_cardinality = node.cardinality
         
         for output_line in node.outputDict.generateSDQLpyOneLambda(
             self, f"{lambda_index}[0]", f"{lambda_index}[1]", node

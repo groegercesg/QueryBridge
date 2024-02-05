@@ -262,6 +262,7 @@ class SDQLpyJoinBuildNode(UnarySDQLpyNode):
         self.sdqlrepr = "indexed"
         self.outputDict = None
         self.vectorValue = False
+        self.is_dense = False
         
     def set_output_dict(self, no_sumaggr_warn=False):
         self.outputDict = SDQLpySRDict(
@@ -834,6 +835,7 @@ class SDQLpySRDict():
         self.value_sr_dict = False
         self.value_vector = False
         self.is_assignment_sum = False
+        self.key_dense = False
         
     def set_is_assignment_sum(self, newValue):
         assert isinstance(newValue, bool)
@@ -1123,32 +1125,41 @@ class SDQLpySRDict():
             f"{{"
         )
         
-        keyCounter = defaultdict(int)
-        writtenKeys = dict()
         
-        # Process: Keys
-        keyContent = []
-        for key in self.keys:
-            expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(key)
+        if len(self.keys) == 1 and self.key_dense == True:
+            # Make the key section a Dense
+            key_codeName = self.keys[0].codeName
+            key_sourceNode = self.keys[0].sourceNode
+            dense_value = unparser.doing_cardinality
+            
+            output_content.append(f"{TAB}dense({dense_value}, {key_sourceNode}.{key_codeName}):")
+        else:
+            keyCounter = defaultdict(int)
+            writtenKeys = dict()
+            
+            # Process: Keys
+            keyContent = []
+            for key in self.keys:
+                expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(key)
 
-            assert key.codeName != ''
-            # Check if can write out key
-            if key.codeName in writtenKeys:
-                assert writtenKeys[key.codeName] == expr
-            else:
-                writtenKeys[key.codeName] = expr
-                keyCounter[key.codeName] += 1
-                keyContent.append(
-                    f'"{key.codeName}": {expr}'
-                )
-        keyFormatted = f"record({{{', '.join(keyContent)}}})"
-        if self.unique == True:
-            keyFormatted = f"unique({keyFormatted})"
-        output_content.append(
-            f"{TAB}{keyFormatted}:"
-        )
-        
-        assert self.counterAllValuesOne(keyCounter)
+                assert key.codeName != ''
+                # Check if can write out key
+                if key.codeName in writtenKeys:
+                    assert writtenKeys[key.codeName] == expr
+                else:
+                    writtenKeys[key.codeName] = expr
+                    keyCounter[key.codeName] += 1
+                    keyContent.append(
+                        f'"{key.codeName}": {expr}'
+                    )
+            keyFormatted = f"record({{{', '.join(keyContent)}}})"
+            if self.unique == True:
+                keyFormatted = f"unique({keyFormatted})"
+            output_content.append(
+                f"{TAB}{keyFormatted}:"
+            )
+            
+            assert self.counterAllValuesOne(keyCounter)
         
         # Process: Values
         if self.values == []:

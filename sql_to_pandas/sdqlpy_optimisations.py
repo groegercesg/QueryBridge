@@ -7,6 +7,7 @@ class SupportedOptimisations(Enum):
     PIPE_BREAK = "PipelineBreaker"
     V_FOLD = "VerticalFolding"
     UPDATE_SUM = "UpdateSum"
+    DENSE = "Dense"
     
     @staticmethod
     def has_value(item):
@@ -15,10 +16,11 @@ class SupportedOptimisations(Enum):
 OPTIMISATIONS_ORDER = [
     SupportedOptimisations.PIPE_BREAK,
     SupportedOptimisations.V_FOLD,
-    SupportedOptimisations.UPDATE_SUM
+    SupportedOptimisations.UPDATE_SUM,
+    SupportedOptimisations.DENSE
 ]
 
-def optimisation_runner(sdqlpy_tree, inOpt):
+def optimisation_runner(sdqlpy_tree, inOpt, o3_value):
     match inOpt:
         case SupportedOptimisations.PIPE_BREAK.value:
             sdqlpy_tree = opt_pipe_break(sdqlpy_tree)
@@ -26,6 +28,8 @@ def optimisation_runner(sdqlpy_tree, inOpt):
             sdqlpy_tree = opt_v_fold(sdqlpy_tree)
         case SupportedOptimisations.UPDATE_SUM.value:
             sdqlpy_tree = opt_update_sum(sdqlpy_tree)
+        case SupportedOptimisations.DENSE.value:
+            sdqlpy_tree = opt_dense(sdqlpy_tree, o3_value)
         case _:
             raise Exception(f"The optimisation: {inOpt} was not recognised.")
         
@@ -51,7 +55,7 @@ def sdqlpy_tree_preprocess(sdqlpy_tree):
 
     return sdqlpy_tree
 
-def sdqlpy_apply_optimisations(sdqlpy_tree, inOptimisations):
+def sdqlpy_apply_optimisations(sdqlpy_tree, inOptimisations, sdqlpy_o3_value):
     if inOptimisations == [""]:
         return sdqlpy_tree
     
@@ -67,7 +71,7 @@ def sdqlpy_apply_optimisations(sdqlpy_tree, inOptimisations):
     # sdqlpy_tree = sdqlpy_tree_preprocess(sdqlpy_tree)
     
     for opt in inOptimisations:
-        sdqlpy_tree = optimisation_runner(sdqlpy_tree, opt)
+        sdqlpy_tree = optimisation_runner(sdqlpy_tree, opt, sdqlpy_o3_value)
         
     return sdqlpy_tree
 
@@ -482,4 +486,105 @@ def opt_update_sum(sdqlpy_tree):
         return sdqlpy_tree
     
     sdqlpy_tree = update_sum_run(sdqlpy_tree)    
+    return sdqlpy_tree
+
+def opt_dense(sdqlpy_tree, o3_value):
+    def run_dense(sdqlpy_tree, dense_value):
+        """
+        And I'll take a parameter, like 0.9, for when the filtered is 90% the cardinality of the original, then I'll insert dense
+        """
+        
+        if isinstance(sdqlpy_tree, BinarySDQLpyNode):
+            leftNode = run_dense(sdqlpy_tree.left, dense_value)
+            rightNode = run_dense(sdqlpy_tree.right, dense_value)
+            
+            sdqlpy_tree.left = leftNode
+            sdqlpy_tree.right = rightNode
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode):
+            childNode = run_dense(sdqlpy_tree.child, dense_value)
+            
+            sdqlpy_tree.child = childNode
+        else:
+            assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
+        
+        if isinstance(sdqlpy_tree, SDQLpyRecordNode) and sdqlpy_tree.filterContent == None:
+            # This is the lowest possible node, we skip
+            pass
+        elif sdqlpy_tree.cardinality == None:
+            # We can't apply dense to a node that doesn't currently know
+            pass
+        elif len(sdqlpy_tree.outputDict.flatKeys()) > 1:
+            # We can't apply for >= 1 Key in Value section
+            pass
+        elif isinstance(sdqlpy_tree, SDQLpyAggrNode):
+            # We can't do dense on an AggrNode
+            pass
+        elif isinstance(sdqlpy_tree, UnarySDQLpyNode) and isinstance(sdqlpy_tree.child, SDQLpyJoinNode) and sdqlpy_tree.child.joinType == "outer":
+            # We don't have accurate cardiality after an outer
+            pass
+        elif isinstance(sdqlpy_tree, SDQLpyJoinNode) and isinstance(sdqlpy_tree.right, SDQLpyRetrieveNode):
+            # We don't have accurate cardinality information in a RetrieveNode
+            pass
+        elif isinstance(sdqlpy_tree, SDQLpyJoinNode) and isinstance(sdqlpy_tree.left, SDQLpyPromoteToFloatNode):
+            # We don't have accurate cardinality information in a SDQLpyPromoteToFloatNode
+            pass
+        else:
+            # Get before Cardinality
+            before_card = None
+            if isinstance(sdqlpy_tree, UnarySDQLpyNode):
+                if isinstance(sdqlpy_tree.child, SDQLpyRecordNode) and sdqlpy_tree.child.filterContent == None:
+                    # Get cardinality from defaults
+                    tpch_cardinality = {
+                        'region': 5, 
+                        'part': 200000, 
+                        'nation': 25, 
+                        'lineitem': 6001215, 
+                        'partsupp': 800000, 
+                        'supplier': 10000, 
+                        'orders': 1500000, 
+                        'customer': 150000
+                    }
+                    before_card = tpch_cardinality.get(sdqlpy_tree.child.tableName, None)
+                elif isinstance(sdqlpy_tree.child, SDQLpyJoinNode):
+                    assert sdqlpy_tree.child.foldedInto == False
+                    before_card = sdqlpy_tree.child.cardinality
+                elif isinstance(sdqlpy_tree.child, SDQLpyGroupNode):
+                    before_card = sdqlpy_tree.child.cardinality
+                else:
+                    raise Exception()
+            elif isinstance(sdqlpy_tree, BinarySDQLpyNode):
+                if sdqlpy_tree.joinType == "inner":
+                    before_card = sdqlpy_tree.right.cardinality
+                elif sdqlpy_tree.joinType == "rightsemijoin":
+                    before_card = sdqlpy_tree.right.cardinality
+                else:
+                    raise Exception("Unexpected Join Type for JoinNode")
+            else:
+                raise Exception("Unexpected Before Cardinality Structure")
+            
+            assert before_card != None
+            
+            # Get after Cardinality
+            after_card = None
+            after_card = sdqlpy_tree.cardinality
+            
+            assert after_card != None
+            
+            # Check we can do is dense
+            card_ratio = after_card / before_card
+            if (card_ratio >= dense_value) and len(sdqlpy_tree.outputDict.flatKeys()) == 1:
+                # TODO: Apply dense
+                assert isinstance(sdqlpy_tree, (SDQLpyJoinBuildNode, SDQLpyGroupNode))
+                if isinstance(sdqlpy_tree, SDQLpyJoinBuildNode):
+                    sdqlpy_tree.is_dense = True
+                else:
+                    pass
+            else:
+                # Don't apply dense, result is too significant
+                pass
+        
+        return sdqlpy_tree
+    
+    dense_value = float(o3_value)
+    sdqlpy_tree = run_dense(sdqlpy_tree, dense_value)
     return sdqlpy_tree
