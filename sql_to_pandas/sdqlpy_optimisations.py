@@ -511,10 +511,7 @@ def opt_dense(sdqlpy_tree, o3_value):
             # This is the lowest possible node, we skip
             pass
         elif sdqlpy_tree.cardinality == None:
-            # We can't apply dense to a node that doesn't currently know
-            pass
-        elif len(sdqlpy_tree.outputDict.flatKeys()) > 1:
-            # We can't apply for >= 1 Key in Value section
+            # We can't apply dense to a node that doesn't currently know it's own cardinality
             pass
         elif isinstance(sdqlpy_tree, SDQLpyAggrNode):
             # We can't do dense on an AggrNode
@@ -522,10 +519,13 @@ def opt_dense(sdqlpy_tree, o3_value):
         elif isinstance(sdqlpy_tree, UnarySDQLpyNode) and isinstance(sdqlpy_tree.child, SDQLpyJoinNode) and sdqlpy_tree.child.joinType == "outer":
             # We don't have accurate cardiality after an outer
             pass
+        elif isinstance(sdqlpy_tree, SDQLpyJoinNode) and sdqlpy_tree.joinType == "outer":
+            # We shouldn't apply dense to a 'outer' JoinNode
+            pass
         elif isinstance(sdqlpy_tree, SDQLpyJoinNode) and isinstance(sdqlpy_tree.right, SDQLpyRetrieveNode):
             # We don't have accurate cardinality information in a RetrieveNode
             pass
-        elif isinstance(sdqlpy_tree, SDQLpyJoinNode) and isinstance(sdqlpy_tree.left, SDQLpyPromoteToFloatNode):
+        elif isinstance(sdqlpy_tree, SDQLpyJoinNode) and (isinstance(sdqlpy_tree.left, SDQLpyPromoteToFloatNode) or isinstance(sdqlpy_tree.right, SDQLpyPromoteToFloatNode)):
             # We don't have accurate cardinality information in a SDQLpyPromoteToFloatNode
             pass
         else:
@@ -545,10 +545,14 @@ def opt_dense(sdqlpy_tree, o3_value):
                         'customer': 150000
                     }
                     before_card = tpch_cardinality.get(sdqlpy_tree.child.tableName, None)
+                elif isinstance(sdqlpy_tree.child, SDQLpyRecordNode) and sdqlpy_tree.child.filterContent != None:
+                    before_card = sdqlpy_tree.child.cardinality
                 elif isinstance(sdqlpy_tree.child, SDQLpyJoinNode):
                     assert sdqlpy_tree.child.foldedInto == False
                     before_card = sdqlpy_tree.child.cardinality
                 elif isinstance(sdqlpy_tree.child, SDQLpyGroupNode):
+                    before_card = sdqlpy_tree.child.cardinality
+                elif isinstance(sdqlpy_tree.child, SDQLpyFilterNode):
                     before_card = sdqlpy_tree.child.cardinality
                 else:
                     raise Exception()
@@ -557,8 +561,23 @@ def opt_dense(sdqlpy_tree, o3_value):
                     before_card = sdqlpy_tree.right.cardinality
                 elif sdqlpy_tree.joinType == "rightsemijoin":
                     before_card = sdqlpy_tree.right.cardinality
+                elif sdqlpy_tree.joinType == "rightantijoin":
+                    before_card = sdqlpy_tree.right.cardinality
                 else:
                     raise Exception("Unexpected Join Type for JoinNode")
+            elif isinstance(sdqlpy_tree, SDQLpyRecordNode) and sdqlpy_tree.filterContent != None:
+                # Get cardinality from defaults
+                tpch_cardinality = {
+                    'region': 5, 
+                    'part': 200000, 
+                    'nation': 25, 
+                    'lineitem': 6001215, 
+                    'partsupp': 800000, 
+                    'supplier': 10000, 
+                    'orders': 1500000, 
+                    'customer': 150000
+                }
+                before_card = tpch_cardinality.get(sdqlpy_tree.tableName, None)
             else:
                 raise Exception("Unexpected Before Cardinality Structure")
             
@@ -572,12 +591,13 @@ def opt_dense(sdqlpy_tree, o3_value):
             
             # Check we can do is dense
             card_ratio = after_card / before_card
-            if (card_ratio >= dense_value) and len(sdqlpy_tree.outputDict.flatKeys()) == 1:
+            if (card_ratio >= dense_value):
                 # TODO: Apply dense
-                assert isinstance(sdqlpy_tree, (SDQLpyJoinBuildNode, SDQLpyGroupNode))
+                
                 if isinstance(sdqlpy_tree, SDQLpyJoinBuildNode):
                     sdqlpy_tree.is_dense = True
                 else:
+                    assert isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyJoinNode, SDQLpyRecordNode))
                     pass
             else:
                 # Don't apply dense, result is too significant
