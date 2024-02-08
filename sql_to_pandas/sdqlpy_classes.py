@@ -702,25 +702,40 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         leftTable, rightTable = self.getChildNames(unparser)
         # {'{leftKey}': {lambda_index}[0].{rightKey}}
         lr_pairs = []
-        # Iterate through equatingConditions
-        for cond in self.equatingConditions:
-            leftName = None
-            rightName = None
-            if cond.left.created == False:
-                leftName = cond.left.value
-            else:
-                leftName = cond.left.codeName
+        
+        leftTableRef = None
+        if isinstance(self.left, SDQLpyJoinBuildNode) and self.left.is_dense == True:
+            assert len(self.equatingConditions) == 1
             
-            if cond.right.created == False:
-                rightName = cond.right.value
+            if self.equatingConditions[0].right.created == False:
+                rightName = self.equatingConditions[0].right.value
             else:
-                rightName = cond.right.codeName
-            
-            lr_pairs.append(
-                f"'{leftName}': {lambda_index}[0].{rightName}"
-            )
-        innerRecord = f"{{{', '.join(lr_pairs)}}}"
-        return f"{leftTable}[record({innerRecord})]"
+                rightName = self.equatingConditions[0].right.codeName
+        
+            leftTableRef = f"{leftTable}[{lambda_index}[0].{rightName}]"
+        else:
+            # Iterate through equatingConditions
+            for cond in self.equatingConditions:
+                leftName = None
+                rightName = None
+                if cond.left.created == False:
+                    leftName = cond.left.value
+                else:
+                    leftName = cond.left.codeName
+                
+                if cond.right.created == False:
+                    rightName = cond.right.value
+                else:
+                    rightName = cond.right.codeName
+                
+                lr_pairs.append(
+                    f"'{leftName}': {lambda_index}[0].{rightName}"
+                )
+            innerRecord = f"{{{', '.join(lr_pairs)}}}"
+            leftTableRef = f"{leftTable}[record({innerRecord})]"
+        
+        assert leftTableRef != None
+        return leftTableRef
     
     def segmentComparingTreeIntoBeforeAndAfterLookup(self, unparser, leftTableRef):
         # Segment the comparingTree into before Lookup and after Lookup
@@ -1125,41 +1140,44 @@ class SDQLpySRDict():
             f"{{"
         )
         
-        
-        keyCounter = defaultdict(int)
-        writtenKeys = dict()
-        
-        # Process: Keys
-        keyContent = []
-        for key in self.keys:
-            expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(key)
-
-            assert key.codeName != ''
-            # Check if can write out key
-            if key.codeName in writtenKeys:
-                assert writtenKeys[key.codeName] == expr
-            else:
-                writtenKeys[key.codeName] = expr
-                keyCounter[key.codeName] += 1
-                keyContent.append(
-                    f'"{key.codeName}": {expr}'
-                )
-        keyFormatted = f"record({{{', '.join(keyContent)}}})"
-        if self.unique == True:
-            keyFormatted = f"unique({keyFormatted})"
-        
         if self.key_dense == True:
-            dense_value = unparser.doing_cardinality
-        
-            output_content.append(
-                f"{TAB}dense({dense_value}, {keyFormatted}):"
-            )
+            assert len(self.keys) == 1
+            # Make the key section a dense_array
+            key_codeName = self.keys[0].codeName
+            key_sourceNode = self.keys[0].sourceNode
+            dense_value = int(unparser.doing_cardinality)
+            
+            output_content.append(f"{TAB}dense({dense_value}, {key_sourceNode}.{key_codeName}):")
         else:
+        
+            keyCounter = defaultdict(int)
+            writtenKeys = dict()
+            
+            # Process: Keys
+            keyContent = []
+            for key in self.keys:
+                expr = unparser._UnparseSDQLpyTree__convert_expression_operator_to_sdqlpy(key)
+
+                assert key.codeName != ''
+                # Check if can write out key
+                if key.codeName in writtenKeys:
+                    assert writtenKeys[key.codeName] == expr
+                else:
+                    writtenKeys[key.codeName] = expr
+                    keyCounter[key.codeName] += 1
+                    keyContent.append(
+                        f'"{key.codeName}": {expr}'
+                    )
+            keyFormatted = f"record({{{', '.join(keyContent)}}})"
+            if self.unique == True:
+                keyFormatted = f"unique({keyFormatted})"
+            
+        
             output_content.append(
                 f"{TAB}{keyFormatted}:"
             )
         
-        assert self.counterAllValuesOne(keyCounter)
+            assert self.counterAllValuesOne(keyCounter)
         
         # Process: Values
         if self.values == []:
