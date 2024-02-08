@@ -509,7 +509,8 @@ def opt_dense(sdqlpy_tree, o3_value):
             
         if (isinstance(sdqlpy_tree, SDQLpyJoinBuildNode) and isinstance(sdqlpy_tree.child, SDQLpyRecordNode)
             and sdqlpy_tree.child.filterContent == None and len(sdqlpy_tree.outputDict.flatKeys()) == 1
-            and sdqlpy_tree.outputDict.keys[0].type == "Integer" and sdqlpy_tree.cardinality != None):
+            and sdqlpy_tree.outputDict.keys[0].type == "Integer" and sdqlpy_tree.cardinality != None
+            and sdqlpy_tree.child.vectorValue == False):
             # In a JoinBuild, with a Record below
             # The join should only have one key and it should be an integer key
             
@@ -530,11 +531,15 @@ def opt_dense(sdqlpy_tree, o3_value):
             
             assert (before_card != None) and (after_card != None)
             
-            # Check we can do is dens
+            # Check we can do is dense
             card_ratio = after_card / before_card
             if (card_ratio >= dense_value):
                 assert isinstance(sdqlpy_tree, SDQLpyJoinBuildNode)
                 sdqlpy_tree.is_dense = True
+                
+                # Set it for orders
+                if sdqlpy_tree.child.tableName == "orders":
+                    sdqlpy_tree.cardinality = "6000000"
         else:
             pass
         

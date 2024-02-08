@@ -714,6 +714,9 @@ class SDQLpyJoinNode(BinarySDQLpyNode):
         
             leftTableRef = f"{leftTable}[{lambda_index}[0].{rightName}]"
         else:
+            # Sort the equating conditions by codeName on left
+            self.equatingConditions.sort(key=lambda x: x.left.codeName)
+            
             # Iterate through equatingConditions
             for cond in self.equatingConditions:
                 leftName = None
@@ -1097,8 +1100,8 @@ class SDQLpySRDict():
         output_content = []
         
         # Order the keys and values
-        # self.keys.sort(key=lambda x: x.codeName)
-        # self.values.sort(key=lambda x: x.codeName)
+        self.keys.sort(key=lambda x: x.codeName)
+        self.values.sort(key=lambda x: x.codeName)
         
         if self.keys == []:
             # If there are no keys, this should be an aggr output
@@ -1143,7 +1146,11 @@ class SDQLpySRDict():
         if self.key_dense == True:
             assert len(self.keys) == 1
             # Make the key section a dense_array
-            key_codeName = self.keys[0].codeName
+            if self.keys[0].codeName != self.keys[0].value:
+                # Prefer value for differences
+                key_codeName = self.keys[0].value
+            else:
+                key_codeName = self.keys[0].codeName
             key_sourceNode = self.keys[0].sourceNode
             dense_value = int(unparser.doing_cardinality)
             
