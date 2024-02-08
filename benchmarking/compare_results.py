@@ -141,6 +141,10 @@ def compare(query_file, exec_result, sql_result, decimal_places, order_checking)
                 # Cast to float
                 for idx, val in enumerate(exec_col):
                     exec_col[idx] = float(val)
+            elif all([(x.count(".") == 1 and exec_col[0].replace(".", "").lstrip("-").isdigit()) for x in exec_col]):
+                # Cast to float
+                for idx, val in enumerate(exec_col):
+                    exec_col[idx] = float(val)
             elif all([(x.isdigit()) for x in exec_col]):
                 # Cast to float
                 for idx, val in enumerate(exec_col):
@@ -346,6 +350,10 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places, is_sdql):
         
         column_equivalent = Counter(sql_column) == Counter(pandas_column)
     else:
+        print("SQL First 5")
+        print(sql_column[:5])
+        print("Pandas First 5")
+        print(pandas_column[:5])
         raise Exception(f"Unknown type of column_types: {column_types}")
     
     return column_equivalent
