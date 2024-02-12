@@ -33,9 +33,9 @@ def run_hyper_query(db_details, query_file, verbose):
             start = time.time()
             
             retrieved_records = db.execute_query(single_query)
-            results.append(retrieved_records)
             
             end = time.time()
+            results.append(retrieved_records)
             
             # Increment running counter
             exec_time += (end - start)

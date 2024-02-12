@@ -148,6 +148,12 @@ def main():
     
     first_run = True
     
+    # HyperThreading
+    if "HyperThreading Off" in manifest_json:
+        if manifest_json["HyperThreading Off"] == "True":
+            print("Setting it off")
+            os.system('echo off | sudo tee /sys/devices/system/cpu/smt/control')
+    
     # Iterate through scaling factors
     for scaling_factor in manifest_json["Scaling Factors"]:
         print("Doing Scaling Factor: " + str(scaling_factor))
@@ -667,6 +673,11 @@ def main():
     delete_temp_folder()
     # TODO: Add back in once solve bugs
     # teardown_sdqlpy(manifest_json["SDQLpy Setup"]["Location"])
-        
+    
+    # Restore HyperThreading
+    if "HyperThreading Off" in manifest_json:
+        if manifest_json["HyperThreading Off"] == "True":
+            os.system('echo on | sudo tee /sys/devices/system/cpu/smt/control')
+    
 if __name__ == "__main__":
     main()
