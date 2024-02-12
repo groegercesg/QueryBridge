@@ -151,9 +151,10 @@ def main():
     # HyperThreading
     if "HyperThreading Off" in manifest_json:
         if manifest_json["HyperThreading Off"] == "True":
-            print("Setting it off")
-            os.system('echo off | sudo tee /sys/devices/system/cpu/smt/control')
-    
+            os.environ["NO_HYPER_THREADING"] = "1"
+        else:
+            os.environ["NO_HYPER_THREADING"] = "-1"
+            
     # Iterate through scaling factors
     for scaling_factor in manifest_json["Scaling Factors"]:
         print("Doing Scaling Factor: " + str(scaling_factor))
@@ -675,9 +676,7 @@ def main():
     # teardown_sdqlpy(manifest_json["SDQLpy Setup"]["Location"])
     
     # Restore HyperThreading
-    if "HyperThreading Off" in manifest_json:
-        if manifest_json["HyperThreading Off"] == "True":
-            os.system('echo on | sudo tee /sys/devices/system/cpu/smt/control')
+    os.system('echo on | tee /sys/devices/system/cpu/smt/control')
     
 if __name__ == "__main__":
     main()

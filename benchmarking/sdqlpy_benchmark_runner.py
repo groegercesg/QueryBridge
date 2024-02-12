@@ -10,6 +10,12 @@ import sys
 def bench_runner(iterations, func, args, query_columns, data_write_path):
     times_list = []
     
+    # HyperThreading
+    if str(os.getenv("NO_HYPER_THREADING")) != "1":
+        os.system('echo on | tee /sys/devices/system/cpu/smt/control')
+    else:
+        os.system('echo off | tee /sys/devices/system/cpu/smt/control')
+    
     # Run 'iteration' number of times
     for i in range(0, iterations):
         start=(time.time())
@@ -21,6 +27,8 @@ def bench_runner(iterations, func, args, query_columns, data_write_path):
     results = func(*args)
 
     print("Executed the query")
+    
+    os.system('echo on | tee /sys/devices/system/cpu/smt/control')
     
     # Create JSON dict
     result_dict = dict()
