@@ -31,7 +31,7 @@ class PrepareHyperDB(PrepareDatabase):
         self.hyper_parameters = {
             #"log_config": "",
             "max_query_size": "10000000000",
-            "hard_concurrent_query_thread_limit": "1" ## Change me back!
+            "hard_concurrent_query_thread_limit": "4" ## Change me back!
         }
 
     def is_database_empty(self):
