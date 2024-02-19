@@ -1,1 +1,13 @@
 Data Type,Scaling Factor,Query Name,Query Number,Average,Correct,Executed,Runs
+SQL,1,Hyper DB,Query 3,0.897,True,Yes,[0.8966493606567383]
+SQL,1,Duck DB,Query 3,0.701,True,Yes,[0.7007982730865479]
+SDQLpy,1,Naive SDQLpy,Query 3,0.954,True,Yes,[0.9541058540344238]
+Pandas,1,Pandas Converted (Hyper DB),Query 3,0.954,True,Yes,[0.9536690711975098]
+SQL,1,Hyper DB,Query 4,0.718,True,Yes,[0.7184669971466064]
+SQL,1,Duck DB,Query 4,0.419,True,Yes,[0.41871142387390137]
+SDQLpy,1,Naive SDQLpy,Query 4,1.16,True,Yes,[1.1590776443481445]
+Pandas,1,Pandas Converted (Hyper DB),Query 4,0.31,True,Yes,[0.309739351272583]
+SQL,1,Hyper DB,Query 5,0.53,True,Yes,[0.5296356678009033]
+SQL,1,Duck DB,Query 5,0.541,True,Yes,[0.5407414436340332]
+SDQLpy,1,Naive SDQLpy,Query 5,0.465,True,Yes,[0.465301513671875]
+Pandas,1,Pandas Converted (Hyper DB),Query 5,0.72,True,Yes,[0.720487117767334]

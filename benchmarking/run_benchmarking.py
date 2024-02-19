@@ -620,13 +620,13 @@ def main():
                     if not compare_decision:
                         print(color.RED + str(query["Query Name"]) + ": The returned data was not equivalent!" + "\n" + "Between " + str(exec_name) + " and " + str(sql_name) + "." + color.END)
                         print("Execution Data:")
-                        # print(exec_result)
+                        print(exec_result)
                         print("SQL Data:")
                         print(columns)
-                        # for row in sql_result:
-                        #     print(row)
+                        for row in sql_result:
+                            print(row)
                     else:
-                        print(color.GREEN + str(query["Query Name"]) + ": The returned data was correct and the same!" + "\n" + "Between " + str(exec_name) + " and " + str(sql_name) + "." + color.END)
+                        print(color.GREEN + str(query["Query Name"]) + ": The returned data was correct and the same!" + "\n" + "\tBetween " + str(exec_name) + " and " + str(sql_name) + "." + color.END)
                         # if args.verbose:
                         #     print("Pandas Data:")
                         #     print(exec_result)

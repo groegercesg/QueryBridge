@@ -163,6 +163,11 @@ def compare(query_file, exec_result, sql_result, decimal_places, order_checking)
         # Only propagate decision forward, if is "False"
         # I.e. Don't give a decision of True, as this will overwrite previous Falses
         if column_compare == False:
+            
+            print(f"Comparing {columns[i]} was false")
+            print(f"SQL Data: {[row[i] for row in sql_result]}")
+            print(f"EXEC Data: {exec_col}")
+            
             compare_result = False
             return compare_result, columns
     
@@ -269,6 +274,20 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places, is_sdql):
         column_equivalent = Counter(sql_column) == Counter(pandas_column)
         if column_equivalent == False and is_sdql == True:
             column_equivalent = sdql_float_counter_compare(Counter(sql_column), Counter(pandas_column))
+            if column_equivalent == False:
+                # Do int identical
+                assert len(sql_column) == len(pandas_column)
+                
+                sql_column_sorted = sorted(sql_column)
+                pandas_column_sorted = sorted(pandas_column)
+                
+                int_identical = [int(sql_column_sorted[i]) == int(pandas_column_sorted[i]) for i in range(0, len(sql_column_sorted))]
+                if all(int_identical):
+                    column_equivalent = True
+                else:
+                    overlaps = [get_overlap(str(sql_column_sorted[i]), str(pandas_column_sorted[i])) >= 8 for i in range(0, len(sql_column_sorted))]
+                    column_equivalent = all(overlaps)
+                
     elif column_types == set([type(1.012)]):
         # Float        
         sql_column = from_decimal_to_float(sql_column, decimal_places)
@@ -347,6 +366,21 @@ def compare_column_no_order(sql_column, pandas_column, decimal_places, is_sdql):
             sql_column = from_datetime_date_to_pd_timestamp(sql_column)
         else: 
             raise Exception(f"sql_column was not of type datetime Date, it was: {type(sql_column[0])}")
+        
+        column_equivalent = Counter(sql_column) == Counter(pandas_column)
+    
+    elif column_types == set([datetime.date]):
+        # Convert datetime.date to pd.Timestamp
+        
+        if isinstance(sql_column[0], datetime.date):
+            sql_column = from_datetime_date_to_pd_timestamp(sql_column)
+        else: 
+            raise Exception(f"sql_column was not of type datetime Date, it was: {type(sql_column[0])}")
+        
+        if isinstance(pandas_column[0], datetime.date):
+            pandas_column = from_datetime_date_to_pd_timestamp(pandas_column)
+        else: 
+            raise Exception(f"pandas_column was not of type datetime Date, it was: {type(sql_column[0])}")
         
         column_equivalent = Counter(sql_column) == Counter(pandas_column)
     else:
