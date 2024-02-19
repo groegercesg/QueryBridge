@@ -1,7 +1,8 @@
 import time
+import os
 from prepare_databases.prepare_duckdb import PrepareDuckDB
 
-def run_duck_query(db_details, query_file, verbose):
+def run_duck_query(db_details, query_file, verbose, number_of_threads = 1):
     # Read SQL file
     with open(query_file, 'r') as file:
         sql_query = file.read()
@@ -27,8 +28,14 @@ def run_duck_query(db_details, query_file, verbose):
         #con = duckdb.connect(database=db_details, read_only=False)
         db = PrepareDuckDB(db_details)
         
+        # HyperThreading
+        if str(os.getenv("NO_HYPER_THREADING")) != "1":
+            os.system('echo on | tee /sys/devices/system/cpu/smt/control')
+        else:
+            os.system('echo off | tee /sys/devices/system/cpu/smt/control')
+        
         # Prepare connection by set to single threaded
-        db.execute_query("SET threads TO 1;")
+        db.execute_query("SET threads TO " + str(number_of_threads) + ";")
         
         for i, single_query in enumerate(queries):
             if verbose:
@@ -46,6 +53,8 @@ def run_duck_query(db_details, query_file, verbose):
         # Run at end to get results
         retrieved_records = db.execute_query(single_query)
         results.append(retrieved_records)
+        
+        os.system('echo on | tee /sys/devices/system/cpu/smt/control')
     except Exception as error:
         print("Error while fetching data from Duck DB: ", error)
     

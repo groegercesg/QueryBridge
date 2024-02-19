@@ -1284,7 +1284,7 @@
     "SQL Queries Location": "benchmarking/tpch_no_limit_order_with_aggrs",
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 6,
+    "Number of Query Runs": 1,
     "Results Location": "benchmarking/test_results/testing.csv",
     "Postgres Connection Details": "postgres_connection.json",
     "Duck DB Connection": "duckdb_tpch.duckdb",

@@ -42,7 +42,7 @@ Same as above
 
 This project requires a modified version of SDQLpy, so download it from here: [OneDrive](https://uoe-my.sharepoint.com/:u:/g/personal/s1925856_ed_ac_uk/EdsZ-90C_wpNkxkZramNvW8BINuHX8i0W11y1DyknW3TKA?e=73PjAt)
 
-Unzip it, rename the overall folder to `sdqply`, place it in a folder called `SDQLPY` and place that at the same level as `dataframe-sql-benchmark`. Here is a diagram of the desired folder structure:
+Unzip it, rename the overall folder to `sdqlpy`, place it in a folder called `SDQLPY` and place that at the same level as `dataframe-sql-benchmark`. Here is a diagram of the desired folder structure:
 
 ```bash
 .

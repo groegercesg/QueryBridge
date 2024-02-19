@@ -293,7 +293,7 @@ def main():
                         if query_option["DBMS"] == "Postgres":
                             sql_result, run_time = run_pg_query(pg_db_details, sql_file_path, args.verbose)
                         elif query_option["DBMS"] == "Duck DB":
-                            sql_result, run_time = run_duck_query(duck_db_details, sql_file_path, args.verbose)
+                            sql_result, run_time = run_duck_query(duck_db_details, sql_file_path, args.verbose, number_of_threads)
                         elif query_option["DBMS"] == "Hyper DB":
                             sql_result, run_time = run_hyper_query(hyper_db_details, sql_file_path, args.verbose)
                         else:
