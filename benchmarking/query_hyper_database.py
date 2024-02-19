@@ -1,4 +1,5 @@
 import time
+import subprocess
 from prepare_databases.prepare_hyperdb import PrepareHyperDB
 import os
 
@@ -29,9 +30,9 @@ def run_hyper_query(db_details, query_file, verbose):
         
         # HyperThreading
         if str(os.getenv("NO_HYPER_THREADING")) != "1":
-            os.system('echo on | tee /sys/devices/system/cpu/smt/control')
+            os.system('echo on | tee /sys/devices/system/cpu/smt/control >/dev/null 2>&1')
         else:
-            os.system('echo off | tee /sys/devices/system/cpu/smt/control')
+            os.system('echo off | tee /sys/devices/system/cpu/smt/control >/dev/null 2>&1')
         
         for i, single_query in enumerate(queries):
             if verbose:
@@ -50,7 +51,7 @@ def run_hyper_query(db_details, query_file, verbose):
         retrieved_records = db.execute_query(single_query)
         results.append(retrieved_records)
             
-        os.system('echo on | tee /sys/devices/system/cpu/smt/control')
+        os.system('echo on | tee /sys/devices/system/cpu/smt/control >/dev/null 2>&1')
     except Exception as error:
         print("Error while fetching data from Duck DB: ", error)
     

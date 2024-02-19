@@ -693,7 +693,7 @@ def main():
     # teardown_sdqlpy(manifest_json["SDQLpy Setup"]["Location"])
     
     # Restore HyperThreading
-    os.system('echo on | tee /sys/devices/system/cpu/smt/control')
+    os.system('echo on | tee /sys/devices/system/cpu/smt/control >/dev/null 2>&1')
     
 if __name__ == "__main__":
     main()
