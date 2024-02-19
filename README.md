@@ -17,7 +17,7 @@ cd dataframe-sql-benchmark
 
 First, change to the root of the project directory.
 
-Grab the DBgen version, clone this into the project directory.
+Grab the DBgen version, clone this inside the `dataframe-sql-benchmark` directory.
 
 ```bash
 git clone https://github.com/edin-dal/tpch-dbgen
@@ -46,7 +46,7 @@ Unzip it, rename the overall folder to `sdqlpy`, place it in a folder called `SD
 
 ```bash
 .
-└── Parent/
+└── Parent Folder
     ├── dataframe-sql-benchmark/
     │   └── ...
     └── SDQLPY/
@@ -81,7 +81,7 @@ And the second command activates it for us.
 
 ## Using the benchmarker
 
-The benchmarker used Test Specification files, open these and configure all options before running. For example, we will use the `hyper_duck_sdqlpy_pandas_tpch_opt_all_comparison.json` file. This runs HyperDB, DuckDB, SDQLpy (And all optimisations) and Pandas. It compares their correctness and output the results into the desired file:
+The benchmarker used Test Specification files, open these and configure all options before running. For example, we will use the `hyper_duck_sdqlpy_pandas_tpch_opt_all_comparison.json` file. This runs HyperDB, DuckDB, SDQLpy (And all optimisations) and Pandas. It compares their correctness and output the results into the location specified in the Test Specification file:
 
 ```bash
 conda deactivate
