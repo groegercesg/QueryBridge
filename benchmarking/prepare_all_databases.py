@@ -59,15 +59,32 @@ def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor,
         run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, number_of_threads, constants_location)
         # Do Hyper DB
         run_prepare(KnownDatabases.HYPER_DB, verbose, data_storage_location, hyper_db_connection_details, number_of_threads, constants_location)
-    elif (run_only != None) and (run_only == "PostgreSQL"):
-        run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, number_of_threads, constants_location)
-    elif (run_only != None) and (run_only == "DuckDB"):
-        run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, number_of_threads, constants_location)
-    elif (run_only != None) and (run_only == "HyperDB"):
-        run_prepare(KnownDatabases.HYPER_DB, verbose, data_storage_location, hyper_db_connection_details, number_of_threads, constants_location)
     else:
-        raise Exception("Unexpected options for '--run_only. The supported options are: \n\t'PostgreSQL'\n\t'DuckDB'\n\t'HyperDB'")
-
+        # We only want to run certain files
+        if "," in run_only:
+            # Split on file
+            options = run_only.split(",")
+            cleaned_options = [s.strip() for s in options]
+            for opt in cleaned_options:
+                if (opt != None) and (opt == "PostgreSQL"):
+                    run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, number_of_threads, constants_location)
+                elif (opt != None) and (opt == "DuckDB"):
+                    run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, number_of_threads, constants_location)
+                elif (opt != None) and (opt == "HyperDB"):
+                    run_prepare(KnownDatabases.HYPER_DB, verbose, data_storage_location, hyper_db_connection_details, number_of_threads, constants_location)
+                else:
+                    raise Exception(f"Unrecognised option: {opt}. May be a problem with the overall options sent to the method: {options}")
+            
+        else:
+            if (run_only != None) and (run_only == "PostgreSQL"):
+                run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, number_of_threads, constants_location)
+            elif (run_only != None) and (run_only == "DuckDB"):
+                run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, number_of_threads, constants_location)
+            elif (run_only != None) and (run_only == "HyperDB"):
+                run_prepare(KnownDatabases.HYPER_DB, verbose, data_storage_location, hyper_db_connection_details, number_of_threads, constants_location)
+            else:
+                raise Exception("Unexpected options for '--run_only. The supported options are: \n\t'PostgreSQL'\n\t'DuckDB'\n\t'HyperDB'")
+    
     
 def str2bool(v):
     if isinstance(v, bool):
