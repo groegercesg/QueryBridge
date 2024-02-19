@@ -4,7 +4,7 @@ import psycopg2
 import os
 
 class PreparePostgres(PrepareDatabase):
-    def __init__(self, connection_details, connection_factory=None):
+    def __init__(self, connection_details, number_of_threads = 1, connection_factory=None):
         # connection details might be a dict
         if isinstance(connection_details, dict):
             pass

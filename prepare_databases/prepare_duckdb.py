@@ -4,10 +4,11 @@ import json
 import os
 
 class PrepareDuckDB(PrepareDatabase):
-    def __init__(self, connection_details):
+    def __init__(self, connection_details, number_of_threads = 1):
         super().__init__(connection_details, "Duck DB")
         self.connection = self.__open_connection()
         self.explain_options = '\n'
+        self.number_of_threads = number_of_threads
         
     def is_database_empty(self):
         cursor_fetch = self.execute_query("""SELECT table_name FROM information_schema.tables""")
@@ -33,7 +34,7 @@ class PrepareDuckDB(PrepareDatabase):
                             "PRAGMA profile_output='" + str(output_explain_name) + "';",
                             "PRAGMA explain_output='ALL';",
                             "SET explain_output='all';",
-                            "SET threads TO 1;"]
+                            "SET threads TO " + str(self.number_of_threads) + ";"]
             
         for command in explain_commands:
             self.execute_query(command)

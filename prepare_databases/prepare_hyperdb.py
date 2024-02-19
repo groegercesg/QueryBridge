@@ -25,13 +25,13 @@ class ForeignKey(DatabaseReference):
         self.ref_table_keys = self.process_keys(ref_keys)
 
 class PrepareHyperDB(PrepareDatabase):
-    def __init__(self, connection_details):
+    def __init__(self, connection_details, number_of_threads = 1):
         super().__init__(connection_details, "Hyper DB")
         self.explain_options = "EXPLAIN (VERBOSE)"
         self.hyper_parameters = {
             #"log_config": "",
             "max_query_size": "10000000000",
-            "hard_concurrent_query_thread_limit": "4" ## Change me back!
+            "hard_concurrent_query_thread_limit": str(number_of_threads) ## Change me back!
         }
 
     def is_database_empty(self):

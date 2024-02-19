@@ -1175,7 +1175,7 @@
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
     "Number of Query Runs": 6,
-    "Results Location": "benchmarking/test_results/hyper_sdqlpy_pandas_tpch_opt_all_4threads_comparison_test_results.csv",
+    "Results Location": "benchmarking/test_results/testing.csv",
     "Postgres Connection Details": "postgres_connection.json",
     "Duck DB Connection": "duckdb_tpch.duckdb",
     "Hyper DB Connection": "hyperdb_tpch.hyper",
@@ -1194,5 +1194,6 @@
         "Bench Class": "benchmarking/sdqlpy_benchmark_runner.py"
     },
     "Order Checking": "False",
-    "HyperThreading Off": "True"
+    "HyperThreading Off": "True",
+    "Number of Threads": "1"
 }

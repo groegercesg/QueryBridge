@@ -22,6 +22,7 @@ import importlib.util
 import sys
 import re
 import pandas as pd
+import stat
 from sdqlpy_running import run_sdqlpy, setup_sdqlpy, teardown_sdqlpy
 
 class HiddenPrinting:
@@ -154,6 +155,17 @@ def main():
             os.environ["NO_HYPER_THREADING"] = "1"
         else:
             os.environ["NO_HYPER_THREADING"] = "-1"
+    
+    # Check we have permissions to change hyper threading modes
+    if os.access("/sys/devices/system/cpu/smt/control", os.W_OK):
+        pass
+    else:
+        raise Exception("Don't have permissions to write to '/sys/devices/system/cpu/smt/control'. Mabe chmod 777 it")
+            
+    # Number of threads
+    number_of_threads = 1
+    if "Number of Threads" in manifest_json:
+        number_of_threads = int(manifest_json["Number of Threads"])
             
     # Iterate through scaling factors
     for scaling_factor in manifest_json["Scaling Factors"]:
@@ -173,7 +185,8 @@ def main():
                         manifest_json["DB Gen Location"], scaling_factor,
                         manifest_json["Postgres Connection Details"],
                         manifest_json["Duck DB Connection"], manifest_json["Hyper DB Connection"],
-                        manifest_json["Constants Location"], prepare_only)
+                        manifest_json["Constants Location"],
+                        number_of_threads, prepare_only)
         
         # Import Pandas Data
         print("Importing Pandas Data")
@@ -554,7 +567,8 @@ def main():
                         sdqlpy_results = run_sdqlpy(query_path,
                                                     manifest_json["Number of Query Runs"],
                                                     manifest_json["SDQLpy Setup"],
-                                                    manifest_json["Data Storage"])
+                                                    manifest_json["Data Storage"],
+                                                    number_of_threads)
                         bad_exec = False
                     except:
                         sdqlpy_results = dict()

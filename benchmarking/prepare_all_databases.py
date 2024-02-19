@@ -23,14 +23,14 @@ class KnownDatabases(Enum):
     DUCK_DB = PrepareDuckDB
     HYPER_DB = PrepareHyperDB
         
-def run_prepare(prepare_class, verbose, data_storage_location, connection_details, constants_location=None):
+def run_prepare(prepare_class, verbose, data_storage_location, connection_details, number_of_threads, constants_location=None):
     if isinstance(prepare_class, KnownDatabases):
         prepare_class = prepare_class.value
     else:
         raise Exception(f"The prepare_class was of type: {type(prepare_class)}")
     
     # Prepare the passed class: prepare_class
-    prep_db = prepare_class(connection_details)
+    prep_db = prepare_class(connection_details, number_of_threads)
     print(f"Prepare {prep_db.database_name} Database")
     if verbose:
         prep_db.prepare_database(data_storage_location, constants_location)
@@ -40,7 +40,7 @@ def run_prepare(prepare_class, verbose, data_storage_location, connection_detail
     print(f"{prep_db.database_name} Database Prepared")
 
 def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor, postgres_connection_details,
-                duck_db_connection_details, hyper_db_connection_details, constants_location, run_only = None):
+                duck_db_connection_details, hyper_db_connection_details, constants_location, number_of_threads, run_only = None):
     # Data generator
         # Generates the data and saves it to:
         # "Data Storage"
@@ -54,17 +54,17 @@ def prepare_all(verbose, data_storage_location, db_gen_location, scaling_factor,
     
     if (run_only == None):
         # Do Postgres
-        run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, constants_location)
+        run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, number_of_threads, constants_location)
         # Do Duck DB
-        run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, constants_location)
+        run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, number_of_threads, constants_location)
         # Do Hyper DB
-        run_prepare(KnownDatabases.HYPER_DB, verbose, data_storage_location, hyper_db_connection_details, constants_location)
+        run_prepare(KnownDatabases.HYPER_DB, verbose, data_storage_location, hyper_db_connection_details, number_of_threads, constants_location)
     elif (run_only != None) and (run_only == "PostgreSQL"):
-        run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, constants_location)
+        run_prepare(KnownDatabases.POSTGRES, verbose, data_storage_location, postgres_connection_details, number_of_threads, constants_location)
     elif (run_only != None) and (run_only == "DuckDB"):
-        run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, constants_location)
+        run_prepare(KnownDatabases.DUCK_DB, verbose, data_storage_location, duck_db_connection_details, number_of_threads, constants_location)
     elif (run_only != None) and (run_only == "HyperDB"):
-        run_prepare(KnownDatabases.HYPER_DB, verbose, data_storage_location, hyper_db_connection_details, constants_location)
+        run_prepare(KnownDatabases.HYPER_DB, verbose, data_storage_location, hyper_db_connection_details, number_of_threads, constants_location)
     else:
         raise Exception("Unexpected options for '--run_only. The supported options are: \n\t'PostgreSQL'\n\t'DuckDB'\n\t'HyperDB'")
 
