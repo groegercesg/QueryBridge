@@ -36,13 +36,16 @@ def run_duck_query(db_details, query_file, verbose):
             
             start = time.time()
             
-            retrieved_records = db.execute_query(single_query)
-            results.append(retrieved_records)
+            db.execute_query(single_query)
             
             end = time.time()
             
             # Increment running counter
             exec_time += (end - start)
+        
+        # Run at end to get results
+        retrieved_records = db.execute_query(single_query)
+        results.append(retrieved_records)
     except Exception as error:
         print("Error while fetching data from Duck DB: ", error)
     

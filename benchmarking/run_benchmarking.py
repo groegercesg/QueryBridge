@@ -467,7 +467,7 @@ def main():
                                 
                                 start_time = time.time()
                                 try:
-                                    pandas_result = query_function(*query_data)
+                                    query_function(*query_data)
                                 except Exception as ex:
                                     print(color.RED + str(query["Query Name"]) + ": Pandas execution error!" + "\n" + color.END)
                                     print(str(type(ex)) + " : " + str(ex))
@@ -477,6 +477,9 @@ def main():
                                 if args.verbose:
                                     print("\tRun time was: " + str(end_time - start_time))
                                 pandas_run_times.append(end_time - start_time)
+                                
+                            # Run it once to get results
+                            pandas_result = query_function(*query_data)
                             
                         # Change back if we've moved
                         if changed_dirs == True:
