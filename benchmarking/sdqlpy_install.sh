@@ -3,7 +3,7 @@
 python3.8 -m venv sdqlenv
 source sdqlenv/bin/activate
 
-# Move sdqlpy - have to use a modified version, as bugs
+# Move sdqlpy - have to use a modified version, different configuration from the mainline
 cp -r ../../SDQL/sdqlpy/ .
 cd sdqlpy/src
 

@@ -102,12 +102,14 @@ def build_sdqlpy_info(data_location: str, desired_tables: list, number_of_thread
         "supplier": 'supplier = read_csv(dataset_path + "supplier.tbl.csv", supplier_type, "supplier")'
     }
     
+    full_data_location = '"' + str(os.getcwd()) + str("/") + str(data_location) + str("/") + '"'
+    
     new_sdqlpy_info = """from sdqlpy.sdql_lib import *
 from sdqlpy_benchmark_runner import bench_runner
 
 print("Starting to Load Data")
 
-dataset_path = "/home/callum/Documents/Academia/University/Year4/PROJ/dataframe-sql-benchmark/"""+data_location+"""/"
+dataset_path = """ + full_data_location + """
 
 """
     for table in desired_tables:
