@@ -481,6 +481,11 @@ def main():
                             # Run it once to get results
                             pandas_result = query_function(*query_data)
                             
+                        else:
+                            # Bad Exec == True
+                            # Create a dummy pandas_run_times list
+                            pandas_run_times = []
+                            
                         # Change back if we've moved
                         if changed_dirs == True:
                             os.chdir("..")
