@@ -966,5 +966,7 @@
     "Use Numpy": "False",
     "Results Precision": 4,
     "Regenerate Data": "True",
-    "Order Checking": "False"
+    "Order Checking": "False",
+    "HyperThreading Off": "True",
+    "Number of Threads": "1"
 }

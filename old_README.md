@@ -127,7 +127,7 @@ sudo -i -u postgres
 And check it's installed with:
 
 ```bash
-psql -V
+psql -c 'SELECT version();'
 ```
 
 If this version is not Postgres 14.X, please install Postgres 14.

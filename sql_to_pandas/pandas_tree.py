@@ -3209,8 +3209,11 @@ class merge_node():
         # Set prefixes
         if not isinstance(prev_dfs, list):
             raise ValueError("Inputted prev_df is not a list!")
-        elif len(prev_dfs) != 2:
+        elif len(prev_dfs) < 2:
             raise ValueError("Too few previous dataframes specified")
+        elif len(prev_dfs) > 2:
+            raise ValueError("Too many previous dataframes specified")
+        
         instructions = []
         
         merge_statements = self.process_condition_into_merge(prev_dfs[0], prev_dfs[1], this_df, codeCompHelper)

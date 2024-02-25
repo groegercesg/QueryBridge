@@ -4,6 +4,7 @@ import psycopg2.extensions
 from psycopg2.extras import LoggingConnection, LoggingCursor
 import logging
 from prepare_databases.prepare_postgres import PreparePostgres
+import os
 
 logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
@@ -53,19 +54,40 @@ def run_pg_query(db_details, query_file, verbose):
     # Try connection, catch error
     try:
         db = PreparePostgres(db_details, MyLoggingConnection)
-        db.connection.initialize(logger)
+        #db.connection.initialize(logger)
+        
+        # HyperThreading
+        if str(os.getenv("NO_HYPER_THREADING")) != "1":
+            os.system('echo on | tee /sys/devices/system/cpu/smt/control >/dev/null 2>&1')
+        else:
+            os.system('echo off | tee /sys/devices/system/cpu/smt/control >/dev/null 2>&1')
         
         for i, single_query in enumerate(queries):
             if verbose:
                 print("Executing SQL Query, part", i+1, "of", len(queries), ".")
             
-            retrieved_records = db.execute_query(single_query)
+            # retrieved_records = db.execute_query(single_query)
             
-            # If it's a select query, we store the results
-            if (single_query[:6].lower() == "select") or (single_query[:4].lower() == "with"):
-                results.append(retrieved_records)
+            start = time.time()
             
-            exec_time += db.connection.exec_time
+            db.execute_query(single_query)
+            
+            end = time.time()
+            
+            # # If it's a select query, we store the results
+            # if (single_query[:6].lower() == "select") or (single_query[:4].lower() == "with"):
+            #     results.append(retrieved_records)
+            
+            # exec_time += db.connection.exec_time
+            
+            # Increment running counter
+            exec_time += (end - start)
+        
+        # Run at end to get results
+        retrieved_records = db.execute_query(single_query)
+        results.append(retrieved_records)
+            
+        os.system('echo on | tee /sys/devices/system/cpu/smt/control >/dev/null 2>&1')
     except (Exception, psycopg2.Error) as error:
         print(f"Error while fetching data from PostgreSQL: {error}")
     finally:

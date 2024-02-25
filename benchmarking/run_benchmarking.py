@@ -160,7 +160,7 @@ def main():
     if os.access("/sys/devices/system/cpu/smt/control", os.W_OK):
         pass
     else:
-        raise Exception("Don't have permissions to write to '/sys/devices/system/cpu/smt/control'. Mabe chmod 777 it")
+        raise Exception("Don't have permissions to write to '/sys/devices/system/cpu/smt/control'. Maybe you should 'chmod 777' it")
             
     # Number of threads
     number_of_threads = 1
@@ -199,7 +199,7 @@ def main():
         print("Pandas Data Imported, now Running Queries")
         
         # Setup SDQLpy environment
-        if manifest_json["SDQLpy Setup"] == "False":
+        if ("SDQLpy Setup" not in manifest_json) or (manifest_json["SDQLpy Setup"] == "False"):
             print("Skipping SDQLpy Setup")
         else:
             print("Setting up SDQLpy Environment")
