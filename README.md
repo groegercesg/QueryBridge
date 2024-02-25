@@ -42,14 +42,14 @@ Same as above
 
 This project requires a modified version of SDQLpy, so download it from here: [OneDrive](https://uoe-my.sharepoint.com/:u:/g/personal/s1925856_ed_ac_uk/EdsZ-90C_wpNkxkZramNvW8BINuHX8i0W11y1DyknW3TKA?e=73PjAt)
 
-Unzip it, rename the overall folder to `sdqlpy`, place it in a folder called `SDQLPY` and place that at the same level as `dataframe-sql-benchmark`. Here is a diagram of the desired folder structure:
+Unzip it, rename the overall folder to `sdqlpy`, place it in a folder called `SDQL` and place that at the same level as `dataframe-sql-benchmark`. Here is a diagram of the desired folder structure:
 
 ```bash
 .
 └── Parent Folder
     ├── dataframe-sql-benchmark/
     │   └── ...
-    └── SDQLPY/
+    └── SDQL/
         └── sdqlpy/
             ├── README.md
             ├── src/
@@ -72,8 +72,8 @@ Back in the root directory of this project, create the virtual environment and s
 Then install the packages required.
 
 ```bash
-python3 -m venv sqlconv_env
-source sqlconv_env/bin/activate
+python3 -m venv sqlconv
+source sqlconv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -85,6 +85,6 @@ The benchmarker used Test Specification files, open these and configure all opti
 
 ```bash
 conda deactivate
-source sqlconv/env/activate
+source sqlconv/bin/activate
 python3.10 benchmarking/run_benchmarking.py --file benchmarking/test_specifications/hyper_duck_sdqlpy_pandas_tpch_opt_all_comparison.json --verbose
 ```

@@ -314,11 +314,11 @@ def main():
                         # We first convert the SQL to a Pandas Query, and then run it!
                         # Run converter
                         if query_option["Query Plan"] == "Postgres":
-                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Postgres", "--planner_file", manifest_json["Postgres Connection Details"]]
+                            cmd = ["python3.10", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Postgres", "--planner_file", manifest_json["Postgres Connection Details"]]
                         elif query_option["Query Plan"] == "Duck DB":
-                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Duck_DB", "--planner_file", duck_db_details]
+                            cmd = ["python3.10", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Duck_DB", "--planner_file", duck_db_details]
                         elif query_option["Query Plan"] == "Hyper DB":
-                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Hyper_DB", "--planner_file", hyper_db_details]
+                            cmd = ["python3.10", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Hyper_DB", "--planner_file", hyper_db_details]
                         else:
                             raise Exception("Unrecognised option")
                         
@@ -517,11 +517,11 @@ def main():
                     query_path = None
                     if ("Converter" in query_option and query_option["Converter"] == "True") or ("Converter" not in query_option):
                         if query_option["Query Plan"] == "Postgres":
-                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Postgres", "--planner_file", manifest_json["Postgres Connection Details"], "--output_fmt", "sdqlpy"]
+                            cmd = ["python3.10", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Postgres", "--planner_file", manifest_json["Postgres Connection Details"], "--output_fmt", "sdqlpy"]
                         elif query_option["Query Plan"] == "Duck DB":
-                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Duck_DB", "--planner_file", duck_db_details, "--output_fmt", "sdqlpy"]
+                            cmd = ["python3.10", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Duck_DB", "--planner_file", duck_db_details, "--output_fmt", "sdqlpy"]
                         elif query_option["Query Plan"] == "Hyper DB":
-                            cmd = ["python3", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Hyper_DB", "--planner_file", hyper_db_details, "--output_fmt", "sdqlpy"]
+                            cmd = ["python3.10", manifest_json["SQL Converter Location"], '--file', sql_file_path, '--benchmarking', "True", "--output_location", manifest_json["Temporary Directory"], "--name", query_option["Converted Name"], "--query_planner", "Hyper_DB", "--planner_file", hyper_db_details, "--output_fmt", "sdqlpy"]
                         else:
                             raise Exception("Unrecognised option")
                         
