@@ -38,14 +38,7 @@ def run_hyper_query(db_details, query_file, verbose):
             if verbose:
                 print("Executing SQL Query, part", i+1, "of", len(queries), ".")
             
-            start = time.time()
-            
-            db.execute_query(single_query)
-            
-            end = time.time()
-            
-            # Increment running counter
-            exec_time += (end - start)
+            exec_time += db.execute_timed_query(single_query)
         
         # Run at end to get results
         retrieved_records = db.execute_query(single_query)
@@ -53,7 +46,7 @@ def run_hyper_query(db_details, query_file, verbose):
             
         os.system('echo on | tee /sys/devices/system/cpu/smt/control >/dev/null 2>&1')
     except Exception as error:
-        print("Error while fetching data from Duck DB: ", error)
+        print("Error while fetching data from Hyper DB: ", error)
     
     # Choose results
     if len(results) == 1:

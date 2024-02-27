@@ -426,7 +426,7 @@
     "SQL Queries Location": "benchmarking/queries",
     "Stored Queries Location": "benchmarking/stored_queries",
     "Pandas Data Loader": "tpch_data_loader.py",
-    "Number of Query Runs": 1,
+    "Number of Query Runs": 6,
     "Results Location": "benchmarking/test_results/hyper_tpch_test_results.csv",
     "Postgres Connection Details": "postgres_connection.json",
     "Duck DB Connection": "duckdb_tpch.duckdb",
@@ -437,5 +437,7 @@
     "Use Numpy": "False",
     "Results Precision": 4,
     "Regenerate Data": "False",
-    "Prepare Only": "HyperDB"
+    "Prepare Only": "HyperDB",
+    "HyperThreading Off": "True",
+    "Number of Threads": "1"
 }

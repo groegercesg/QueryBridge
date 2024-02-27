@@ -4,6 +4,7 @@ from enum import Enum
 from collections import defaultdict
 from difflib import SequenceMatcher
 import json
+import time
 
 class DatabaseReference():        
     def process_keys(self, keys):
@@ -31,7 +32,8 @@ class PrepareHyperDB(PrepareDatabase):
         self.hyper_parameters = {
             #"log_config": "",
             "max_query_size": "10000000000",
-            "hard_concurrent_query_thread_limit": str(number_of_threads) ## Change me back!
+            "hard_concurrent_query_thread_limit": str(number_of_threads), 
+            "initial_compilation_mode": "o"
         }
 
     def is_database_empty(self):
@@ -170,6 +172,17 @@ class PrepareHyperDB(PrepareDatabase):
         with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU, parameters=self.hyper_parameters) as hyper:
             with Connection(hyper.endpoint, self.connection_details, CreateMode.NONE) as connection:
                 return connection.execute_list_query(query_text)
+            
+    def execute_timed_query(self, query_text):
+        with HyperProcess(telemetry=Telemetry.DO_NOT_SEND_USAGE_DATA_TO_TABLEAU, parameters=self.hyper_parameters) as hyper:
+            with Connection(hyper.endpoint, self.connection_details, CreateMode.NONE) as connection:
+                start = time.time()
+            
+                connection.execute_list_query(query_text)
+            
+                end = time.time() 
+                    
+                return (end - start)
 
     def get_explain(self, query_text, query_name=None):
         query_list = []
