@@ -452,16 +452,22 @@ def opt_update_sum(sdqlpy_tree):
         else:
             assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
             
+        us_tracking = open("tpch_update_sum.csv", "a")  # append mode
+            
         if (sdqlpy_tree.outputDict.duplicateCounter == False) and len(sdqlpy_tree.outputDict.flatVals()) == 0:
             # Is not an UpdateSum - we know that the key is unique
             # So we can pass in "False"
             sdqlpy_tree.outputDict.set_is_assignment_sum(True)
+            
+            us_tracking.write(f"1\n")
         elif isinstance(sdqlpy_tree, (SDQLpyJoinBuildNode, SDQLpyConcatNode)):
             # Build summations should always be true, also the concat 
             if isinstance(sdqlpy_tree, SDQLpyJoinBuildNode) and hasattr(sdqlpy_tree.child, "vectorValue") and sdqlpy_tree.child.vectorValue == True:
                 pass
             else:
                 sdqlpy_tree.outputDict.set_is_assignment_sum(True)
+                
+                us_tracking.write(f"1\n")
         elif isinstance(sdqlpy_tree, (SDQLpyGroupNode, SDQLpyAggrNode, SDQLpyPromoteToFloatNode)):
             # In a groupNode, PromoteToFloat or AggrNode, the key is not unique
             pass
@@ -478,10 +484,14 @@ def opt_update_sum(sdqlpy_tree):
                     else:
                         # The value section is just ColumnValues, so we can make it an assignment sum
                         sdqlpy_tree.outputDict.set_is_assignment_sum(True)
+                        
+                        us_tracking.write(f"1\n")
                 else:
                     pass
         else:
             pass
+        
+        us_tracking.close()
         
         return sdqlpy_tree
     

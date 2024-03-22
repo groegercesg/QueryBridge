@@ -1,0 +1,7 @@
+Part,Type,Cardinality,Columns
+A,Before,200000,5
+A,After,200000,5
+B,Before,529392,8
+B,After,529392,6
+C,Before,269118,12
+C,After,269118,4
