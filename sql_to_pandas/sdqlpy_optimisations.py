@@ -508,7 +508,8 @@ def opt_dense(sdqlpy_tree, o3_value):
             assert isinstance(sdqlpy_tree, LeafSDQLpyNode)
             
         if (isinstance(sdqlpy_tree, SDQLpyJoinBuildNode) and isinstance(sdqlpy_tree.child, SDQLpyRecordNode)
-            and sdqlpy_tree.child.filterContent == None and len(sdqlpy_tree.outputDict.flatKeys()) == 1
+            and sdqlpy_tree.child.filterContent == None
+            and len(sdqlpy_tree.outputDict.flatKeys()) == 1
             and sdqlpy_tree.outputDict.keys[0].type == "Integer" and sdqlpy_tree.cardinality != None
             and sdqlpy_tree.child.vectorValue == False):
             # In a JoinBuild, with a Record below
@@ -531,8 +532,13 @@ def opt_dense(sdqlpy_tree, o3_value):
             
             assert (before_card != None) and (after_card != None)
             
-            # Check we can do is dense
             card_ratio = after_card / before_card
+            
+            card_tracking = open("tpch_cardinality_tracking.csv", "a")  # append mode
+            card_tracking.write(f"{card_ratio}\n")
+            card_tracking.close()
+            
+            # Check we can do is dense
             if (card_ratio >= dense_value):
                 assert isinstance(sdqlpy_tree, SDQLpyJoinBuildNode)
                 sdqlpy_tree.is_dense = True
