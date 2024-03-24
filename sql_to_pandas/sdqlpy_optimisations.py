@@ -556,6 +556,21 @@ def opt_dense(sdqlpy_tree, o3_value):
                 # Set it for orders
                 if sdqlpy_tree.child.tableName == "orders":
                     sdqlpy_tree.cardinality = "6000000"
+                elif sdqlpy_tree.child.tableName == "region":
+                    sdqlpy_tree.cardinality = "5"
+                elif sdqlpy_tree.child.tableName == "customer":
+                    sdqlpy_tree.cardinality = "150000"
+                elif sdqlpy_tree.child.tableName == "lineitem":
+                    sdqlpy_tree.cardinality = "6000000"
+                elif sdqlpy_tree.child.tableName == "part":
+                    sdqlpy_tree.cardinality = "200000"
+                elif sdqlpy_tree.child.tableName == "partsupp":
+                    sdqlpy_tree.cardinality = "200000"
+                elif sdqlpy_tree.child.tableName == "nation":
+                    sdqlpy_tree.cardinality = "25"
+                elif sdqlpy_tree.child.tableName == "supplier":
+                    sdqlpy_tree.cardinality = "10000"
+                
         else:
             pass
         

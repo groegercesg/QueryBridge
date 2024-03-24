@@ -14,77 +14,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q1_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q1_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -110,77 +110,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q2_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q2_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -206,77 +206,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q3_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q3_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -302,77 +302,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q4_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q4_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -398,77 +398,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q5_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q5_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -494,77 +494,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q6_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q6_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -590,77 +590,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q7_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q7_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -686,77 +686,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q8_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q8_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -782,77 +782,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q9_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q9_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -878,77 +878,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q10_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q10_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -974,77 +974,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q11_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q11_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -1070,77 +1070,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q12_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q12_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -1166,77 +1166,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q13_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q13_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -1262,77 +1262,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q14_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q14_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -1358,77 +1358,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q15_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q15_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -1454,77 +1454,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q16_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q16_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -1550,77 +1550,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q17_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q17_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -1646,77 +1646,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q18_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q18_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -1742,77 +1742,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q19_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q19_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -1838,77 +1838,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q20_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q20_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -1934,77 +1934,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q21_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q21_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
@@ -2030,77 +2030,77 @@
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_01.py",
                     "Results Name": "O3 (0.0001) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.0001"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_1.py",
                     "Results Name": "O3 (0.1) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.1"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_2.py",
                     "Results Name": "O3 (0.2) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.2"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_3.py",
                     "Results Name": "O3 (0.3) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.3"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_4.py",
                     "Results Name": "O3 (0.4) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.4"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_5.py",
                     "Results Name": "O3 (0.5) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.5"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_6.py",
                     "Results Name": "O3 (0.6) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.6"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_7.py",
                     "Results Name": "O3 (0.7) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.7"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_8.py",
                     "Results Name": "O3 (0.8) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.8"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_9.py",
                     "Results Name": "O3 (0.9) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
                 },
                 {
                     "Type": "SDQLpy",
-                    "Converted Name": "hyper_q22_sdqlpy_O3.py",
+                    "Converted Name": "hyper_q22_sdqlpy_O3_99.py",
                     "Results Name": "O3 (0.9999) SDQLpy",
                     "Conversion Options": ["--sdqlpy_optimisations", "Dense, VerticalFolding, PipelineBreaker", "--sdqlpy_o3_value", "0.9"],
                     "Query Plan": "Hyper DB"
