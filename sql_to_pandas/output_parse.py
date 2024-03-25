@@ -278,7 +278,7 @@ def make_class_tree_from_duck(json, parent=None):
     
 
 def run_tree_generation():
-    explain_directory = 'sql_to_pandas/tpch_explain'
+    explain_directory = 'sql_to_pandas/duck_tpch_explain'
     onlyfiles = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
     
     # Track failures
@@ -299,6 +299,6 @@ def run_tree_generation():
             print(f'\t{failed_file}')
 
 # generate_duckdb_explains()
-# run_tree_generation()
+run_tree_generation()
 
-make_tree_from_duck(f'sql_to_pandas/tpch_explain/{12}_duck.json')
+#make_tree_from_duck(f'sql_to_pandas/duck_tpch_explain/{1}_duck.json')
