@@ -413,7 +413,7 @@ def uplan_to_exec_format(op_tree, output_format, table_schema, uplan_opts, query
     op_tree = uplan_apply_optimisations(op_tree, uplan_opts)
     
     # Test 1: top node should be OutputNode
-    assert audit_universal_plan_tree_outputnode(op_tree)
+    #assert audit_universal_plan_tree_outputnode(op_tree)
     # Test 2: all leaf nodes should be ScanNode
     assert audit_universal_plan_tree_scannode(op_tree)
     

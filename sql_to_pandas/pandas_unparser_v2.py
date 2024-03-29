@@ -236,6 +236,8 @@ def convert_expression_operator_to_pandas(expr_tree: ExpressionBaseNode, dataFra
             expression_output = f"({leftNode} != {rightNode})"
         case GreaterThanOperator():
             expression_output = f"({leftNode} > {rightNode})"
+        case GreaterThanEqOperator():
+            expression_output = f"({leftNode} >= {rightNode})"
         case IntervalNotionOperator():
             expression_output = handleIntervalNotion(expr_tree, leftNode, rightNode, dataFrameName)
         case SubOperator():
