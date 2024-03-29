@@ -1,0 +1,259 @@
+{
+    "name": "Query",
+    "result": 1.170026,
+    "timing": 1.170026,
+    "cardinality": 411,
+    "extra-info": "\nselect\n        s_name,\n        count(*) as numwait\nfrom\n        supplier,\n        lineitem l1,\n        orders,\n        nation\nwhere\n        s_suppkey = l1.l_suppkey\n        and o_orderkey = l1.l_orderkey\n        and o_orderstatus = 'F'\n        and l1.l_receiptdate > l1.l_commitdate\n        and exists (\n                select\n                        *\n                from\n                        lineitem l2\n                where\n                        l2.l_orderkey = l1.l_orderkey\n                        and l2.l_suppkey <> l1.l_suppkey\n        )\n        and not exists (\n                select\n                        *\n                from\n                        lineitem l3\n                where\n                        l3.l_orderkey = l1.l_orderkey\n                        and l3.l_suppkey <> l1.l_suppkey\n                        and l3.l_receiptdate > l3.l_commitdate\n        )\n        and s_nationkey = n_nationkey\n        and n_name = 'SAUDI ARABIA'\ngroup by\n        s_name\n",
+    "timings": [],
+    "children": [
+        {
+            "name": "HASH_GROUP_BY",
+            "timing": 0.00036,
+            "cardinality": 411,
+            "extra_info": "#0\ncount_star()",
+            "timings": [],
+            "children": [
+                {
+                    "name": "PROJECTION",
+                    "timing": 4e-06,
+                    "cardinality": 4141,
+                    "extra_info": "s_name\n",
+                    "timings": [],
+                    "children": [
+                        {
+                            "name": "DELIM_JOIN",
+                            "timing": 0.013914,
+                            "cardinality": 0,
+                            "extra_info": "ANTI\nl_orderkey IS NOT DISTINCT FROM l_orderkey\nl_suppkey IS NOT DISTINCT FROM l_suppkey\n",
+                            "timings": [],
+                            "children": [
+                                {
+                                    "name": "DELIM_JOIN",
+                                    "timing": 0.013206,
+                                    "cardinality": 0,
+                                    "extra_info": "SEMI\nl_orderkey IS NOT DISTINCT FROM l_orderkey\nl_suppkey IS NOT DISTINCT FROM l_suppkey\n",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "HASH_JOIN",
+                                            "timing": 0.017493,
+                                            "cardinality": 75871,
+                                            "extra_info": "INNER\nl_suppkey = s_suppkey\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "HASH_JOIN",
+                                                    "timing": 0.144842,
+                                                    "cardinality": 1828911,
+                                                    "extra_info": "INNER\nl_orderkey = o_orderkey\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "PROJECTION",
+                                                            "timing": 0.000939,
+                                                            "cardinality": 3793296,
+                                                            "extra_info": "#0\n#1\n",
+                                                            "timings": [],
+                                                            "children": [
+                                                                {
+                                                                    "name": "FILTER",
+                                                                    "timing": 0.010483,
+                                                                    "cardinality": 3793296,
+                                                                    "extra_info": "l_receiptdate > l_commitdate",
+                                                                    "timings": [],
+                                                                    "children": [
+                                                                        {
+                                                                            "name": "SEQ_SCAN",
+                                                                            "timing": 0.044969,
+                                                                            "cardinality": 6001215,
+                                                                            "extra_info": "lineitem\n[INFOSEPARATOR]\nl_suppkey\nl_orderkey\nl_receiptdate\nl_commitdate",
+                                                                            "timings": [],
+                                                                            "children": []
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 0.053299,
+                                                            "cardinality": 729413,
+                                                            "extra_info": "orders\n[INFOSEPARATOR]\no_orderkey\no_orderstatus\n[INFOSEPARATOR]\nFilters: o_orderstatus=F AND o_orderstatus IS NOT NULL\n",
+                                                            "timings": [],
+                                                            "children": []
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "HASH_JOIN",
+                                                    "timing": 0.000109,
+                                                    "cardinality": 411,
+                                                    "extra_info": "INNER\ns_nationkey = n_nationkey\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 0.000357,
+                                                            "cardinality": 10000,
+                                                            "extra_info": "supplier\n[INFOSEPARATOR]\ns_suppkey\ns_nationkey\ns_name",
+                                                            "timings": [],
+                                                            "children": []
+                                                        },
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 1.9e-05,
+                                                            "cardinality": 1,
+                                                            "extra_info": "nation\n[INFOSEPARATOR]\nn_nationkey\nn_name\n[INFOSEPARATOR]\nFilters: n_name=SAUDI ARABIA AND n_name IS NOT NULL\n",
+                                                            "timings": [],
+                                                            "children": []
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "name": "HASH_JOIN",
+                                            "timing": 0.013489,
+                                            "cardinality": 73089,
+                                            "extra_info": "SEMI\nl_orderkey IS NOT DISTINCT FROM l_orderkey\nl_suppkey IS NOT DISTINCT FROM l_suppkey\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "CHUNK_SCAN",
+                                                    "timing": 4.9e-05,
+                                                    "cardinality": 75871,
+                                                    "extra_info": "",
+                                                    "timings": [],
+                                                    "children": []
+                                                },
+                                                {
+                                                    "name": "PROJECTION",
+                                                    "timing": 0.000149,
+                                                    "cardinality": 302356,
+                                                    "extra_info": "#0\n#1\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "HASH_JOIN",
+                                                            "timing": 0.246973,
+                                                            "cardinality": 302356,
+                                                            "extra_info": "INNER\nl_orderkey = l_orderkey\nl_suppkey != l_suppkey\n",
+                                                            "timings": [],
+                                                            "children": [
+                                                                {
+                                                                    "name": "DELIM_SCAN",
+                                                                    "timing": 0.0,
+                                                                    "cardinality": 0,
+                                                                    "extra_info": "",
+                                                                    "timings": [],
+                                                                    "children": []
+                                                                },
+                                                                {
+                                                                    "name": "SEQ_SCAN",
+                                                                    "timing": 0.028862,
+                                                                    "cardinality": 6001215,
+                                                                    "extra_info": "lineitem\n[INFOSEPARATOR]\nl_orderkey\nl_suppkey",
+                                                                    "timings": [],
+                                                                    "children": []
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "name": "HASH_GROUP_BY",
+                                            "timing": 0.000572,
+                                            "cardinality": 75864,
+                                            "extra_info": "#1\n#0",
+                                            "timings": [],
+                                            "children": []
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "HASH_JOIN",
+                                    "timing": 0.009728,
+                                    "cardinality": 4141,
+                                    "extra_info": "ANTI\nl_orderkey IS NOT DISTINCT FROM l_orderkey\nl_suppkey IS NOT DISTINCT FROM l_suppkey\n",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "CHUNK_SCAN",
+                                            "timing": 4.2e-05,
+                                            "cardinality": 73089,
+                                            "extra_info": "",
+                                            "timings": [],
+                                            "children": []
+                                        },
+                                        {
+                                            "name": "PROJECTION",
+                                            "timing": 0.000128,
+                                            "cardinality": 190909,
+                                            "extra_info": "#0\n#1\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "HASH_JOIN",
+                                                    "timing": 0.182324,
+                                                    "cardinality": 190909,
+                                                    "extra_info": "INNER\nl_orderkey = l_orderkey\nl_suppkey != l_suppkey\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "DELIM_SCAN",
+                                                            "timing": 0.0,
+                                                            "cardinality": 0,
+                                                            "extra_info": "",
+                                                            "timings": [],
+                                                            "children": []
+                                                        },
+                                                        {
+                                                            "name": "PROJECTION",
+                                                            "timing": 0.000998,
+                                                            "cardinality": 3793296,
+                                                            "extra_info": "#0\n#1\n",
+                                                            "timings": [],
+                                                            "children": [
+                                                                {
+                                                                    "name": "FILTER",
+                                                                    "timing": 0.0115,
+                                                                    "cardinality": 3793296,
+                                                                    "extra_info": "l_receiptdate > l_commitdate",
+                                                                    "timings": [],
+                                                                    "children": [
+                                                                        {
+                                                                            "name": "SEQ_SCAN",
+                                                                            "timing": 0.045364,
+                                                                            "cardinality": 6001215,
+                                                                            "extra_info": "lineitem\n[INFOSEPARATOR]\nl_orderkey\nl_suppkey\nl_receiptdate\nl_commitdate",
+                                                                            "timings": [],
+                                                                            "children": []
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "name": "HASH_GROUP_BY",
+                                    "timing": 0.000546,
+                                    "cardinality": 73082,
+                                    "extra_info": "#1\n#0",
+                                    "timings": [],
+                                    "children": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

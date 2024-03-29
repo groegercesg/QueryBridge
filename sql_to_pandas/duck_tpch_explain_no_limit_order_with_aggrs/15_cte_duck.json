@@ -1,0 +1,151 @@
+{
+    "name": "Query",
+    "result": 0.206387,
+    "timing": 0.206387,
+    "cardinality": 1,
+    "extra-info": "\nwith revenue_view as (\n    select\n        l_suppkey as supplier_no,\n        sum(l_extendedprice * (1 - l_discount)) as total_revenue\n    from\n        lineitem\n    where\n        l_shipdate >= '1996-01-01'\n        and l_shipdate < date '1996-01-01' + interval '3' month\n    group by\n        l_suppkey\n)\n\nselect\n    s_suppkey,\n    s_name,\n    s_address,\n    s_phone,\n    total_revenue\nfrom\n    supplier,\n    revenue_view\nwhere\n    s_suppkey = supplier_no\n    and total_revenue = (\n        select\n            max(total_revenue)\n        from\n            revenue_view\n    )\n",
+    "timings": [],
+    "children": [
+        {
+            "name": "PROJECTION",
+            "timing": 1e-06,
+            "cardinality": 1,
+            "extra_info": "s_suppkey\ns_name\ns_address\ns_phone\ntotal_revenue\n",
+            "timings": [],
+            "children": [
+                {
+                    "name": "HASH_JOIN",
+                    "timing": 8.2e-05,
+                    "cardinality": 1,
+                    "extra_info": "INNER\ntotal_revenue = SUBQUERY\n",
+                    "timings": [],
+                    "children": [
+                        {
+                            "name": "HASH_JOIN",
+                            "timing": 0.000155,
+                            "cardinality": 10000,
+                            "extra_info": "INNER\ns_suppkey = supplier_no\n",
+                            "timings": [],
+                            "children": [
+                                {
+                                    "name": "SEQ_SCAN",
+                                    "timing": 0.002701,
+                                    "cardinality": 10000,
+                                    "extra_info": "supplier\n[INFOSEPARATOR]\ns_suppkey\ns_name\ns_address\ns_phone",
+                                    "timings": [],
+                                    "children": []
+                                },
+                                {
+                                    "name": "HASH_GROUP_BY",
+                                    "timing": 0.019755,
+                                    "cardinality": 10000,
+                                    "extra_info": "#0\nsum(#1)",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "PROJECTION",
+                                            "timing": 0.008174,
+                                            "cardinality": 225954,
+                                            "extra_info": "l_suppkey\n(l_extendedprice * (1.000 - l_discount))\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "SEQ_SCAN",
+                                                    "timing": 0.106471,
+                                                    "cardinality": 225954,
+                                                    "extra_info": "lineitem\n[INFOSEPARATOR]\nl_shipdate\nl_suppkey\nl_extendedprice\nl_discount\n[INFOSEPARATOR]\nFilters: l_shipdate>=1996-01-01 AND l_shipdate<1996-04-01 AND l_shipdate IS NOT NULL\n",
+                                                    "timings": [],
+                                                    "children": []
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        {
+                            "name": "SIMPLE_AGGREGATE",
+                            "timing": 1e-06,
+                            "cardinality": 1,
+                            "extra_info": "first(#0)",
+                            "timings": [],
+                            "children": [
+                                {
+                                    "name": "PROJECTION",
+                                    "timing": 0.0,
+                                    "cardinality": 1,
+                                    "extra_info": "#0\n",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "LIMIT",
+                                            "timing": 3e-06,
+                                            "cardinality": 1,
+                                            "extra_info": "",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "SIMPLE_AGGREGATE",
+                                                    "timing": 2e-05,
+                                                    "cardinality": 1,
+                                                    "extra_info": "max(#0)",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "PROJECTION",
+                                                            "timing": 1e-06,
+                                                            "cardinality": 10000,
+                                                            "extra_info": "total_revenue\n",
+                                                            "timings": [],
+                                                            "children": [
+                                                                {
+                                                                    "name": "PROJECTION",
+                                                                    "timing": 1e-06,
+                                                                    "cardinality": 10000,
+                                                                    "extra_info": "total_revenue\n",
+                                                                    "timings": [],
+                                                                    "children": [
+                                                                        {
+                                                                            "name": "HASH_GROUP_BY",
+                                                                            "timing": 0.011096,
+                                                                            "cardinality": 10000,
+                                                                            "extra_info": "#0\nsum(#1)",
+                                                                            "timings": [],
+                                                                            "children": [
+                                                                                {
+                                                                                    "name": "PROJECTION",
+                                                                                    "timing": 0.004648,
+                                                                                    "cardinality": 225954,
+                                                                                    "extra_info": "l_suppkey\n(l_extendedprice * (1.000 - l_discount))\n",
+                                                                                    "timings": [],
+                                                                                    "children": [
+                                                                                        {
+                                                                                            "name": "SEQ_SCAN",
+                                                                                            "timing": 0.046396,
+                                                                                            "cardinality": 225954,
+                                                                                            "extra_info": "lineitem\n[INFOSEPARATOR]\nl_shipdate\nl_suppkey\nl_extendedprice\nl_discount\n[INFOSEPARATOR]\nFilters: l_shipdate>=1996-01-01 AND l_shipdate<1996-04-01 AND l_shipdate IS NOT NULL\n",
+                                                                                            "timings": [],
+                                                                                            "children": []
+                                                                                        }
+                                                                                    ]
+                                                                                }
+                                                                            ]
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

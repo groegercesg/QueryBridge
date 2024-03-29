@@ -16,7 +16,8 @@ from prepare_databases.prepare_hyperdb import PrepareHyperDB
 from prepare_databases.prepare_database import EXPLAIN_LOCATION
 
 from tpch_helpers import *
-from hyper_parsing import generate_unparse_content_from_explain_and_query
+from hyper_parsing import hyper_to_uplan
+from uplan_parsing import uplan_to_exec_format
 from pandas_unparser_v2 import *
 from sdqlpy_unparser import *
 from sdqlpy_optimisations import *
@@ -418,9 +419,18 @@ def main():
             assert isinstance(uplan_opts, list)
             assert all(isinstance(x, str) for x in uplan_opts)
             
-            # content = db.execute_query(query_file_data)
-            unparse_content = generate_unparse_content_from_explain_and_query(
-                explain_json, query_file, args.output_fmt, table_schema, uplan_opts
+            uplan_tree = hyper_to_uplan(
+                explain_json, query_file
+            )
+            
+            query_name = str(query_file.split("/")[-1]).split(".")[0].strip()
+            
+            unparse_content = uplan_to_exec_format(
+                uplan_tree,
+                args.output_fmt,
+                table_schema,
+                uplan_opts,
+                query_name
             )
             
             if isinstance(unparse_content, UnparsePandasTree):

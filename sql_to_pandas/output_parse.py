@@ -12,8 +12,8 @@ from lark import Transformer
 def generate_duckdb_explains():
     db = prep_duck('duckdb_tpch.duckdb')
     explain_opts = "EXPLAIN (COSTS FALSE, VERBOSE TRUE, FORMAT JSON) "
-    query_directory = 'sql_to_pandas/tpch_queries'
-    explain_directory = 'sql_to_pandas/tpch_explain'
+    query_directory = 'sql_to_pandas/tpch_no_limit_order_with_aggrs'
+    explain_directory = 'sql_to_pandas/duck_tpch_explain_no_limit_order_with_aggrs'
     
     onlyfiles = [f for f in listdir(query_directory) if isfile(join(query_directory, f))]
     
@@ -276,6 +276,55 @@ def make_class_tree_from_duck(json, parent=None):
     else:
         return node_class_plans
     
+    
+def set_node_names(file):
+    with open(file, "r") as f:
+        explain_content = json.loads(f.read())["children"][0]
+        
+    local_set = set()
+    local_jts = set()
+    
+    nodes_to_review = []
+    nodes_to_review.append(explain_content)
+    while len(nodes_to_review) > 0:
+        current_node = nodes_to_review.pop()
+        local_set.add(current_node["name"])
+        if current_node["name"] in ["HASH_JOIN", "DELIM_JOIN", "PIECEWISE_MERGE_JOIN"]:
+            local_jts.add(current_node["extra_info"].split("\n")[0])
+        
+        if "children" in current_node:
+            for child_node in current_node["children"]:
+                nodes_to_review.append(child_node)
+        
+    return local_set, local_jts
+
+
+def gather_all_nodes():
+    explain_directory = 'sql_to_pandas/duck_tpch_explain_no_limit_order_with_aggrs'
+    onlyfiles = [f for f in listdir(explain_directory) if isfile(join(explain_directory, f))]
+    
+    targeted_nodes = {'DELIM_JOIN', 'DELIM_SCAN', 'PROJECTION', 'HASH_JOIN', 'CHUNK_SCAN', 'HASH_GROUP_BY', 'FILTER', 'SEQ_SCAN'}
+    supportable_queries = []
+    
+    overall_set = set()
+    join_types = set()
+    for explain_file in onlyfiles:
+        query_nodes, query_jts = set_node_names(f'{explain_directory}/{explain_file}')
+        overall_set.update(query_nodes)
+        join_types.update(query_jts)
+        
+        if query_nodes.issubset(targeted_nodes):
+            supportable_queries.append(explain_file)
+        
+    print('-'*15)
+    print(overall_set)
+    print('-'*15)
+    print(join_types)
+    print('-'*15)
+    print(f"{len(supportable_queries)} Can be supported with this combination of nodes")
+    print(f"They are:")
+    for q in supportable_queries:
+        print(f"\t{q}")
 
 def run_tree_generation():
     explain_directory = 'sql_to_pandas/duck_tpch_explain'
@@ -298,7 +347,14 @@ def run_tree_generation():
         for failed_file in failed:
             print(f'\t{failed_file}')
 
-# generate_duckdb_explains()
-run_tree_generation()
+#generate_duckdb_explains()
+#run_tree_generation()
 
 #make_tree_from_duck(f'sql_to_pandas/duck_tpch_explain/{1}_duck.json')
+#set_node_names(f'sql_to_pandas/duck_tpch_explain/{1}_duck.json')
+
+gather_all_nodes()
+
+# print(set_node_names(f'sql_to_pandas/duck_tpch_explain_no_limit_order_with_aggrs/{21}_duck.json'))
+
+

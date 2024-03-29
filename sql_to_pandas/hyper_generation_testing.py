@@ -10,9 +10,11 @@ from os.path import isfile, join
 import json
 
 from prepare_databases.prepare_hyperdb import PrepareHyperDB
-from hyper_parsing import generate_unparse_content_from_explain_and_query
+from hyper_parsing import hyper_to_uplan
 from tpch_helpers import *
 from sdqlpy_optimisations import sdqlpy_apply_optimisations
+
+from uplan_parsing import uplan_to_exec_format
 
 query_directory = 'sql_to_pandas/tpch_no_limit_order_with_aggrs'
 explain_directory = 'sql_to_pandas/hyperdb_tpch_explain_no_limit_order_with_aggrs'
@@ -98,12 +100,19 @@ def convert_explain_plan_to_x(desired_format):
             uplan_opts = ""
             # uplan_opts = ["ColumnElimination"]
             
-            unparse_content = generate_unparse_content_from_explain_and_query(
+            uplan_tree = hyper_to_uplan(
                 explain_content,
-                f'{query_directory}/{sql_file}',
+                f'{query_directory}/{sql_file}'
+            )
+            
+            query_name = sql_file.split(".")[0].strip()
+            
+            unparse_content = uplan_to_exec_format(
+                uplan_tree,
                 desired_format,
                 table_schema,
-                uplan_opts
+                uplan_opts,
+                query_name
             )
             
             print(unparse_content)

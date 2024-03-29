@@ -1,0 +1,79 @@
+{
+    "name": "Query",
+    "result": 0.256967,
+    "timing": 0.256967,
+    "cardinality": 11620,
+    "extra-info": "\nselect\n        l_orderkey,\n        sum(l_extendedprice * (1 - l_discount)) as revenue,\n        o_orderdate,\n        o_shippriority\nfrom\n        customer,\n        orders,\n        lineitem\nwhere\n        c_mktsegment = 'BUILDING'\n        and c_custkey = o_custkey\n        and l_orderkey = o_orderkey\n        and o_orderdate < date '1995-03-15'\n        and l_shipdate > date '1995-03-15'\ngroup by\n        l_orderkey,\n        o_orderdate,\n        o_shippriority\n",
+    "timings": [],
+    "children": [
+        {
+            "name": "PROJECTION",
+            "timing": 1e-05,
+            "cardinality": 11620,
+            "extra_info": "l_orderkey\nrevenue\no_orderdate\no_shippriority\n",
+            "timings": [],
+            "children": [
+                {
+                    "name": "HASH_GROUP_BY",
+                    "timing": 0.003541,
+                    "cardinality": 11620,
+                    "extra_info": "#0\n#1\n#2\nsum(#3)",
+                    "timings": [],
+                    "children": [
+                        {
+                            "name": "PROJECTION",
+                            "timing": 0.000586,
+                            "cardinality": 30519,
+                            "extra_info": "l_orderkey\no_orderdate\no_shippriority\n(l_extendedprice * (1.000 - l_discount))\n",
+                            "timings": [],
+                            "children": [
+                                {
+                                    "name": "HASH_JOIN",
+                                    "timing": 0.002809,
+                                    "cardinality": 30519,
+                                    "extra_info": "INNER\no_custkey = c_custkey\n",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "HASH_JOIN",
+                                            "timing": 0.088694,
+                                            "cardinality": 151331,
+                                            "extra_info": "INNER\nl_orderkey = o_orderkey\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "SEQ_SCAN",
+                                                    "timing": 0.070139,
+                                                    "cardinality": 3241776,
+                                                    "extra_info": "lineitem\n[INFOSEPARATOR]\nl_orderkey\nl_shipdate\nl_extendedprice\nl_discount\n[INFOSEPARATOR]\nFilters: l_shipdate>1995-03-15 AND l_shipdate IS NOT NULL\n",
+                                                    "timings": [],
+                                                    "children": []
+                                                },
+                                                {
+                                                    "name": "SEQ_SCAN",
+                                                    "timing": 0.015668,
+                                                    "cardinality": 727305,
+                                                    "extra_info": "orders\n[INFOSEPARATOR]\no_custkey\no_orderkey\no_orderdate\no_shippriority\n[INFOSEPARATOR]\nFilters: o_orderdate<1995-03-15 AND o_orderdate IS NOT NULL\n",
+                                                    "timings": [],
+                                                    "children": []
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "name": "SEQ_SCAN",
+                                            "timing": 0.004524,
+                                            "cardinality": 30142,
+                                            "extra_info": "customer\n[INFOSEPARATOR]\nc_mktsegment\nc_custkey\n[INFOSEPARATOR]\nFilters: c_mktsegment=BUILDING AND c_mktsegment IS NOT NULL\n",
+                                            "timings": [],
+                                            "children": []
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,148 @@
+{
+    "name": "Query",
+    "result": 2.775698,
+    "timing": 2.775698,
+    "cardinality": 175,
+    "extra-info": "\nselect\n        nation,\n        o_year,\n        sum(amount) as sum_profit\nfrom\n        (\n                select\n                        n_name as nation,\n                        extract(year from o_orderdate) as o_year,\n                        l_extendedprice * (1 - l_discount) - ps_supplycost * l_quantity as amount\n                from\n                        part,\n                        supplier,\n                        lineitem,\n                        partsupp,\n                        orders,\n                        nation\n                where\n                        s_suppkey = l_suppkey\n                        and ps_suppkey = l_suppkey\n                        and ps_partkey = l_partkey\n                        and p_partkey = l_partkey\n                        and o_orderkey = l_orderkey\n                        and s_nationkey = n_nationkey\n                        and p_name like '%green%'\n        ) as profit\ngroup by\n        nation,\n        o_year\n",
+    "timings": [],
+    "children": [
+        {
+            "name": "HASH_GROUP_BY",
+            "timing": 0.017965,
+            "cardinality": 175,
+            "extra_info": "#0\n#1\nsum(#2)",
+            "timings": [],
+            "children": [
+                {
+                    "name": "PROJECTION",
+                    "timing": 0.000216,
+                    "cardinality": 319404,
+                    "extra_info": "nation\no_year\namount\n",
+                    "timings": [],
+                    "children": [
+                        {
+                            "name": "PROJECTION",
+                            "timing": 0.007947,
+                            "cardinality": 319404,
+                            "extra_info": "nation\nyear(o_orderdate)\namount\n",
+                            "timings": [],
+                            "children": [
+                                {
+                                    "name": "HASH_JOIN",
+                                    "timing": 0.679455,
+                                    "cardinality": 319404,
+                                    "extra_info": "INNER\nps_partkey = p_partkey\nl_partkey = p_partkey\n",
+                                    "timings": [],
+                                    "children": [
+                                        {
+                                            "name": "HASH_JOIN",
+                                            "timing": 0.669719,
+                                            "cardinality": 6001215,
+                                            "extra_info": "INNER\nps_suppkey = s_suppkey\nl_suppkey = s_suppkey\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "HASH_JOIN",
+                                                    "timing": 0.211489,
+                                                    "cardinality": 6001215,
+                                                    "extra_info": "INNER\nl_orderkey = o_orderkey\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "HASH_JOIN",
+                                                            "timing": 0.50065,
+                                                            "cardinality": 6001215,
+                                                            "extra_info": "INNER\nl_suppkey = ps_suppkey\nl_partkey = ps_partkey\n",
+                                                            "timings": [],
+                                                            "children": [
+                                                                {
+                                                                    "name": "SEQ_SCAN",
+                                                                    "timing": 0.069285,
+                                                                    "cardinality": 6001215,
+                                                                    "extra_info": "lineitem\n[INFOSEPARATOR]\nl_suppkey\nl_partkey\nl_orderkey\nl_extendedprice\nl_discount\nl_quantity",
+                                                                    "timings": [],
+                                                                    "children": []
+                                                                },
+                                                                {
+                                                                    "name": "SEQ_SCAN",
+                                                                    "timing": 0.003962,
+                                                                    "cardinality": 800000,
+                                                                    "extra_info": "partsupp\n[INFOSEPARATOR]\nps_suppkey\nps_partkey\nps_supplycost",
+                                                                    "timings": [],
+                                                                    "children": []
+                                                                }
+                                                            ]
+                                                        },
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 0.007289,
+                                                            "cardinality": 1500000,
+                                                            "extra_info": "orders\n[INFOSEPARATOR]\no_orderkey\no_orderdate",
+                                                            "timings": [],
+                                                            "children": []
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "name": "HASH_JOIN",
+                                                    "timing": 8.2e-05,
+                                                    "cardinality": 10000,
+                                                    "extra_info": "INNER\ns_nationkey = n_nationkey\n",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 3.6e-05,
+                                                            "cardinality": 10000,
+                                                            "extra_info": "supplier\n[INFOSEPARATOR]\ns_suppkey\ns_nationkey",
+                                                            "timings": [],
+                                                            "children": []
+                                                        },
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 1.1e-05,
+                                                            "cardinality": 25,
+                                                            "extra_info": "nation\n[INFOSEPARATOR]\nn_nationkey\nn_name",
+                                                            "timings": [],
+                                                            "children": []
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "name": "PROJECTION",
+                                            "timing": 6e-06,
+                                            "cardinality": 10664,
+                                            "extra_info": "#0\n",
+                                            "timings": [],
+                                            "children": [
+                                                {
+                                                    "name": "FILTER",
+                                                    "timing": 0.009613,
+                                                    "cardinality": 10664,
+                                                    "extra_info": "contains(p_name, 'green')",
+                                                    "timings": [],
+                                                    "children": [
+                                                        {
+                                                            "name": "SEQ_SCAN",
+                                                            "timing": 0.005417,
+                                                            "cardinality": 200000,
+                                                            "extra_info": "part\n[INFOSEPARATOR]\np_partkey\np_name",
+                                                            "timings": [],
+                                                            "children": []
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
