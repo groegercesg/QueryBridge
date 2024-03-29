@@ -195,6 +195,7 @@ def Query16():
     
     count_distinct = CountDistinctAggrOperator()
     count_distinct.addChild(ps_suppkey)
+    count_distinct.codeName = "supplier_cnt"
     final_groupby = DHashGroupBy([p_brand, p_type, p_size], [count_distinct])
     final_groupby.setCardinality(18314)
     final_groupby.addID(9)
