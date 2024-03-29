@@ -5,13 +5,19 @@ class DuckNode():
         self.nodeID = None
         self.cardinality = None
     
-    def addID(self, value):
-        assert self.nodeID == None
-        self.nodeID = value
+    def addID(self, inValue):
+        if self.nodeID == inValue:
+            pass
+        else:
+            assert self.nodeID == None
+            self.nodeID = inValue
     
-    def setCardinality(self, card):
-        assert self.cardinality == None and isinstance(card, int)
-        self.cardinality = card
+    def setCardinality(self, inCard):
+        if self.cardinality == inCard:
+            pass
+        else:
+            assert self.cardinality == None and isinstance(inCard, int)
+            self.cardinality = inCard
         
 class LeafDuckNode(DuckNode):
     def __init__(self):
@@ -62,9 +68,8 @@ class TernaryDuckNode(DuckNode):
 # Classes for Nodes
 
 class DHashJoinNode(BinaryDuckNode):
-    def __init__(self, joinMethod, joinType, joinCondition, leftKeys, rightKeys):
+    def __init__(self, joinType, joinCondition, leftKeys, rightKeys):
         super().__init__()
-        self.joinMethod = joinMethod
         self.joinType = joinType
         self.joinCondition = joinCondition
         self.leftKeys = leftKeys
@@ -100,7 +105,6 @@ class DHashGroupBy(UnaryDuckNode):
         self.aggregateOperations = aggregateOperations
 
 # DProjection
-
 class DPiecewiseMergeJoin(BinaryDuckNode):
     def __init__(self, joinType, joinCondition, leftKeys, rightKeys):
         super().__init__()

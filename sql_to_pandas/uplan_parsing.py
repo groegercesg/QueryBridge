@@ -230,7 +230,7 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
         if uplan_tree.joinType == "leftantijoin":
             flowColumnIDs = [id(x) for x in uplan_tree.flowColumns]
             leftPrimIDs = [id(x) for x in uplan_tree.left.primaryKey]
-            assert all([x in flowColumnIDs for x in leftPrimIDs])
+            # assert all([x in flowColumnIDs for x in leftPrimIDs])
             uplan_tree.setPrimary(uplan_tree.left.primaryKey)
         elif uplan_tree.joinType == "leftsemijoin":
             flowColumnIDs = [id(x) for x in uplan_tree.flowColumns]

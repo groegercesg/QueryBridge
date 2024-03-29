@@ -364,3 +364,7 @@ class SDQLpyRegexMatch(BinaryExpressionOperator):
     def __init__(self):
         super().__init__()
         
+# Duck DB
+class DSubqueryOp(LeafNode):
+    def __init__(self):
+        super().__init__()

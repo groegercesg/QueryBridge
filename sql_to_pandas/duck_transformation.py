@@ -4,7 +4,7 @@ from uplan_nodes import *
 def duck_to_uplan(duck_tree):
     def visit_duck_nodes(op_node: DuckNode):
         # Visit Children
-        if isinstance(op_node, BinaryDuckNode) and op_node.isJoinNode == True:
+        if isinstance(op_node, BinaryDuckNode):
             leftNode = visit_duck_nodes(op_node.left)
             rightNode = visit_duck_nodes(op_node.right)
         elif isinstance(op_node, UnaryDuckNode):
@@ -25,6 +25,33 @@ def duck_to_uplan(duck_tree):
             case DSimpleAggregate():
                 child_ops = [x.child for x in op_node.aggregateOperations]
                 new_op_node = GroupNode([], child_ops, op_node.aggregateOperations)
+            case DChunkScan():
+                new_op_node = op_node
+            case DHashJoinNode():
+                if op_node.joinType == "MARK":
+                    if (isinstance(op_node.joinCondition, EqualsOperator) and
+                        isinstance(op_node.joinCondition.right, NotOperator) and 
+                        isinstance(op_node.joinCondition.right.child, DSubqueryOp)):
+                        new_cond = EqualsOperator()
+                        new_cond.addLeft(op_node.leftKeys[0])
+                        new_cond.addRight(op_node.rightKeys[0])
+                        new_op_node = JoinNode("hash", "rightantijoin", new_cond, op_node.leftKeys, op_node.rightKeys)
+                    else:
+                        assert isinstance(op_node.left, DChunkScan) or isinstance(op_node.right, DChunkScan)
+                        new_op_node = FilterNode(op_node.joinCondition)
+                        if isinstance(op_node.left, DChunkScan):
+                            childNode = rightNode
+                        elif isinstance(op_node.right, DChunkScan):
+                            childNode = leftNode
+                elif op_node.joinType == "INNER":
+                    new_op_node = JoinNode("hash", "inner", op_node.joinCondition, op_node.leftKeys, op_node.rightKeys)
+                else:
+                    raise Exception(f"Unrecognised Join Type: {op_node.joinType}")
+            case DFilter():
+                new_op_node = FilterNode(op_node.condition)
+            case DHashGroupBy():
+                child_ops = [x.child for x in op_node.aggregateOperations]
+                new_op_node = GroupNode(op_node.keys, child_ops, op_node.aggregateOperations)
             case _: 
                 raise Exception(f"Unexpected op_node, it was of class: {op_node.__class__}")
 
@@ -51,7 +78,7 @@ def duck_to_uplan(duck_tree):
                 lowest_node_pointer.addRight(rightNode)
             case _:
                 # ScanNode
-                assert isinstance(lowest_node_pointer, ScanNode)
+                assert isinstance(lowest_node_pointer, (ScanNode, DChunkScan))
                 
         # Add hyperID to new_op_node
     #        assert hasattr(op_node, "hyperID")
