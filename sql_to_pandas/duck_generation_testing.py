@@ -18,13 +18,13 @@ def convert_duck_to_x(desired_format):
     
     uplan_opts = ""
     # uplan_opts = ["ColumnElimination"]
-    duck_tree = Query3()
+    duck_tree = Query21()
     
     uplan_tree = duck_to_uplan(
         duck_tree
     )
     
-    query_name = "query6"
+    query_name = "query21"
     
     unparse_content = uplan_to_exec_format(
         uplan_tree,
@@ -35,10 +35,11 @@ def convert_duck_to_x(desired_format):
     )
     
     print(unparse_content)
+    exec_code = None
     content_size = 0
     if desired_format == "pandas":
         pandas_content = unparse_content.getPandasContent()
-        print(pandas_content)
+        exec_code = pandas_content
         content_size = len(pandas_content)
     elif desired_format == "sdqlpy":
         # Do Optimisations
@@ -53,6 +54,11 @@ def convert_duck_to_x(desired_format):
     
     assert content_size > 0
     print(f"Generated {content_size} lines of SDQLpy code")
+
+    print("-" * 15)
+    print("\n")
+    for line in exec_code:
+        print(line)
 
 # generate_hyperdb_explains()
 # # inspect_explain_plans()

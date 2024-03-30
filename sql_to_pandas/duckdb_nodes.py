@@ -86,6 +86,10 @@ class DChunkScan(LeafDuckNode):
     def __init__(self):
         super().__init__()
         
+class DDelimScan(LeafDuckNode):
+    def __init__(self):
+        super().__init__()        
+
 class DSimpleAggregate(UnaryDuckNode):
     def __init__(self, aggregateOperations):
         super().__init__()
@@ -103,6 +107,10 @@ class DHashGroupBy(UnaryDuckNode):
         super().__init__()
         self.keys = keys
         self.aggregateOperations = aggregateOperations
+
+class DHashGroupByLeaf(LeafDuckNode):
+    def __init__(self):
+        super().__init__()
 
 # DProjection
 class DPiecewiseMergeJoin(BinaryDuckNode):

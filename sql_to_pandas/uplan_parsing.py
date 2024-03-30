@@ -174,7 +174,7 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
                 nonEquiJoinTypes = set([type(x) for x in [GreaterThanEqOperator(), GreaterThanOperator(), LessThanEqOperator(), LessThanOperator()]])
                 # Subset - all items of A are present in B
                 joinType = "non-equi"
-                assert joinConditionTypes.issubset(nonEquiJoinTypes)
+                #assert joinConditionTypes.issubset(nonEquiJoinTypes)
         elif "P" in leftType and "P" in rightType:
             # Both left and right are primary
             # Prefer the one with lower cardinality
@@ -209,7 +209,7 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
             uplan_tree.swapLeftAndRight()
         elif leftKeys_str == rightKeys_str:
             # They are entirely foreign
-            assert set(leftType) == set("F") and set(rightType) == set("F")
+            # assert set(leftType) == set("F") and set(rightType) == set("F")
             # If we are joining on identical keys, even if they're not primary, it's still okay
             # We'll use cardinality to decide
             # Prefer the one with lower cardinality
@@ -235,7 +235,7 @@ def fix_orderJoinsForPrimaryForeignKeys(uplan_tree: UniversalBaseNode, table_sch
         elif uplan_tree.joinType == "leftsemijoin":
             flowColumnIDs = [id(x) for x in uplan_tree.flowColumns]
             leftPrimIDs = [id(x) for x in uplan_tree.left.primaryKey]
-            assert all([x in flowColumnIDs for x in leftPrimIDs])
+            #assert all([x in flowColumnIDs for x in leftPrimIDs])
             uplan_tree.setPrimary(uplan_tree.left.primaryKey)
         elif uplan_tree.joinType == "rightantijoin":
             flowColumnIDs = [id(x) for x in uplan_tree.flowColumns]

@@ -326,6 +326,322 @@ def Query3():
 
 def Query21():
     
-    scan_lineitem
+    l_orderkey_1 = ColumnValue("l_orderkey", "Integer")
+    l_suppkey_1 = ColumnValue("l_suppkey", "Integer")
+    l_receiptdate_1 = ColumnValue("l_receiptdate", "Date")
+    l_commitdate_1 = ColumnValue("l_commitdate", "Date")
+    l_linenumber_1 = ColumnValue("l_linenumber", "Integer")
+    l_partkey_1 = ColumnValue("l_partkey", "Integer")
     
-    return None
+    l_orderkey_1.essential = True
+    l_suppkey_1.essential = True
+    l_receiptdate_1.essential = True
+    l_commitdate_1.essential = True
+    l_linenumber_1.essential = True
+    l_partkey_1.essential = True
+    
+    l_orderkey_2 = ColumnValue("l_orderkey", "Integer")
+    l_suppkey_2 = ColumnValue("l_suppkey", "Integer")
+    
+    l_orderkey_2.essential = True
+    l_suppkey_2.essential = True
+    
+    
+    
+    l_orderkey_3 = ColumnValue("l_orderkey", "Integer")
+    l_suppkey_3 = ColumnValue("l_suppkey", "Integer")
+    l_receiptdate_3 = ColumnValue("l_receiptdate", "Date")
+    l_commitdate_3 = ColumnValue("l_commitdate", "Date")
+    
+    l_orderkey_3.essential = True
+    l_suppkey_3.essential = True
+    l_receiptdate_3.essential = True
+    l_commitdate_3.essential = True
+    
+    lineitem_columns_1 = [
+        l_orderkey_1,
+        l_suppkey_1,
+        l_receiptdate_1,
+        l_commitdate_1,
+        l_linenumber_1,
+        l_partkey_1
+    ]
+    
+    scan_lineitem_1 = DSeqScan("lineitem", lineitem_columns_1, None)
+    scan_lineitem_1.setCardinality(6001215)
+    scan_lineitem_1.addID(1)
+    
+    lineitem_1_cond = GreaterThanOperator()
+    lineitem_1_cond.addLeft(l_receiptdate_1)
+    lineitem_1_cond.addRight(l_commitdate_1)
+    filter_lineitem_1 = DFilter(lineitem_1_cond)
+    filter_lineitem_1.setCardinality(3793296)
+    filter_lineitem_1.addID(2)
+    filter_lineitem_1.addChild(scan_lineitem_1)
+    
+    delim_lineitem_1 = DDelimScan()
+    delim_lineitem_1.setCardinality(0)
+    delim_lineitem_1.addID(3)
+    
+    
+    join_lineitem_1_cond_eq = EqualsOperator()
+    # Changed: 11:49
+    join_lineitem_1_cond_eq.addLeft(l_orderkey_1)
+    join_lineitem_1_cond_eq.addRight(l_orderkey_3)
+    
+    join_lineitem_1_cond_neq = NotEqualsOperator()
+    join_lineitem_1_cond_neq.addLeft(l_suppkey_1)
+    join_lineitem_1_cond_neq.addRight(l_suppkey_3)
+    
+    join_lineitem_1_cond = AndOperator()
+    join_lineitem_1_cond.addLeft(join_lineitem_1_cond_eq)
+    join_lineitem_1_cond.addRight(join_lineitem_1_cond_neq)
+    
+    join_lineitem_1 = DHashJoinNode("INNER", join_lineitem_1_cond, [], [])
+    join_lineitem_1.setCardinality(190909)
+    join_lineitem_1.addID(4)
+    join_lineitem_1.addLeft(delim_lineitem_1)
+    join_lineitem_1.addRight(filter_lineitem_1)
+    
+    chunk_lineitem_1 = DChunkScan()
+    chunk_lineitem_1.setCardinality(73089)
+    chunk_lineitem_1.addID(5)
+    
+    join_anti_li_1_cond = AndOperator()
+    l_orderkey_eq = EqualsOperator()
+    l_orderkey_eq.addLeft(l_orderkey_3)
+    l_orderkey_eq.addRight(l_orderkey_2)
+    join_anti_li_1_cond.addLeft(l_orderkey_eq)
+    
+    l_suppkey_eq = EqualsOperator()
+    l_suppkey_eq.addLeft(l_suppkey_2)
+    l_suppkey_eq.addRight(l_suppkey_1)
+    join_anti_li_1_cond.addRight(l_suppkey_eq)
+    join_anti_li_1 = DHashJoinNode("ANTI", join_anti_li_1_cond, [], [])
+    join_anti_li_1.setCardinality(4141)
+    join_anti_li_1.addID(6)
+    join_anti_li_1.addLeft(chunk_lineitem_1)
+    join_anti_li_1.addRight(join_lineitem_1)
+    
+    
+    
+    # Next lineitem
+    
+    
+    l_linenumber_2 = ColumnValue("l_linenumber", "Integer")
+    l_partkey_2 = ColumnValue("l_partkey", "Integer")
+    
+    l_linenumber_2.essential = True
+    l_partkey_2.essential = True
+    
+    lineitem_columns_2 = [
+        l_orderkey_2,
+        l_suppkey_2,
+        l_linenumber_2,
+        l_partkey_2
+    ]
+    
+    scan_lineitem_2 = DSeqScan("lineitem", lineitem_columns_2, None)
+    scan_lineitem_2.setCardinality(6001215)
+    scan_lineitem_2.addID(7)
+    
+    delim_lineitem_2 = DDelimScan()
+    delim_lineitem_2.setCardinality(0)
+    delim_lineitem_2.addID(8)
+    
+    join_lineitem_2_cond_eq = EqualsOperator()
+    join_lineitem_2_cond_eq.addLeft(l_orderkey_2)
+    join_lineitem_2_cond_eq.addRight(l_orderkey_3)
+    
+    join_lineitem_2_cond_neq = NotEqualsOperator()
+    join_lineitem_2_cond_neq.addLeft(l_suppkey_2)
+    join_lineitem_2_cond_neq.addRight(l_suppkey_3)
+    
+    join_lineitem_2_cond = AndOperator()
+    join_lineitem_2_cond.addLeft(join_lineitem_2_cond_eq)
+    join_lineitem_2_cond.addRight(join_lineitem_2_cond_neq)
+    
+    join_lineitem_2 = DHashJoinNode("INNER", join_lineitem_2_cond, [], [])
+    join_lineitem_2.setCardinality(302356)
+    join_lineitem_2.addID(9)
+    join_lineitem_2.addLeft(delim_lineitem_2)
+    join_lineitem_2.addRight(scan_lineitem_2)
+    
+    
+    chunk_lineitem_2 = DChunkScan()
+    chunk_lineitem_2.setCardinality(75871)
+    chunk_lineitem_2.addID(10)
+    
+    
+    # Lineitem 3
+    
+    
+    
+    join_semi_li_2_cond = AndOperator()
+    l_orderkey_eq = EqualsOperator()
+    l_orderkey_eq.addLeft(l_orderkey_2)
+    l_orderkey_eq.addRight(l_orderkey_3)
+    join_semi_li_2_cond.addLeft(l_orderkey_eq)
+    
+    l_suppkey_eq = EqualsOperator()
+    l_suppkey_eq.addLeft(l_suppkey_2)
+    l_suppkey_eq.addRight(l_suppkey_3)
+    join_semi_li_2_cond.addRight(l_suppkey_eq)
+    
+    join_semi_li_2 = DHashJoinNode("SEMI", join_semi_li_2_cond, [], [])
+    join_semi_li_2.setCardinality(73089)
+    join_semi_li_2.addID(11)
+    join_semi_li_2.addLeft(chunk_lineitem_2)
+    join_semi_li_2.addRight(join_lineitem_2)
+    
+    
+    l_linenumber_3 = ColumnValue("l_linenumber", "Integer")
+    l_partkey_3 = ColumnValue("l_partkey", "Integer")
+    
+    l_linenumber_3.essential = True
+    l_partkey_3.essential = True
+    
+    lineitem_columns_3 = [
+        l_orderkey_3,
+        l_suppkey_3,
+        l_receiptdate_3,
+        l_commitdate_3,
+        l_linenumber_3,
+        l_partkey_3
+    ]
+    
+    scan_lineitem_3 = DSeqScan("lineitem", lineitem_columns_3, None)
+    scan_lineitem_3.setCardinality(6001215)
+    scan_lineitem_3.addID(12)
+    
+    lineitem_3_cond = GreaterThanOperator()
+    lineitem_3_cond.addLeft(l_receiptdate_3)
+    lineitem_3_cond.addRight(l_commitdate_3)
+    filter_lineitem_3 = DFilter(lineitem_3_cond)
+    filter_lineitem_3.setCardinality(3793296)
+    filter_lineitem_3.addID(13)
+    filter_lineitem_3.addChild(scan_lineitem_3)
+    
+    o_orderkey = ColumnValue("o_orderkey", "Integer")
+    o_orderstatus = ColumnValue("o_orderstatus", "Integer")
+    o_custkey = ColumnValue("o_custkey", "Integer")
+    
+    o_orderkey.essential = True
+    o_orderstatus.essential = True
+    o_custkey.essential = True
+    
+    orders_columns = [
+        o_orderkey,
+        o_orderstatus,
+        o_custkey
+    ]
+    
+    scan_orders_cond = EqualsOperator()
+    scan_orders_cond.addLeft(o_orderstatus)
+    scan_orders_cond.addRight(ConstantValue("F", "String"))
+    scan_orders = DSeqScan("orders", orders_columns, scan_orders_cond)
+    scan_orders.setCardinality(729413)
+    scan_orders.addID(14)
+    
+    join_lineitem_3_orders_cond = EqualsOperator()
+    join_lineitem_3_orders_cond.addLeft(l_orderkey_3)
+    join_lineitem_3_orders_cond.addRight(o_orderkey)
+    join_lineitem_3_orders = DHashJoinNode("INNER", join_lineitem_3_orders_cond, [l_orderkey_3], [o_orderkey])
+    join_lineitem_3_orders.setCardinality(1828911)
+    join_lineitem_3_orders.addID(15)
+    join_lineitem_3_orders.addLeft(filter_lineitem_3)   
+    join_lineitem_3_orders.addRight(scan_orders)
+    
+    
+    s_suppkey = ColumnValue("s_suppkey", "Integer")
+    s_nationkey = ColumnValue("s_nationkey", "Integer")
+    s_name = ColumnValue("s_name", "Varchar")
+    
+    s_suppkey.essential = True
+    s_nationkey.essential = True
+    s_name.essential = True
+    
+    supplier_columns = [
+        s_suppkey,
+        s_nationkey,
+        s_name
+    ]
+    
+    scan_supplier = DSeqScan("supplier", supplier_columns, None)
+    scan_supplier.setCardinality(10000)
+    scan_supplier.addID(16)
+    
+    
+    n_nationkey = ColumnValue("n_nationkey", "Integer")
+    n_name = ColumnValue("n_name", "Varchar")
+    n_regionkey = ColumnValue("n_regionkey", "Integer")
+    
+    n_nationkey.essential = True
+    n_name.essential = True
+    n_regionkey.essential = True
+    
+    nation_columns = [
+        n_nationkey,
+        n_name,
+        n_regionkey
+    ]
+    
+    scan_nation_cond = EqualsOperator()
+    scan_nation_cond.addLeft(n_name)
+    scan_nation_cond.addRight(ConstantValue("SAUDI ARABIA", "String"))
+    scan_nation = DSeqScan("nation", nation_columns, scan_nation_cond)
+    scan_nation.setCardinality(1)
+    scan_nation.addID(17)
+    
+    join_supplier_nation_cond = EqualsOperator()
+    join_supplier_nation_cond.addLeft(s_nationkey)
+    join_supplier_nation_cond.addRight(n_nationkey)
+    
+    join_supplier_nation = DHashJoinNode("INNER", join_supplier_nation_cond, [s_nationkey], [n_nationkey])
+    join_supplier_nation.setCardinality(411)
+    join_supplier_nation.addID(18)
+    join_supplier_nation.addLeft(scan_supplier)
+    join_supplier_nation.addRight(scan_nation)
+    
+    join_li_3_supp_nation_cond = EqualsOperator()
+    join_li_3_supp_nation_cond.addLeft(l_suppkey_3)
+    join_li_3_supp_nation_cond.addRight(s_suppkey)
+    join_li_3_supp_nation = DHashJoinNode("INNER", join_li_3_supp_nation_cond, [l_suppkey_3], [s_suppkey])
+    join_li_3_supp_nation.setCardinality(75871)
+    join_li_3_supp_nation.addID(19)
+    join_li_3_supp_nation.addLeft(join_lineitem_3_orders)
+    join_li_3_supp_nation.addRight(join_supplier_nation)
+    
+    
+    hash_group_by_1 = DHashGroupByLeaf()
+    hash_group_by_1.setCardinality(75864)
+    hash_group_by_1.addID(20)
+    
+    delim_join_1 = DDelimJoin("SEMI", [], [])
+    delim_join_1.setCardinality(0)
+    delim_join_1.addID(21)
+    delim_join_1.addLeft(join_li_3_supp_nation)
+    delim_join_1.addMiddle(join_semi_li_2)
+    delim_join_1.addRight(hash_group_by_1)
+    
+    hash_group_by_2 = DHashGroupByLeaf()
+    hash_group_by_2.setCardinality(73082)
+    hash_group_by_2.addID(22)
+    
+    delim_join_2 = DDelimJoin("ANTI", [], [])
+    delim_join_2.setCardinality(0)
+    delim_join_2.addID(23)
+    delim_join_2.addLeft(delim_join_1)
+    delim_join_2.addMiddle(join_anti_li_1)
+    delim_join_2.addRight(hash_group_by_2)
+    
+    count_star = CountAggrOperator()
+    count_star.addChild(s_name)
+    count_star.codeName = "numwait"
+    
+    final_group_by = DHashGroupBy([s_name], [count_star])
+    final_group_by.setCardinality(411)
+    final_group_by.addID(24)
+    final_group_by.addChild(delim_join_2)
+    
+    return final_group_by
