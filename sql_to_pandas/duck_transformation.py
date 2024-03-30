@@ -145,7 +145,6 @@ def duck_to_uplan(duck_tree):
                 if op_node.joinType == "SEMI":
                     new_join_type = "leftsemijoin"
                 elif op_node.joinType == "ANTI":
-                    # rightanti?
                     new_join_type = "leftantijoin"
                 else:
                     raise Exception()
