@@ -203,5 +203,129 @@ def Query16():
     
     return final_groupby
 
+def Query3():
+    
+    l_linenumber = ColumnValue("l_linenumber", "Integer")
+    l_orderkey = ColumnValue("l_orderkey", "Integer")
+    l_shipdate = ColumnValue("l_shipdate", "Date")
+    l_extendedprice = ColumnValue("l_extendedprice", "Double")
+    l_discount = ColumnValue("l_discount", "Double")
+    l_partkey = ColumnValue("l_partkey", "Integer")
+    l_suppkey = ColumnValue("l_suppkey", "Integer")
+    
+    l_linenumber.essential = True
+    l_orderkey.essential = True
+    l_shipdate.essential = True
+    l_extendedprice.essential = True
+    l_discount.essential = True
+    l_partkey.essential = True
+    l_suppkey.essential = True
+    
+    lineitem_columns = [
+        l_linenumber,
+        l_orderkey,
+        l_shipdate,
+        l_extendedprice,
+        l_discount,
+        l_partkey,
+        l_suppkey
+    ]
+    
+    lineitem_cond = GreaterThanOperator()
+    lineitem_cond.addLeft(l_shipdate)
+    lineitem_cond.addRight(ConstantValue(datetime.date(1995, 3, 15), "Datetime"))
+    
+    scan_lineitem = DSeqScan("lineitem", lineitem_columns, lineitem_cond)
+    scan_lineitem.setCardinality(3241776)
+    scan_lineitem.addID(1)
+    
+    o_custkey = ColumnValue("o_custkey", "Integer")
+    o_orderkey = ColumnValue("o_orderkey", "Integer")
+    o_orderdate = ColumnValue("o_orderdate", "Date")
+    o_shippriority = ColumnValue("o_shippriority", "Integer")
+    
+    o_custkey.essential = True
+    o_orderkey.essential = True
+    o_orderdate.essential = True
+    o_shippriority.essential = True
+    
+    orders_columns = [
+        o_custkey,
+        o_orderkey,
+        o_orderdate,
+        o_shippriority
+    ]
+    
+    order_cond = LessThanOperator()
+    order_cond.addLeft(o_orderdate)
+    order_cond.addRight(ConstantValue(datetime.date(1995, 3, 15), "Datetime"))
+    
+    scan_orders = DSeqScan("orders", orders_columns, order_cond)
+    scan_orders.setCardinality(727305)
+    scan_orders.addID(2)
+    
+    
+    initial_join_cond = EqualsOperator()
+    initial_join_cond.addLeft(l_orderkey)
+    initial_join_cond.addRight(o_orderkey)
+    initial_join = DHashJoinNode("INNER", initial_join_cond, [l_orderkey], [o_orderkey])
+    initial_join.setCardinality(151331)
+    initial_join.addID(3)
+    initial_join.addLeft(scan_lineitem)
+    initial_join.addRight(scan_orders)
+    
+    c_mktsegment = ColumnValue("c_mktsegment", "Varchar")
+    c_custkey = ColumnValue("c_custkey", "Integer")
+    c_nationkey = ColumnValue("c_nationkey", "Integer")
+    
+    c_mktsegment.essential = True
+    c_custkey.essential = True
+    c_nationkey.essential = True
+    
+    customer_columns = [
+        c_mktsegment,
+        c_custkey,
+        c_nationkey
+    ]
+    
+    customer_cond = EqualsOperator()
+    customer_cond.addLeft(c_mktsegment)
+    customer_cond.addRight(ConstantValue("BUILDING", "String"))
+    
+    scan_customer = DSeqScan("customer", customer_columns, customer_cond)
+    scan_customer.setCardinality(151331)
+    scan_customer.addID(4)
+    
+    top_join_cond = EqualsOperator()
+    top_join_cond.addLeft(o_custkey)
+    top_join_cond.addRight(c_custkey)
+    top_join = DHashJoinNode("INNER", top_join_cond, [o_custkey], [c_custkey])
+    top_join.setCardinality(30519)
+    top_join.addID(5)
+    top_join.addLeft(initial_join)
+    top_join.addRight(scan_customer)
+    
+    subtract = SubOperator()
+    subtract.addLeft(ConstantValue(1, "Integer"))
+    subtract.addRight(l_discount)
+    mult = MulOperator()
+    mult.addLeft(l_extendedprice)
+    mult.addRight(subtract)
+    sum_mult = SumAggrOperator()
+    sum_mult.addChild(mult)
+    sum_mult.codeName = "revenue"
+    final_ops = [sum_mult]
+    final_group = DHashGroupBy([l_orderkey, o_orderdate, o_shippriority], final_ops)
+    final_group.setCardinality(11620)
+    final_group.addID(6)
+    final_group.addChild(top_join)
+    
+    return final_group
+
+# The query with delimjoins
+
 def Query21():
+    
+    scan_lineitem
+    
     return None

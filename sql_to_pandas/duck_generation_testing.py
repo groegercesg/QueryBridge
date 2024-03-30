@@ -18,7 +18,7 @@ def convert_duck_to_x(desired_format):
     
     uplan_opts = ""
     # uplan_opts = ["ColumnElimination"]
-    duck_tree = Query16()
+    duck_tree = Query3()
     
     uplan_tree = duck_to_uplan(
         duck_tree
