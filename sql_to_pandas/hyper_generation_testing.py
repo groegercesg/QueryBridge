@@ -124,7 +124,7 @@ def convert_explain_plan_to_x(desired_format):
                 # With Pipeline Breakers
                 # unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["UpdateSum", "VerticalFolding", "Dense", "PipelineBreaker"], "0.9") # 
                 # From Naive
-                unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["UpdateSum", "VerticalFolding", "PipelineBreaker"], "0.9") # 
+                unparse_content.sdqlpy_tree = sdqlpy_apply_optimisations(unparse_content.sdqlpy_tree, ["Dense", "VerticalFolding", "PipelineBreaker"], "0.9") # 
                 
                 
                 
