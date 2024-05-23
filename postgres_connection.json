@@ -1,7 +1,0 @@
-{
-    "User": "benchmarker",
-    "Password": "benchMugPassword",
-    "Host": "localhost",
-    "Port": "5432",
-    "Database": "tpchdb"
-}
