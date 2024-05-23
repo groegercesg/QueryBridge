@@ -21,3 +21,11 @@ We see that using [SDQL.py](https://github.com/edin-dal/sdqlpy) over Pandas resu
 ## How can I use it?
 
 Full installation instructions can be found in the [installation file](INSTALL.md).
+
+## How could this work be extended?
+
+There are various changes I'd like to make if more time enabled it, including:
+
+- Improve the `Pipeline Breakers` optimisation, it can't perform multiple joins in a summation. Despite the fact that this functionality is offered in SDQL.py and on occasion planned for by databases.
+- The benchmarker could be made more efficient by loading all the SDQL.py preliminaries into memory, then running all the tests once. Instead of the loading/unloading that occurs at the moment.
+- The SDQL.py unparser has a couple idiosyncracies at the moment, including "Duplicate User" and "Update Sum" tracking. These should be cleaned up so that the code better matches the mental model of the project.
